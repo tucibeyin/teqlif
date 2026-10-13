@@ -75,6 +75,8 @@ class PublicProfileState {
 }
 
 class PublicProfileViewModel extends AutoDisposeFamilyAsyncNotifier<PublicProfileState, PublicProfileArgs> {
+  CacheService get _cache => ref.read(cacheServiceProvider);
+
   Future<Map<String, String>> _authHeaders() async {
     final token = await StorageService.getToken();
     return {
@@ -105,10 +107,10 @@ class PublicProfileViewModel extends AutoDisposeFamilyAsyncNotifier<PublicProfil
   }
 
   void _emitCachedIfAvailable(PublicProfileArgs arg) {
-    final cachedUser = CacheService.getData(_profileKey(arg.username));
+    final cachedUser = _cache.getData(_profileKey(arg.username));
     if (cachedUser == null) return;
-    final cachedListings = CacheService.getData(_listingsKey(arg.username));
-    final cachedRatings = CacheService.getData(_ratingsKey(arg.username));
+    final cachedListings = _cache.getData(_listingsKey(arg.username));
+    final cachedRatings = _cache.getData(_ratingsKey(arg.username));
     state = AsyncValue.data(PublicProfileState(
       user: Map<String, dynamic>.from(cachedUser as Map),
       listings: (cachedListings as List?) ?? const [],
@@ -141,7 +143,7 @@ class PublicProfileViewModel extends AutoDisposeFamilyAsyncNotifier<PublicProfil
         if (resp.statusCode == 200) {
           final decoded = jsonDecode(resp.body) as List;
           listings = decoded;
-          await CacheService.saveData(_listingsKey(arg.username), decoded,
+          await _cache.saveData(_listingsKey(arg.username), decoded,
               ttl: const Duration(minutes: 10));
         }
       } catch (_) {}
@@ -160,12 +162,12 @@ class PublicProfileViewModel extends AutoDisposeFamilyAsyncNotifier<PublicProfil
         if (resp.statusCode == 200) {
           final decoded = jsonDecode(resp.body) as Map<String, dynamic>;
           ratingSummary = decoded;
-          await CacheService.saveData(_ratingsKey(arg.username), decoded,
+          await _cache.saveData(_ratingsKey(arg.username), decoded,
               ttl: const Duration(minutes: 30));
         }
       } catch (_) {}
 
-      await CacheService.saveData(_profileKey(arg.username), data,
+      await _cache.saveData(_profileKey(arg.username), data,
           ttl: const Duration(minutes: 15));
     }
 
@@ -202,7 +204,7 @@ class PublicProfileViewModel extends AutoDisposeFamilyAsyncNotifier<PublicProfil
       if (resp.statusCode == 200) {
         final decoded = jsonDecode(resp.body) as Map<String, dynamic>;
         state = AsyncValue.data(current.copyWith(ratingSummary: decoded));
-        await CacheService.saveData(_ratingsKey(username), decoded,
+        await _cache.saveData(_ratingsKey(username), decoded,
             ttl: const Duration(minutes: 30));
       }
     } catch (_) {}

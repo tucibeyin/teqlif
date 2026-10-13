@@ -1795,7 +1795,7 @@ class _GiftSheetState extends ConsumerState<_GiftSheet> {
     if (!mounted) return;
     setState(() => _sending = false);
     if (result['ok'] == true) {
-      CacheService.clearData('user_wallet_data');
+      ref.read(cacheServiceProvider).clearData('user_wallet_data');
       ref.read(analyticsServiceProvider).logInteraction(
         itemId: widget.streamId,
         itemType: 'stream',

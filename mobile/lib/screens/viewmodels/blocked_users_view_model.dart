@@ -12,6 +12,8 @@ class BlockedUsersState {
 }
 
 class BlockedUsersViewModel extends AutoDisposeAsyncNotifier<BlockedUsersState> {
+  CacheService get _cache => ref.read(cacheServiceProvider);
+
   Future<Map<String, String>> _headers() async {
     final token = await StorageService.getToken();
     return ref.read(apiClientProvider).buildApiHeaders(token, json: true);
@@ -20,7 +22,7 @@ class BlockedUsersViewModel extends AutoDisposeAsyncNotifier<BlockedUsersState> 
   @override
   FutureOr<BlockedUsersState> build() async {
     // SWR: cache varsa hemen göster
-    final cached = CacheService.getData(StorageService.cacheBlockedUsers);
+    final cached = _cache.getData(StorageService.cacheBlockedUsers);
     if (cached != null) {
       state = AsyncValue.data(BlockedUsersState(blockedUsers: cached as List));
     }
@@ -31,7 +33,7 @@ class BlockedUsersViewModel extends AutoDisposeAsyncNotifier<BlockedUsersState> 
     );
     if (resp.statusCode == 200) {
       final users = jsonDecode(resp.body) as List;
-      await CacheService.saveData(StorageService.cacheBlockedUsers, users,
+      await _cache.saveData(StorageService.cacheBlockedUsers, users,
           ttl: const Duration(minutes: 10));
       return BlockedUsersState(blockedUsers: users);
     } else {
@@ -51,7 +53,7 @@ class BlockedUsersViewModel extends AutoDisposeAsyncNotifier<BlockedUsersState> 
         if (current != null) {
           final updated = List.from(current.blockedUsers)..removeWhere((u) => u['id'] == userId);
           state = AsyncValue.data(BlockedUsersState(blockedUsers: updated));
-          await CacheService.saveData(StorageService.cacheBlockedUsers, updated,
+          await _cache.saveData(StorageService.cacheBlockedUsers, updated,
               ttl: const Duration(minutes: 10));
         }
       } else {

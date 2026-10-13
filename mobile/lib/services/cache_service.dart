@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 /// Hive tabanlı anahtar-değer önbellek servisi.
@@ -12,9 +13,9 @@ import 'package:hive_flutter/hive_flutter.dart';
 ///     senkronize edilir, UI thread'i bloke etmez.
 ///   • TTL desteği — her kayıt `{_d, _t, _x}` zarfıyla JSON string olarak
 ///     saklanır; böylece Hive'ın Map tip dönüşüm sorunları yaşanmaz.
+///   • DIP — [cacheServiceProvider] aracılığıyla Riverpod'a enjekte edilir;
+///     testlerde `ProviderContainer` ile mock subclass geçilebilir.
 class CacheService {
-  CacheService._();
-
   static const _boxName = 'api_cache';
   static late Box<String> _box;
 
@@ -24,10 +25,12 @@ class CacheService {
     _box = await Hive.openBox<String>(_boxName);
   }
 
+  // ── Veri metodları (instance) ─────────────────────────────────────────────
+
   /// [key] için önbelleğe alınmış ham veriyi **senkron** olarak döner.
   ///
   /// TTL süresi dolmuşsa veya kayıt yoksa `null` döner.
-  static dynamic getData(String key) {
+  dynamic getData(String key) {
     final raw = _box.get(key);
     if (raw == null) return null;
     try {
@@ -51,7 +54,7 @@ class CacheService {
   ///
   /// TTL dolmuş olsa bile veriyi döndürür; [isStale] ile işaretler.
   /// Kayıt hiç yoksa `null` döner.
-  static ({dynamic data, bool isStale})? getWithStaleness(String key) {
+  ({dynamic data, bool isStale})? getWithStaleness(String key) {
     final raw = _box.get(key);
     if (raw == null) return null;
     try {
@@ -71,7 +74,7 @@ class CacheService {
   }
 
   /// [data] (List veya Map) değerini [ttl] süreli TTL zarfıyla saklar.
-  static Future<void> saveData(
+  Future<void> saveData(
     String key,
     dynamic data, {
     Duration ttl = const Duration(minutes: 5),
@@ -85,7 +88,7 @@ class CacheService {
   }
 
   /// Belirli bir [key] silerek ya da [key] verilmezse tüm kutuyu temizler.
-  static Future<void> clearData([String? key]) async {
+  Future<void> clearData([String? key]) async {
     if (key != null) {
       await _box.delete(key);
     } else {
@@ -114,3 +117,5 @@ class CacheService {
     await _box.deleteAll(toDelete);
   }
 }
+
+final cacheServiceProvider = Provider<CacheService>((_) => CacheService());

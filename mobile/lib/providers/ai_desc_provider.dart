@@ -25,7 +25,8 @@ class AiDescState {
 
 class AiDescNotifier extends StateNotifier<AiDescState> {
   final ApiClient _api;
-  AiDescNotifier(this._api) : super(const AiDescState());
+  final CacheService _cache;
+  AiDescNotifier(this._api, this._cache) : super(const AiDescState());
 
   Future<void> generate({
     required String title,
@@ -61,7 +62,7 @@ class AiDescNotifier extends StateNotifier<AiDescState> {
       final teqlikSpent = (data['teqlik_spent'] as num?)?.toInt() ?? 0;
 
       if (teqlikSpent > 0) {
-        CacheService.clearData('user_wallet_data');
+        _cache.clearData('user_wallet_data');
       }
 
       state = AiDescState(
@@ -81,5 +82,5 @@ class AiDescNotifier extends StateNotifier<AiDescState> {
 
 final aiDescProvider =
     StateNotifierProvider.autoDispose<AiDescNotifier, AiDescState>(
-  (ref) => AiDescNotifier(ref.watch(apiClientProvider)),
+  (ref) => AiDescNotifier(ref.watch(apiClientProvider), ref.watch(cacheServiceProvider)),
 );

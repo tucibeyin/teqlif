@@ -29,11 +29,14 @@ import 'storage_service.dart';
 ///   if (!_disposed) state = AsyncData(items);
 /// }
 /// ```
-final apiServiceProvider = Provider<ApiService>((ref) => ApiService(ref.watch(apiClientProvider)));
+final apiServiceProvider = Provider<ApiService>(
+  (ref) => ApiService(ref.watch(apiClientProvider), ref.watch(cacheServiceProvider)),
+);
 
 class ApiService {
   final ApiClient _api;
-  ApiService(this._api);
+  final CacheService _cache;
+  ApiService(this._api, this._cache);
 
   Future<Map<String, String>> _headers({bool auth = true}) async {
     final token = auth ? await StorageService.getToken() : null;
@@ -66,7 +69,7 @@ class ApiService {
 
     // ── 1. Cache okuma (senkron — await yok) ────────────────────────────────
     if (!bypassCache && cacheKey != null) {
-      final cached = CacheService.getWithStaleness(cacheKey);
+      final cached = _cache.getWithStaleness(cacheKey);
       if (cached != null) {
         try {
           yield fromJson(cached.data);
@@ -90,7 +93,7 @@ class ApiService {
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body);
         if (cacheKey != null) {
-          await CacheService.saveData(cacheKey, data, ttl: cacheTtl);
+          await _cache.saveData(cacheKey, data, ttl: cacheTtl);
         }
         yield fromJson(data);
       } else if (!cacheYielded) {

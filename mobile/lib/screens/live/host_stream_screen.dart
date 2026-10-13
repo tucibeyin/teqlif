@@ -281,7 +281,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
           );
       if (!mounted) return;
       if (result != null && result['error'] == null) {
-        CacheService.clearData('user_wallet_data');
+        ref.read(cacheServiceProvider).clearData('user_wallet_data');
         final sent = result['sent'] as int? ?? _audienceSize;
         final msg = sent > 0
             ? loc.t('blastSent', {'count': sent.toString()})

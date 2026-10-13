@@ -7,12 +7,14 @@ import '../core/network/api_client.dart';
 import '../core/app_exception.dart';
 import '../models/listing_offer.dart';
 import 'api_service.dart';
+import 'cache_service.dart';
 import 'storage_service.dart';
 
 class ListingService {
   final ApiClient _api;
-  ListingService(this._api);
-  late final _apiService = ApiService(_api);
+  final CacheService _cache;
+  ListingService(this._api, this._cache);
+  late final _apiService = ApiService(_api, _cache);
 
   // Uygulama oturumu boyunca beğeni durumunu tutan merkezi cache.
   // Herhangi bir ekrandan toggleLike / setLikeCache çağrılınca güncellenir;
@@ -211,4 +213,4 @@ class ListingService {
 }
 
 final listingServiceProvider = Provider<ListingService>((ref) =>
-    ListingService(ref.watch(apiClientProvider)));
+    ListingService(ref.watch(apiClientProvider), ref.watch(cacheServiceProvider)));

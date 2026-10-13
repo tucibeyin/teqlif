@@ -6,12 +6,14 @@ import '../core/network/api_client.dart';
 import '../core/app_exception.dart';
 import '../models/stream.dart';
 import 'api_service.dart';
+import 'cache_service.dart';
 import 'storage_service.dart';
 
 class StreamService {
   final ApiClient _api;
-  StreamService(this._api);
-  late final _apiService = ApiService(_api);
+  final CacheService _cache;
+  StreamService(this._api, this._cache);
+  late final _apiService = ApiService(_api, _cache);
 
   /// Kullanıcı aktif olarak yayın yapıyor mu?
   /// HostStreamScreen initState/dispose tarafından set edilir.
@@ -363,4 +365,4 @@ class StreamService {
 }
 
 final streamServiceProvider = Provider<StreamService>((ref) =>
-    StreamService(ref.watch(apiClientProvider)));
+    StreamService(ref.watch(apiClientProvider), ref.watch(cacheServiceProvider)));

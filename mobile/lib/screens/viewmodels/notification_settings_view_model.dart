@@ -57,6 +57,8 @@ class NotificationSettingsState {
 }
 
 class NotificationSettingsViewModel extends AutoDisposeAsyncNotifier<NotificationSettingsState> {
+  CacheService get _cache => ref.read(cacheServiceProvider);
+
   TimeOfDay _parseTime(String hhmm) {
     try {
       final parts = hhmm.split(':');
@@ -89,7 +91,7 @@ class NotificationSettingsViewModel extends AutoDisposeAsyncNotifier<Notificatio
   @override
   FutureOr<NotificationSettingsState> build() async {
     // SWR: cache varsa hemen göster
-    final cached = CacheService.getData(StorageService.cacheNotificationSettings);
+    final cached = _cache.getData(StorageService.cacheNotificationSettings);
     if (cached != null) {
       state = AsyncValue.data(_parseData(Map<String, dynamic>.from(cached as Map)));
     }
@@ -104,7 +106,7 @@ class NotificationSettingsViewModel extends AutoDisposeAsyncNotifier<Notificatio
 
     if (resp.statusCode == 200) {
       final data = jsonDecode(resp.body) as Map<String, dynamic>;
-      await CacheService.saveData(StorageService.cacheNotificationSettings, data,
+      await _cache.saveData(StorageService.cacheNotificationSettings, data,
           ttl: const Duration(minutes: 30));
       return _parseData(data);
     } else {
@@ -136,7 +138,7 @@ class NotificationSettingsViewModel extends AutoDisposeAsyncNotifier<Notificatio
         body: jsonEncode(_buildPayload(newState)),
       );
       // Ayar değişti — cache'i temizle ki sonraki build() taze veri çeksin
-      await CacheService.clearData(StorageService.cacheNotificationSettings);
+      await _cache.clearData(StorageService.cacheNotificationSettings);
     } catch (_) {}
   }
 

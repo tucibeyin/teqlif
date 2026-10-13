@@ -71,6 +71,8 @@ class RetargetingState {
 }
 
 class RetargetingViewModel extends AutoDisposeNotifier<RetargetingState> {
+  CacheService get _cache => ref.read(cacheServiceProvider);
+
   Timer? _countdownTimer;
 
   @override
@@ -194,7 +196,7 @@ class RetargetingViewModel extends AutoDisposeNotifier<RetargetingState> {
     );
     
     if (result != null && result['error'] == null) {
-      CacheService.clearData('user_wallet_data');
+      _cache.clearData('user_wallet_data');
       final sent = result['sent'] as int? ?? actualCount;
       state = state.copyWith(
         sent: true,

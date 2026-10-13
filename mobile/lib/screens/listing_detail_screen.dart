@@ -790,7 +790,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
       notifier.setSending(false);
       TeqSnackBar.show(message: apiResult['error'] as String, type: TeqSnackBarType.error);
     } else if (apiResult != null) {
-      CacheService.clearData('user_wallet_data');
+      ref.read(cacheServiceProvider).clearData('user_wallet_data');
       notifier.startCooldown(86400);
       TeqSnackBar.show(message: loc.t("audienceMassSendSuccess"), type: TeqSnackBarType.success);
     } else {
@@ -889,7 +889,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
             if (resp.statusCode == 201) {
               final data = jsonDecode(resp.body) as Map<String, dynamic>;
               final wasFree = data['is_free'] == true;
-              CacheService.clearData('user_wallet_data');
+              ref.read(cacheServiceProvider).clearData('user_wallet_data');
               setState(() {
                 _campaignId = data['id'] as int?;
                 widget.listing['campaign_id'] = _campaignId;

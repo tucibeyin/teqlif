@@ -30,10 +30,12 @@ class SalesState {
 }
 
 class SalesViewModel extends AutoDisposeAsyncNotifier<SalesState> {
+  CacheService get _cache => ref.read(cacheServiceProvider);
+
   @override
   FutureOr<SalesState> build() async {
     // SWR: cache varsa hemen göster, arka planda taze veri çek
-    final cached = CacheService.getWithStaleness(StorageService.cacheSales);
+    final cached = _cache.getWithStaleness(StorageService.cacheSales);
     if (cached != null) {
       final cachedState = SalesState(
         sales: List<Map<String, dynamic>>.from(
@@ -48,7 +50,7 @@ class SalesViewModel extends AutoDisposeAsyncNotifier<SalesState> {
 
   Future<SalesState> _fetchData() async {
     final sales = await ref.read(authServiceProvider).getMySales();
-    await CacheService.saveData(StorageService.cacheSales, sales,
+    await _cache.saveData(StorageService.cacheSales, sales,
         ttl: const Duration(minutes: 3));
     final categories = state.valueOrNull?.categories;
     final filter = state.valueOrNull?.filter ?? const ListingFilterState();
@@ -56,7 +58,7 @@ class SalesViewModel extends AutoDisposeAsyncNotifier<SalesState> {
   }
 
   Future<void> reload() async {
-    await CacheService.clearData(StorageService.cacheSales);
+    await _cache.clearData(StorageService.cacheSales);
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() => _fetchData());
   }

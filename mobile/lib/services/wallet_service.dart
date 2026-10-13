@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import '../main.dart' show providerContainer;
 import '../core/network/api_client.dart';
 import '../services/api_service.dart';
+import '../services/cache_service.dart';
 import '../services/storage_service.dart';
 
 class WalletService {
@@ -81,7 +82,7 @@ class WalletService {
     int limit = 5,
     bool bypassCache = false,
   }) =>
-      ApiService(providerContainer.read(apiClientProvider)).get<Map<String, dynamic>>(
+      ApiService(providerContainer.read(apiClientProvider), providerContainer.read(cacheServiceProvider)).get<Map<String, dynamic>>(
         url: '${providerContainer.read(apiClientProvider).config.baseUrl}/wallet/balance?limit=$limit',
         cacheKey: 'user_wallet_data',
         cacheTtl: const Duration(minutes: 2),

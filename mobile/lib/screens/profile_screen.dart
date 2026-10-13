@@ -3353,7 +3353,7 @@ class _FavoritesScreenState extends ConsumerState<_FavoritesScreen> {
   }
 
   Future<void> _load() async {
-    final cached = CacheService.getData('user_favorites');
+    final cached = ref.read(cacheServiceProvider).getData('user_favorites');
     if (cached != null) {
       if (mounted) {
         setState(() {
@@ -3379,7 +3379,7 @@ class _FavoritesScreenState extends ConsumerState<_FavoritesScreen> {
       );
       if (resp.statusCode == 200 && mounted) {
         final data = jsonDecode(resp.body) as List;
-        await CacheService.saveData(
+        await ref.read(cacheServiceProvider).saveData(
           'user_favorites',
           data,
           ttl: const Duration(minutes: 10),

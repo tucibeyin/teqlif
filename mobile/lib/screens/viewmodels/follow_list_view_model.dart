@@ -33,6 +33,8 @@ class FollowListState {
 }
 
 class FollowListViewModel extends AutoDisposeFamilyAsyncNotifier<FollowListState, FollowListArgs> {
+  CacheService get _cache => ref.read(cacheServiceProvider);
+
   Future<Map<String, String>> _authHeaders() async {
     final token = await StorageService.getToken();
     return {
@@ -47,7 +49,7 @@ class FollowListViewModel extends AutoDisposeFamilyAsyncNotifier<FollowListState
   @override
   FutureOr<FollowListState> build(FollowListArgs arg) async {
     // SWR: cache varsa hemen göster
-    final cached = CacheService.getData(_cacheKey(arg));
+    final cached = _cache.getData(_cacheKey(arg));
     if (cached != null) {
       state = AsyncValue.data(FollowListState(users: cached as List));
     }
@@ -60,7 +62,7 @@ class FollowListViewModel extends AutoDisposeFamilyAsyncNotifier<FollowListState
     );
     if (resp.statusCode == 200) {
       final users = jsonDecode(resp.body) as List;
-      await CacheService.saveData(_cacheKey(arg), users,
+      await _cache.saveData(_cacheKey(arg), users,
           ttl: const Duration(minutes: 5));
       return FollowListState(users: users);
     } else {
@@ -99,7 +101,7 @@ class FollowListViewModel extends AutoDisposeFamilyAsyncNotifier<FollowListState
         users[index]['is_following'] = isFollowing;
         state = AsyncValue.data(FollowListState(users: users));
       } else {
-        await CacheService.saveData(_cacheKey(arg), users,
+        await _cache.saveData(_cacheKey(arg), users,
             ttl: const Duration(minutes: 5));
       }
     } catch (_) {

@@ -10,6 +10,7 @@ import '../core/network/api_client.dart';
 import '../core/app_exception.dart';
 import '../models/pro_insights_data.dart';
 import '../services/api_service.dart';
+import '../services/cache_service.dart';
 import '../services/storage_service.dart';
 
 class AiInsufficientTeqlikException implements Exception {
@@ -19,8 +20,9 @@ class AiInsufficientTeqlikException implements Exception {
 
 class AnalyticsService {
   final ApiClient _api;
-  AnalyticsService(this._api);
-  late final _apiService = ApiService(_api);
+  final CacheService _cache;
+  AnalyticsService(this._api, this._cache);
+  late final _apiService = ApiService(_api, _cache);
 
   // Static session state — app-wide, single instance
   static String? _sessionId;
@@ -788,7 +790,7 @@ class AnalyticsService {
 }
 
 final analyticsServiceProvider = Provider<AnalyticsService>((ref) =>
-    AnalyticsService(ref.watch(apiClientProvider)));
+    AnalyticsService(ref.watch(apiClientProvider), ref.watch(cacheServiceProvider)));
 
 // --- Screen Tracking Observer ---
 class AnalyticsRouteObserver extends RouteObserver<PageRoute<dynamic>> {
