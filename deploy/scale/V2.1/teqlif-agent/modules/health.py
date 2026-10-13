@@ -49,6 +49,8 @@ _BACKUP_MAX_MIN = {
     "uptime_kuma_backup":         25 * 60,
     "nodemonitor_config_backup":  25 * 60,
     "mail_backup":                25 * 60,
+    "clickhouse_backup":          25 * 60,
+    "pg_basebackup":               7 * 24 * 60,  # haftalık
 }
 
 # Servisler her node'un rolüne göre farklıdır; her node sadece kendi
@@ -205,6 +207,8 @@ class HealthMonitor:
                 "uptime_kuma_backup":        "Uptime Kuma yedeği",
                 "nodemonitor_config_backup": "nodeMonitor config yedeği",
                 "mail_backup":               "Mail (Stalwart) yedeği",
+                "clickhouse_backup":         "ClickHouse yedeği",
+                "pg_basebackup":             "PostgreSQL base backup",
             }.get(bkey, bkey)
             if isinstance(mins, int) and mins > max_min:
                 await self._fire(fkey, f"⚠️ <b>{node_id}</b> — {blabel} eski ({_fmt(mins)})")
@@ -366,9 +370,11 @@ async def _systemctl_error(svc: str) -> str:
 async def _backup_ages() -> dict:
     """node2'deki yedek dizinlerinin yaşını dakika cinsinden döner."""
     backup_dirs = {
-        "pg_backup":    "/project/teqlif/backups/pg_dump",
-        "minio_backup": "/project/teqlif/backups/minio",
-        "redis_backup": "/project/teqlif/backups/redis",
+        "pg_backup":         "/project/teqlif/backups/pg_dump",
+        "minio_backup":      "/project/teqlif/backups/minio",
+        "redis_backup":      "/project/teqlif/backups/redis",
+        "clickhouse_backup": "/project/teqlif/backups/clickhouse",
+        "pg_basebackup":     "/project/teqlif/backups/pg_basebackup",
     }
     # rsync tabanlı backup'lar .last_backup_ok sentinel dosyasına bakılır
     sentinel_dirs = {

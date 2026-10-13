@@ -1,5 +1,5 @@
 [Unit]
-Description=teqlif PostgreSQL Base Backup — haftalık Pazar 02:00 UTC
+Description=teqlif PostgreSQL Base Backup — haftalık Pazar 08:30 UTC
 
 [Timer]
 OnCalendar=Sun *-*-* 08:30:00

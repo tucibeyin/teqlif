@@ -301,13 +301,13 @@ batch:
     watchdog_m: 1500
 
   - name: mail_backup
-    hour: 3
-    minute: 45
+    hour: 6
+    minute: 15
     watchdog_m: 1500
 
   - name: minio_backup
-    hour: 4
-    minute: 0
+    hour: 5
+    minute: 30
     watchdog_m: 1500
 
   - name: pg_basebackup

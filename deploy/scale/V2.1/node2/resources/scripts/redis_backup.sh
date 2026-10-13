@@ -11,7 +11,14 @@ install -d "${BACKUP_DIR}"
 
 # Local replica'ya BGSAVE — node1'e SSH gerekmez
 redis-cli -h 127.0.0.1 -p 6379 -a "${CORE_REDIS_PASS}" --no-auth-warning BGSAVE
-sleep 5
+
+# BGSAVE tamamlanana kadar bekle: polling, maks 60 saniye
+for _i in $(seq 1 12); do
+    _in_prog=$(redis-cli -h 127.0.0.1 -p 6379 -a "${CORE_REDIS_PASS}" --no-auth-warning \
+        INFO persistence 2>/dev/null | grep rdb_bgsave_in_progress | tr -d '[:space:]' | cut -d: -f2)
+    [[ "${_in_prog}" == "0" ]] && break
+    sleep 5
+done
 
 # Replica RDB dosyasını kopyala
 RDB_SRC=$(redis-cli -h 127.0.0.1 -p 6379 -a "${CORE_REDIS_PASS}" --no-auth-warning CONFIG GET dir | tail -1)

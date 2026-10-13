@@ -21,8 +21,23 @@ mirror_bucket() {
     echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) minio_backup: ${bucket} OK ($(du -sh "${dest}" | cut -f1))"
 }
 
-mirror_bucket teqlif
-mirror_bucket teqlif-dm
+# WireGuard ağ dalgalanmalarına karşı 3x retry, 2 dakika backoff
+mirror_bucket_with_retry() {
+    local bucket="$1"
+    local attempt
+    for attempt in 1 2 3; do
+        if mirror_bucket "${bucket}"; then
+            return 0
+        fi
+        echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) minio_backup: ${bucket} deneme ${attempt}/3 başarısız"
+        [[ ${attempt} -lt 3 ]] && sleep 120
+    done
+    echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) minio_backup: ${bucket} 3 denemede başarısız"
+    return 1
+}
+
+mirror_bucket_with_retry teqlif
+mirror_bucket_with_retry teqlif-dm
 
 # teqlif bucket mirror başarılı → node1 MinIO'daki tüm nesneler node2'de mevcut.
 # Henüz onaylanmamış stream_recordings kayıtlarını damgala.
