@@ -4605,5 +4605,9 @@
   "recordingSortLowHigh": "Preis ↑",
   "recordingSortMostBids": "Gebote ↓",
   "recordingSortMostSold": "Verkäufe ↓",
-  "recordingSortMostGifts": "Teqlik ↓"
+  "recordingSortMostGifts": "Teqlik ↓",
+  "viewerSectionTitle": "Aktive Zuschauer",
+  "viewerSortByValue": "Wert ↓",
+  "viewerSortByBids": "Gebote ↓",
+  "viewerSortByGifts": "Geschenke ↓"
 }

@@ -4605,5 +4605,9 @@
   "recordingSortLowHigh": "Price ↑",
   "recordingSortMostBids": "Bids ↓",
   "recordingSortMostSold": "Sales ↓",
-  "recordingSortMostGifts": "Teqlik ↓"
+  "recordingSortMostGifts": "Teqlik ↓",
+  "viewerSectionTitle": "Active Viewers",
+  "viewerSortByValue": "Value ↓",
+  "viewerSortByBids": "Bids ↓",
+  "viewerSortByGifts": "Gifts ↓"
 }

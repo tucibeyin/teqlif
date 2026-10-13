@@ -4569,5 +4569,9 @@
   "recordingSortLowHigh": "السعر ↑",
   "recordingSortMostBids": "العروض ↓",
   "recordingSortMostSold": "المبيعات ↓",
-  "recordingSortMostGifts": "تيكليك ↓"
+  "recordingSortMostGifts": "تيكليك ↓",
+  "viewerSectionTitle": "المشاهدون النشطون",
+  "viewerSortByValue": "القيمة ↓",
+  "viewerSortByBids": "العروض ↓",
+  "viewerSortByGifts": "الهدايا ↓"
 }

@@ -216,6 +216,68 @@ class _RecoveryBanner extends ConsumerWidget {
 enum _AuctionSort { newest, highPrice, lowPrice, mostBids }
 enum _SaleSort    { newest, mostSold }
 enum _GiftSort    { mostTeqlik, newest }
+enum _ViewerSort  { byValue, byBids, byGifts }
+
+// ── Viewer activity (client-side aggregate) ───────────────────────────────────
+
+class _ViewerActivity {
+  final int userId;
+  final String username;
+  final String? avatarUrl;
+  final List<_ViewerBidAction>   bids   = [];
+  final List<_ViewerOrderAction> orders = [];
+  final List<_ViewerGiftAction>  gifts  = [];
+
+  _ViewerActivity({required this.userId, required this.username, this.avatarUrl});
+
+  double get bidTotal      => bids.fold(0.0, (s, b) => s + b.amount);
+  double get orderTotal    => orders.fold(0.0, (s, o) => s + o.quantity * o.unitPrice);
+  int    get giftTeqlik    => gifts.fold(0, (s, g) => s + g.costTeqlik);
+  double get monetaryTotal => bidTotal + orderTotal;
+}
+
+class _ViewerBidAction {
+  final String auctionName;
+  final double amount;
+  _ViewerBidAction({required this.auctionName, required this.amount});
+}
+
+class _ViewerOrderAction {
+  final String itemName;
+  final int quantity;
+  final double unitPrice;
+  _ViewerOrderAction({required this.itemName, required this.quantity, required this.unitPrice});
+}
+
+class _ViewerGiftAction {
+  final String giftName;
+  final int costTeqlik;
+  _ViewerGiftAction({required this.giftName, required this.costTeqlik});
+}
+
+List<_ViewerActivity> _buildViewers(RecordingDetail detail) {
+  final map = <int, _ViewerActivity>{};
+
+  for (final a in detail.auctions) {
+    for (final b in a.bids) {
+      (map[b.userId] ??= _ViewerActivity(userId: b.userId, username: b.username, avatarUrl: b.avatarUrl))
+          .bids.add(_ViewerBidAction(auctionName: a.itemName, amount: b.amount));
+    }
+  }
+  for (final ds in detail.directSales) {
+    for (final o in ds.orders) {
+      (map[o.userId] ??= _ViewerActivity(userId: o.userId, username: o.username, avatarUrl: o.avatarUrl))
+          .orders.add(_ViewerOrderAction(itemName: ds.title, quantity: o.quantity, unitPrice: o.unitPrice));
+    }
+  }
+  for (final e in detail.gifts.events) {
+    (map[e.userId] ??= _ViewerActivity(userId: e.userId, username: e.username, avatarUrl: e.avatarUrl))
+        .gifts.add(_ViewerGiftAction(giftName: e.giftName, costTeqlik: e.costTeqlik));
+  }
+
+  return map.values.toList()
+    ..sort((a, b) => b.monetaryTotal.compareTo(a.monetaryTotal));
+}
 
 class _SummarySection extends StatefulWidget {
   final RecordingDetail detail;
@@ -231,6 +293,7 @@ class _SummarySectionState extends State<_SummarySection> {
   _AuctionSort _auctionSort = _AuctionSort.newest;
   _SaleSort    _saleSort    = _SaleSort.newest;
   _GiftSort    _giftSort    = _GiftSort.mostTeqlik;
+  _ViewerSort  _viewerSort  = _ViewerSort.byValue;
 
   List<RecordingAuction> get _sortedAuctions {
     final list = [...widget.detail.auctions];
@@ -272,6 +335,19 @@ class _SummarySectionState extends State<_SummarySection> {
     return list;
   }
 
+  List<_ViewerActivity> get _sortedViewers {
+    final list = _buildViewers(widget.detail);
+    switch (_viewerSort) {
+      case _ViewerSort.byBids:
+        list.sort((a, b) => b.bidTotal.compareTo(a.bidTotal));
+      case _ViewerSort.byGifts:
+        list.sort((a, b) => b.giftTeqlik.compareTo(a.giftTeqlik));
+      case _ViewerSort.byValue:
+        break;
+    }
+    return list;
+  }
+
   @override
   Widget build(BuildContext context) {
     final m = widget.detail.metrics;
@@ -281,6 +357,8 @@ class _SummarySectionState extends State<_SummarySection> {
     final categoryLabel = s.category != null
         ? CategoryService.localizedLabelFor(loc, s.category!)
         : null;
+
+    final viewers = _sortedViewers;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -381,6 +459,23 @@ class _SummarySectionState extends State<_SummarySection> {
               ),
               loc: loc,
             ),
+          ],
+
+          // Active Viewers
+          if (viewers.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            _SectionHeaderWithSort<_ViewerSort>(
+              title: '${loc.tOr("viewerSectionTitle", "Aktif İzleyiciler")} (${viewers.length})',
+              current: _viewerSort,
+              options: [
+                (_ViewerSort.byValue, loc.tOr('viewerSortByValue', 'Değer ↓')),
+                (_ViewerSort.byBids,  loc.tOr('viewerSortByBids',  'Teklif ↓')),
+                (_ViewerSort.byGifts, loc.tOr('viewerSortByGifts', 'Hediye ↓')),
+              ],
+              onChanged: (v) => setState(() => _viewerSort = v),
+            ),
+            const SizedBox(height: 8),
+            ...viewers.map((v) => _ViewerCard(viewer: v)),
           ],
         ],
       ),
@@ -767,6 +862,210 @@ class _GiftsCard extends StatelessWidget {
             Icon(Icons.chevron_right, color: AppColors.textTertiary(context)),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── Viewer card ───────────────────────────────────────────────────────────────
+
+class _ViewerCard extends StatefulWidget {
+  final _ViewerActivity viewer;
+  const _ViewerCard({required this.viewer});
+
+  @override
+  State<_ViewerCard> createState() => _ViewerCardState();
+}
+
+class _ViewerCardState extends State<_ViewerCard> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final v = widget.viewer;
+    return GestureDetector(
+      onTap: () => setState(() => _expanded = !_expanded),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.card(context),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: AppColors.border(context)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CircleAvatar(
+                  radius: 18,
+                  backgroundImage: v.avatarUrl != null
+                      ? CachedNetworkImageProvider(v.avatarUrl!)
+                      : null,
+                  child: v.avatarUrl == null
+                      ? const Icon(Icons.person, size: 18)
+                      : null,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '@${v.username}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary(context),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 2,
+                        children: [
+                          if (v.bids.isNotEmpty)
+                            _ActionBadge(
+                              icon: Icons.gavel,
+                              label: '${v.bids.length} teklif · ₺${v.bidTotal.toStringAsFixed(0)}',
+                              color: kPrimary,
+                            ),
+                          if (v.orders.isNotEmpty)
+                            _ActionBadge(
+                              icon: Icons.shopping_bag_outlined,
+                              label: '${v.orders.length} alım · ₺${v.orderTotal.toStringAsFixed(0)}',
+                              color: const Color(0xFF6366F1),
+                            ),
+                          if (v.gifts.isNotEmpty)
+                            _ActionBadge(
+                              icon: Icons.card_giftcard_outlined,
+                              label: '${v.gifts.length} hediye · ${v.giftTeqlik}⚡',
+                              color: const Color(0xFFF97316),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  _expanded ? Icons.expand_less : Icons.expand_more,
+                  size: 20,
+                  color: AppColors.textTertiary(context),
+                ),
+              ],
+            ),
+            if (_expanded) ...[
+              const SizedBox(height: 10),
+              Divider(height: 1, color: AppColors.border(context)),
+              const SizedBox(height: 8),
+              if (v.bids.isNotEmpty) ...[
+                _ActionGroupLabel(icon: Icons.gavel, label: 'Teklifler'),
+                ...v.bids.map((b) => _ActionDetailRow(
+                      label: b.auctionName,
+                      value: '₺${b.amount.toStringAsFixed(2)}',
+                      valueColor: kPrimary,
+                    )),
+                const SizedBox(height: 6),
+              ],
+              if (v.orders.isNotEmpty) ...[
+                _ActionGroupLabel(icon: Icons.shopping_bag_outlined, label: 'Satın Almalar'),
+                ...v.orders.map((o) => _ActionDetailRow(
+                      label: o.itemName,
+                      value: '×${o.quantity} · ₺${o.unitPrice.toStringAsFixed(2)}',
+                      valueColor: const Color(0xFF6366F1),
+                    )),
+                const SizedBox(height: 6),
+              ],
+              if (v.gifts.isNotEmpty) ...[
+                _ActionGroupLabel(icon: Icons.card_giftcard_outlined, label: 'Hediyeler'),
+                ...v.gifts.map((g) => _ActionDetailRow(
+                      label: g.giftName,
+                      value: '${g.costTeqlik}⚡',
+                      valueColor: const Color(0xFFF97316),
+                    )),
+              ],
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ActionBadge extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  const _ActionBadge({required this.icon, required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 11, color: color),
+        const SizedBox(width: 3),
+        Text(label, style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w500)),
+      ],
+    );
+  }
+}
+
+class _ActionGroupLabel extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  const _ActionGroupLabel({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        children: [
+          Icon(icon, size: 12, color: AppColors.textTertiary(context)),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textTertiary(context),
+              letterSpacing: 0.3,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActionDetailRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color valueColor;
+  const _ActionDetailRow({required this.label, required this.value, required this.valueColor});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: valueColor),
+          ),
+        ],
       ),
     );
   }

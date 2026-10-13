@@ -4569,5 +4569,9 @@
   "recordingSortLowHigh": "Цена ↑",
   "recordingSortMostBids": "Ставки ↓",
   "recordingSortMostSold": "Продажи ↓",
-  "recordingSortMostGifts": "Тeклик ↓"
+  "recordingSortMostGifts": "Тeклик ↓",
+  "viewerSectionTitle": "Активные зрители",
+  "viewerSortByValue": "Ценность ↓",
+  "viewerSortByBids": "Ставки ↓",
+  "viewerSortByGifts": "Подарки ↓"
 }

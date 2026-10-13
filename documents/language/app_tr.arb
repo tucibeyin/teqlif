@@ -4569,5 +4569,9 @@
   "recordingSortLowHigh": "Fiyat ↑",
   "recordingSortMostBids": "Teklif ↓",
   "recordingSortMostSold": "Satış ↓",
-  "recordingSortMostGifts": "Teqlik ↓"
+  "recordingSortMostGifts": "Teqlik ↓",
+  "viewerSectionTitle": "Aktif İzleyiciler",
+  "viewerSortByValue": "Değer ↓",
+  "viewerSortByBids": "Teklif ↓",
+  "viewerSortByGifts": "Hediye ↓"
 }
