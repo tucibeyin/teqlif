@@ -4,6 +4,8 @@
 **Kapsam:** Host ekranı deneyiminin kayıt oynatımına taşınması — synchronized replay overlay  
 **Önceki sürüm:** `documents/stream/V1.3/01_findings.md` (kayıt altyapısı, durum makinesi)
 
+> **Uygulama Zorunluluğu:** Bu plandaki her adım `documents/teqlif_architectural_decisions.md`'ye uygun olmalıdır. Workflow (ADR §13), Clean Architecture, MVVM (ADR §8), OTA Localization (ADR §1), ARB pipeline ve tüm geri kalan ADR maddeleri eksiksiz uygulanır — hiçbir adımda bu standartlardan taviz verilmez.
+
 ---
 
 ## 0. Uygulama İlkeleri
