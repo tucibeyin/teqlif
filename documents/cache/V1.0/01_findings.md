@@ -2,7 +2,7 @@
 
 **Tarih:** 2026-10-13
 **Kapsam:** Flutter mobile uygulaması client-side cache stratejisi, TTL yönetimi, veri yaşam döngüsü
-**Revizyon:** V1.3 — Uyum gereksinimleri eklendi (ADR, Clean Architecture, MVVM, Workflow)
+**Revizyon:** V1.4 — P0-P2 tam uygulama tamamlandı (commit `f371c67b`)
 
 ---
 
@@ -850,23 +850,23 @@ Etkin olması için backend'in GET endpoint'lerinde `ETag` header dönmesi gerek
 ### Özet — Uygulama Sırası
 
 ```
-P0  §11.1  race condition          home_view_model.dart          ~5 satır
-P0  §11.2  homeCache TTL           home_view_model.dart          ~15 satır
+P0  §11.1  race condition          home_view_model.dart          ✅ f371c67b
+P0  §11.2  homeCache TTL           home_view_model.dart          ✅ f371c67b
 
-P1  §11.3  SWR düzelt              cache_service.dart            ~20 satır (yeni metod)
-           SWR düzelt              api_service.dart              ~8 satır (getWithStaleness kullan)
-P1  §11.5  public profil cache     public_profile_view_model.dart ~40 satır
-P1  §11.6  sales cache             sales_screen.dart              ~3 satır
-P1  §11.7  ratings cache           my_ratings_view_model.dart     ~20 satır
-P1  §11.8  düşük öncelikli cache   4 dosya                        ~10 satır/dosya
+P1  §11.3  SWR düzelt              cache_service.dart            ✅ f371c67b
+           SWR düzelt              api_service.dart              ✅ f371c67b
+P1  §11.5  public profil cache     public_profile_view_model.dart ✅ f371c67b
+P1  §11.6  sales cache             sales_view_model.dart          ✅ f371c67b
+P1  §11.7  ratings cache           my_ratings_view_model.dart     ✅ f371c67b
+P1  §11.8  düşük öncelikli cache   4 dosya                        ✅ f371c67b
 
-P2  §11.9  TTL güncellemeleri      6 dosya                        ~10 satır toplam
-P2  §11.10 ref.cacheFor            3 provider                     ~3 satır
-P2  §11.11 CategoryService refresh category_service.dart          ~15 satır
-P2  §11.12 resume debounce         account_info viewmodel         ~8 satır
+P2  §11.9  TTL güncellemeleri      6 dosya                        ✅ f371c67b
+P2  §11.10 ref.keepAlive+Timer     story + live stream provider   ✅ f371c67b
+P2  §11.11 CategoryService refresh main_screen.dart               ✅ f371c67b
+P2  §11.12 resume debounce         account_info_screen.dart       ✅ f371c67b
 
-P3  §11.13 CacheService DIP        cache_service.dart + tüm çağrılar
-P3  §11.14 Repository pattern      home_view_model + yeni repo
-P3  §11.15 DRY                     storage_service + cache_service
-P3  §11.16 ETag                    api_client + backend koordinasyonu
+P3  §11.13 CacheService DIP        cache_service.dart + tüm çağrılar  ⏳ beklemede
+P3  §11.14 Repository pattern      home_view_model + yeni repo         ⏳ beklemede
+P3  §11.15 DRY                     storage_service + cache_service     ⏳ beklemede
+P3  §11.16 ETag                    api_client + backend koordinasyonu  ⏳ beklemede
 ```
