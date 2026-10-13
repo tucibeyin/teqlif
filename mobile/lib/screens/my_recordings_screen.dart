@@ -11,6 +11,7 @@ import '../services/localization_service.dart';
 import 'viewmodels/my_recordings_view_model.dart';
 import 'recording_detail_screen.dart';
 import '../widgets/pro_paywall_overlay.dart';
+import '../widgets/teq_search_field.dart';
 
 class MyRecordingsScreen extends ConsumerStatefulWidget {
   final bool isPremium;
@@ -305,31 +306,10 @@ class _RecordingFilterBarState extends ConsumerState<_RecordingFilterBar> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-            child: TextField(
+            child: TeqSearchField(
+              hintText: loc.t('recordingSearchHint'),
               controller: _searchCtrl,
               onChanged: _onSearch,
-              style: TextStyle(fontSize: 14, color: AppColors.textPrimary(context)),
-              decoration: InputDecoration(
-                hintText: loc.t('recordingSearchHint'),
-                hintStyle: TextStyle(color: AppColors.textTertiary(context), fontSize: 14),
-                prefixIcon: Icon(Icons.search, size: 20, color: AppColors.textTertiary(context)),
-                suffixIcon: _searchCtrl.text.isNotEmpty
-                    ? IconButton(
-                        icon: Icon(Icons.clear, size: 18, color: AppColors.textTertiary(context)),
-                        onPressed: () {
-                          _searchCtrl.clear();
-                          _onSearch('');
-                        },
-                      )
-                    : null,
-                filled: true,
-                fillColor: AppColors.card(context),
-                contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide.none,
-                ),
-              ),
             ),
           ),
           // Durum filtreleri

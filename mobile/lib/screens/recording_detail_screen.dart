@@ -12,6 +12,7 @@ import '../services/category_service.dart';
 import '../services/localization_service.dart';
 import 'public_profile_screen.dart';
 import 'viewmodels/recording_detail_view_model.dart';
+import '../widgets/teq_search_field.dart';
 
 class RecordingDetailScreen extends ConsumerStatefulWidget {
   final int streamId;
@@ -448,25 +449,10 @@ class _SummarySectionState extends State<_SummarySection> {
           const SizedBox(height: 10),
 
           // ── Kullanıcı arama ───────────────────────────────────────────
-          TextField(
-            onChanged: (text) =>
-                setState(() => _usernameQuery = text.trim()),
-            style: TextStyle(
-                fontSize: 13, color: AppColors.textPrimary(context)),
-            decoration: InputDecoration(
-              hintText: loc.t('detailUserSearchHint'),
-              hintStyle: TextStyle(
-                  color: AppColors.textTertiary(context), fontSize: 13),
-              prefixIcon: Icon(Icons.person_search_outlined,
-                  size: 18, color: AppColors.textTertiary(context)),
-              filled: true,
-              fillColor: AppColors.card(context),
-              contentPadding: const EdgeInsets.symmetric(vertical: 6),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide.none,
-              ),
-            ),
+          TeqSearchField(
+            hintText: loc.t('detailUserSearchHint'),
+            prefixIcon: Icons.person_search_outlined,
+            onChanged: (text) => setState(() => _usernameQuery = text.trim()),
           ),
           const SizedBox(height: 12),
 
