@@ -2,7 +2,116 @@
 
 **Tarih:** 2026-10-13
 **Kapsam:** Flutter mobile uygulaması client-side cache stratejisi, TTL yönetimi, veri yaşam döngüsü
-**Revizyon:** V1.2 — Endüstri standardı karşılaştırması + eksiksiz uygulama spesifikasyonu eklendi
+**Revizyon:** V1.3 — Uyum gereksinimleri eklendi (ADR, Clean Architecture, MVVM, Workflow)
+
+---
+
+## 0. Uyum Gereksinimleri
+
+Bu döküman kapsamındaki **her değişiklik**, aşağıdaki kurallara tam uyumlu olmak zorundadır. Kural sırası öncelik sırasıdır: bir çelişki durumunda üstteki kural kazanır.
+
+---
+
+### 0.1 `teqlif_architectural_decisions.md` Önce Okunur
+
+`documents/teqlif_architectural_decisions.md` — ADR §13 gereği her kod değişikliğinden önce okunur. Bu dökümanın herhangi bir maddesi uygulanmadan önce ADR kontrol edilir; bir karar zaten ADR'de varsa yeni bir karar oluşturulmaz, var olan karar uygulanır.
+
+---
+
+### 0.2 ADR §9 — Cache Taksonomisi (her cache değişikliği)
+
+Her yeni cache anahtarı veya TTL değişikliği için §5 tablosundaki **ADR §9 Taksonomisi** sütunu doldurulmalıdır:
+
+| Taksonomi | Nasıl Tanınır | Uygulama Kuralı |
+|---|---|---|
+| **SCHEMA_VERSIONED** | Katalog, şehirler, kategori — şema değişince geçersiz | Sürüm çarpması + migration zorunlu |
+| **ALGORITHMIC** | Personalized feed, trending — hesaplaması pahalı | Kendi TTL'i + backend cron ile senkron |
+| **LIFECYCLE** | Profil, ilan, stream — yaşam döngüsüne bağlı | Olay bitişinde `clearData()` ile invalidasyon |
+| **SECURITY_CRITICAL** | Token, rate limit, presigned URL | TTL dışında müdahale yasak |
+| **EPHEMERAL** | Bakiye, mesaj listesi — hızla bayat | Kısa TTL yeterli, event-driven güncelleme |
+
+Cache anahtarının taksonomisi hatalı sınıflandırılırsa invalidasyon stratejisi yanlış seçilir. **§5 tablosuna bakılmadan yeni cache eklenmez.**
+
+---
+
+### 0.3 ADR §8 — MVVM (her ViewModel değişikliği)
+
+| Katman | Yapabilir | Yapamaz |
+|---|---|---|
+| **Model** | API DTO, entity, domain nesnesi | UI import, `BuildContext`, Riverpod widget ref |
+| **ViewModel** (`AsyncNotifier`/`Notifier`) | İş mantığı, API çağrısı, state yönetimi, cache okuma/yazma | `flutter/material.dart`, `BuildContext`, widget ağacı bilgisi |
+| **View (Screen)** | `ref.watch()` ile state göster, ViewModel metodlarını çağır | İş mantığı, `http.get()`, Hive erişimi, cache işlemi |
+
+Kontrol listesi (her ViewModel değişikliğinde):
+- [ ] ViewModel `flutter/material.dart` veya `flutter/widgets.dart` import etmiyor
+- [ ] ViewModel `BuildContext` parametresi almıyor
+- [ ] View'da `http.get()` / `CacheService` / `Hive.openBox()` çağrısı yok
+- [ ] Navigasyon gerektiren durumlar callback pattern ile çözülüyor (ADR §8, commit `bc6998ff`)
+- [ ] `setState` kullanımı yoksa gereksiz `StatefulWidget` dönüştürülüyor
+
+---
+
+### 0.4 Clean Architecture — Katman Sınırları
+
+```
+Presentation  →  Domain  →  Data
+  (View)          (UseCase/       (Repository/
+  (ViewModel)      ViewModel)      Service/Cache)
+```
+
+Kurallar:
+- **Presentation → Data doğrudan erişim yasak.** `HomeViewModel`'deki `Hive.openBox('homeCache')` bu ihlale örnektir (§9.1). Bu döküman kapsamındaki yeni kodlar bu hatayı tekrarlamamalıdır.
+- **Bağımlılık oku içeri doğru akar.** Data layer, Domain'i bilmez; Domain, Presentation'ı bilmez.
+- **Cache bir Data Layer detayıdır.** ViewModel cache'in nerede tutulduğunu (Hive mi, SharedPreferences mi, memory mi) bilmemelidir. Cache erişimi `CacheService` veya `Repository` üzerinden yapılır.
+- **Yeni ekranlar için:** ViewModel doğrudan `ApiService.get()` kullanabilir (mevcut pattern); ancak `Hive.openBox()`, `SharedPreferences.getInstance()`, `http.get()` doğrudan ViewModel içinde çağrılamaz.
+
+---
+
+### 0.5 Clean Code Kuralları
+
+Bu döküman kapsamındaki tüm Flutter kodu için:
+
+**İsimlendirme:**
+- Cache key sabitleri `StorageService` içinde `static const` olarak tanımlanır; magic string yasak.
+- TTL sabitleri `const Duration(minutes: X)` ile tanımlanır; magic number yasak.
+- Yeni cache key: `snake_case`, scope_entity formatı (örn: `public_profile_42`, `my_ratings_received`).
+
+**Fonksiyon büyüklüğü:**
+- `build()` metodu maksimum tek sorumluluğa sahip olmalıdır: state başlatma + subscription kurma. İş mantığı ayrı private metodlara taşınır.
+- Cache okuma (`_loadFromCache`) ve API çağrısı (`_fetchData`) ayrı metodlar olarak kalır; birleştirilmez.
+
+**Yorum politikası:**
+- Yorum yalnızca "neden" açıklamak için yazılır; "ne yaptığını" açıklayan yorumlar eklenmez.
+- TTL değişikliğinin nedeni: satır başı kısa yorum kabul edilir (örn: `// sosyal ticaret standardı: 15 dk`).
+
+**Hata yönetimi:**
+- `recordStoryView` gibi fire-and-forget çağrılar `catchError` ile sessizce ignore edilir.
+- Cache miss asla hata değildir; `null` döndürmek beklenen davranıştır.
+- Cache okuma/yazma hatası asla ekranı çökertmemeli; loglama yeterli.
+
+---
+
+### 0.6 ADR §13 — Development Workflow (her commit)
+
+Her §11 maddesinin uygulanması aşağıdaki adımları izler:
+
+```
+1. Local    Mac'te kod yazılır, `flutter analyze` temiz geçmeli
+2. push     git push — GitHub'a gönderilir
+3. pull     İlgili node'da git pull (sudo'suz)
+4. config   .env veya config değişikliği varsa düzenlenir
+5. log      sudo journalctl -u teqlif -f ile canlı log izlenir
+6. onay     Değişiklik mobil/staging üzerinden test edilir
+7. docs     Bu döküman veya ADR güncellenir, commit numarası eklenir
+8. izleme   Node hataları kısa süre gözlemlenir
+9. cleanup  Geçici dosya, debug kodu temizlenir
+```
+
+Flutter-spesifik ek kurallar:
+- Her değişiklik sonrası `flutter analyze` sıfır hata/uyarı vermeli.
+- P0 ve P1 değişiklikleri staging'de (`dart_defines/staging.json`) test edildikten sonra prod'a taşınır.
+- Cache key değişikliği veya eklenmesinde `StorageService` sabit listesi güncellenir; PR açıklamasına hangi key'lerin eklendiği/değiştirildiği yazılır.
+- Mobil tarafta backend şemasına dokunulmaz; migration gerektiren durum oluşursa ADR §9 kuralı işletilir (backend koordinasyonu şart).
 
 ---
 
