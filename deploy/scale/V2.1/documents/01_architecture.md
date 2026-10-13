@@ -172,13 +172,19 @@ Her node'da `teqlif-metrics-agent.service` olarak çalışır (`backend/scripts/
 ```
 node1 PostgreSQL ──WAL stream──→ node2 pg_receivewal → /project/teqlif/backups/pg_wal/  [AKTİF ✓ RPO ~1dk]
                                   slot: node2_receivewal | cleanup: günlük 05:30 UTC (7g retention)
-node1 PostgreSQL ──pg_dump─────→ node2 /project/teqlif/backups/pg_dump/     (günlük 03:00 UTC)
-node2 ClickHouse ──yerel dump──→ node2 /project/teqlif/backups/clickhouse/  (günlük 03:20 UTC)
-node2 Redis rep. ──BGSAVE──────→ node2 /project/teqlif/backups/redis/       (günlük 03:40 UTC)
-node2 Stalwart   ──rsync────────→ node2 /project/mail/backups/               (günlük 03:45 UTC)
-node1 MinIO      ──mc mirror───→ node2 /project/teqlif/backups/minio/       (günlük 04:00 UTC)
-                                  └─ mirror sonrası PG stream_recordings.node2_confirmed_at setler
+node1 PostgreSQL ──pg_dump─────→ node2 /project/teqlif/backups/pg_dump/        (günlük 03:00 UTC)
+node2 ClickHouse ──yerel dump──→ node2 /project/teqlif/backups/clickhouse/     (günlük 03:20 UTC)
+node2 Redis rep. ──BGSAVE──────→ node2 /project/teqlif/backups/redis/          (günlük 03:40 UTC)
+node1 MinIO      ──mc mirror───→ node2 /project/teqlif/backups/minio/          (günlük 05:30 UTC)
+                                  └─ 3x retry; mirror sonrası PG node2_confirmed_at setler
+nodeMonitor      ──rsync────────→ node2 /project/teqlif/backups/loki/          (günlük 06:00 UTC)
+nodeMonitor      ──rsync────────→ node2 /project/teqlif/backups/uptime_kuma/   (günlük 06:05 UTC)
+nodeMonitor      ──rsync────────→ node2 /project/teqlif/backups/nodemonitor_config/ (günlük 06:10 UTC)
+node2 Stalwart   ──tar+gz───────→ node2 /project/teqlif/backups/stalwart/      (günlük 06:15 UTC)
+node1 PostgreSQL ──pg_basebackup→ node2 /project/teqlif/backups/pg_basebackup/ (haftalık Paz 08:30 UTC)
 ```
+
+**Backup Bildirim Katmanı (2026-10-13):** Her backup servisinde `OnFailure=teqlif-backup-failed@%n.service` — hata anında `notify_backup_failed.sh` Telegram bildirim gönderir. İzleme: Katman A (watchdog Redis HSET), Katman B (health.py filesystem yaşı), Katman C (OnFailure= anlık bildirim).
 
 ---
 
@@ -1054,18 +1060,23 @@ Bu bölüm `system_timing/V1.0/01_findings.md` verilerini kapsayan ve sistemin t
 | **03:00** | `teqlif-pg-dump.timer` | node1 PG → WireGuard → node2 HDD | Seri yazma |
 | **03:20** | `teqlif-clickhouse-backup.timer` | node2 CH → node2 HDD (yerel) | Seri yazma |
 | **03:40** | `teqlif-redis-backup.timer` | node2 Redis replica BGSAVE → node2 HDD | Seri yazma |
-| **03:45** | `teqlif-mail-backup.timer` | Stalwart RocksDB + blobs → node2 HDD | Seri yazma |
-| **04:00** | `teqlif-minio-backup.timer` | node1 MinIO → WireGuard → node2 HDD; tamamlanınca PG `stream_recordings.node2_confirmed_at` setler | Seri yazma |
+| **04:00** | `teqlif-offsite-sync.timer` | **DISABLED** — ofsite hedef yapılandırılmamış | — |
+| **05:30** | `teqlif-minio-backup.timer` | node1 MinIO → WireGuard → node2 HDD (3x retry); tamamlanınca PG `stream_recordings.node2_confirmed_at` setler | Seri yazma |
 | **05:30** | `teqlif-pg-wal-cleanup.timer` | `/project/teqlif/backups/pg_wal/` 7 günden eski WAL segmentleri siler | Disk silme |
+| **06:00** | `teqlif-loki-backup.timer` | nodeMonitor Loki chunks → node2 HDD | Seri yazma |
+| **06:05** | `teqlif-uptime-kuma-backup.timer` | nodeMonitor Uptime Kuma MariaDB → node2 HDD | Seri yazma |
+| **06:10** | `teqlif-nodemonitor-config-backup.timer` | nodeMonitor config dosyaları → node2 HDD | Seri yazma |
+| **06:15** | `teqlif-mail-backup.timer` | Stalwart RocksDB + DKIM → node2 HDD; trap ile stalwart-mail restart garantili | Seri yazma |
 | **08:30** (Pazar) | `teqlif-pg-basebackup.timer` | node1 PG fiziksel kopya → node2 HDD; `pg_receivewal` WAL ile birlikte PITR (RPO ~1 dk) sağlar | Seri yazma |
-| ~~05:00~~ | `teqlif-offsite-sync.timer` | **DISABLED** — ofsite hedef yapılandırılmamış | — |
+
+**Toplam: 9 backup servisi** — hepsinde `OnFailure=teqlif-backup-failed@%n.service` (Telegram anlık bildirim).
 
 **Not — Backup penceresi tasarım ilkeleri:**
-- Backup timer'ları 03:00–04:45 UTC penceresine taşındı; analytics pre-compute (01:50–02:45) artık tamamen temiz bir pencerede çalışıyor.
+- 03:00–03:40: Ağır PG/CH/Redis yazmaları — node2 HDD sequential write pik penceresi.
+- 05:30–06:15: nodeMonitor + mail backup — ağ bağlantılı ve hafif yerel işlemler.
+- CH backup (03:20) ile sync_pg_to_clickhouse (01:50): **çakışma yok**.
+- minio backup (05:30) ile compute_trending_listings (04:00): **çakışma yok** — minio artık 05:30'a alındı.
 - node2 HDD kafası iki eşzamanlı yazma isteği alırsa random I/O = hız 10-20 MB/s'ye düşer. Timer'ların sıralı dizilimi HDD'nin sequential write kapasitesini (~150 MB/s) tam kullanır.
-- CH backup (03:20) ile sync_pg_to_clickhouse (01:50) artık ayrı pencerelerde: **çakışma yok**.
-- mail backup (03:45) ile compute_analytics_cache (02:30) artık ayrı pencerelerde: **çakışma yok**.
-- minio backup (04:00–04:45) ağ bağlantılı (WireGuard) sequential write; bu pencerede CH okuma (compute_trending_listings 04:00) yapılıyor — minor overlap, ancak minio I/O network-bound olduğu için HDD head movement az.
 
 **pg_receivewal durumu:** `teqlif-pg-receivewal.service` node2'de **AKTİF**. RPO = ~1 dakika. Replication slot `node2_receivewal` node1'de aktif. WAL segmentleri `/project/teqlif/backups/pg_wal/`'a akar; `teqlif-pg-wal-cleanup.timer` günlük 05:30 UTC'de 7 günden eskilerini siler. node2 HDD etkisi: aktif saatlerde ~0.5–2 MB/s seri yazma (kapasitenin %1–3'ü).
 
@@ -1167,7 +1178,7 @@ SAAT    NODE     İŞ / OLAY                          KAYNAK
 01:50   node1    sync_pg_to_clickhouse_task          PG → CH write (node2 HDD)
 02:30   node1    compute_analytics_cache_task        CH read → Redis
 02:45   node1    precompute_premium_user_analytics   CH read → Redis
-── Backup penceresi — node2 HDD seri yazma (03:00-04:45) ───────────
+── Backup penceresi I — node2 HDD seri yazma (03:00-03:45) ─────────
 03:00   node2    pg_dump BAŞLAR                      node1 PG → node2 HDD write
 03:00   node1    cleanup_old_notifications           PG (hafif)
 03:00   node1    cleanup_old_stream_likes            PG (hafif)
@@ -1176,16 +1187,12 @@ SAAT    NODE     İŞ / OLAY                          KAYNAK
 03:20   node1    calculate_user_budgets              PG
 03:20   node1    compute_trust_scores                PG
 03:40   node2    clickhouse_backup BİTER (tahmini)
-03:40   node2    redis_backup BAŞLAR                 BGSAVE → node2 HDD write (~5dk)
+03:40   node2    redis_backup BAŞLAR                 BGSAVE → node2 HDD write (~60s polling)
 03:40   node1    compute_user_interests              CH read (node2 HDD)
 03:40   node1    compute_trending_categories         CH read + PG
-03:45   node2    minio_backup BİTER (tahmini)
 03:45   node2    redis_backup BİTER
-03:45   node2    mail_backup BAŞLAR                  Stalwart → node2 HDD write (~10dk)
 03:50   node1    compute_user_condition_preferences  PG + Redis
 03:55   node1    populate_foryou_feed (1. tur)       Redis only
-03:55   node2    mail_backup BİTER (tahmini)
-04:00   node2    minio_backup BAŞLAR                 node1 MinIO → node2 HDD sequential write
 04:00   node1    compute_trending_listings           CH read (node2 HDD)
 04:00   node1    process_churn_and_airdrop           CH read + PG + FCM
 04:10   node1    optimize_notification_timing        CH + Redis
@@ -1205,6 +1212,14 @@ SAAT    NODE     İŞ / OLAY                          KAYNAK
 05:00   node1    [Paz] cleanup_empty_message_threads PG
 05:10   node1    cleanup_old_media_messages          PG
 05:10   node1    cleanup_hidden_messages             PG
+── Backup penceresi II — nodeMonitor + mail (05:30-06:20) ───────────
+05:30   node2    minio_backup BAŞLAR                 node1 MinIO → node2 HDD (3x retry)
+05:30   node2    pg_wal_cleanup                      7g+ WAL sil
+06:00   node2    loki_backup                         nodeMonitor → node2 rsync
+06:05   node2    uptime_kuma_backup                  nodeMonitor → node2
+06:10   node2    nodemonitor_config_backup           nodeMonitor → node2
+06:15   node2    mail_backup BAŞLAR                  Stalwart → node2 HDD (~10dk)
+──────────────────────────────────────────────────────────────────────
 05:15   node1    [Pzt/Çar/Cum] train_bpr             PG + bellek (çok ağır, ~45 dk)
 05:15   node1    [Paz] cleanup_inactive_search_alerts PG
 05:15   node1    [Paz] train_swipe_live_als           PG + CH + bellek (çok ağır)
@@ -1259,7 +1274,7 @@ node3/4 (6 core / 11GB / SSD)
 |---|-------|------|
 | 1 | `teqlif-pg-receivewal.service` node2'de **AKTİF** ✓ | RPO ~1 dakika. Slot: `node2_receivewal`. WAL cleanup günlük 05:30 UTC. |
 | 2 | `teqlif-offsite-sync.timer` **disabled** | rclone hedef yapılandırılmamış. Timer ve script mevcut; hedef belirlendikten sonra aktive edilir. |
-| 3 | 04:00 minio_backup + CH okuma minor örtüşmesi | minio_backup (04:00–04:45) sequential write, network-bound; compute_trending_listings (04:00) CH read. Aynı HDD ama minio I/O WireGuard hızıyla sınırlı → minor. Kritik çakışmalar (CH backup+sync, mail+analytics) çözüldü. |
+| 3 | minio_backup 05:30 — örtüşme yok | minio_backup (05:30+) sequential write, network-bound; compute_trending_listings (04:00) CH read — aralarında 90 dk boşluk. Kritik çakışmalar (CH backup+sync, mail+analytics) çözüldü. |
 | 4 | Pazar training CPU spike | 06:00–07:00 UTC = 09:00–10:00 TR; Pazar sabahı commute başlamadan biter; Prom p99 izlenir |
 
 ---
@@ -1293,7 +1308,7 @@ recording → encoding → encoded → transferring → available → expired �
 1. `node2_confirmed_at IS NOT NULL` — node2 dosyayı gördüğünü onayladı
 2. `transferred_at < NOW() - INTERVAL '2 days'` — MinIO ILM (2 gün expiry) büyük olasılıkla tetiklendi
 
-**Başarısızlık modu:** node2 backup başarısız → `node2_confirmed_at` set edilmez → task bekler → node1 MinIO ILM tetiklenmez → dosya korunur → bir sonraki başarılı backup'ta onaylanır.
+**Başarısızlık modu:** node2 backup başarısız → `node2_confirmed_at` set edilmez → `archive_recordings_task` bekler. Ancak MinIO ILM PostgreSQL'den **bağımsız** çalışır; `node2_confirmed_at` durumu ne olursa olsun nesneyi 2 günde siler. Bu nedenle `minio_backup.sh`'ın başarısız olması kalıcı veri kaybına yol açar. Bkz. `documents/backup/V1.0/01_findings.md` — minio_backup retry zorunluluğu.
 
 #### MinIO ILM (node1)
 
