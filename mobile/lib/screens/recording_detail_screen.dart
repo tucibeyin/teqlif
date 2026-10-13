@@ -1710,10 +1710,7 @@ class _ReplayFeedState extends State<_ReplayFeed> {
                     controller: _scrollCtrl,
                     padding: const EdgeInsets.symmetric(vertical: 4),
                     itemCount: visible.length,
-                    itemBuilder: (ctx, i) => _ReplayRow(
-                      event: visible[i],
-                      context: ctx,
-                    ),
+                    itemBuilder: (_, i) => _ReplayRow(event: visible[i]),
                   ),
           ),
         ],
@@ -1724,9 +1721,8 @@ class _ReplayFeedState extends State<_ReplayFeed> {
 
 class _ReplayRow extends StatelessWidget {
   final ReplayEvent event;
-  final BuildContext context;
 
-  const _ReplayRow({required this.event, required this.context});
+  const _ReplayRow({required this.event});
 
   @override
   Widget build(BuildContext ctx) {

@@ -32,12 +32,15 @@ async def _dump_chat_to_db(stream: LiveStream, db: AsyncSession) -> None:
             except (json.JSONDecodeError, ValueError):
                 logger.warning("[Finalizer] stream_id=%s bozuk chat JSON atlandı", stream.id)
                 continue
+            content = (msg.get("content") or "").strip()
+            if not content:
+                continue
             rows.append({
                 "stream_id":  stream.id,
                 "user_id":    msg.get("user_id"),
                 "username":   msg.get("username", ""),
                 "avatar_url": msg.get("profile_image_url"),
-                "content":    msg.get("content", ""),
+                "content":    content,
                 "is_host":    msg.get("is_host", False),
                 "is_mod":     msg.get("is_mod", False),
                 "is_hidden":  msg.get("is_hidden", False),
