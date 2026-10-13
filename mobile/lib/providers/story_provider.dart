@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/network/api_client.dart';
@@ -29,12 +30,15 @@ class StoryGroupsNotifier
   @override
   Future<List<UserStoryGroup>> build() async {
     ref.onDispose(() => _disposed = true);
+    final link = ref.keepAlive();
+    final timer = Timer(const Duration(minutes: 5), link.close);
+    ref.onDispose(timer.cancel);
 
     List<UserStoryGroup>? last;
     await for (final groups in ref.read(apiServiceProvider).get<List<UserStoryGroup>>(
       url: _url,
       cacheKey: StorageService.cacheStories,
-      cacheTtl: const Duration(minutes: 2),
+      cacheTtl: const Duration(minutes: 5),
       fromJson: _parse,
     )) {
       last = groups;
@@ -49,7 +53,7 @@ class StoryGroupsNotifier
       await for (final groups in ref.read(apiServiceProvider).get<List<UserStoryGroup>>(
         url: _url,
         cacheKey: StorageService.cacheStories,
-        cacheTtl: const Duration(minutes: 2),
+        cacheTtl: const Duration(minutes: 5),
         bypassCache: true,
         fromJson: _parse,
       )) {
@@ -85,12 +89,15 @@ class MyStoriesNotifier extends AutoDisposeAsyncNotifier<List<StoryItem>> {
   @override
   Future<List<StoryItem>> build() async {
     ref.onDispose(() => _disposed = true);
+    final link = ref.keepAlive();
+    final timer = Timer(const Duration(minutes: 5), link.close);
+    ref.onDispose(timer.cancel);
 
     List<StoryItem>? last;
     await for (final items in ref.read(apiServiceProvider).get<List<StoryItem>>(
       url: _url,
       cacheKey: StorageService.cacheMyStories,
-      cacheTtl: const Duration(minutes: 2),
+      cacheTtl: const Duration(minutes: 5),
       fromJson: _parse,
     )) {
       last = items;
@@ -105,7 +112,7 @@ class MyStoriesNotifier extends AutoDisposeAsyncNotifier<List<StoryItem>> {
       await for (final items in ref.read(apiServiceProvider).get<List<StoryItem>>(
         url: _url,
         cacheKey: StorageService.cacheMyStories,
-        cacheTtl: const Duration(minutes: 2),
+        cacheTtl: const Duration(minutes: 5),
         bypassCache: true,
         fromJson: _parse,
       )) {

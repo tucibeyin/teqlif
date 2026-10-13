@@ -66,11 +66,12 @@ class ApiService {
 
     // ── 1. Cache okuma (senkron — await yok) ────────────────────────────────
     if (!bypassCache && cacheKey != null) {
-      final cached = CacheService.getData(cacheKey);
+      final cached = CacheService.getWithStaleness(cacheKey);
       if (cached != null) {
         try {
-          yield fromJson(cached);
+          yield fromJson(cached.data);
           cacheYielded = true;
+          if (!cached.isStale) return; // taze — ağ çağrısına gerek yok
         } catch (e) {
           debugPrint('[ApiService] Cache parse hatası ($cacheKey): $e');
         }

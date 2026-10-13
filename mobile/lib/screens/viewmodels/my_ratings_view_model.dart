@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:teqlif/core/network/api_client.dart';
+import '../../services/cache_service.dart';
 import '../../services/storage_service.dart';
 
 class MyRatingsState {
@@ -18,6 +19,15 @@ class MyRatingsState {
 class MyRatingsViewModel extends AutoDisposeAsyncNotifier<MyRatingsState> {
   @override
   FutureOr<MyRatingsState> build() async {
+    // SWR: cache varsa hemen göster
+    final cachedReceived = CacheService.getData(StorageService.cacheMyRatingsReceived);
+    final cachedGiven = CacheService.getData(StorageService.cacheMyRatingsGiven);
+    if (cachedReceived != null && cachedGiven != null) {
+      state = AsyncValue.data(MyRatingsState(
+        receivedRatings: cachedReceived as List,
+        givenRatings: cachedGiven as List,
+      ));
+    }
     _markAsRead(); // fire and forget
     return _fetchRatings();
   }
@@ -44,17 +54,23 @@ class MyRatingsViewModel extends AutoDisposeAsyncNotifier<MyRatingsState> {
     
     List<dynamic> received = [];
     List<dynamic> given = [];
-    
+
     if (futures[0].statusCode == 200) {
-      received = jsonDecode(futures[0].body);
+      received = jsonDecode(futures[0].body) as List;
+      await CacheService.saveData(StorageService.cacheMyRatingsReceived, received,
+          ttl: const Duration(minutes: 10));
     }
     if (futures[1].statusCode == 200) {
-      given = jsonDecode(futures[1].body);
+      given = jsonDecode(futures[1].body) as List;
+      await CacheService.saveData(StorageService.cacheMyRatingsGiven, given,
+          ttl: const Duration(minutes: 10));
     }
     return MyRatingsState(receivedRatings: received, givenRatings: given);
   }
 
   Future<void> reload() async {
+    await CacheService.clearData(StorageService.cacheMyRatingsReceived);
+    await CacheService.clearData(StorageService.cacheMyRatingsGiven);
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() => _fetchRatings());
   }

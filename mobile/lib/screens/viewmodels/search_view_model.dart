@@ -327,7 +327,7 @@ class SearchViewModel extends AutoDisposeAsyncNotifier<SearchState> {
   }) {
     final url = loggedIn ? '${ref.read(apiClientProvider).config.baseUrl}/feed/for-you?page=0' : '${ref.read(apiClientProvider).config.baseUrl}/listings';
     final cacheKey = loggedIn ? 'explore_for_you' : 'explore_listings';
-    final ttl = const Duration(minutes: 5);
+    final ttl = const Duration(minutes: 10);
 
     ref.read(apiServiceProvider).get<List<dynamic>>(
       url: url,
@@ -381,7 +381,7 @@ class SearchViewModel extends AutoDisposeAsyncNotifier<SearchState> {
     final cacheKey = isLoggedIn ? 'explore_personalized_feed' : 'explore_recent_feed';
     final ttl = isLoggedIn
         ? const Duration(minutes: 15) // Backend Redis affinity TTL ile senkron
-        : const Duration(minutes: 5);
+        : const Duration(minutes: 10);
 
     ref.read(apiServiceProvider).get<List<dynamic>>(
       url: url,

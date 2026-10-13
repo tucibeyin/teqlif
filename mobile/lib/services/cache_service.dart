@@ -47,6 +47,29 @@ class CacheService {
     }
   }
 
+  /// Kayıt varsa veriyi ve bayatlık durumunu birlikte döner.
+  ///
+  /// TTL dolmuş olsa bile veriyi döndürür; [isStale] ile işaretler.
+  /// Kayıt hiç yoksa `null` döner.
+  static ({dynamic data, bool isStale})? getWithStaleness(String key) {
+    final raw = _box.get(key);
+    if (raw == null) return null;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map &&
+          decoded.containsKey('_t') &&
+          decoded.containsKey('_d')) {
+        final savedAt = (decoded['_t'] as num).toInt();
+        final ttlMs = (decoded['_x'] as num?)?.toInt() ?? 300000;
+        final age = DateTime.now().millisecondsSinceEpoch - savedAt;
+        return (data: decoded['_d'], isStale: age > ttlMs);
+      }
+      return (data: decoded, isStale: false);
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// [data] (List veya Map) değerini [ttl] süreli TTL zarfıyla saklar.
   static Future<void> saveData(
     String key,

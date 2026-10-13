@@ -68,12 +68,13 @@ class HomeViewModel extends AutoDisposeAsyncNotifier<HomeState> {
   static const _kCacheKeyFeed = 'home_feed_recent';
   static const _kCacheKeyHesitated = 'feed_hesitated';
   static const _kCacheKeyVersion = 'home_cache_version';
+  static const _kCacheKeyTimestamp = 'home_cache_timestamp';
   static const _kCacheVersion = 2;
+  static const _kCacheTtlMs = 30 * 60 * 1000; // 30 dakika
 
   @override
   FutureOr<HomeState> build() async {
-    // SWR pattern: Load cache first, then API
-    _loadFromCache();
+    await _loadFromCache();
     await _fetchInitial();
     return state.value ?? const HomeState();
   }
@@ -87,6 +88,16 @@ class HomeViewModel extends AutoDisposeAsyncNotifier<HomeState> {
         await cacheBox.clear();
         await cacheBox.put(_kCacheKeyVersion, _kCacheVersion);
         return;
+      }
+
+      final savedAt = cacheBox.get(_kCacheKeyTimestamp) as int?;
+      if (savedAt != null) {
+        final age = DateTime.now().millisecondsSinceEpoch - savedAt;
+        if (age > _kCacheTtlMs) {
+          await cacheBox.clear();
+          await cacheBox.put(_kCacheKeyVersion, _kCacheVersion);
+          return;
+        }
       }
 
       final cachedFeed = cacheBox.get(_kCacheKeyFeed);
@@ -173,6 +184,7 @@ class HomeViewModel extends AutoDisposeAsyncNotifier<HomeState> {
       final cacheBox = await Hive.openBox('homeCache');
       cacheBox.put(_kCacheKeyFeed, resp.body);
       cacheBox.put(_kCacheKeyVersion, _kCacheVersion);
+      cacheBox.put(_kCacheKeyTimestamp, DateTime.now().millisecondsSinceEpoch);
 
       state = AsyncValue.data(state.value!.copyWith(
         recentListings: listings,

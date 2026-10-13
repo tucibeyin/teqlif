@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import '../../core/network/api_client.dart';
+import '../../services/cache_service.dart';
 import '../../services/storage_service.dart';
 import '../../services/notification_service.dart';
 import '../../models/listing_filter_state.dart';
@@ -81,8 +83,42 @@ class PublicProfileViewModel extends AutoDisposeFamilyAsyncNotifier<PublicProfil
     };
   }
 
+  String _profileKey(String username) => 'public_profile_$username';
+  String _listingsKey(String username) => 'public_listings_$username';
+  String _ratingsKey(String username) => 'public_ratings_$username';
+
   @override
   FutureOr<PublicProfileState> build(PublicProfileArgs arg) async {
+    // SWR: mevcut cache varsa hemen göster, arka planda taze veri çek
+    _emitCachedIfAvailable(arg);
+
+    try {
+      return await _fetchFresh(arg);
+    } catch (e, st) {
+      // Cache gösterilmişse ağ hatasını yut, kullanıcı bayat veriyi görmeye devam etsin
+      if (state.value != null) {
+        debugPrint('[PublicProfile] Ağ hatası — cache korunuyor: $e');
+        return state.value!;
+      }
+      Error.throwWithStackTrace(e, st);
+    }
+  }
+
+  void _emitCachedIfAvailable(PublicProfileArgs arg) {
+    final cachedUser = CacheService.getData(_profileKey(arg.username));
+    if (cachedUser == null) return;
+    final cachedListings = CacheService.getData(_listingsKey(arg.username));
+    final cachedRatings = CacheService.getData(_ratingsKey(arg.username));
+    state = AsyncValue.data(PublicProfileState(
+      user: Map<String, dynamic>.from(cachedUser as Map),
+      listings: (cachedListings as List?) ?? const [],
+      ratingSummary: cachedRatings != null
+          ? Map<String, dynamic>.from(cachedRatings as Map)
+          : null,
+    ));
+  }
+
+  Future<PublicProfileState> _fetchFresh(PublicProfileArgs arg) async {
     final data = await ref.read(notificationServiceProvider).getUserByUsername(arg.username);
     final info = await StorageService.getUserInfo();
     final isOwn = info != null && info['username'] == arg.username;
@@ -95,14 +131,19 @@ class PublicProfileViewModel extends AutoDisposeFamilyAsyncNotifier<PublicProfil
 
     if (data != null) {
       final userId = data['id'] as int;
+      final headers = await _authHeaders();
 
       try {
-        final headers = await _authHeaders();
         final resp = await http.get(
           Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/listings?user_id=$userId'),
           headers: headers,
         );
-        if (resp.statusCode == 200) listings = jsonDecode(resp.body) as List;
+        if (resp.statusCode == 200) {
+          final decoded = jsonDecode(resp.body) as List;
+          listings = decoded;
+          await CacheService.saveData(_listingsKey(arg.username), decoded,
+              ttl: const Duration(minutes: 10));
+        }
       } catch (_) {}
 
       if (!isOwn && info != null) {
@@ -112,15 +153,20 @@ class PublicProfileViewModel extends AutoDisposeFamilyAsyncNotifier<PublicProfil
       }
 
       try {
-        final headers = await _authHeaders();
         final resp = await http.get(
           Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/ratings/$userId/summary'),
           headers: headers,
         );
         if (resp.statusCode == 200) {
-          ratingSummary = jsonDecode(resp.body) as Map<String, dynamic>;
+          final decoded = jsonDecode(resp.body) as Map<String, dynamic>;
+          ratingSummary = decoded;
+          await CacheService.saveData(_ratingsKey(arg.username), decoded,
+              ttl: const Duration(minutes: 30));
         }
       } catch (_) {}
+
+      await CacheService.saveData(_profileKey(arg.username), data,
+          ttl: const Duration(minutes: 15));
     }
 
     return PublicProfileState(
@@ -145,7 +191,8 @@ class PublicProfileViewModel extends AutoDisposeFamilyAsyncNotifier<PublicProfil
     final current = state.value;
     if (current == null || current.user == null) return;
     final userId = current.user!['id'] as int;
-    
+    final username = current.user!['username'] as String? ?? arg.username;
+
     try {
       final headers = await _authHeaders();
       final resp = await http.get(
@@ -153,9 +200,10 @@ class PublicProfileViewModel extends AutoDisposeFamilyAsyncNotifier<PublicProfil
         headers: headers,
       );
       if (resp.statusCode == 200) {
-        state = AsyncValue.data(current.copyWith(
-          ratingSummary: jsonDecode(resp.body) as Map<String, dynamic>,
-        ));
+        final decoded = jsonDecode(resp.body) as Map<String, dynamic>;
+        state = AsyncValue.data(current.copyWith(ratingSummary: decoded));
+        await CacheService.saveData(_ratingsKey(username), decoded,
+            ttl: const Duration(minutes: 30));
       }
     } catch (_) {}
   }

@@ -40,6 +40,11 @@ class StorageService {
   static const cacheStreams       = 'cache_streams';
   static const cacheStories       = 'cache_stories';
   static const cacheMyStories     = 'cache_my_stories';
+  static const cacheSales                  = 'cache_sales';
+  static const cacheMyRatingsReceived      = 'cache_my_ratings_received';
+  static const cacheMyRatingsGiven         = 'cache_my_ratings_given';
+  static const cacheNotificationSettings   = 'cache_notification_settings';
+  static const cacheBlockedUsers           = 'cache_blocked_users';
 
   /// [data] (List veya Map) → TTL sarmalayıcısıyla JSON olarak sakla.
   /// [ttl]: varsayılan 5 dakika. Mesajlar için 2 dakika kullanılabilir.

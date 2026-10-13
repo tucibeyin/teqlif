@@ -19,6 +19,9 @@ class AccountInfoScreen extends ConsumerStatefulWidget {
 }
 
 class _AccountInfoScreenState extends ConsumerState<AccountInfoScreen> with WidgetsBindingObserver {
+  static const _kResumeDebounceDuration = Duration(minutes: 5);
+  DateTime? _lastReload;
+
   @override
   void initState() {
     super.initState();
@@ -37,7 +40,11 @@ class _AccountInfoScreenState extends ConsumerState<AccountInfoScreen> with Widg
   }
 
   // Lifecycle resume'da eski veri ekranda kalır; hata olursa snackbar, hata ekranı değil.
+  // 5 dakikadan kısa aralıkla tetiklenirse yoksayılır (debounce).
   Future<void> _silentReload() async {
+    final now = DateTime.now();
+    if (_lastReload != null && now.difference(_lastReload!) < _kResumeDebounceDuration) return;
+    _lastReload = now;
     try {
       await ref.read(accountInfoProvider.notifier).reload(silent: true);
     } catch (_) {

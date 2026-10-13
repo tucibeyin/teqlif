@@ -1,4 +1,5 @@
 import '../services/analytics_service.dart';
+import '../services/category_service.dart';
 import '../services/storage_service.dart';
 import 'direct_sale_detail_screen.dart';
 import 'pro_hub_screen.dart';
@@ -76,6 +77,7 @@ class _MainScreenState extends ConsumerState<MainScreen> with WidgetsBindingObse
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       ref.read(mainViewModelProvider.notifier).handleLifecycleResumed();
+      CategoryService.clearCache(); // arka plandan dönüşte kategori cache'i yenile
       // App arka plandan döndü: aktif sekmenin TTL'i dolmuşsa SWR ile yenile
       _maybeRefreshCurrentTab();
     } else if (state == AppLifecycleState.paused ||

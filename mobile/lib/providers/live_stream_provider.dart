@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/network/api_client.dart';
@@ -26,6 +27,9 @@ class FollowedStreamsNotifier
   @override
   Future<List<StreamOut>> build() async {
     ref.onDispose(() => _disposed = true);
+    final link = ref.keepAlive();
+    final timer = Timer(const Duration(minutes: 3), link.close);
+    ref.onDispose(timer.cancel);
 
     List<StreamOut>? last;
     await for (final batch in ref.read(apiServiceProvider).get<List<StreamOut>>(

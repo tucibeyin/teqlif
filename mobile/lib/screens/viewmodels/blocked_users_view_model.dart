@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import '../../core/network/api_client.dart';
+import '../../services/cache_service.dart';
 import '../../services/storage_service.dart';
 
 class BlockedUsersState {
@@ -18,13 +19,23 @@ class BlockedUsersViewModel extends AutoDisposeAsyncNotifier<BlockedUsersState> 
 
   @override
   FutureOr<BlockedUsersState> build() async {
+    // SWR: cache varsa hemen göster
+    final cached = CacheService.getData(StorageService.cacheBlockedUsers);
+    if (cached != null) {
+      state = AsyncValue.data(BlockedUsersState(blockedUsers: cached as List));
+    }
+
     final resp = await http.get(
       Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/users/blocked'),
       headers: await _headers(),
     );
     if (resp.statusCode == 200) {
-      return BlockedUsersState(blockedUsers: jsonDecode(resp.body) as List);
+      final users = jsonDecode(resp.body) as List;
+      await CacheService.saveData(StorageService.cacheBlockedUsers, users,
+          ttl: const Duration(minutes: 10));
+      return BlockedUsersState(blockedUsers: users);
     } else {
+      if (cached != null) return state.value!;
       throw Exception('Failed to load blocked users');
     }
   }
@@ -40,6 +51,8 @@ class BlockedUsersViewModel extends AutoDisposeAsyncNotifier<BlockedUsersState> 
         if (current != null) {
           final updated = List.from(current.blockedUsers)..removeWhere((u) => u['id'] == userId);
           state = AsyncValue.data(BlockedUsersState(blockedUsers: updated));
+          await CacheService.saveData(StorageService.cacheBlockedUsers, updated,
+              ttl: const Duration(minutes: 10));
         }
       } else {
         throw Exception('Failed to unblock');

@@ -172,7 +172,7 @@ class ProfileViewModel extends AutoDisposeAsyncNotifier<ProfileUiState> {
     _profileSub = ref.read(apiServiceProvider).get<Map<String, dynamic>>(
       url: '${ref.read(apiClientProvider).config.baseUrl}/users/$username',
       cacheKey: StorageService.cacheProfile,
-      cacheTtl: const Duration(minutes: 10),
+      cacheTtl: const Duration(minutes: 15),
       bypassCache: bypassCache,
       fromJson: (raw) => Map<String, dynamic>.from(raw as Map),
     ).listen(
@@ -215,7 +215,7 @@ class ProfileViewModel extends AutoDisposeAsyncNotifier<ProfileUiState> {
     _listingsSub = ref.read(apiServiceProvider).get<List<dynamic>>(
       url: '${ref.read(apiClientProvider).config.baseUrl}/listings/my?limit=1000',
       cacheKey: StorageService.cacheUserListings,
-      cacheTtl: const Duration(minutes: 5),
+      cacheTtl: const Duration(minutes: 10),
       bypassCache: bypassCache,
       fromJson: (raw) => raw as List,
     ).listen(

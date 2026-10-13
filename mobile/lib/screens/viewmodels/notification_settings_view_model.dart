@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:teqlif/core/network/api_client.dart';
+import '../../services/cache_service.dart';
 import '../../services/storage_service.dart';
 
 class NotificationSettingsState {
@@ -68,37 +69,46 @@ class NotificationSettingsViewModel extends AutoDisposeAsyncNotifier<Notificatio
   String _formatTime(TimeOfDay t) =>
       '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 
+  NotificationSettingsState _parseData(Map<String, dynamic> data) {
+    final initialPrefs = const NotificationSettingsState().prefs;
+    final newPrefs = Map<String, bool>.from(initialPrefs);
+    for (final k in newPrefs.keys) {
+      newPrefs[k] = data[k] as bool? ?? true;
+    }
+    return NotificationSettingsState(
+      prefs: newPrefs,
+      bidThreshold: (data['bid_threshold_tl'] as int?) ?? 0,
+      quietEnabled: (data['quiet_hours_enabled'] as bool?) ?? false,
+      quietFrom: _parseTime(data['quiet_from'] as String? ?? '22:00'),
+      quietTo: _parseTime(data['quiet_to'] as String? ?? '08:00'),
+      receiveBlastNotifications: (data['receive_blast_notifications'] as bool?) ?? true,
+      analyticsOptOut: (data['analytics_opt_out'] as bool?) ?? false,
+    );
+  }
+
   @override
   FutureOr<NotificationSettingsState> build() async {
-    final token = await StorageService.getToken();
-    if (token == null) {
-      throw Exception('Unauthenticated');
+    // SWR: cache varsa hemen göster
+    final cached = CacheService.getData(StorageService.cacheNotificationSettings);
+    if (cached != null) {
+      state = AsyncValue.data(_parseData(Map<String, dynamic>.from(cached as Map)));
     }
-    
+
+    final token = await StorageService.getToken();
+    if (token == null) throw Exception('Unauthenticated');
+
     final resp = await http.get(
       Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/auth/notification-prefs'),
       headers: {'Authorization': 'Bearer $token'},
     );
-    
+
     if (resp.statusCode == 200) {
       final data = jsonDecode(resp.body) as Map<String, dynamic>;
-      final initialPrefs = const NotificationSettingsState().prefs;
-      final newPrefs = Map<String, bool>.from(initialPrefs);
-      
-      for (final k in newPrefs.keys) {
-        newPrefs[k] = data[k] as bool? ?? true;
-      }
-      
-      return NotificationSettingsState(
-        prefs: newPrefs,
-        bidThreshold: (data['bid_threshold_tl'] as int?) ?? 0,
-        quietEnabled: (data['quiet_hours_enabled'] as bool?) ?? false,
-        quietFrom: _parseTime(data['quiet_from'] as String? ?? '22:00'),
-        quietTo: _parseTime(data['quiet_to'] as String? ?? '08:00'),
-        receiveBlastNotifications: (data['receive_blast_notifications'] as bool?) ?? true,
-        analyticsOptOut: (data['analytics_opt_out'] as bool?) ?? false,
-      );
+      await CacheService.saveData(StorageService.cacheNotificationSettings, data,
+          ttl: const Duration(minutes: 30));
+      return _parseData(data);
     } else {
+      if (cached != null) return state.value!;
       throw Exception('Failed to load preferences');
     }
   }
@@ -125,6 +135,8 @@ class NotificationSettingsViewModel extends AutoDisposeAsyncNotifier<Notificatio
         },
         body: jsonEncode(_buildPayload(newState)),
       );
+      // Ayar değişti — cache'i temizle ki sonraki build() taze veri çeksin
+      await CacheService.clearData(StorageService.cacheNotificationSettings);
     } catch (_) {}
   }
 
