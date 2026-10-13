@@ -17,7 +17,8 @@ install -d "${BACKUP_DIR}"
 exec >> "${LOGFILE}" 2>&1
 echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) mail_backup: start"
 
-# RocksDB tutarlı snapshot için servisi durdur
+# RocksDB tutarlı snapshot için servisi durdur — trap: tar başarısız olsa bile servis yeniden başlar
+trap 'sudo systemctl start stalwart-mail' EXIT
 sudo systemctl stop stalwart-mail
 
 tar -czf "${DEST}" \

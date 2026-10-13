@@ -1,6 +1,7 @@
 [Unit]
 Description=teqlif Stalwart Mail Backup (node2 local)
 After=network.target stalwart-mail.service
+OnFailure=teqlif-backup-failed@%n.service
 
 [Service]
 Type=oneshot

@@ -2,6 +2,7 @@
 Description=teqlif PostgreSQL Base Backup (node1 → node2, haftalık)
 After=network.target wg-quick@wg0.service
 Wants=wg-quick@wg0.service
+OnFailure=teqlif-backup-failed@%n.service
 
 [Service]
 Type=oneshot
