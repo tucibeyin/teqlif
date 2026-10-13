@@ -194,14 +194,16 @@ Hepsi node2 backup script'leri, systemd unit dosyaları ve teqlif-agent modülle
 3. ✅ `notify_backup_failed.sh` + `teqlif-backup-failed@.service` oluşturuldu. Tüm 9 backup servisine `OnFailure=teqlif-backup-failed@%n.service` eklendi. `.env.backup`'a `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` eklendi (node2 sunucusunda).
 4. ✅ `teqlif-clickhouse-backup.service/.timer` `node2/resources/systemd/` → `node2/systemd/` taşındı. `WantedBy=multi-user.target` → `timers.target`. Timer aktif.
 
-**P1 — Güvenilirlik artışı:**
+**P1 — Güvenilirlik artışı:** ✅ 2026-10-13
 
-5. `pg_dump.sh`: `${DEST}.tmp`'ye yaz → `pg_restore --list` ile doğrula → `mv` ile taşı.
-6. `minio_backup.sh`: 3x retry döngüsü, 2 dakika backoff (WireGuard ağ dalgalanmalarına karşı).
-7. `health.py`: `_backup_ages()` içine `clickhouse_backup` ve `pg_basebackup` dizinlerini ekle.
+5. ✅ `pg_dump.sh`: dump `${DEST}.tmp`'ye yazılır, `pg_restore --list` doğrulaması geçerse `mv` ile yerleştirilir.
+6. ✅ `minio_backup.sh`: `mirror_bucket_with_retry()` — 3x retry, 2 dk backoff. WireGuard geçici kopukluğu job'ı öldürmez.
+7. ✅ `health.py`: `_BACKUP_MAX_MIN`, `_backup_ages`, `blabel`'e `clickhouse_backup` (25h) ve `pg_basebackup` (7 gün) eklendi. Katman B kör noktaları kapatıldı. node2'de teqlif-agent restart yapıldı.
 
-**P2 — Süreç iyileştirmeleri:**
+**P2 — Süreç iyileştirmeleri:** ✅ 2026-10-13
 
-8. `redis_backup.sh`: `sleep 5` yerine `rdb_bgsave_in_progress` döngüsü (timeout ile).
-9. `schedule.yaml`: `minio_backup` 04:00 → 05:30, `mail_backup` 03:45 → 06:15 olarak düzelt.
-10. `teqlif-pg-basebackup.timer` Description satırı: "Pazar 02:00 UTC" → "Pazar 08:30 UTC" (kalıntı düzeltme).
+8. ✅ `redis_backup.sh`: `sleep 5` → `rdb_bgsave_in_progress` polling döngüsü (maks 60 saniye).
+9. ✅ `schedule.yaml`: `minio_backup` 04:00→05:30, `mail_backup` 03:45→06:15 — timer gerçeğiyle eşleştirildi.
+10. ✅ `teqlif-pg-basebackup.timer` Description: "02:00 UTC"→"08:30 UTC" kalıntı düzeltildi.
+
+**Deploy:** node2 git pull ✓ · teqlif-agent restart ✓ · node1 git pull + teqlif-restart ✓ · tüm backup job log'ları OK ✓

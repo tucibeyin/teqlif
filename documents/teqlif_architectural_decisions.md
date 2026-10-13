@@ -1662,3 +1662,30 @@ View'da yalnızca gerçek UI state kaldı: `_wasBackgrounded`, thumbnail timer, 
 | `mobile/lib/screens/live/viewmodels/host_stream_view_model.dart` | `ChangeNotifier` tam yeniden yazım; 3-retry + exponential backoff |
 | `mobile/lib/widgets/direct_sale_panel.dart` | 2-adım satın alma onayı ("Onayla" dialog) + analytics event |
 
+---
+
+## 21. Backup Sistemi Sertleştirmesi (P0/P1/P2)
+
+**Commit:** `3e6fff2d` (P0), `69d558db` (P1/P2)  
+**Tarih:** 2026-10-13  
+**Analiz:** `documents/backup/V1.0/01_findings.md`
+
+### Sorunlar ve Düzeltmeler
+
+| Öncelik | Bileşen | Sorun | Düzeltme |
+|---|---|---|---|
+| P0 | `mail_backup.sh` | `trap` yok — `tar` başarısız olunca mail servisi kapalı kalır | `trap 'sudo systemctl start stalwart-mail' EXIT` |
+| P0 | `clickhouse_backup.sh` | `cmd \|\| cmd \|\| subshell` zinciri her durumda exit 0 — watchdog yanlış pozitif | `if/elif/else` yapısı; fallback `exit 2` ile çıkar, HSET önceden yazılır |
+| P0 | Tüm 9 backup servisi | `OnFailure=` yok — hata ~25 saate kadar sessiz kalır | `teqlif-backup-failed@.service` template + Telegram notification |
+| P0 | `teqlif-clickhouse-backup.*` | `resources/systemd/` altında (yanlış dizin), `WantedBy=multi-user.target` | `node2/systemd/` taşındı, `WantedBy=timers.target` |
+| P1 | `pg_dump.sh` | Dump doğrudan `$DEST`'e — yarım dump geçerli backup gibi görünür | `${DEST}.tmp` → `pg_restore --list` → `mv` |
+| P1 | `minio_backup.sh` | Retry yok — WireGuard kopukluğu job'ı öldürür | 3x retry, 120s backoff |
+| P1 | `health.py` | `clickhouse_backup` ve `pg_basebackup` Katman B'de izlenmiyor | `_BACKUP_MAX_MIN` + `_backup_ages` + `blabel` güncellendi |
+| P2 | `redis_backup.sh` | `sleep 5` — yoğun I/O'da eski RDB kopyalanabilir | `rdb_bgsave_in_progress` polling (maks 60s) |
+| P2 | `schedule.yaml` | `mail_backup` 03:45, `minio_backup` 04:00 — timer gerçeğiyle uyuşmuyor | 06:15 ve 05:30 olarak güncellendi |
+| P2 | `teqlif-pg-basebackup.timer` | Description "02:00 UTC" kalıntısı | "08:30 UTC" düzeltildi |
+
+### Bildirim Mimarisi
+
+`teqlif-backup-failed@.service`: systemd `OnFailure=` tetiklenince `notify_backup_failed.sh` çalışır. Script `.env.backup`'tan `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` okur, journalctl son 5 satırıyla Telegram mesajı gönderir. Watchdog (Katman A) + filesystem yaşı (Katman B) + anlık OnFailure bildirim (Katman C) — 3 bağımsız izleme katmanı.
+
