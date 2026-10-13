@@ -31,21 +31,10 @@ import time
 import av
 from livekit import rtc
 
-class _SuppressLivekitCleanup(logging.Filter):
-    """livekit-rtc Rust/Python sınırındaki race condition mesajlarını filtreler.
-
-    room.disconnect() sonrası Rust thread'leri asyncio queue'ya yazmaya
-    çalışır; event loop kapanınca bu harmless mesajlar üretilir.
-    """
-    def filter(self, record: logging.LogRecord) -> bool:
-        return "error putting to queue" not in record.getMessage()
-
-
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [livekit-subscriber] %(levelname)s %(message)s",
 )
-logging.getLogger().addFilter(_SuppressLivekitCleanup())
 logger = logging.getLogger("livekit-subscriber")
 
 _MAX_DURATION_S    = 7200  # 2 saat güvenlik sınırı
@@ -205,8 +194,11 @@ class MKVWriter:
 
 async def _run(
     room_name: str, ws_url: str, api_key: str, api_secret: str,
-    output: Path, stop_evt: asyncio.Event,
+    output: Path,
+    stop_evt: asyncio.Event | None = None,
 ) -> None:
+    if stop_evt is None:
+        stop_evt = asyncio.Event()
     token    = _make_token(room_name, api_key, api_secret)
     writer   = MKVWriter(output)
     room     = rtc.Room()
@@ -374,7 +366,7 @@ async def _run(
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
-def main() -> None:
+async def _main_async() -> None:
     parser = argparse.ArgumentParser(description="LiveKit room kaydedici (livekit-rtc)")
     parser.add_argument("--room",       required=True)
     parser.add_argument("--ws-url",     required=True)
@@ -394,30 +386,35 @@ def main() -> None:
     fh.setLevel(logging.DEBUG)
     logging.getLogger().addHandler(fh)
 
-    loop     = asyncio.new_event_loop()
     stop_evt = asyncio.Event()
+    loop     = asyncio.get_running_loop()
 
-    def _on_signal(*_):
+    def _on_signal() -> None:
         logger.info("Sinyal alındı, durduruluyor")
-        loop.call_soon_threadsafe(stop_evt.set)
+        stop_evt.set()
 
-    signal.signal(signal.SIGTERM, _on_signal)
-    signal.signal(signal.SIGINT,  _on_signal)
+    for sig in (signal.SIGTERM, signal.SIGINT):
+        loop.add_signal_handler(sig, _on_signal)
 
     try:
-        loop.run_until_complete(_run(
+        await _run(
             room_name  = args.room,
             ws_url     = args.ws_url,
             api_key    = args.api_key,
             api_secret = args.api_secret,
             output     = output,
             stop_evt   = stop_evt,
-        ))
+        )
     except Exception as exc:
         logger.error("Hata: %s", exc)
         sys.exit(1)
     finally:
-        loop.close()
+        for sig in (signal.SIGTERM, signal.SIGINT):
+            loop.remove_signal_handler(sig)
+
+
+def main() -> None:
+    asyncio.run(_main_async())
 
 
 if __name__ == "__main__":
