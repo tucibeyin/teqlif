@@ -4577,5 +4577,14 @@
   "giftSenderCount": "{count} gönderici",
   "detailBidsSectionTitle": "Teklifler",
   "detailPurchasesSectionTitle": "Satın Almalar",
-  "detailUserSearchHint": "Kullanıcı ara..."
+  "detailUserSearchHint": "Kullanıcı ara...",
+  "replayFeedTitle": "Anlık Akış",
+  "replayEventBid": "Teklif",
+  "replayEventGift": "Hediye",
+  "replayEventPurchase": "Satın Alma",
+  "replayEventChat": "Chat",
+  "replayNoEventsYet": "Henüz etkinlik yok",
+  "replayBidRow": "{username} ₺{amount} teklif verdi",
+  "replayGiftRow": "{username} {giftName} gönderdi",
+  "replayPurchaseRow": "{username} {itemTitle} × {quantity}"
 }

@@ -8,6 +8,7 @@ import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../core/error_mapper.dart';
 import '../models/recording.dart';
+import '../models/replay_event.dart';
 import '../services/category_service.dart';
 import '../services/localization_service.dart';
 import 'public_profile_screen.dart';
@@ -30,24 +31,36 @@ class _RecordingDetailScreenState
   bool _playerInitialized = false;
   String? _currentUrl;
   bool _recovering = false;
+  double _replayPosSecs = 0.0;
 
   @override
   void dispose() {
+    _vpCtrl?.removeListener(_onPlayerTick);
     _chewieCtrl?.dispose();
     _vpCtrl?.dispose();
     super.dispose();
+  }
+
+  void _onPlayerTick() {
+    if (!mounted || _vpCtrl == null) return;
+    final pos = _vpCtrl!.value.position.inSeconds.toDouble();
+    if ((pos - _replayPosSecs).abs() >= 1.0) {
+      setState(() => _replayPosSecs = pos);
+    }
   }
 
   void _initPlayer(String url) {
     if (_currentUrl == url) return;
     _currentUrl = url;
     _recovering = false;
+    _vpCtrl?.removeListener(_onPlayerTick);
     _chewieCtrl?.dispose();
     _vpCtrl?.dispose();
     setState(() => _playerInitialized = false);
     _vpCtrl = VideoPlayerController.networkUrl(Uri.parse(url));
     _vpCtrl!.initialize().then((_) {
       if (!mounted) return;
+      _vpCtrl!.addListener(_onPlayerTick);
       _chewieCtrl = ChewieController(
         videoPlayerController: _vpCtrl!,
         autoPlay: false,
@@ -146,6 +159,14 @@ class _RecordingDetailScreenState
             ),
 
           const SizedBox(height: 16),
+
+          // ── Replay feed ───────────────────────────────────────────────
+          if (s.replayEnabled)
+            _ReplayFeed(
+              timeline: s.timeline,
+              posSecs: _replayPosSecs,
+              loc: loc,
+            ),
 
           // ── Summary section ───────────────────────────────────────────
           if (s.summaryLoading)
@@ -1556,6 +1577,191 @@ class _GiftEventRow extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── Replay feed ───────────────────────────────────────────────────────────────
+
+int _upperBound(List<ReplayEvent> timeline, double pos) {
+  int lo = 0, hi = timeline.length;
+  while (lo < hi) {
+    final mid = (lo + hi) ~/ 2;
+    timeline[mid].offsetSecs <= pos ? lo = mid + 1 : hi = mid;
+  }
+  return lo;
+}
+
+String _formatOffset(double secs) {
+  final total = secs.toInt();
+  final m = total ~/ 60;
+  final s = total % 60;
+  return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+}
+
+class _ReplayFeed extends StatefulWidget {
+  final List<ReplayEvent> timeline;
+  final double posSecs;
+  final TranslationPack loc;
+
+  const _ReplayFeed({
+    required this.timeline,
+    required this.posSecs,
+    required this.loc,
+  });
+
+  @override
+  State<_ReplayFeed> createState() => _ReplayFeedState();
+}
+
+class _ReplayFeedState extends State<_ReplayFeed> {
+  final _scrollCtrl = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(_ReplayFeed old) {
+    super.didUpdateWidget(old);
+    if (widget.posSecs != old.posSecs) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottomIfNeeded());
+    }
+  }
+
+  void _scrollToBottomIfNeeded() {
+    if (!_scrollCtrl.hasClients) return;
+    final isAtBottom =
+        _scrollCtrl.offset >= _scrollCtrl.position.maxScrollExtent - 40;
+    if (isAtBottom) {
+      _scrollCtrl.animateTo(
+        _scrollCtrl.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final end = _upperBound(widget.timeline, widget.posSecs);
+    final visible = widget.timeline.sublist(0, end);
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      decoration: BoxDecoration(
+        color: AppColors.card(context),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.border(context)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+            child: Row(
+              children: [
+                Text(
+                  widget.loc.t('replayFeedTitle'),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary(context),
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  width: 7,
+                  height: 7,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF22C55E),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  widget.loc.t('replayEventChat'),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppColors.textTertiary(context),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Divider(height: 1, color: AppColors.border(context)),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 220),
+            child: visible.isEmpty
+                ? Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Text(
+                      widget.loc.t('replayNoEventsYet'),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textTertiary(context),
+                      ),
+                    ),
+                  )
+                : ListView.builder(
+                    controller: _scrollCtrl,
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    itemCount: visible.length,
+                    itemBuilder: (ctx, i) => _ReplayRow(
+                      event: visible[i],
+                      context: ctx,
+                    ),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReplayRow extends StatelessWidget {
+  final ReplayEvent event;
+  final BuildContext context;
+
+  const _ReplayRow({required this.event, required this.context});
+
+  @override
+  Widget build(BuildContext ctx) {
+    final (icon, color) = switch (event.type) {
+      ReplayEventType.bid      => (Icons.gavel,                   AppColors.replayBid(ctx)),
+      ReplayEventType.gift     => (Icons.card_giftcard,           AppColors.replayGift(ctx)),
+      ReplayEventType.purchase => (Icons.shopping_bag_outlined,   AppColors.replayPurchase(ctx)),
+      ReplayEventType.chat     => (Icons.chat_bubble_outline,     AppColors.textSecondary(ctx)),
+    };
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            _formatOffset(event.offsetSecs),
+            style: TextStyle(
+              fontSize: 11,
+              color: AppColors.textTertiary(ctx),
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+          const SizedBox(width: 6),
+          Icon(icon, size: 13, color: color),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              event.label,
+              style: TextStyle(fontSize: 12, color: AppColors.textPrimary(ctx)),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
       ),
     );
   }

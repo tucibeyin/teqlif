@@ -4577,5 +4577,14 @@
   "giftSenderCount": "{count} отправителей",
   "detailBidsSectionTitle": "Ставки",
   "detailPurchasesSectionTitle": "Покупки",
-  "detailUserSearchHint": "Поиск пользователя..."
+  "detailUserSearchHint": "Поиск пользователя...",
+  "replayFeedTitle": "Прямой эфир",
+  "replayEventBid": "Ставка",
+  "replayEventGift": "Подарок",
+  "replayEventPurchase": "Покупка",
+  "replayEventChat": "Чат",
+  "replayNoEventsYet": "Событий пока нет",
+  "replayBidRow": "{username} ставка ₺{amount}",
+  "replayGiftRow": "{username} отправил {giftName}",
+  "replayPurchaseRow": "{username} купил {quantity}× {itemTitle}"
 }

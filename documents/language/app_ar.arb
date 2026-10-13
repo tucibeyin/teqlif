@@ -4577,5 +4577,14 @@
   "giftSenderCount": "{count} مرسل",
   "detailBidsSectionTitle": "العروض",
   "detailPurchasesSectionTitle": "المشتريات",
-  "detailUserSearchHint": "بحث عن مستخدم..."
+  "detailUserSearchHint": "بحث عن مستخدم...",
+  "replayFeedTitle": "البث المباشر",
+  "replayEventBid": "مزايدة",
+  "replayEventGift": "هدية",
+  "replayEventPurchase": "شراء",
+  "replayEventChat": "دردشة",
+  "replayNoEventsYet": "لا أحداث حتى الآن",
+  "replayBidRow": "{username} عرض ₺{amount}",
+  "replayGiftRow": "{username} أرسل {giftName}",
+  "replayPurchaseRow": "{username} اشترى {itemTitle} × {quantity}"
 }

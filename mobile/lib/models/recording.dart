@@ -123,6 +123,7 @@ class RecordingDetail {
   final List<RecordingAuction> auctions;
   final List<RecordingDirectSale> directSales;
   final RecordingGifts gifts;
+  final List<RecordingChatMessage> chatMessages;
   final DateTime? recordingExpiresAt;
 
   const RecordingDetail({
@@ -131,6 +132,7 @@ class RecordingDetail {
     required this.auctions,
     required this.directSales,
     required this.gifts,
+    this.chatMessages = const [],
     this.recordingExpiresAt,
   });
 
@@ -146,6 +148,10 @@ class RecordingDetail {
             .map(RecordingDirectSale.fromJson)
             .toList(),
         gifts: RecordingGifts.fromJson(j['gifts'] as Map<String, dynamic>? ?? {}),
+        chatMessages: (j['chat_messages'] as List? ?? [])
+            .cast<Map<String, dynamic>>()
+            .map(RecordingChatMessage.fromJson)
+            .toList(),
         recordingExpiresAt: _dt(j['recording_expires_at']),
       );
 
@@ -155,6 +161,7 @@ class RecordingDetail {
         'auctions': auctions.map((e) => e.toJson()).toList(),
         'direct_sales': directSales.map((e) => e.toJson()).toList(),
         'gifts': gifts.toJson(),
+        'chat_messages': chatMessages.map((e) => e.toJson()).toList(),
         'recording_expires_at': recordingExpiresAt?.toIso8601String(),
       };
 }
@@ -168,6 +175,7 @@ class RecordingStreamMeta {
   final DateTime? endedAt;
   final int? peakViewerCount;
   final String? thumbnailUrl;
+  final DateTime? recordingStartedAt;
 
   const RecordingStreamMeta({
     required this.id,
@@ -178,6 +186,7 @@ class RecordingStreamMeta {
     this.endedAt,
     this.peakViewerCount,
     this.thumbnailUrl,
+    this.recordingStartedAt,
   });
 
   factory RecordingStreamMeta.fromJson(Map<String, dynamic> j) =>
@@ -190,6 +199,7 @@ class RecordingStreamMeta {
         endedAt: _dt(j['ended_at']),
         peakViewerCount: j['peak_viewer_count'] as int?,
         thumbnailUrl: j['thumbnail_url'] as String?,
+        recordingStartedAt: _dt(j['recording_started_at']),
       );
 
   Map<String, dynamic> toJson() => {
@@ -201,6 +211,7 @@ class RecordingStreamMeta {
         'ended_at': endedAt?.toIso8601String(),
         'peak_viewer_count': peakViewerCount,
         'thumbnail_url': thumbnailUrl,
+        'recording_started_at': recordingStartedAt?.toIso8601String(),
       };
 }
 
@@ -259,6 +270,7 @@ class RecordingBid {
   final String? avatarUrl;
   final double amount;
   final DateTime? createdAt;
+  final double? offsetSecs;
 
   const RecordingBid({
     required this.userId,
@@ -266,6 +278,7 @@ class RecordingBid {
     this.avatarUrl,
     required this.amount,
     this.createdAt,
+    this.offsetSecs,
   });
 
   factory RecordingBid.fromJson(Map<String, dynamic> j) => RecordingBid(
@@ -274,6 +287,7 @@ class RecordingBid {
         avatarUrl: j['avatar_url'] as String?,
         amount: (j['amount'] as num).toDouble(),
         createdAt: _dt(j['created_at']),
+        offsetSecs: (j['offset_secs'] as num?)?.toDouble(),
       );
 
   Map<String, dynamic> toJson() => {
@@ -282,6 +296,7 @@ class RecordingBid {
         'avatar_url': avatarUrl,
         'amount': amount,
         'created_at': createdAt?.toIso8601String(),
+        'offset_secs': offsetSecs,
       };
 }
 
@@ -357,6 +372,7 @@ class RecordingOrder {
   final int quantity;
   final double unitPrice;
   final DateTime? createdAt;
+  final double? offsetSecs;
 
   const RecordingOrder({
     required this.userId,
@@ -365,6 +381,7 @@ class RecordingOrder {
     required this.quantity,
     required this.unitPrice,
     this.createdAt,
+    this.offsetSecs,
   });
 
   factory RecordingOrder.fromJson(Map<String, dynamic> j) => RecordingOrder(
@@ -374,6 +391,7 @@ class RecordingOrder {
         quantity: j['quantity'] as int,
         unitPrice: (j['unit_price'] as num).toDouble(),
         createdAt: _dt(j['created_at']),
+        offsetSecs: (j['offset_secs'] as num?)?.toDouble(),
       );
 
   Map<String, dynamic> toJson() => {
@@ -383,6 +401,7 @@ class RecordingOrder {
         'quantity': quantity,
         'unit_price': unitPrice,
         'created_at': createdAt?.toIso8601String(),
+        'offset_secs': offsetSecs,
       };
 }
 
@@ -449,6 +468,7 @@ class RecordingGiftEvent {
   final String giftName;
   final int costTeqlik;
   final DateTime? sentAt;
+  final double? offsetSecs;
 
   const RecordingGiftEvent({
     required this.userId,
@@ -457,6 +477,7 @@ class RecordingGiftEvent {
     required this.giftName,
     required this.costTeqlik,
     this.sentAt,
+    this.offsetSecs,
   });
 
   factory RecordingGiftEvent.fromJson(Map<String, dynamic> j) =>
@@ -467,6 +488,7 @@ class RecordingGiftEvent {
         giftName: j['gift_name'] as String? ?? '',
         costTeqlik: j['cost_teqlik'] as int? ?? 0,
         sentAt: _dt(j['sent_at']),
+        offsetSecs: (j['offset_secs'] as num?)?.toDouble(),
       );
 
   Map<String, dynamic> toJson() => {
@@ -476,6 +498,52 @@ class RecordingGiftEvent {
         'gift_name': giftName,
         'cost_teqlik': costTeqlik,
         'sent_at': sentAt?.toIso8601String(),
+        'offset_secs': offsetSecs,
+      };
+}
+
+class RecordingChatMessage {
+  final int? userId;
+  final String username;
+  final String? avatarUrl;
+  final String content;
+  final bool isHost;
+  final bool isMod;
+  final DateTime? createdAt;
+  final double? offsetSecs;
+
+  const RecordingChatMessage({
+    this.userId,
+    required this.username,
+    this.avatarUrl,
+    required this.content,
+    required this.isHost,
+    required this.isMod,
+    this.createdAt,
+    this.offsetSecs,
+  });
+
+  factory RecordingChatMessage.fromJson(Map<String, dynamic> j) =>
+      RecordingChatMessage(
+        userId: j['user_id'] as int?,
+        username: j['username'] as String? ?? '',
+        avatarUrl: j['avatar_url'] as String?,
+        content: j['content'] as String? ?? '',
+        isHost: j['is_host'] as bool? ?? false,
+        isMod: j['is_mod'] as bool? ?? false,
+        createdAt: _dt(j['created_at']),
+        offsetSecs: (j['offset_secs'] as num?)?.toDouble(),
+      );
+
+  Map<String, dynamic> toJson() => {
+        'user_id': userId,
+        'username': username,
+        'avatar_url': avatarUrl,
+        'content': content,
+        'is_host': isHost,
+        'is_mod': isMod,
+        'created_at': createdAt?.toIso8601String(),
+        'offset_secs': offsetSecs,
       };
 }
 

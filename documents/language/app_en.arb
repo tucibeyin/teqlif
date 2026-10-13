@@ -4613,5 +4613,14 @@
   "giftSenderCount": "{count} senders",
   "detailBidsSectionTitle": "Bids",
   "detailPurchasesSectionTitle": "Purchases",
-  "detailUserSearchHint": "Search user..."
+  "detailUserSearchHint": "Search user...",
+  "replayFeedTitle": "Live Feed",
+  "replayEventBid": "Bid",
+  "replayEventGift": "Gift",
+  "replayEventPurchase": "Purchase",
+  "replayEventChat": "Chat",
+  "replayNoEventsYet": "No events yet",
+  "replayBidRow": "{username} bid ₺{amount}",
+  "replayGiftRow": "{username} sent {giftName}",
+  "replayPurchaseRow": "{username} purchased {quantity}× {itemTitle}"
 }

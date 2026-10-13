@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/app_exception.dart';
 import '../../core/result.dart';
 import '../../models/recording.dart';
+import '../../models/replay_event.dart';
 import '../../services/localization_service.dart';
 import '../../services/recordings/recording_repository.dart';
 import '../../utils/error_helper.dart';
@@ -13,12 +14,16 @@ class RecordingDetailState {
   final RecordingDetail? summary;
   final bool summaryLoading;
   final String? urlError;
+  final List<ReplayEvent> timeline;
+  final bool replayEnabled;
 
   const RecordingDetailState({
     this.urlData,
     this.summary,
     this.summaryLoading = false,
     this.urlError,
+    this.timeline = const [],
+    this.replayEnabled = false,
   });
 
   RecordingDetailState copyWith({
@@ -27,12 +32,16 @@ class RecordingDetailState {
     bool? summaryLoading,
     String? urlError,
     bool clearUrlError = false,
+    List<ReplayEvent>? timeline,
+    bool? replayEnabled,
   }) {
     return RecordingDetailState(
       urlData: urlData ?? this.urlData,
       summary: summary ?? this.summary,
       summaryLoading: summaryLoading ?? this.summaryLoading,
       urlError: clearUrlError ? null : (urlError ?? this.urlError),
+      timeline: timeline ?? this.timeline,
+      replayEnabled: replayEnabled ?? this.replayEnabled,
     );
   }
 }
@@ -103,9 +112,17 @@ class RecordingDetailNotifier
 
     switch (result) {
       case Ok(:final value):
+        final loc = ref.read(localizationProvider);
+        final timeline = _buildTimeline(value, loc);
+        final replayEnabled = value.stream.recordingStartedAt != null &&
+            timeline.isNotEmpty;
         state = AsyncValue.data(
-          (state.valueOrNull ?? const RecordingDetailState())
-              .copyWith(summary: value, summaryLoading: false),
+          (state.valueOrNull ?? const RecordingDetailState()).copyWith(
+            summary: value,
+            summaryLoading: false,
+            timeline: timeline,
+            replayEnabled: replayEnabled,
+          ),
         );
       case Err(:final error):
         handleError(error, ref.read(localizationProvider));
@@ -115,6 +132,23 @@ class RecordingDetailNotifier
         );
     }
   }
+
+  List<ReplayEvent> _buildTimeline(RecordingDetail detail, TranslationPack loc) => [
+        for (final a in detail.auctions)
+          for (final b in a.bids)
+            if (b.offsetSecs != null && b.offsetSecs! >= 0)
+              ReplayEvent.bid(b, a.itemName, loc),
+        for (final ds in detail.directSales)
+          for (final o in ds.orders)
+            if (o.offsetSecs != null && o.offsetSecs! >= 0)
+              ReplayEvent.purchase(o, ds.title, loc),
+        for (final ge in detail.gifts.events)
+          if (ge.offsetSecs != null && ge.offsetSecs! >= 0)
+            ReplayEvent.gift(ge, loc),
+        for (final cm in detail.chatMessages)
+          if (cm.offsetSecs != null && cm.offsetSecs! >= 0)
+            ReplayEvent.chat(cm),
+      ]..sort((a, b) => a.offsetSecs.compareTo(b.offsetSecs));
 
   String _errorMessage(Object error) {
     if (error is AppException) return error.code;

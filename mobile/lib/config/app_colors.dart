@@ -45,4 +45,13 @@ class AppColors {
 
   static Color navBar(BuildContext context) =>
       isDark(context) ? const Color(0xFF000000) : const Color(0xFFFFFFFF);
+
+  static Color replayBid(BuildContext context) =>
+      isDark(context) ? const Color(0xFF60A5FA) : const Color(0xFF2563EB);
+
+  static Color replayGift(BuildContext context) =>
+      isDark(context) ? const Color(0xFFFB923C) : const Color(0xFFEA580C);
+
+  static Color replayPurchase(BuildContext context) =>
+      isDark(context) ? const Color(0xFFA78BFA) : const Color(0xFF7C3AED);
 }
