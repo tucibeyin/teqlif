@@ -31,10 +31,21 @@ import time
 import av
 from livekit import rtc
 
+class _SuppressLivekitCleanup(logging.Filter):
+    """livekit-rtc Rust/Python sınırındaki race condition mesajlarını filtreler.
+
+    room.disconnect() sonrası Rust thread'leri asyncio queue'ya yazmaya
+    çalışır; event loop kapanınca bu harmless mesajlar üretilir.
+    """
+    def filter(self, record: logging.LogRecord) -> bool:
+        return "error putting to queue" not in record.getMessage()
+
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [livekit-subscriber] %(levelname)s %(message)s",
 )
+logging.getLogger().addFilter(_SuppressLivekitCleanup())
 logger = logging.getLogger("livekit-subscriber")
 
 _MAX_DURATION_S    = 7200  # 2 saat güvenlik sınırı
@@ -351,7 +362,6 @@ async def _run(
 
     writer.close()
     await room.disconnect()
-    await asyncio.sleep(0.1)  # livekit-rtc Rust thread'lerinin kapanmasını bekle
 
     if output.exists():
         logger.info(
