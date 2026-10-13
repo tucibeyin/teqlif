@@ -27,6 +27,7 @@ class _RecordingDetailScreenState
   ChewieController? _chewieCtrl;
   bool _playerInitialized = false;
   String? _currentUrl;
+  bool _recovering = false;
 
   @override
   void dispose() {
@@ -38,8 +39,10 @@ class _RecordingDetailScreenState
   void _initPlayer(String url) {
     if (_currentUrl == url) return;
     _currentUrl = url;
+    _recovering = false;
     _chewieCtrl?.dispose();
     _vpCtrl?.dispose();
+    setState(() => _playerInitialized = false);
     _vpCtrl = VideoPlayerController.networkUrl(Uri.parse(url));
     _vpCtrl!.initialize().then((_) {
       if (!mounted) return;
@@ -53,6 +56,12 @@ class _RecordingDetailScreenState
         aspectRatio: 16 / 9,
       );
       setState(() => _playerInitialized = true);
+    }).catchError((_) {
+      if (!mounted || _recovering) return;
+      _recovering = true;
+      ref
+          .read(recordingDetailProvider(widget.streamId).notifier)
+          .recoverUrl();
     });
   }
 
