@@ -517,21 +517,28 @@ enum RecordingFilterStatus { all, available, preparing, expired }
 class RecordingFilterState {
   final RecordingFilterStatus statusFilter;
   final String? searchQuery;
+  final String? categoryFilter;
 
   const RecordingFilterState({
     this.statusFilter = RecordingFilterStatus.all,
     this.searchQuery,
+    this.categoryFilter,
   });
 
-  bool get isEmpty => statusFilter == RecordingFilterStatus.all && (searchQuery == null || searchQuery!.isEmpty);
+  bool get isEmpty =>
+      statusFilter == RecordingFilterStatus.all &&
+      (searchQuery == null || searchQuery!.isEmpty) &&
+      categoryFilter == null;
 
   RecordingFilterState copyWith({
     RecordingFilterStatus? statusFilter,
     Object? searchQuery = _sentinel,
+    Object? categoryFilter = _sentinel,
   }) =>
       RecordingFilterState(
         statusFilter: statusFilter ?? this.statusFilter,
         searchQuery: searchQuery == _sentinel ? this.searchQuery : searchQuery as String?,
+        categoryFilter: categoryFilter == _sentinel ? this.categoryFilter : categoryFilter as String?,
       );
 
   List<RecordingItem> apply(List<RecordingItem> items) {
@@ -549,6 +556,9 @@ class RecordingFilterState {
             return true;
         }
       }).toList();
+    }
+    if (categoryFilter != null) {
+      result = result.where((i) => i.category == categoryFilter).toList();
     }
     final q = searchQuery?.trim().toLowerCase();
     if (q != null && q.isNotEmpty) {

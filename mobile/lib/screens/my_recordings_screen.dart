@@ -87,7 +87,7 @@ class _MyRecordingsScreenState extends ConsumerState<MyRecordingsScreen> {
                     padding: const EdgeInsets.symmetric(
                         vertical: 12, horizontal: 16),
                     itemCount: items.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    separatorBuilder: (context, i) => const SizedBox(height: 10),
                     itemBuilder: (context, index) => _RecordingCard(
                       item: items[index],
                       loc: loc,
@@ -170,8 +170,36 @@ class _RecordingCard extends StatelessWidget {
                       ],
                     ],
                   ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      if (item.recordingStartedAt != null) ...[
+                        Icon(Icons.calendar_today_outlined,
+                            size: 11, color: AppColors.textTertiary(context)),
+                        const SizedBox(width: 3),
+                        Text(
+                          _formatDate(item.recordingStartedAt!),
+                          style: TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textTertiary(context)),
+                        ),
+                      ],
+                      if (item.peakViewerCount != null) ...[
+                        const SizedBox(width: 8),
+                        Icon(Icons.remove_red_eye_outlined,
+                            size: 11, color: AppColors.textTertiary(context)),
+                        const SizedBox(width: 3),
+                        Text(
+                          '${item.peakViewerCount}',
+                          style: TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textTertiary(context)),
+                        ),
+                      ],
+                    ],
+                  ),
                   if (item.expiresAt != null && item.status.canWatch) ...[
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     _ExpiryRow(expiresAt: item.expiresAt!, loc: loc),
                   ],
                 ],
@@ -193,6 +221,16 @@ class _RecordingCard extends StatelessWidget {
       return '$h:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
     }
     return '$m:${s.toString().padLeft(2, '0')}';
+  }
+
+  String _formatDate(DateTime dt) {
+    const months = [
+      'Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz',
+      'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara',
+    ];
+    final h = dt.hour.toString().padLeft(2, '0');
+    final m = dt.minute.toString().padLeft(2, '0');
+    return '${dt.day} ${months[dt.month - 1]}, $h:$m';
   }
 }
 
@@ -240,13 +278,22 @@ class _RecordingFilterBarState extends ConsumerState<_RecordingFilterBar> {
     final filter = ref.watch(recordingFilterProvider);
     final loc = widget.loc;
 
+    // Mevcut kayıtlardan benzersiz kategorileri çıkar
+    final allItems = ref.watch(myRecordingsProvider).valueOrNull ?? [];
+    final categories = allItems
+        .map((i) => i.category)
+        .whereType<String>()
+        .toSet()
+        .toList()
+      ..sort();
+
     // Search text controller'ı dış reset ile senkronize et
     final externalQuery = filter.searchQuery ?? '';
     if (_searchCtrl.text != externalQuery && externalQuery.isEmpty) {
       _searchCtrl.clear();
     }
 
-    final chips = [
+    final statusChips = [
       (RecordingFilterStatus.all,       loc.t('recordingFilterAll')),
       (RecordingFilterStatus.available,  loc.t('recordingFilterAvailable')),
       (RecordingFilterStatus.preparing,  loc.t('recordingFilterPreparing')),
@@ -287,12 +334,13 @@ class _RecordingFilterBarState extends ConsumerState<_RecordingFilterBar> {
               ),
             ),
           ),
+          // Durum filtreleri
           SizedBox(
             height: 36,
             child: ListView(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 12),
-              children: chips.map((chip) {
+              children: statusChips.map((chip) {
                 final (status, label) = chip;
                 final selected = filter.statusFilter == status;
                 return Padding(
@@ -320,6 +368,41 @@ class _RecordingFilterBarState extends ConsumerState<_RecordingFilterBar> {
               }).toList(),
             ),
           ),
+          // Kategori filtreleri — birden fazla kategori varsa göster
+          if (categories.length > 1) ...[
+            const SizedBox(height: 4),
+            SizedBox(
+              height: 32,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                children: [
+                  // "Tümü" seçeneği
+                  Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: _CategoryFilterChip(
+                      label: loc.t('recordingFilterAll'),
+                      selected: filter.categoryFilter == null,
+                      onTap: () => ref.read(recordingFilterProvider.notifier).state =
+                          filter.copyWith(categoryFilter: null),
+                    ),
+                  ),
+                  ...categories.map((cat) {
+                    final selected = filter.categoryFilter == cat;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: _CategoryFilterChip(
+                        label: CategoryService.localizedLabelFor(loc, cat),
+                        selected: selected,
+                        onTap: () => ref.read(recordingFilterProvider.notifier).state =
+                            filter.copyWith(categoryFilter: selected ? null : cat),
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 6),
           Divider(height: 1, color: AppColors.border(context)),
         ],
@@ -328,7 +411,44 @@ class _RecordingFilterBarState extends ConsumerState<_RecordingFilterBar> {
   }
 }
 
-// ── Category chip ─────────────────────────────────────────────────────────────
+// ── Category filter chip (filter bar) ────────────────────────────────────────
+
+class _CategoryFilterChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _CategoryFilterChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: selected ? kPrimary : AppColors.card(context),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected ? kPrimary : AppColors.border(context),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            color: selected ? Colors.white : AppColors.textSecondary(context),
+            fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class _CategoryChip extends StatelessWidget {
   final String category;
