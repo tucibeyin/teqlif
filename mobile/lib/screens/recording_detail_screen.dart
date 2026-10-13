@@ -447,6 +447,29 @@ class _SummarySectionState extends State<_SummarySection> {
           ),
           const SizedBox(height: 10),
 
+          // ── Kullanıcı arama ───────────────────────────────────────────
+          TextField(
+            onChanged: (text) =>
+                setState(() => _usernameQuery = text.trim()),
+            style: TextStyle(
+                fontSize: 13, color: AppColors.textPrimary(context)),
+            decoration: InputDecoration(
+              hintText: loc.t('detailUserSearchHint'),
+              hintStyle: TextStyle(
+                  color: AppColors.textTertiary(context), fontSize: 13),
+              prefixIcon: Icon(Icons.person_search_outlined,
+                  size: 18, color: AppColors.textTertiary(context)),
+              filled: true,
+              fillColor: AppColors.card(context),
+              contentPadding: const EdgeInsets.symmetric(vertical: 6),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
           // ── Kategori badge'leri ───────────────────────────────────────
           if (categoryLabel != null) ...[
             Wrap(
@@ -457,7 +480,7 @@ class _SummarySectionState extends State<_SummarySection> {
                   _CategoryBadge(label: s.subcategory!, secondary: true),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
           ],
 
           // ── Metrik kartlar ────────────────────────────────────────────
@@ -484,29 +507,6 @@ class _SummarySectionState extends State<_SummarySection> {
                 value: '${widget.detail.directSales.length}',
               ),
             ],
-          ),
-          const SizedBox(height: 12),
-
-          // ── Kullanıcı arama ───────────────────────────────────────────
-          TextField(
-            onChanged: (text) =>
-                setState(() => _usernameQuery = text.trim()),
-            style: TextStyle(
-                fontSize: 13, color: AppColors.textPrimary(context)),
-            decoration: InputDecoration(
-              hintText: loc.t('detailUserSearchHint'),
-              hintStyle: TextStyle(
-                  color: AppColors.textTertiary(context), fontSize: 13),
-              prefixIcon: Icon(Icons.person_search_outlined,
-                  size: 18, color: AppColors.textTertiary(context)),
-              filled: true,
-              fillColor: AppColors.card(context),
-              contentPadding: const EdgeInsets.symmetric(vertical: 6),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide.none,
-              ),
-            ),
           ),
           const SizedBox(height: 16),
 
