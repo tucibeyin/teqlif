@@ -279,15 +279,16 @@ class _ExpiryRowState extends State<_ExpiryRow> {
     final String label;
     if (diff.isNegative) {
       label = widget.loc.t('recordingStatusExpired');
-    } else if (diff.inHours < 1) {
+    } else if (diff.inMinutes < 60) {
       label = widget.loc.t('recordingStatusExpiresIn')
           .replaceAll('{duration}', '${diff.inMinutes}dk');
-    } else if (diff.inDays < 1) {
-      label = widget.loc.t('recordingStatusExpiresIn')
-          .replaceAll('{duration}', '${diff.inHours}s');
     } else {
+      // Maksimum 24 saat geçerli — gün gösterme, saat+dakika göster
+      final h = diff.inHours;
+      final m = diff.inMinutes % 60;
+      final durationStr = m > 0 ? '${h}s ${m}dk' : '${h}s';
       label = widget.loc.t('recordingStatusExpiresIn')
-          .replaceAll('{duration}', '${diff.inDays}g');
+          .replaceAll('{duration}', durationStr);
     }
 
     return Row(
