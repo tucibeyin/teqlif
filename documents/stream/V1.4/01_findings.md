@@ -13,7 +13,7 @@
 | **Clean Architecture** | ADR | Router → UseCase → Model; View katmanı DB/Redis bilmez |
 | **MVVM** | ADR §8 | Replay pozisyonu View'da (UI state), event verisi ViewModel'de |
 | **OTA Localization** | ADR §1 | Tüm overlay stringleri ARB'a eklenir, `loc.t()` ile tüketilir |
-| **Cache Taksonomisi** | ADR §9 | Chat + event verisi = LIFECYCLE (summary ile birlikte 10 dk) |
+| **Cache Taksonomisi** | ADR §9 | Replay verisi tamamlanmış stream için değişmez; LIFECYCLE 24 saat (kayıt `expires_at`'e kadar) |
 | **Deployment Workflow** | ADR §13 | Local → push → pull → `sudo teqlif-restart` |
 | **asyncpg Kuralı** | `feedback_alembic_asyncpg.md` | Her SQL komutu ayrı `op.execute()` — multi-statement yasak |
 | **Uploads URL** | `feedback_uploads_url.md` | `kUploadsHost` ile oluşturulur, `kBaseHost + /uploads/` değil |
@@ -144,6 +144,18 @@ CREATE INDEX ix_stream_chat_messages_stream_id_created_at
 
 **asyncpg kuralı:** Her `op.execute()` ayrı satır — tek multi-statement string yasak.
 
+**Yaşam döngüsü kuralı:** `stream_chat_messages` satırları video kaydıyla birlikte silinir. ARQ `janitor` görevi şu koşulda temizler:
+
+```sql
+DELETE FROM stream_chat_messages
+WHERE stream_id IN (
+    SELECT ls.id FROM live_streams ls
+    WHERE ls.ended_at < NOW() - INTERVAL '30 days'
+);
+```
+
+`ON DELETE CASCADE` ile `live_streams` silindiğinde otomatik temizlenir; ARQ görevi erken temizlik için ek güvencedir. Video `archived` olunca (transferred_at + 2 gün MinIO ILM, archived_at + 15 gün DB) replay zaten çalışmaz — chat satırlarının daha uzun yaşamasının işlevsel karşılığı yoktur.
+
 #### 4.2 Chat persistence: `_MAX_HISTORY` + finalize dump
 
 **`chat_commands.py` + `chat_utils.py`:**
@@ -160,8 +172,23 @@ async def _dump_chat_to_db(stream: LiveStream, db: AsyncSession, redis) -> None:
         return
 
     messages = [json.loads(m) for m in raw_messages]
-    for msg in messages:
-        await db.execute(text("""
+    rows = [
+        {
+            "stream_id":  stream.id,
+            "user_id":    msg.get("user_id"),
+            "username":   msg.get("username", ""),
+            "avatar_url": msg.get("profile_image_url"),
+            "content":    msg.get("content", ""),
+            "is_host":    msg.get("is_host", False),
+            "is_mod":     msg.get("is_mod", False),
+            "is_hidden":  msg.get("is_hidden", False),
+            "created_at": msg.get("created_at"),
+        }
+        for msg in messages
+    ]
+    # Tek multi-row INSERT — N ayrı roundtrip değil, tek statement
+    await db.execute(
+        text("""
             INSERT INTO stream_chat_messages
                 (stream_id, user_id, username, avatar_url, content,
                  is_host, is_mod, is_hidden, created_at)
@@ -169,22 +196,13 @@ async def _dump_chat_to_db(stream: LiveStream, db: AsyncSession, redis) -> None:
                 (:stream_id, :user_id, :username, :avatar_url, :content,
                  :is_host, :is_mod, :is_hidden, :created_at)
             ON CONFLICT DO NOTHING
-        """), {
-            "stream_id": stream.id,
-            "user_id":   msg.get("user_id"),
-            "username":  msg.get("username", ""),
-            "avatar_url": msg.get("profile_image_url"),
-            "content":   msg.get("content", ""),
-            "is_host":   msg.get("is_host", False),
-            "is_mod":    msg.get("is_mod", False),
-            "is_hidden": msg.get("is_hidden", False),
-            "created_at": msg.get("created_at"),
-        })
-
+        """),
+        rows,
+    )
     await db.commit()
 ```
 
-`finalize_stream()` içinde DB commit öncesi çağrılır. Redis delete bloğuna `f"chat:{stream.id}:messages"` eklenir (dump sonrası temizle).
+`finalize_stream()` içinde DB commit öncesi çağrılır. Aynı fonksiyon `cleanup_stale_streams_task` (ARQ, 2 dk cron) ve `force_close_stream` içinden de çağrılmalıdır — zombie yayınlarda chat verisinin 24 saat TTL ile kaybolmasını önler. Redis delete bloğuna `f"chat:{stream.id}:messages"` eklenir (dump sonrası temizle).
 
 #### 4.3 `get_recording_summary.py` güncellemeleri
 
@@ -225,6 +243,8 @@ ORDER BY created_at ASC
 - `stream.recording_started_at` eklendi
 - Her event'e `offset_secs: float | null` eklendi
 - `chat_messages: list` eklendi
+
+**Cache TTL:** Yayın bittikten sonra bu veri değişmez. `RecordingsCacheService.saveSummary` TTL'i 10 dk yerine `recording_expires_at - now()` (max 24 saat) olarak hesaplanır. `recording_expires_at` null ise 24 saat sabit kullanılır.
 
 ### Katman 2 — Flutter: Model (`recording.dart`)
 
@@ -366,18 +386,20 @@ List<_ReplayEvent> get _visibleEvents {
 ## 5. Uygulama Sırası
 
 ```
-1.  Backend — Alembic migration: zzzzzo_stream_chat_messages
+1.  Backend — Alembic migration: zzzzzo_stream_chat_messages (tablo + index + yaşam döngüsü kuralı)
 2.  Backend — _MAX_HISTORY: chat_commands.py + chat_utils.py  50 → 2000
-3.  Backend — stream_finalizer.py: _dump_chat_to_db + Redis delete
-4.  Backend — get_recording_summary.py: recording_started_at + offset_secs + chat_messages
-5.  flutter analyze — backend değişiklik yok, bu adım prod/staging test için
-6.  git push → node1 + node5: git pull + sudo teqlif-restart
-7.  Flutter — recording.dart: model güncellemeleri
-8.  Flutter — recording_detail_view_model.dart: replayEnabled state
-9.  Flutter — recording_detail_screen.dart: pozisyon listener + _ReplayFeed
-10. ARB dosyaları: 6 yeni key × 5 dil
-11. flutter analyze
-12. git push → node1 + node5: sudo teqlif-restart (sync_translations otomatik çalışır)
+3.  Backend — stream_finalizer.py: _dump_chat_to_db (bulk insert) + Redis delete
+4.  Backend — cleanup_stale_streams_task (ARQ): _dump_chat_to_db hook'u eklenir
+5.  Backend — force_close_stream.py: _dump_chat_to_db hook'u eklenir
+6.  Backend — get_recording_summary.py: recording_started_at + offset_secs + chat_messages
+7.  git push → node1 + node5: git pull + sudo teqlif-restart
+8.  Flutter — recording.dart: model güncellemeleri
+9.  Flutter — recording_detail_view_model.dart: replayEnabled state
+10. Flutter — recording_detail_screen.dart: pozisyon listener + _ReplayFeed
+11. Flutter — RecordingsCacheService: summary TTL → recording_expires_at'e göre dinamik (max 24 saat)
+12. ARB dosyaları: 6 yeni key × 5 dil
+13. flutter analyze
+14. git push → node1 + node5: sudo teqlif-restart (sync_translations otomatik çalışır)
 ```
 
 ---
@@ -386,7 +408,7 @@ List<_ReplayEvent> get _visibleEvents {
 
 | Risk | Karar |
 |------|-------|
-| Stream crash → `finalize_stream` çağrılmaz → chat kaybolur | 24h TTL penceresi encoding süresi için yeterli. `force_close_stream` de `finalize_stream` çağırır. Kabul edilmiş trade-off. |
+| Stream crash → `finalize_stream` çağrılmaz → chat kaybolur | `_dump_chat_to_db` üç noktadan çağrılır: `finalize_stream`, `force_close_stream`, `cleanup_stale_streams_task` (ARQ 2 dk cron). Zombie yayın 2 dk içinde yakalanır ve dump tetiklenir. |
 | `recording_started_at` NULL (encoding tamamlanmamış) | `replayEnabled = false`; feed gizlenir. `recordingStartedAt == null` kontrolü ile guard. |
 | `offset_secs` negatif (mesaj recording başlamadan atıldı) | `max(0.0, offsetSecs)` — sıfırdan itibaren gösterilir. |
 | `_MAX_HISTORY = 2000` yetmezse (çok aktif yayın) | Yol B'ye geçiş kolay: `_persist_and_publish` içine tek satır `asyncio.create_task(db_insert(msg))` eklenir. |
