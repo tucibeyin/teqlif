@@ -4586,5 +4586,10 @@
   "bestTimePaywallDesc": "Find the best days and times to go live for maximum conversions with PRO.",
   "streamHistPaywallDesc": "Analyze your stream history and audience data in depth with PRO.",
   "retargetPaywallDesc": "Send push notifications directly to potential buyers for your listings with PRO.",
-  "recordingPaywallDesc": "Watch your past streams and analyze sales details with PRO."
+  "recordingPaywallDesc": "Watch your past streams and analyze sales details with PRO.",
+  "recordingDetailTitle": "Recording Detail",
+  "recordingLoading": "Loading...",
+  "recordingUrlExpiredRetry": "Link expired. Tap to refresh.",
+  "retry": "Retry",
+  "recordingMetricRevenue": "Revenue"
 }

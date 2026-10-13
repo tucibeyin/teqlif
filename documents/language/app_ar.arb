@@ -4550,5 +4550,10 @@
   "bestTimePaywallDesc": "اكتشف أفضل الأيام والأوقات للبث المباشر لتحقيق أعلى تحويل مع PRO.",
   "streamHistPaywallDesc": "حلّل تاريخ بثوثك وبيانات الجمهور بعمق مع PRO.",
   "retargetPaywallDesc": "أرسل إشعارات فورية مباشرة للمشترين المحتملين لإعلاناتك مع PRO.",
-  "recordingPaywallDesc": "شاهد بثوثك السابقة وحلّل تفاصيل المبيعات مع PRO."
+  "recordingPaywallDesc": "شاهد بثوثك السابقة وحلّل تفاصيل المبيعات مع PRO.",
+  "recordingDetailTitle": "تفاصيل التسجيل",
+  "recordingLoading": "جارٍ التحميل...",
+  "recordingUrlExpiredRetry": "انتهت صلاحية الرابط. انقر للتحديث.",
+  "retry": "إعادة المحاولة",
+  "recordingMetricRevenue": "الإيراد"
 }

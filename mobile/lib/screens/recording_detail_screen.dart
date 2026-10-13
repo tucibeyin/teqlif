@@ -6,6 +6,7 @@ import 'package:video_player/video_player.dart';
 
 import '../config/app_colors.dart';
 import '../config/theme.dart';
+import '../core/error_mapper.dart';
 import '../models/recording.dart';
 import '../services/localization_service.dart';
 import 'public_profile_screen.dart';
@@ -75,7 +76,7 @@ class _RecordingDetailScreenState
       body: stateAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
-          child: Text(e.toString(),
+          child: Text(ErrorMapper.toMessage(e, loc),
               style: TextStyle(color: AppColors.textSecondary(context))),
         ),
         data: (s) => _buildBody(context, s, loc),

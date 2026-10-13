@@ -4537,7 +4537,7 @@
   "recordingStatusWatch": "İzle",
   "recordingStatusExpired": "Süresi Doldu",
   "recordingStatusExpiresIn": "Son: {duration}",
-  "recordingDetailAuctions": "Müzayedeler",
+  "recordingDetailAuctions": "Açık Arttırmalar",
   "recordingDetailDirectSales": "Direkt Satışlar",
   "recordingDetailGifts": "Hediyeler",
   "errorRecordingNotFound": "Kayıt bulunamadı.",
@@ -4550,5 +4550,10 @@
   "bestTimePaywallDesc": "Yayınlarınız için en verimli gün ve saatleri bulmak için PRO'ya geçin.",
   "streamHistPaywallDesc": "Yayın geçmişinizi ve kitle verilerini derinlemesine analiz etmek için PRO'ya geçin.",
   "retargetPaywallDesc": "Potansiyel alıcılara doğrudan push bildirim göndermek için PRO'ya geçin.",
-  "recordingPaywallDesc": "Geçmiş yayınlarınızı izlemek ve satış detaylarını analiz etmek için PRO'ya geçin."
+  "recordingPaywallDesc": "Geçmiş yayınlarınızı izlemek ve satış detaylarını analiz etmek için PRO'ya geçin.",
+  "recordingDetailTitle": "Kayıt Detayı",
+  "recordingLoading": "Yükleniyor...",
+  "recordingUrlExpiredRetry": "Bağlantı süresi doldu. Yenilemek için dokun.",
+  "retry": "Yenile",
+  "recordingMetricRevenue": "Gelir"
 }

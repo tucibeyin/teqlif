@@ -4550,5 +4550,10 @@
   "bestTimePaywallDesc": "Найдите лучшие дни и время для трансляций с максимальной конверсией с PRO.",
   "streamHistPaywallDesc": "Анализируйте историю трансляций и данные аудитории в глубину с PRO.",
   "retargetPaywallDesc": "Отправляйте push-уведомления потенциальным покупателям напрямую с PRO.",
-  "recordingPaywallDesc": "Просматривайте прошлые трансляции и анализируйте детали продаж с PRO."
+  "recordingPaywallDesc": "Просматривайте прошлые трансляции и анализируйте детали продаж с PRO.",
+  "recordingDetailTitle": "Детали записи",
+  "recordingLoading": "Загрузка...",
+  "recordingUrlExpiredRetry": "Ссылка истекла. Нажмите для обновления.",
+  "retry": "Повторить",
+  "recordingMetricRevenue": "Доход"
 }
