@@ -2,7 +2,7 @@
 
 **Tarih:** 2026-10-13
 **Kapsam:** Flutter mobile uygulaması client-side cache stratejisi, TTL yönetimi, veri yaşam döngüsü
-**Revizyon:** V1.6 — P3 §11.16 ETag / Conditional Request tam uygulama tamamlandı (20ab93a5)
+**Revizyon:** V1.7 — V1.1 analizi tamamlandı; bkz. `documents/cache/V1.1/01_findings.md`
 
 ---
 
