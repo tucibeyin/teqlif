@@ -107,13 +107,15 @@ class MKVWriter:
         return self._vinfo is not None
 
     @property
+    def vinfo(self) -> tuple[int, int]:
+        """Encoder'ın kilitli olduğu (width, height)."""
+        assert self._vinfo is not None
+        return self._vinfo
+
+    @property
     def vinfo_stable_for(self) -> float:
         """Son resolution değişiminden bu yana geçen süre (saniye)."""
         return time.monotonic() - self._vinfo_at if self._vinfo_at else 0.0
-
-    def frame_fits(self, width: int, height: int) -> bool:
-        """Gelen frame boyutu açık encoder ile uyuşuyor mu?"""
-        return self._vinfo == (width, height)
 
     def open_container(self) -> None:
         if self._container is not None or self._vinfo is None:
@@ -212,12 +214,15 @@ async def _run(room_name: str, ws_url: str, api_key: str, api_secret: str, outpu
                     logger.info("VIDEO frame #%d: %dx%d", vframe_count, lk.width, lk.height)
                 writer.hint_video(lk.width, lk.height)
                 await open_evt.wait()
-                if not writer.frame_fits(lk.width, lk.height):
-                    continue  # kalite geçiş anında gelen yanlış boyutlu frame
                 # BGRA numpy dizisi → av.VideoFrame → yuv420p
                 arr = np.frombuffer(bytes(lk.data), dtype=np.uint8).reshape(lk.height, lk.width, 4)
                 frame = av.VideoFrame.from_ndarray(arr, format="bgra")
-                frame = frame.reformat(format="yuv420p")
+                enc_w, enc_h = writer.vinfo
+                if lk.width != enc_w or lk.height != enc_h:
+                    # dynacast kalite geçişi — encoder boyutuna ölçekle
+                    frame = frame.reformat(width=enc_w, height=enc_h, format="yuv420p")
+                else:
+                    frame = frame.reformat(format="yuv420p")
                 pkts = writer.write_video(frame)
                 if vframe_count <= 3:
                     logger.info("VIDEO encode → %d paket (frame=%d)", pkts, vframe_count)
@@ -273,7 +278,7 @@ async def _run(room_name: str, ws_url: str, api_key: str, api_secret: str, outpu
                 break
             await asyncio.sleep(0.05)
 
-        w, h = writer._vinfo
+        w, h = writer.vinfo
         logger.info("Video kalitesi sabitlendi: %dx%d (%.1fs sabit)", w, h, writer.vinfo_stable_for)
         await asyncio.sleep(0.15)   # audio hint penceresi
         writer.open_container()
