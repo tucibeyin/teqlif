@@ -46,44 +46,6 @@ class StorageService {
   static const cacheNotificationSettings   = 'cache_notification_settings';
   static const cacheBlockedUsers           = 'cache_blocked_users';
 
-  /// [data] (List veya Map) → TTL sarmalayıcısıyla JSON olarak sakla.
-  /// [ttl]: varsayılan 5 dakika. Mesajlar için 2 dakika kullanılabilir.
-  static Future<void> cacheData(
-    String key,
-    dynamic data, {
-    Duration ttl = const Duration(minutes: 5),
-  }) async {
-    final prefs = await SharedPreferences.getInstance();
-    final wrapper = {
-      '_d': data,
-      '_t': DateTime.now().millisecondsSinceEpoch,
-      '_x': ttl.inMilliseconds,
-    };
-    await prefs.setString(key, jsonEncode(wrapper));
-  }
-
-  /// Saklanan veriyi döner. TTL aşılmışsa null döner (sanki hiç yokmuş gibi).
-  static Future<dynamic> getCachedData(String key) async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(key);
-    if (raw == null) return null;
-    try {
-      final decoded = jsonDecode(raw);
-      // Yeni TTL formatı: {"_d": data, "_t": savedAt, "_x": ttlMs}
-      if (decoded is Map && decoded.containsKey('_t') && decoded.containsKey('_d')) {
-        final savedAt = (decoded['_t'] as num).toInt();
-        final ttlMs = (decoded['_x'] as num?)?.toInt() ?? 300000;
-        final age = DateTime.now().millisecondsSinceEpoch - savedAt;
-        if (age > ttlMs) return null; // süresi dolmuş
-        return decoded['_d'];
-      }
-      // Eski format (TTL'siz) — geçerli kabul et, bir sonraki yazımda yeni formata geçer
-      return decoded;
-    } catch (_) {
-      return null;
-    }
-  }
-
   /// Mevcut oturumdaki kullanıcının ID'sini JWT token üzerinden çözer.
   static Future<int?> getCurrentUserId() async {
     final token = await getToken();

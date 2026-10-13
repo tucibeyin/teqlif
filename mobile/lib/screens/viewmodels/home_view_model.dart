@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:http/http.dart' as http;
 
 import 'package:teqlif/core/network/api_client.dart';
+import '../../../repositories/home_repository.dart';
 import '../../../services/storage_service.dart';
 import '../../../services/analytics_service.dart';
 import '../../../models/listing_filter_state.dart';
@@ -65,12 +65,7 @@ class HomeState {
 }
 
 class HomeViewModel extends AutoDisposeAsyncNotifier<HomeState> {
-  static const _kCacheKeyFeed = 'home_feed_recent';
-  static const _kCacheKeyHesitated = 'feed_hesitated';
-  static const _kCacheKeyVersion = 'home_cache_version';
-  static const _kCacheKeyTimestamp = 'home_cache_timestamp';
-  static const _kCacheVersion = 2;
-  static const _kCacheTtlMs = 30 * 60 * 1000; // 30 dakika
+  HomeRepository get _repo => ref.read(homeRepositoryProvider);
 
   @override
   FutureOr<HomeState> build() async {
@@ -80,69 +75,19 @@ class HomeViewModel extends AutoDisposeAsyncNotifier<HomeState> {
   }
 
   Future<void> _loadFromCache() async {
-    try {
-      final cacheBox = await Hive.openBox('homeCache');
-
-      final storedVersion = cacheBox.get(_kCacheKeyVersion) as int?;
-      if (storedVersion != _kCacheVersion) {
-        await cacheBox.clear();
-        await cacheBox.put(_kCacheKeyVersion, _kCacheVersion);
-        return;
-      }
-
-      final savedAt = cacheBox.get(_kCacheKeyTimestamp) as int?;
-      if (savedAt != null) {
-        final age = DateTime.now().millisecondsSinceEpoch - savedAt;
-        if (age > _kCacheTtlMs) {
-          await cacheBox.clear();
-          await cacheBox.put(_kCacheKeyVersion, _kCacheVersion);
-          return;
-        }
-      }
-
-      final cachedFeed = cacheBox.get(_kCacheKeyFeed);
-      final cachedHesitated = cacheBox.get(_kCacheKeyHesitated);
-
-      final current = state.value ?? const HomeState();
-
-      List<dynamic> recent = current.recentListings;
-      List<dynamic> hesitated = current.hesitatedListings;
-      int totalP = current.totalPages;
-
-      if (cachedFeed != null) {
-        try {
-          final parsed = jsonDecode(cachedFeed);
-          if (parsed is List) {
-            recent = parsed;
-          } else if (parsed['listings'] != null) {
-            recent = parsed['listings'];
-            totalP = parsed['pagination']?['total_pages'] ?? 1;
-          }
-        } catch (_) {}
-      }
-
-      if (cachedHesitated != null) {
-        try {
-          hesitated = jsonDecode(cachedHesitated) as List<dynamic>;
-        } catch (_) {}
-      }
-
-      state = AsyncValue.data(current.copyWith(
-        recentListings: recent,
-        hesitatedListings: hesitated,
-        totalPages: totalP,
-      ));
-    } catch (_) {}
+    final cached = await _repo.loadCache();
+    if (cached == null) return;
+    final current = state.value ?? const HomeState();
+    state = AsyncValue.data(current.copyWith(
+      recentListings:    cached.recentListings,
+      hesitatedListings: cached.hesitatedListings,
+      totalPages:        cached.totalPages,
+    ));
   }
 
   Future<void> _fetchInitial({bool bypassCache = false}) async {
     final current = state.value ?? const HomeState();
-    
-    // UI Loading state, ama veriler cache'ten geldiyse ekranda duruyor olacak.
-    state = AsyncValue.data(current.copyWith(
-      isLoading: true,
-      hasError: false,
-    ));
+    state = AsyncValue.data(current.copyWith(isLoading: true, hasError: false));
 
     final token = await StorageService.getToken();
     if (token == null) {
@@ -169,30 +114,30 @@ class HomeViewModel extends AutoDisposeAsyncNotifier<HomeState> {
   }
 
   Future<void> _fetchRecent(String token) async {
-    final resp = await http.get(Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/feed/recent?page=0'), headers: {
-      'Authorization': 'Bearer $token',
-    });
+    final resp = await http.get(
+      Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/feed/recent?page=0'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
 
     if (resp.statusCode == 200) {
       final parsed = jsonDecode(resp.body);
       final listings = parsed is List ? parsed : (parsed['listings'] ?? []) as List<dynamic>;
-      final totalP = parsed is List ? (listings.length < 20 ? 0 : 9999) : parsed['pagination']?['total_pages'] ?? 1;
+      final totalP = parsed is List
+          ? (listings.length < 20 ? 0 : 9999)
+          : parsed['pagination']?['total_pages'] ?? 1;
       final minId = listings.isNotEmpty
           ? listings.map((e) => e['id'] as int).reduce((a, b) => a < b ? a : b)
           : null;
 
-      final cacheBox = await Hive.openBox('homeCache');
-      cacheBox.put(_kCacheKeyFeed, resp.body);
-      cacheBox.put(_kCacheKeyVersion, _kCacheVersion);
-      cacheBox.put(_kCacheKeyTimestamp, DateTime.now().millisecondsSinceEpoch);
+      await _repo.saveFeed(resp.body);
 
       state = AsyncValue.data(state.value!.copyWith(
         recentListings: listings,
-        totalPages: totalP,
-        currentPage: 0,
-        lastMaxId: minId,
-        isLoading: false,
-        hasError: false,
+        totalPages:     totalP,
+        currentPage:    0,
+        lastMaxId:      minId,
+        isLoading:      false,
+        hasError:       false,
       ));
     } else {
       throw Exception('API error: ${resp.statusCode}');
@@ -201,17 +146,15 @@ class HomeViewModel extends AutoDisposeAsyncNotifier<HomeState> {
 
   Future<void> _fetchHesitated(String token) async {
     state = AsyncValue.data(state.value!.copyWith(isHesitatedLoading: true));
-    final resp = await http.get(Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/feed/hesitated'), headers: {
-      'Authorization': 'Bearer $token',
-    });
+    final resp = await http.get(
+      Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/feed/hesitated'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
 
     if (resp.statusCode == 200) {
-      final hes = jsonDecode(resp.body) as List<dynamic>;
-      final cacheBox = await Hive.openBox('homeCache');
-      cacheBox.put(_kCacheKeyHesitated, resp.body);
-      
+      await _repo.saveHesitated(resp.body);
       state = AsyncValue.data(state.value!.copyWith(
-        hesitatedListings: hes,
+        hesitatedListings: jsonDecode(resp.body) as List<dynamic>,
         isHesitatedLoading: false,
       ));
     } else {
@@ -237,15 +180,16 @@ class HomeViewModel extends AutoDisposeAsyncNotifier<HomeState> {
     if (filter.dateTo != null) {
       params['date_to'] = filter.dateTo!.toIso8601String().substring(0, 10);
     }
-    final uri = Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/listings').replace(queryParameters: params);
-    
+    final uri = Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/listings')
+        .replace(queryParameters: params);
+
     final resp = await http.get(uri, headers: {'Authorization': 'Bearer $token'});
 
     if (resp.statusCode == 200) {
       state = AsyncValue.data(state.value!.copyWith(
         recentListings: jsonDecode(resp.body) as List,
-        isLoading: false,
-        hasError: false,
+        isLoading:      false,
+        hasError:       false,
       ));
     } else {
       throw Exception('API error: ${resp.statusCode}');
@@ -255,46 +199,35 @@ class HomeViewModel extends AutoDisposeAsyncNotifier<HomeState> {
   Future<void> refresh({bool bypassCache = true}) async {
     final current = state.value;
     final token = await StorageService.getToken();
-    
-    // Eğer filtre varsa, liste boşsa veya token yoksa baştan tam yükleme (fallback) yap
+
     if (current == null || token == null || current.hasFilter || current.recentListings.isEmpty) {
       await _fetchInitial(bypassCache: bypassCache);
       return;
     }
 
     try {
-      // 1. Delta Fetching: Sadece yeni ilanları getir
       final sinceId = current.recentListings.first['id'];
-      final resp = await http.get(Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/feed/recent?since_id=$sinceId'), headers: {
-        'Authorization': 'Bearer $token',
-      });
-      
+      final resp = await http.get(
+        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/feed/recent?since_id=$sinceId'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
       if (resp.statusCode == 200) {
         final parsed = jsonDecode(resp.body);
         final delta = parsed is List ? parsed : parsed['listings'] ?? [];
         if (delta.isNotEmpty) {
           final existingIds = current.recentListings.map((e) => e['id']).toSet();
           final uniqueDelta = delta.where((e) => !existingIds.contains(e['id'])).toList();
-          
-          // Yeni ilanları (delta) mevcut listenin en üstüne ekle (prepend)
           final newListings = [...uniqueDelta, ...current.recentListings];
-          
-          state = AsyncValue.data(current.copyWith(
-            recentListings: newListings,
-          ));
-          
-          // Cache'i güncelle
-          final cacheBox = await Hive.openBox('homeCache');
-          cacheBox.put(_kCacheKeyFeed, jsonEncode(newListings));
+          state = AsyncValue.data(current.copyWith(recentListings: newListings));
+          await _repo.prependFeed(newListings);
         }
       } else {
         await _fetchInitial(bypassCache: bypassCache);
       }
-      
-      // 2. Hesitated ilanlarını da (varsa) güncelle
+
       await _fetchHesitated(token);
     } catch (e) {
-      // Hata olursa (timeout vs) fallback olarak tam yükleme yap
       await _fetchInitial(bypassCache: bypassCache);
     }
   }
@@ -314,7 +247,7 @@ class HomeViewModel extends AutoDisposeAsyncNotifier<HomeState> {
       }
 
       final nextPage = current.currentPage + 1;
-      final baseUrl = ref.read(apiClientProvider).config.baseUrl;
+      final baseUrl  = ref.read(apiClientProvider).config.baseUrl;
       final uri = current.lastMaxId != null
           ? Uri.parse('$baseUrl/feed/recent?max_id=${current.lastMaxId}')
           : Uri.parse('$baseUrl/feed/recent?page=$nextPage');
@@ -322,33 +255,33 @@ class HomeViewModel extends AutoDisposeAsyncNotifier<HomeState> {
       final resp = await http.get(uri, headers: {'Authorization': 'Bearer $token'});
 
       if (resp.statusCode == 200) {
-        final parsed = jsonDecode(resp.body);
-        final moreListings = (parsed is List ? parsed : (parsed['listings'] ?? [])) as List<dynamic>;
-        final newTotal = parsed is List
+        final parsed        = jsonDecode(resp.body);
+        final moreListings  = (parsed is List ? parsed : (parsed['listings'] ?? [])) as List<dynamic>;
+        final newTotal      = parsed is List
             ? (moreListings.length < 20 ? nextPage : 9999)
             : parsed['pagination']?['total_pages'] ?? current.totalPages;
 
         final existingIds = current.recentListings.map((e) => e['id']).toSet();
-        final uniqueMore = moreListings.where((e) => !existingIds.contains(e['id'])).toList();
-        final newMinId = uniqueMore.isNotEmpty
+        final uniqueMore  = moreListings.where((e) => !existingIds.contains(e['id'])).toList();
+        final newMinId    = uniqueMore.isNotEmpty
             ? uniqueMore.map((e) => e['id'] as int).reduce((a, b) => a < b ? a : b)
             : current.lastMaxId;
 
         state = AsyncValue.data(current.copyWith(
           recentListings: [...current.recentListings, ...uniqueMore],
-          currentPage: nextPage,
-          totalPages: newTotal,
-          lastMaxId: newMinId,
-          isLoadingMore: false,
+          currentPage:    nextPage,
+          totalPages:     newTotal,
+          lastMaxId:      newMinId,
+          isLoadingMore:  false,
         ));
       } else {
         state = AsyncValue.data(current.copyWith(isLoadingMore: false));
       }
     } catch (e) {
-      state = AsyncValue.data(current.copyWith(isLoadingMore: false));
+      state = AsyncValue.data(state.value!.copyWith(isLoadingMore: false));
     }
   }
-  
+
   void applyFilter(ListingFilterState newFilter) {
     if (!newFilter.isEmpty) {
       ref.read(analyticsServiceProvider).trackEvent('filter_applied', {
@@ -359,7 +292,7 @@ class HomeViewModel extends AutoDisposeAsyncNotifier<HomeState> {
     state = AsyncValue.data(state.value!.copyWith(filter: newFilter));
     _fetchInitial(bypassCache: true);
   }
-  
+
   void clearFilters() {
     state = AsyncValue.data(state.value!.copyWith(filter: const ListingFilterState()));
     _fetchInitial(bypassCache: true);
@@ -368,10 +301,12 @@ class HomeViewModel extends AutoDisposeAsyncNotifier<HomeState> {
   Future<void> removeHesitated(int listingId) async {
     final current = state.value;
     if (current == null) return;
-    
-    final newList = current.hesitatedListings.where((e) => (e as Map)['id'] != listingId).toList();
+
+    final newList = current.hesitatedListings
+        .where((e) => (e as Map)['id'] != listingId)
+        .toList();
     state = AsyncValue.data(current.copyWith(hesitatedListings: newList));
-    
+
     final token = await StorageService.getToken();
     if (token != null) {
       try {

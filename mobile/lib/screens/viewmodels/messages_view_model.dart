@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../services/cache_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/push_notification_service.dart';
 import '../../services/storage_service.dart';
@@ -129,8 +130,8 @@ class MessagesTabViewModel extends AutoDisposeAsyncNotifier<ConversationsUiState
     final info = await StorageService.getUserInfo();
     final myUserId = info?['id'] as int?;
 
-    final cached = await StorageService.getCachedData(StorageService.cacheMessages);
-    
+    final cached = CacheService.getData(StorageService.cacheMessages);
+
     Future.microtask(() => load(silent: cached != null));
 
     return ConversationsUiState(
@@ -150,7 +151,7 @@ class MessagesTabViewModel extends AutoDisposeAsyncNotifier<ConversationsUiState
 
     try {
       final data = await ref.read(notificationServiceProvider).getConversations();
-      await StorageService.cacheData(StorageService.cacheMessages, data);
+      await CacheService.saveData(StorageService.cacheMessages, data);
       state = AsyncValue.data(state.value!.copyWith(
         conversations: data,
         loading: false,
@@ -255,8 +256,8 @@ class NotificationsTabViewModel extends AutoDisposeAsyncNotifier<NotificationsUi
     _sub = PushNotificationService.notificationStream.stream.listen((_) => load(silent: true));
     ref.onDispose(() => _sub?.cancel());
 
-    final cached = await StorageService.getCachedData(StorageService.cacheNotifications);
-    
+    final cached = CacheService.getData(StorageService.cacheNotifications);
+
     Future.microtask(() => load(silent: cached != null));
 
     return NotificationsUiState(
@@ -273,7 +274,7 @@ class NotificationsTabViewModel extends AutoDisposeAsyncNotifier<NotificationsUi
 
     try {
       final data = await ref.read(notificationServiceProvider).getNotifications();
-      await StorageService.cacheData(StorageService.cacheNotifications, data);
+      await CacheService.saveData(StorageService.cacheNotifications, data);
       state = AsyncValue.data(state.value!.copyWith(
         notifications: data,
         loading: false,
@@ -322,7 +323,7 @@ class RequestsTabViewModel extends AutoDisposeAsyncNotifier<ConversationsUiState
       _wsSub?.cancel();
     });
 
-    final cached = await StorageService.getCachedData(StorageService.cacheMessageRequests);
+    final cached = CacheService.getData(StorageService.cacheMessageRequests);
 
     Future.microtask(() => load(silent: cached != null));
 
@@ -340,7 +341,7 @@ class RequestsTabViewModel extends AutoDisposeAsyncNotifier<ConversationsUiState
     }
     try {
       final data = await ref.read(notificationServiceProvider).getMessageRequests();
-      await StorageService.cacheData(StorageService.cacheMessageRequests, data);
+      await CacheService.saveData(StorageService.cacheMessageRequests, data);
       state = AsyncValue.data(state.value!.copyWith(
         conversations: data,
         loading: false,
