@@ -39,6 +39,7 @@ async def send_push(
     is_silent: bool = False,
     ttl: int | None = None,
     android_channel_id: str | None = None,
+    content_available: bool = False,
 ) -> None:
     """
     Eski servis fonksiyonu, geriye dönük uyumluluk (Facade) amacıyla korunmuştur.
@@ -63,6 +64,7 @@ async def send_push(
             is_silent=is_silent,
             ttl=ttl,
             android_channel_id=android_channel_id,
+            content_available=content_available,
         )
         if not success:
             logger.warning("[FCM Facade] Push gönderimi başarısız döndü.")

@@ -1037,7 +1037,8 @@ async def _send_missed_call_push(callee: User, caller: User, call_id: int) -> No
             title=title,
             body=body,
             notif_type="call_missed",
-            extra_data={"caller_username": caller.username, "related_id": str(caller.id), "call_id": str(call_id)}
+            extra_data={"caller_username": caller.username, "related_id": str(caller.id), "call_id": str(call_id)},
+            content_available=True,
         )
     except Exception as _e:
         logger.warning("[CALL_PROCESS][IN] missed_call FCM push FAILED | call_id=%d %s", call_id, _e)

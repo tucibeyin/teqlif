@@ -17,12 +17,14 @@ class PushNotificationPort(abc.ABC):
         is_silent: bool = False,
         ttl: int | None = None,
         android_channel_id: str | None = None,
+        content_available: bool = False,
     ) -> bool:
         """
         Tek bir cihaza bildirim gönderir.
         is_silent=True → notification alanı olmadan data-only mesaj (callkit için).
         ttl → FCM mesaj yaşam süresi (saniye).
         android_channel_id → özel kanal ID'si.
+        content_available=True → APNs aps["content-available"]=1; iOS background app'i uyandırır.
         """
         pass
 

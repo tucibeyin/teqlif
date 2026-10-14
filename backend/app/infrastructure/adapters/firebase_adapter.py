@@ -54,6 +54,7 @@ class FirebaseAdapter(PushNotificationPort):
         is_silent: bool = False,
         ttl: int | None = None,
         android_channel_id: str | None = None,
+        content_available: bool = False,
     ) -> bool:
         if not token:
             logger.error("[FirebaseAdapter] send_notification çağrıldı ama token boş")
@@ -66,7 +67,7 @@ class FirebaseAdapter(PushNotificationPort):
         try:
             async with fcm_breaker:
                 msg = self._build_message(
-                    token, title, body, data, is_silent, ttl, android_channel_id
+                    token, title, body, data, is_silent, ttl, android_channel_id, content_available
                 )
                 message_id = await asyncio.to_thread(self._send_http, msg)
                 logger.info(
@@ -109,6 +110,7 @@ class FirebaseAdapter(PushNotificationPort):
         is_silent: bool,
         ttl: int | None,
         android_channel_id: str | None,
+        content_available: bool = False,
     ) -> dict:
         formatted_data = {k: str(v) for k, v in data.items()} if data else {}
 
@@ -126,13 +128,18 @@ class FirebaseAdapter(PushNotificationPort):
 
         # iOS: apns-priority 10 olmadan arka planda/kapalıyken bildirim gösterilmez.
         # is_silent=True (VoIP) için yok — o akış apns_service.py'den PushType.VOIP ile gidiyor.
+        # content_available=True: aps["content-available"]=1 → iOS background app'i uyandırır;
+        # FirebaseMessagingBackgroundHandler çalışır — CallKit endCall() için gerekli.
         if not is_silent:
+            aps: dict = {"sound": "default"}
+            if content_available:
+                aps["content-available"] = 1
             msg["apns"] = {
                 "headers": {
                     "apns-priority": "10",
                     "apns-push-type": "alert",
                 },
-                "payload": {"aps": {"sound": "default"}},
+                "payload": {"aps": aps},
             }
 
         return msg
