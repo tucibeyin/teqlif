@@ -740,6 +740,10 @@
   "walletTxnSpendBoost": "Listing boost",
   "walletTxnSpendBoostPaid": "Paid listing boost",
   "walletTxnSpendReactivation": "Listing reactivation",
+  "walletTxnSpendBlast": "Blast notification",
+  "walletTxnSpendAiPrice": "AI price analysis",
+  "walletTxnStreamGiftReceived": "Stream gift received",
+  "walletTxnDailyLogin": "Daily login reward",
   "walletSeeAllTxns": "See all {n} transactions",
   "@walletSeeAllTxns": {
     "placeholders": {

@@ -1324,6 +1324,10 @@
   "walletTxnSpendBoost": "Продвижение объявления",
   "walletTxnSpendBoostPaid": "Платное продвижение",
   "walletTxnSpendReactivation": "Повторная публикация объявления",
+  "walletTxnSpendBlast": "Массовая рассылка",
+  "walletTxnSpendAiPrice": "Анализ цен ИИ",
+  "walletTxnStreamGiftReceived": "Получен подарок в эфире",
+  "walletTxnDailyLogin": "Ежедневная награда за вход",
   "walletSeeAllTxns": "Показать все {n} транзакции",
   "@walletSeeAllTxns": {
     "placeholders": {

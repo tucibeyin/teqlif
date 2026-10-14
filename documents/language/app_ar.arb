@@ -743,6 +743,10 @@
   "walletTxnSpendBoost": "تعزيز الإعلان",
   "walletTxnSpendBoostPaid": "تعزيز مدفوع للإعلان",
   "walletTxnSpendReactivation": "إعادة تفعيل الإعلان",
+  "walletTxnSpendBlast": "إشعار بث فوري",
+  "walletTxnSpendAiPrice": "تحليل الأسعار بالذكاء الاصطناعي",
+  "walletTxnStreamGiftReceived": "هدية بث مستلمة",
+  "walletTxnDailyLogin": "مكافأة الدخول اليومي",
   "walletSeeAllTxns": "عرض جميع {n} معاملة",
   "@walletSeeAllTxns": {
     "placeholders": {

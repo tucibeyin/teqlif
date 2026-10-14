@@ -740,6 +740,10 @@
   "walletTxnSpendBoost": "Öne çıkarma",
   "walletTxnSpendBoostPaid": "Öne çıkarma (ücretli)",
   "walletTxnSpendReactivation": "İlan yeniden yayına alma",
+  "walletTxnSpendBlast": "Anlık Yayın Bildirimi",
+  "walletTxnSpendAiPrice": "AI fiyat analizi",
+  "walletTxnStreamGiftReceived": "Yayın hediyesi alındı",
+  "walletTxnDailyLogin": "Günlük giriş ödülü",
   "walletSeeAllTxns": "Tümünü gör ({n} işlem)",
   "@walletSeeAllTxns": {
     "placeholders": {
