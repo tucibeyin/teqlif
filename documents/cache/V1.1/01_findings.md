@@ -1,353 +1,469 @@
 # Mobile Cache Sistem Analizi — V1.1 Bulgular & Uygulama Spesifikasyonu
 
 **Tarih:** 2026-10-14
-**Kapsam:** V1.0 sonrası açık kalan cache iyileştirme fırsatları; görüntü cache birleşimi, sayfalama kalıcılığı, bellek yönetimi
-**Revizyon:** V1.0 — Analiz tamamlandı, uygulama bekliyor
+**Kapsam:** ADR, Clean Architecture, MVVM, OTA/ARB, Redis, PostgreSQL, backend servisleri ve V2.1 sistem mimarisine göre tam re-analiz
+**Revizyon:** V1.1 — Mimari re-analiz tamamlandı, 13 bulgu, uygulama bekliyor
 
 ---
 
 ## 0. Uyum Gereksinimleri
 
-V1.0 §0 kurallarının tamamı bu döküman için de geçerlidir. Tekrarlanmamıştır; her uygulama adımında V1.0 §0 okunur.
+V1.0 §0 kurallarının tamamı bu döküman için geçerlidir. Her uygulama adımında V1.0 §0 okunur.
 
 Kısaca:
-- ADR §13 workflow her commit için zorunlu (local → push → git pull → test → docs → cleanup)
+- ADR §13 workflow her commit için zorunlu
 - ADR §8 MVVM katman sınırları ihlal edilemez
+- ADR §9 cache taksonomisi her yeni anahtarda kontrol edilir
 - `flutter analyze` sıfır hata/uyarı
 - P0 ve P1 önce staging'de test edilir
 
 ---
 
-## 1. Özet Tablo
+## 1. ADR §9 — Tüm Cache Anahtarlarının Taksonomi Tablosu
 
-| § | Başlık | Öncelik | Durum | Commit |
-|---|--------|---------|-------|--------|
-| §12.1 | `flutter_cache_manager` sürüm sabitleme | **P0** | ⬜ bekliyor | — |
-| §12.2 | messages/notifications açık TTL | **P1** | ⬜ bekliyor | — |
-| §12.3 | TeqlifCacheManager tüm CachedNetworkImage'lara yay | **P1** | ⬜ bekliyor | — |
-| §12.4 | memCacheWidth/Height feed kartlarına ekle | **P1** | ⬜ bekliyor | — |
-| §12.5 | Feed loadMore() sayfaları diske yaz | **P2** | ⬜ bekliyor | — |
-| §12.6 | api_cache box maksimum anahtar limiti | **P2** | ⬜ bekliyor | — |
-| §12.7 | PublicProfile prefetch (gecikmeli önbellek ısıtma) | **P3** | ⬜ bekliyor | — |
-| §12.8 | Entity normalization store | **P3** | ⬜ bekliyor | — |
+Her cache anahtarı için ADR §9'daki beş taksonomiden biri atanmalıdır. Bu tablo V1.1 analizi sırasında oluşturulmuştur; eksik veya yanlış sınıflandırılan anahtarlar §12'deki bulgularla ilişkilendirilir.
+
+| Cache Key | Taksonomi | Client TTL | Backend Redis TTL | Invalidasyon Tetikleyici | Durum |
+|-----------|-----------|-----------|------------------|--------------------------|-------|
+| `i18n_cache` (Hive) | SCHEMA_VERSIONED | 24h | 1h (`/api/i18n`) | `sync_translations.py` + `bump_schema_version()` | ✅ doğru |
+| `field_config_*` (Hive) | SCHEMA_VERSIONED | in-memory | 24h | admin deploy | ✅ doğru |
+| `catalog` / `cities` | SCHEMA_VERSIONED | — (backend) | 24h + schema_v | migration + `bump_schema_version()` | ✅ doğru |
+| `home_feed_recent` (Hive box) | ALGORITHMIC | 30 min | **15 min** (Redis setex) | — (TTL) | ⚠️ TTL uyumsuz §12.10 |
+| `explore_for_you` / `feed_personalized` | ALGORITHMIC | 10 min | 15 min (Redis setex) | — (TTL) | ✅ kabul edilebilir |
+| `explore_personalized_feed` | ALGORITHMIC | 10 min | 15 min | — (TTL) | ✅ kabul edilebilir |
+| `cache_streams` | **LIFECYCLE** | 3 min | — | ❌ stream sonu event temizlemiyor | 🔴 §12.9 |
+| `cache_auctions` | **LIFECYCLE** | — | — | ❌ kullanılmıyor (dead code) | 🔴 §12.11 |
+| `cache_stories` | LIFECYCLE | 5 min | — | story.expires_at → TTL ile örtüşüyor | ⚠️ kabul |
+| `cache_profile` | LIFECYCLE | 15 min | — | ❌ profil güncellemede temizlenmiyor | ⚠️ kabul |
+| `public_profile_*` | LIFECYCLE | 15 min | — | ❌ takip/engel event'inde temizlenmiyor | ⚠️ kabul |
+| `public_listings_*` | LIFECYCLE | 10 min | — | — (TTL) | ✅ kabul |
+| `public_ratings_*` | LIFECYCLE | 30 min | — | — (TTL) | ✅ kabul |
+| `cache_messages` | EPHEMERAL | 5 min (**implicit**) | — | WS gerçek zamanlı | 🟡 §12.2 |
+| `cache_notifications` | EPHEMERAL | 5 min (**implicit**) | — | push notification | 🟡 §12.2 |
+| `cache_message_requests` | EPHEMERAL | 5 min (**implicit**) | — | WS event | 🟡 §12.2 |
+| `cache_sales` | LIFECYCLE | 3 min | — | `clearData` satış tamamlandığında ✅ | ✅ doğru |
+| `cache_my_ratings_*` | LIFECYCLE | 10 min | — | `clearData` manuel refresh ✅ | ✅ doğru |
+| `cache_blocked_users` | LIFECYCLE | 10 min | — | `clearData` blokta ✅ | ✅ doğru |
+| `cache_notification_settings` | SCHEMA_VERSIONED | 30 min | — | `clearData` ayar değişince ✅ | ✅ doğru |
+| `cache_feed` | ALGORITHMIC | — | — | ❓ nerede kullanıldığı belirsiz | 🟡 gözlem |
+| `user_wallet_data` | LIFECYCLE | default 5 min | — | `clearData` ödeme sonrası ✅ | ✅ doğru |
+| `follow_list_*` | LIFECYCLE | 5 min | — | — (TTL) | ✅ kabul |
+
+> **Kural (ADR §9):** LIFECYCLE anahtarlar için TTL yeterli değildir — olayın sonunda `clearData()` da çağrılmalıdır. TTL yalnızca event gözden kaçırıldığında ağ yeniden senkronizasyonunu garanti eder.
 
 ---
 
-## 2. Bulgular
+## 2. Özet Tablo
+
+| § | Başlık | Öncelik | Etkilenen Sistem | Durum |
+|---|--------|---------|-----------------|-------|
+| §12.1 | `flutter_cache_manager` sürüm sabitleme | **P0** | Mobil | ⬜ bekliyor |
+| §12.2 | messages/notifications açık TTL | **P1** | Mobil | ⬜ bekliyor |
+| §12.3 | TeqlifCacheManager tüm CachedNetworkImage'lara yay | **P1** | Mobil | ⬜ bekliyor |
+| §12.4 | memCacheWidth/Height feed kartlarına ekle | **P1** | Mobil | ⬜ bekliyor |
+| §12.9 | LIFECYCLE cache → WS event invalidasyonu | **P1** | Mobil + WS | ⬜ bekliyor |
+| §12.10 | Backend ↔ mobil TTL uyumsuzluğu (home feed) | **P1** | Mobil + Backend | ⬜ bekliyor |
+| §12.11 | `home_view_model` / `search_view_model` — direct http.get (ADR §8 ihlali) | **P1** | Mobil MVVM | ⬜ bekliyor |
+| §12.5 | Feed loadMore() sayfaları diske yaz | **P2** | Mobil | ⬜ bekliyor |
+| §12.6 | api_cache box maksimum anahtar limiti | **P2** | Mobil | ⬜ bekliyor |
+| §12.12 | cacheKey parametresi — presigned URL bağımlılığı | **P2** | Mobil | ⬜ bekliyor |
+| §12.13 | Backend `Cache-Control` header eksikliği | **P2** | Backend + Cloudflare | ⬜ bekliyor |
+| §12.7 | PublicProfile prefetch | **P3** | Mobil | ⬜ bekliyor |
+| §12.8 | Entity normalization store | **P3** | Mobil | ⬜ bekliyor |
+
+---
+
+## 3. Bulgular
 
 ### §12.1 `flutter_cache_manager: any` — Sürüm Sabitleme
 
 **Öncelik:** P0
-**Etki:** Bir sonraki `flutter pub upgrade` ile kırılma riski — breaking change olduğunda herhangi bir build'de sessizce bozulabilir.
+**Etkilenen sistem:** Mobil → `mobile/pubspec.yaml:66`
 
-**Tespit:**
-
-```
-mobile/pubspec.yaml:66:  flutter_cache_manager: any
-```
-
-`any` kısıtı, pub.dev'de yeni sürüm yayınlandığında CI/build ortamında farklı sürüm çözümü alınmasına neden olur. `cached_network_image: ^3.3.1` zaten `flutter_cache_manager`'a bağımlıdır; `any` bırakmak gereksiz.
+`any` kısıtı, `flutter pub upgrade` veya CI ortamında farklı sürüm çözümü alınmasını sağlar. Bir sonraki breaking change'de sessizce bozulabilir. `cached_network_image: ^3.3.1` zaten bağımlı olduğundan `any` gereksiz.
 
 **Çözüm:**
-
 ```yaml
-# pubspec.yaml
 flutter_cache_manager: ">=3.3.1 <4.0.0"
 ```
+Mevcut prod sürümünü `flutter pub deps | grep flutter_cache_manager` ile doğrula, ardından sabitle.
 
-Mevcut prod sürümünü doğrula: `flutter pub deps | grep flutter_cache_manager`, ardından `^` ile sabitle.
-
-**Test:** `flutter pub upgrade --dry-run` çıktısında version conflict yok, `flutter analyze` temiz.
+**Test:** `flutter pub upgrade --dry-run` version conflict yok, `flutter analyze` temiz.
 
 ---
 
 ### §12.2 messages / notifications / message_requests — Açık TTL Eksikliği
 
 **Öncelik:** P1
-**Etki:** ADR §9 taksonomisi `EPHEMERAL` olarak sınıflandırılmış bu anahtarlar, `saveData` çağrısında `ttl` parametresi geçmediği için varsayılan 5 dakika kullanıyor. Bu değer şu an doğru tesadüfen — ama gelecekte `CacheService` varsayılanı değişirse sessizce kırılır.
+**Etkilenen sistem:** Mobil → `messages_view_model.dart:155,280,349`
 
-**Tespit:**
-
-```
-messages_view_model.dart:155   await _cache.saveData(StorageService.cacheMessages, data);
-messages_view_model.dart:280   await _cache.saveData(StorageService.cacheNotifications, data);
-messages_view_model.dart:349   await _cache.saveData(StorageService.cacheMessageRequests, data);
-```
-
-Her üçü de `ttl` parametresi geçmiyor. Kasıtlı değer değil, unutulmuş.
+Üç EPHEMERAL anahtar `saveData` çağrısında `ttl` parametresi geçmiyor. Şu an varsayılan 5 dakika kullanılıyor — bu değer doğru, ancak gelecekte `CacheService` varsayılanı değişirse sessizce kırılır. ADR §9 taksonomisi gereği TTL her zaman açık olmalıdır.
 
 **Çözüm:**
-
 ```dart
-// messages_view_model.dart — üç satır
 await _cache.saveData(
-  StorageService.cacheMessages,
-  data,
-  ttl: const Duration(minutes: 5), // EPHEMERAL: mesaj listesi hızla bayatlar
+  StorageService.cacheMessages, data,
+  ttl: const Duration(minutes: 5), // EPHEMERAL: WS gerçek zamanlı günceller
 );
 await _cache.saveData(
-  StorageService.cacheNotifications,
-  data,
+  StorageService.cacheNotifications, data,
   ttl: const Duration(minutes: 5),
 );
 await _cache.saveData(
-  StorageService.cacheMessageRequests,
-  data,
+  StorageService.cacheMessageRequests, data,
   ttl: const Duration(minutes: 5),
 );
 ```
-
-TTL değeri bilinçli olarak seçilmeli: backend mesaj/bildirim event gönderiyorsa WS bağlantısında zaten anlık güncellenir; 5 dakika offline kapsam için yeterli.
-
-**Test:** Messages ekranı offline açılınca cached data gösterir; 5 dakika sonra açılınca network fetch tetikler.
 
 ---
 
 ### §12.3 TeqlifCacheManager — Tüm CachedNetworkImage Kapsamı
 
 **Öncelik:** P1
-**Etki:** 60 `CachedNetworkImage` widget'ından yalnızca 13'ü `TeqlifCacheManager` kullanıyor. Geri kalan 47'si `DefaultCacheManager` ile calışıyor: **7 günlük TTL, 200 dosya limiti** — uygulamamızın 2 gün / 300 dosya konfigürasyonu yerine.
+**Etkilenen sistem:** Mobil → 60 CachedNetworkImage widget, 13'ü mevcut
 
-**Tespit:**
+47 widget `DefaultCacheManager` (7 gün TTL, 200 dosya) kullanıyor. `TeqlifCacheManager` (2 gün TTL, 300 dosya) ile tutarlı politika sağlanmalı.
 
-```
-TeqlifCacheManager kullanan widget'lar (13):
-  search_screen.dart         : 3 widget
-  home_screen.dart           : 2 widget
-  profile_screen.dart        : 4 widget
-  listing_detail_screen.dart : 3 widget  (eklendi)
-  (diğer ekranlar)           : 1 widget
+**Öncelikli ekranlar (frekanslı):**
+1. `messages_screen.dart` — 3 CachedNetworkImage + 2 CachedNetworkImageProvider
+2. `recording_detail_screen.dart` — 4 + 4
+3. `sales_screen.dart`, `purchase_detail_screen.dart` — 2'şer
+4. `retargeting_screen.dart`, `direct_sale_detail_screen.dart` — kalan
 
-DefaultCacheManager ile kalan ekranlar (örnekler):
-  direct_sale_detail_screen.dart
-  retargeting_screen.dart       (2 widget)
-  sales_screen.dart             (2 widget)
-  purchase_detail_screen.dart   (2 widget)
-  recording_detail_screen.dart  (4 widget)
-  messages_screen.dart          (3 widget + 2 Provider)
-  follow_requests_screen.dart
-  call_history_screen.dart
-  blocked_users_screen.dart
-```
-
-`CachedNetworkImageProvider` kullanan 10 konum da `TeqlifCacheManager` almıyor — ancak `CachedNetworkImageProvider` CircleAvatar içinde background image olarak kullanıldığında `cacheManager` parametresi destekleniyor.
-
-**Çözüm:**
-
-Her `CachedNetworkImage(...)` çağrısına `cacheManager: TeqlifCacheManager()` ekle. `CachedNetworkImageProvider(url)` → `CachedNetworkImageProvider(url, cacheManager: TeqlifCacheManager())`.
-
-Uygulama sırası (etki büyüklüğüne göre):
-1. `messages_screen.dart` — 3 CachedNetworkImage + 2 Provider (yüksek frekanslı ekran)
-2. `recording_detail_screen.dart` — 4 CachedNetworkImage + 4 Provider
-3. `sales_screen.dart`, `purchase_detail_screen.dart` — 2'şer widget
-4. `retargeting_screen.dart`, `direct_sale_detail_screen.dart` — kalan ekranlar
-
-**Test:** `flutter_cache_manager` disk cache dizininde `teqlifImgCache/` klasörü büyürken `flutter_cache/` küçülüyor.
+**Çözüm:** Her `CachedNetworkImage(...)` çağrısına `cacheManager: TeqlifCacheManager()` ekle. `CachedNetworkImageProvider(url)` → `CachedNetworkImageProvider(url, cacheManager: TeqlifCacheManager())`.
 
 ---
 
 ### §12.4 memCacheWidth / memCacheHeight — Bellek Önbellek Optimizasyonu
 
 **Öncelik:** P1
-**Etki:** `PaintingBinding.instance.imageCache` 25 MB olarak sınırlandırılmış (V1.0'da uygulandı). Ancak hiçbir `CachedNetworkImage` widget'ı `memCacheWidth` veya `memCacheHeight` kullanmıyor. Feed kartları 1080px tam boyutlu görselleri 80×80 avatar olarak decode ediyor — bellek 180× gereksiz harcanıyor.
+**Etkilenen sistem:** Mobil → tüm 60 CachedNetworkImage widget (0 memCache kullanımı)
+
+`PaintingBinding.instance.imageCache` 25 MB ile sınırlı (V1.0). Ama 1080px görseller 80×80 avatar alanında decode ediliyor — bellek ~180× gereksiz harcanıyor.
+
+**Çözüm:**
+```dart
+// Avatar (~60dp × 2x)
+CachedNetworkImage(imageUrl: url, cacheManager: TeqlifCacheManager(),
+  memCacheWidth: 120, memCacheHeight: 120, fit: BoxFit.cover)
+
+// Feed kartı (ekran genişliği / 2 ~ 200dp × 2x)
+CachedNetworkImage(imageUrl: url, cacheManager: TeqlifCacheManager(),
+  memCacheWidth: 400, fit: BoxFit.cover)
+```
+
+Kural: `memCacheWidth = round(renderWidth * devicePixelRatio)`. Sabit olmayan layout için makul üst sınır: avatar=120, feed kart=400, tam ekran=800.
+
+---
+
+### §12.9 LIFECYCLE Cache — WS Event Invalidasyonu Eksikliği
+
+**Öncelik:** P1
+**Etkilenen sistem:** Mobil + WS altyapısı (ADR §10 StreamCommerceNotifier)
+
+ADR §9: "LIFECYCLE: Olayın bitişiyle tetiklenir." Ancak mevcut durumda `cacheStreams` ve `cacheAuctions` yalnızca TTL ile evict ediliyor.
 
 **Tespit:**
 
-```bash
-# grep sonucu: 0 satır
-grep -rn "memCacheWidth\|memCacheHeight" mobile/lib/
+```dart
+// auction_provider.dart:30 — auction_ended_by_buy_it_now
+// direct_sale_provider.dart:64 — direct_sale_ended
+// → clearData(cacheAuctions) veya clearData(cacheStreams) ÇAĞRILMIYOR
 ```
 
-**Çözüm — öncelikli lokasyonlar:**
+**Senaryo:** Kullanıcı açık artırma listesini görüyor (cache'de 3 dk TTL). Artırma anında sona eriyor (WS event alınıyor). Kullanıcı listele sayfasına geri dönüyor → 3 dakikaya kadar "aktif" olarak görebilir.
 
-Feed kartları ve avatar'lar en kritik; bunlar yüksek tekrar eden widget'lar:
+**Çözüm:**
+
+ADR §10 kuralına göre WS altyapısına dokunulmaz; cache temizleme sadece `onCommerceEvent()` alt sınıf metoduna eklenir:
 
 ```dart
-// Avatar (genellikle 40-60dp → 2x = 80-120px mantıklı)
-CachedNetworkImage(
-  imageUrl: avatarUrl,
-  cacheManager: TeqlifCacheManager(),
-  memCacheWidth: 120,   // dp * devicePixelRatio ≈ 60 * 2
-  memCacheHeight: 120,
-  fit: BoxFit.cover,
-)
-
-// Feed kartı ana görseli (genellikle ekran genişliği / 2 grid veya full width)
-CachedNetworkImage(
-  imageUrl: photoUrl,
-  cacheManager: TeqlifCacheManager(),
-  memCacheWidth: 400,  // grid kart genişliği * 2x
-  fit: BoxFit.cover,
-)
+// auction_provider.dart — AuctionNotifier.onCommerceEvent()
+case 'auction_ended':
+case 'auction_ended_by_buy_it_now':
+  // LIFECYCLE invalidasyon — cache stale kalmasın
+  ref.read(cacheServiceProvider).clearData(StorageService.cacheAuctions);
+  break;
 ```
 
-Kural: `memCacheWidth = round(renderWidth * devicePixelRatio)`. Layout sabit değilse hesaplamak yerine makul bir üst sınır belirle (avatar=120, feed kart=400, full-screen=800).
+```dart
+// live_stream_provider.dart — FollowedStreamsNotifier (veya stream end observer)
+// Stream durumu 'ended' olan kayıt home/search feed'de de olabilir
+// → clearData(cacheStreams) stream.status == 'ended' WS event alındığında
+```
 
-**Not:** `memCacheWidth` yalnızca bellek decoder cache'ini etkiler — disk'teki dosya değişmez. `§12.3` ile aynı anda uygulanabilir.
+**Not:** WS event olmaksızın stream sona erme (sunucu kapanması, ağ kopması) TTL ile çözülür. Bu düzeltme yalnızca uygulama açık ve WS bağlıyken geçerli event'lar içindir — ek karmaşıklık gerekmez.
 
-**Test:** `flutter --profile` ile memory profiler'da image cache bellek kullanımı azalıyor.
+---
+
+### §12.10 Backend ↔ Mobil TTL Uyumsuzluğu
+
+**Öncelik:** P1
+**Etkilenen sistem:** Mobil HomeRepository + Backend feed.py
+
+**Tespit:**
+
+| Katman | TTL | Kaynak |
+|--------|-----|--------|
+| Backend Redis `feed:personalized:{uid}` | **15 dakika** | `feed.py:362` `setex(cache_key, 900, ...)` |
+| Flutter `HomeRepository._kCacheTtlMs` | **30 dakika** | `home_repository.dart:27` |
+| Flutter `search_view_model` for-you | **10 dakika** | `search_view_model.dart:330` |
+
+`HomeRepository` 30 dakika geçerli sayarken backend aynı veriyi 15 dakika sonra yeniliyor. Kullanıcı uygulamayı 20 dakika sonra açtığında mobil 10 dakika daha taze veri gösterirken backend farklı (yenilenmiş) bir feed hesaplamış olabilir. Sosyal ticaret bağlamında yeni ilanlar, fiyat değişikliği ve "for-you" kişiselleştirme için bu fark önemli.
+
+**Çözüm:**
+
+```dart
+// home_repository.dart
+static const _kCacheTtlMs = 15 * 60 * 1000; // 30 → 15 dakika (backend TTL ile senkron)
+```
+
+`search_view_model.dart:330` zaten 10 dakika kullanıyor — for-you feed için bu daha iyi; değiştirilmez.
+
+**Test:** Backend Redis'e doğrudan yazılmış bir test verisi 15 dakika sonra mobilde yenileniyor.
+
+---
+
+### §12.11 `home_view_model` / `search_view_model` — Direct http.get (ADR §8 İhlali)
+
+**Öncelik:** P1
+**Etkilenen sistem:** Mobil MVVM — Clean Architecture §0.4 ihlali
+
+ADR §8: "ViewModel doğrudan `http.get()`, `Hive.openBox()`, `SharedPreferences.getInstance()` çağıramaz."
+
+**Tespit:**
+
+```
+home_view_model.dart:117   final resp = await http.get(uri, headers: ...)
+home_view_model.dart:149   final resp = await http.get(...)
+home_view_model.dart:186   final resp = await http.get(...)
+home_view_model.dart:255   final resp = await http.get(uri, headers: ...)   ← loadMore()
+home_view_model.dart:310   await http.delete(...)
+
+search_view_model.dart:235  final resp = await http.get(...)
+search_view_model.dart:257  final resp = await http.get(...)
+search_view_model.dart:476  final resp = await http.get(...)                ← loadMoreRecentListings()
+search_view_model.dart:517  final resp = await http.get(...)                ← loadMoreForYou()
+```
+
+`StorageService.getToken()` static çağrısı da Data Layer → ViewModel ihlalidir. `ApiService` veya `ApiClient` bu token yönetimini zaten içeriyor.
+
+**İlişki:** §12.5 (loadMore disk persistansı) bu bulguyla birleşiyor — her ikisi de `loadMore()` için `HomeRepository`'nin genişletilmesini gerektiriyor.
+
+**Çözüm:**
+
+`HomeRepository`'ye `loadMore(page, maxId)` metodu ekle:
+
+```dart
+// home_repository.dart
+Future<HomeFeedPage> loadMore({required int page, int? maxId}) async {
+  // ApiClient üzerinden çağrı yapar — token yönetimi ApiClient içinde
+  final uri = maxId != null
+      ? Uri.parse('${_client.config.baseUrl}/feed/recent?max_id=$maxId')
+      : Uri.parse('${_client.config.baseUrl}/feed/recent?page=$page');
+  final resp = await _client.get(uri);
+  // parse + cache yazma buraya taşınır
+}
+```
+
+`home_view_model.dart` `loadMore()` metodu `_repo.loadMore(...)` çağrısına indirgenir.
+
+Aynı düzeltme `search_view_model.dart` için de gereklidir — ancak `SearchRepository` henüz yok; önce `HomeRepository` düzeltilir, ardından aynı pattern `SearchRepository` ile tekrarlanır.
+
+**Etki:** Bu refactor `§12.5` (loadMore disk persistansı) ile aynı sprint'te yapılmalıdır; her ikisi de aynı metodun içini değiştiriyor.
 
 ---
 
 ### §12.5 Feed loadMore() Sayfaları — Disk Kalıcılığı
 
 **Öncelik:** P2
-**Etki:** Kullanıcı feed'i 3 sayfa kaydırır, uygulama arka plana alınır. Geri döndüğünde yalnızca sayfa 0 görünür — kaydırma pozisyonu ve görülen ilan listesi kaybolur. Instagram / TikTok bu durumu "sayfa önbelleğe alınmış" veriyle çözer.
+**Etkilenen sistem:** Mobil — `HomeRepository` + `search_view_model`
+
+> **Not:** Bu bulgu §12.11 ile birlikte ele alınmalıdır. `loadMore()` önce Repository'ye taşınmalı (§12.11), ardından Repository cache yazması eklenmeli.
 
 **Tespit:**
 
-`home_view_model.dart:235 loadMore()` — yalnızca state'e yazar, `CacheService.saveData()` çağırmaz.
-`search_view_model.dart:445 loadMoreRecentListings()` ve `loadMoreForYou()` — aynı durum.
+`home_view_model.dart:235 loadMore()` ve `search_view_model.dart:445,503` — başarılı yanıtlar yalnızca state'e yazılıyor, cache'e değil. Uygulama arka plana alınıp geri dönüldüğünde yalnızca sayfa 0 görünür.
 
-**Çözüm:**
+**Çözüm (§12.11 sonrası):**
 
-Feed state'ini tek bir merged blob olarak sakla — her `loadMore()` sonrasında tüm birikmiş listeyi güncelle:
-
-```dart
-// home_view_model.dart — loadMore() başarı bloğu sonuna ekle
-await ref.read(cacheServiceProvider).saveData(
-  StorageService.cacheHomeFeedRecent,
-  [...current.recentListings, ...uniqueMore],
-  ttl: const Duration(minutes: 15), // ALGORITHMIC taksonomi
-);
-```
-
-Maksimum sayfa limiti belirle — disk'e sonsuz liste yazmamak için:
+`HomeRepository.loadMore()` içinde merged listeyi kaydeder:
 
 ```dart
 const _kMaxCachedListings = 60; // 3 sayfa × 20 ilan
-if (mergedList.length > _kMaxCachedListings) {
-  mergedList = mergedList.take(_kMaxCachedListings).toList();
-}
+final merged = [...current, ...uniqueMore].take(_kMaxCachedListings).toList();
+await saveFeed(jsonEncode(merged)); // var olan HomeRepository metodu
 ```
-
-`StorageService` sabitlerini kontrol et: `cacheHomeFeedRecent` zaten var mı, yoksa ekle.
-
-**Kapsam:** `home_view_model.dart` + `search_view_model.dart` (iki feed türü).
-
-**Test:** 3 sayfa kaydır → arka plana al → geri dön → liste korunmuş.
 
 ---
 
-### §12.6 api_cache Box — Maksimum Anahtar Limiti
+### §12.6 api_cache Box — Maksimum Anahtar Limiti (LRU Kırpma)
 
 **Öncelik:** P2
-**Etki:** `CacheService` altındaki `api_cache` Hive box'ı sadece `clearExpired()` ile TTL dolmuş kayıtları temizliyor. Dinamik anahtarlar (örn: `public_profile_<username>`, `public_listings_<username>`) kullanıcı davranışına bağlı olarak birikir; aktif kullanıcıda 500+ anahtar mümkün.
+**Etkilenen sistem:** Mobil — `CacheService`
 
-**Tespit:**
-
-```dart
-// cache_service.dart — clearExpired() tek temizleme noktası
-Future<void> clearExpired() async {
-  // sadece TTL dolmuş kayıtları siler
-}
-// maksimum box boyutu kontrolü yok
-```
+`api_cache` box yalnızca TTL'e göre temizleniyor. Dinamik anahtarlar (`public_profile_<username>`, `public_listings_<username>`, `feed_personalized`) birikerek 500+ anahtara ulaşabilir (~1 MB).
 
 **Çözüm:**
 
-`clearExpired()` çalıştıktan sonra box boyutu hâlâ limitin üzerindeyse en eski kayıtları sil:
-
 ```dart
-Future<void> clearExpired() async {
-  final box = Hive.box<String>(_boxName);
-  final now = DateTime.now().millisecondsSinceEpoch;
-
-  // 1. TTL dolmuş kayıtları sil (mevcut mantık)
-  final expiredKeys = <dynamic>[];
-  for (final key in box.keys) {
-    final raw = box.get(key);
-    if (raw == null) continue;
-    final wrapper = jsonDecode(raw) as Map<String, dynamic>;
-    final savedAt = (wrapper['_t'] as num).toInt();
-    final ttlMs   = (wrapper['_x'] as num).toInt();
-    if (now - savedAt > ttlMs) expiredKeys.add(key);
-  }
-  await box.deleteAll(expiredKeys);
-
-  // 2. Aşırı büyümüş box'ı LRU benzeri kırp
-  const maxKeys = 200;
-  if (box.length > maxKeys) {
-    final entries = <MapEntry<dynamic, int>>[];
-    for (final key in box.keys) {
-      final raw = box.get(key);
-      if (raw == null) continue;
-      final wrapper = jsonDecode(raw) as Map<String, dynamic>;
-      entries.add(MapEntry(key, (wrapper['_t'] as num).toInt()));
-    }
-    entries.sort((a, b) => a.value.compareTo(b.value)); // en eski önce
-    final toDelete = entries.take(box.length - maxKeys).map((e) => e.key).toList();
-    await box.deleteAll(toDelete);
-  }
+// cache_service.dart — clearExpired() sonuna ekle
+const maxKeys = 200;
+if (box.length > maxKeys) {
+  final entries = box.keys.map((k) {
+    final raw = box.get(k);
+    if (raw == null) return MapEntry(k, 0);
+    final w = jsonDecode(raw) as Map<String, dynamic>;
+    return MapEntry(k, (w['_t'] as num).toInt());
+  }).toList()
+    ..sort((a, b) => a.value.compareTo(b.value));
+  await box.deleteAll(entries.take(box.length - maxKeys).map((e) => e.key));
 }
 ```
 
-**Limit önerisi:** 200 anahtar. Her kayıt ortalama 2KB → toplam ~400KB; Hive için uygun.
+**Limit:** 200 anahtar × ortalama 2 KB ≈ 400 KB Hive box boyutu.
 
-**Test:** 300 farklı anahtar yaz → `clearExpired()` çağır → box.length ≤ 200.
+---
+
+### §12.12 cacheKey Parametresi — Presigned URL Bağımlılığı
+
+**Öncelik:** P2
+**Etkilenen sistem:** Mobil — tüm 60 CachedNetworkImage widget
+
+`flutter_cache_manager`, URL'yi cache key olarak kullanır. MinIO presigned URL'leri rotasyon veya URL yapısı değişiminde bozulur — eski cache geçersiz hale gelir, tüm görseller yeniden indirilir.
+
+**Tespit:**
+
+```bash
+# grep: 0 satır
+grep -rn "cacheKey:" mobile/lib/
+```
+
+**Sorun:** `https://uploads.teqlif.com/teqlif/listings/42/photo_0.jpg?X-Amz-Expires=...` URL'sinin imza kısmı değişince cache miss oluşur. MinIO bucket adı değişikliği (staging → prod geçişi) de aynı sorunu yaratır.
+
+**Çözüm:**
+
+Entity ID tabanlı stabil cache key kullan:
+
+```dart
+CachedNetworkImage(
+  imageUrl: listing.photoUrl,
+  cacheKey: 'listing_${listing.id}_photo_0',   // URL değişse de key sabit
+  cacheManager: TeqlifCacheManager(),
+  memCacheWidth: 400,
+)
+
+// Avatar
+CachedNetworkImage(
+  imageUrl: user.avatarUrl,
+  cacheKey: 'user_${user.id}_avatar',
+  cacheManager: TeqlifCacheManager(),
+  memCacheWidth: 120, memCacheHeight: 120,
+)
+```
+
+Kural: `cacheKey = entityType_entityId_fieldName`. URL segment veya query string içermez.
+
+---
+
+### §12.13 Backend — `Cache-Control` Header Eksikliği
+
+**Öncelik:** P2
+**Etkilenen sistem:** Backend FastAPI + Cloudflare CDN katmanı
+
+**Tespit:**
+
+```bash
+grep -rn "Cache-Control" backend/app/ → 0 sonuç
+```
+
+Backend hiçbir response'a `Cache-Control` header'ı eklemiyor. Cloudflare `teqlif.com` ve `api.teqlif.com` üzerinde Proxied modda çalışıyor (ADR §12). Cloudflare, standart `Cache-Control` header'ı olan JSON response'ları edge'de cache'leyebilir — bu özellikle ALGORITHMIC ve SCHEMA_VERSIONED endpoint'ler için önemli.
+
+**ETag ile ilişki:** V1.0 §11.16'da ETag desteği eklendi (`If-None-Match`). `Cache-Control` ETag'ı tamamlar: müşteri önce `max-age` dolmadan sunucuya gitmez, dolunca `If-None-Match` ile gider.
+
+**Çözüm (kademeli):**
+
+```python
+# backend/app/routers/feed.py — ALGORITHMIC endpoint'ler
+from fastapi import Response
+
+@router.get("/feed/recent")
+async def get_recent_feed(..., response: Response):
+    ...
+    response.headers["Cache-Control"] = "private, max-age=300, stale-while-revalidate=900"
+    return listings
+```
+
+| Endpoint tipi | Öneri |
+|---------------|-------|
+| `/api/catalog`, `/api/cities` (SCHEMA_VERSIONED) | `public, max-age=86400, stale-while-revalidate=3600` — Cloudflare edge cache |
+| `/api/feed/recent`, `/api/feed/for-you` (ALGORITHMIC) | `private, max-age=300, stale-while-revalidate=900` — CDN cache değil, client hint |
+| `/api/i18n/{lang}` (SCHEMA_VERSIONED) | `public, max-age=3600, stale-while-revalidate=86400` |
+| Commerce / auction / stream (LIFECYCLE) | `no-cache` — WS gerçek zamanlı, CDN cache istenmiyor |
+| Auth / payment (SECURITY_CRITICAL) | `no-store` |
+
+**Kural:** `private` = yalnızca client cache, Cloudflare cache etmez. `public` = Cloudflare edge'de cache'lenebilir.
 
 ---
 
 ### §12.7 PublicProfile Prefetch — Gecikmeli Önbellek Isıtma
 
 **Öncelik:** P3
-**Etki:** Kullanıcı ilan kartına tıklamadan önce profil verisini önceden yüklemek mümkün, ancak uygulamanın mevcut navigasyon deseninde tap anında veri yükleniyor. Profil verisi küçük (~2KB) ve yüksek hit-rate bir önbellek adayı.
+**Etkilenen sistem:** Mobil
 
-**Tespit:**
-
-`public_profile_view_model.dart` profil verisini `build()` sırasında `_fetchProfile()` ile yüklüyor. Herhangi bir "ön ısıtma" mekanizması yok.
-
-**Çözüm:**
-
-Feed kart widget'larında `onHover` (tablet/desktop) veya ilan detayına geçiş sırasında `PublicProfileViewModel`'in prefetch metodunu tetikle. Ancak bu değişiklik View → ViewModel çağrısının zamanlamasını değiştirdiği için ADR §8 incelemesi gerektirir.
-
-**Öneri:** Bu madde bağımsız bir ADR kararı gerektirir; mevcut döngüde uygulanmaz.
+ADR §8 MVVM kuralı: prefetch View'dan ViewModel metodunu `didChangeDependencies` veya liste render sırasında çağırarak yapılabilir — ancak bu navigasyon zamanlamasını değiştirdiği için ADR kararı gerektirir. V1.2'ye bırakılır.
 
 ---
 
 ### §12.8 Entity Normalization Store
 
 **Öncelik:** P3
-**Etki:** Bir `Listing` entity'si aynı anda 5-6 farklı cache anahtarında bulunabilir:
-- `home_feed_recent` (page 0)
-- `explore_for_you`
-- `explore_personalized_feed`
-- `public_listings_<username>`
-- `user_favorites`
-- ilan detayı cache'i (varsa)
+**Etkilenen sistem:** Mobil
 
-Birinde ilan kapandığında veya fiyat değiştiğinde diğerleri bayat kalır. Instagram / Facebook bu sorunu normalize entity store ile çözer — her entity tek yerde tutulur, diğerleri ID'ye referans verir.
-
-**Çözüm (mimari):**
-
-1. `ListingEntity` ID → JSON normalize cache: `entity_listing_<id>`
-2. Feed cache'leri yalnızca ID listesi tutar: `[42, 17, 98, ...]`
-3. Feed widget'ları ID'ye göre `EntityStore`'dan resolve eder
-
-**Neden P3:** Bu refactor tüm feed / search / profile akışlarını etkiler; bağımsız bir ADR maddesi ve ayrı implementation sprint gerektirir. V1.1 döngüsünde analiz belgesi oluşturulur, uygulama V1.2'ye bırakılır.
+Bir `Listing` entity'si eş zamanlı 5-6 farklı cache anahtarında bulunabilir. Normalize store mimarisi V1.2'de ADR kararı ve bağımsız implementation sprint gerektirir.
 
 ---
 
-## 3. Uygulama Sırası
+## 4. ADR §17 Tutarsızlığı — Uptime Kuma Backend
 
-```
-P0 — flutter_cache_manager sürüm sabitleme          (§12.1)  ← hemen
-P1 — messages TTL açık hale getir                   (§12.2)  ← §12.1 ile birlikte
-P1 — TeqlifCacheManager tüm widget'lara             (§12.3)  ← en yüksek etki
-P1 — memCacheWidth/Height feed kartları             (§12.4)  ← §12.3 ile aynı PR
-P2 — loadMore() sayfaları diske yaz                 (§12.5)  ← ayrı sprint
-P2 — api_cache box LRU kırpma                       (§12.6)  ← ayrı sprint
-P3 — PublicProfile prefetch ADR kararı              (§12.7)  ← V1.2
-P3 — Entity normalization ADR + tasarım             (§12.8)  ← V1.2
-```
+**Bu dökümanın kapsamı dışında ama kritik not:**
 
-**Tahmini etki:** §12.1–§12.4 tamamlandığında görüntü cache tutarsızlığı ortadan kalkar; kullanıcı her ekranda 2 günlük staleness politikasından yararlanır (şu an rastgele 7 gün vs 2 gün karışımı var). Bellek kullanımı özellikle mesajlar ve kayıtlar ekranında ölçülebilir şekilde düşer.
+ADR §17 (nodeMonitor) Uptime Kuma için "MariaDB backend" yazmaktadır. 2026-10-14 backup düzeltmesi sırasında doğrulama yapıldı — **gerçekte SQLite** kullanılıyor (`/opt/monitor/shared/uptime-kuma/db/kuma.db`). ADR §17 güncellenmeli.
 
 ---
 
-## 4. Kapsam Dışı
+## 5. Uygulama Sırası
 
-Aşağıdakiler V1.0 döngüsünde tamamlandı; V1.1'de yeniden ele alınmaz:
+```
+P0 — flutter_cache_manager sürüm sabitleme          (§12.1)   ← bu sprint
+P1 — messages/notifications açık TTL               (§12.2)   ← §12.1 ile birlikte (küçük değişiklik)
+P1 — Backend TTL uyumu: home feed 30→15 dk          (§12.10)  ← §12.1 ile birlikte (tek satır)
+P1 — TeqlifCacheManager tüm widget'lara             (§12.3)   ← ayrı PR (47 widget)
+P1 — memCacheWidth/Height                           (§12.4)   ← §12.3 ile aynı PR
+P1 — LIFECYCLE cache WS invalidasyon               (§12.9)   ← WS bağlamında ayrı PR
+P1 — home/search ViewModel http.get kaldır          (§12.11)  ← HomeRepository refactor sprint
+P2 — loadMore() Repository'den diske yaz            (§12.5)   ← §12.11 ile aynı sprint
+P2 — api_cache box LRU kırpma                       (§12.6)   ← ayrı sprint
+P2 — cacheKey parametresi                           (§12.12)  ← §12.3 ile aynı PR (her widget'a eklenebilir)
+P2 — Backend Cache-Control header                   (§12.13)  ← backend-only ayrı PR
+P3 — PublicProfile prefetch ADR kararı              (§12.7)   ← V1.2
+P3 — Entity normalization tasarımı                  (§12.8)   ← V1.2
+```
+
+**Sprint Planı:**
+
+| Sprint | Bulgular | Beklenen Etki |
+|--------|----------|---------------|
+| S1 (bu hafta) | §12.1 + §12.2 + §12.10 | Güvenli paket versiyonu, tutarlı TTL, tek satır fix |
+| S2 | §12.3 + §12.4 + §12.12 | Tüm görseller 2 gün TTL + bellek optimizasyonu |
+| S3 | §12.9 | LIFECYCLE anahtarlar gerçek zamanlı temizleniyor |
+| S4 | §12.11 + §12.5 | Clean Architecture düzeldi, loadMore kalıcı |
+| S5 | §12.6 + §12.13 | LRU kırpma + CDN cache hint |
+| V1.2 | §12.7 + §12.8 | Prefetch + entity normalization |
+
+---
+
+## 6. Kapsam Dışı (V1.0'da Tamamlandı)
 
 | Madde | Commit |
 |-------|--------|

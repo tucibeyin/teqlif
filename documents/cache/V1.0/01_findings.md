@@ -2,7 +2,7 @@
 
 **Tarih:** 2026-10-13
 **Kapsam:** Flutter mobile uygulaması client-side cache stratejisi, TTL yönetimi, veri yaşam döngüsü
-**Revizyon:** V1.7 — V1.1 analizi tamamlandı; bkz. `documents/cache/V1.1/01_findings.md`
+**Revizyon:** V1.8 — V1.1 re-analiz (ADR + Clean Architecture + MVVM + Redis + backend): 13 bulgu; bkz. `documents/cache/V1.1/01_findings.md`
 
 ---
 
