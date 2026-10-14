@@ -119,7 +119,7 @@ async def get_callee_token(
     )
     return {
         "token": token,
-        "livekit_url": (await orchestrator.allocate_node(ServiceType.MEDIA))["livekit_url"],
+        "livekit_url": call.livekit_url or (await orchestrator.allocate_node(ServiceType.MEDIA))["livekit_url"],
         "room_name": call.room_name,
     }
 
@@ -194,7 +194,7 @@ async def get_active_call(
             "status": call.status,
             "role": role,
             "room_name": call.room_name,
-            "livekit_url": (await orchestrator.allocate_node(ServiceType.MEDIA))["livekit_url"],
+            "livekit_url": call.livekit_url or (await orchestrator.allocate_node(ServiceType.MEDIA))["livekit_url"],
             "token": token,
             "other_user": {
                 "id": other_user_id,
@@ -412,6 +412,12 @@ async def _send_call_push(
         title = title_raw
         body = body_raw
 
+    # Reuse the livekit_url stored at call creation — never re-allocate here.
+    # Re-allocating independently could pick a different node and split caller/callee.
+    _call_row = await db.get(Call, call_id)
+    _stored_lk_url = (_call_row.livekit_url if _call_row and _call_row.livekit_url
+                      else (await orchestrator.allocate_node(ServiceType.MEDIA))["livekit_url"])
+
     # FCM payload: tam veri — Android flutter_callkit_incoming extra dict'i doğru map eder
     fcm_extra_data = {
         "call_id": str(call_id),
@@ -419,7 +425,7 @@ async def _send_call_push(
         "caller_id": str(caller.id),
         "caller_username": caller.username,
         "caller_avatar": caller.profile_image_thumb_url or caller.profile_image_url or "",
-        "livekit_url": (await orchestrator.allocate_node(ServiceType.MEDIA))["livekit_url"],
+        "livekit_url": _stored_lk_url,
         "callee_token": callee_token,
     }
 
@@ -431,7 +437,7 @@ async def _send_call_push(
         "caller_id": str(caller.id),
         "caller_username": caller.username,
         "caller_avatar": caller.profile_image_thumb_url or caller.profile_image_url or "",
-        "livekit_url": (await orchestrator.allocate_node(ServiceType.MEDIA))["livekit_url"],
+        "livekit_url": _stored_lk_url,
         "callee_token": callee_token,
     }
 
@@ -641,7 +647,8 @@ async def start_call(
         raise AppException(status_code=409, message="User is busy", code="USER_BUSY")
 
     room_name = f"call_{current_user.id}_{callee_id}_{int(time.time() * 1000)}_{secrets.token_hex(4)}"
-    call = Call(caller_id=current_user.id, callee_id=callee_id, room_name=room_name, status="calling")
+    _livekit_url = (await orchestrator.allocate_node(ServiceType.MEDIA))["livekit_url"]
+    call = Call(caller_id=current_user.id, callee_id=callee_id, room_name=room_name, status="calling", livekit_url=_livekit_url)
     db.add(call)
     await db.commit()
     await db.refresh(call)
@@ -660,7 +667,7 @@ async def start_call(
         "caller_id": current_user.id,
         "caller_username": current_user.username,
         "caller_avatar": current_user.profile_image_thumb_url or current_user.profile_image_url or "",
-        "livekit_url": (await orchestrator.allocate_node(ServiceType.MEDIA))["livekit_url"],
+        "livekit_url": call.livekit_url,
         "callee_token": callee_token,
     }
     await _ws_broadcast(callee_id, ws_payload)
@@ -713,7 +720,7 @@ async def start_call(
     return {
         "call_id": call.id,
         "room_name": room_name,
-        "livekit_url": (await orchestrator.allocate_node(ServiceType.MEDIA))["livekit_url"],
+        "livekit_url": call.livekit_url,
         "token": token,
     }
 
@@ -822,10 +829,11 @@ async def accept_call(
         "[CALL_PROCESS][IN] accept_call OK | call_id=%d callee=%d caller=%d accepted_at=%s token_gen_ms=%d",
         call_id, current_user.id, caller_id, accepted_at.isoformat(), _token_gen_ms,
     )
+    _lk_url = call.livekit_url or (await orchestrator.allocate_node(ServiceType.MEDIA))["livekit_url"]
     return {
         "call_id": call_id_val,
         "room_name": room_name,
-        "livekit_url": (await orchestrator.allocate_node(ServiceType.MEDIA))["livekit_url"],
+        "livekit_url": _lk_url,
         "token": token,
         "accepted_at": accepted_at.isoformat(),
     }
@@ -1331,12 +1339,14 @@ async def invite_to_call(
         )
         logger.info("[CALL_GROUP][INVITE] ARQ timeout task enqueued | call_id=%d invitee=%d", call_id, invitee_id)
 
+    _invite_lk_url = call.livekit_url or (await orchestrator.allocate_node(ServiceType.MEDIA))["livekit_url"]
+
     # WS: invite notification to invitee
     ws_invite_payload = {
         "type": ws_types.CALL_GROUP_INVITE,
         "call_id": call_id,
         "room_name": call.room_name,
-        "livekit_url": (await orchestrator.allocate_node(ServiceType.MEDIA))["livekit_url"],
+        "livekit_url": _invite_lk_url,
         "livekit_token": livekit_token,
         "inviter_id": current_user.id,
         "inviter_username": current_user.username,
@@ -1358,7 +1368,7 @@ async def invite_to_call(
                 extra_data={
                     "call_id": str(call_id),
                     "room_name": call.room_name,
-                    "livekit_url": (await orchestrator.allocate_node(ServiceType.MEDIA))["livekit_url"],
+                    "livekit_url": _invite_lk_url,
                     "livekit_token": livekit_token,
                     "inviter_id": str(current_user.id),
                     "inviter_username": current_user.username,
@@ -1444,7 +1454,7 @@ async def accept_group_invite(
     logger.info("[CALL_GROUP][ACCEPT] accept OK | call_id=%d user=%d", call_id, user_id)
     return {
         "livekit_token": cp.livekit_token,
-        "livekit_url": (await orchestrator.allocate_node(ServiceType.MEDIA))["livekit_url"],
+        "livekit_url": call.livekit_url or (await orchestrator.allocate_node(ServiceType.MEDIA))["livekit_url"],
         "room_name": call.room_name,
         "participants": participants,
     }

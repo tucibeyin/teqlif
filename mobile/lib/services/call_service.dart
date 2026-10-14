@@ -157,6 +157,7 @@ class CallService {
   DateTime? _acceptedAt;
 
   Timer? _statsTimer;               // WebRTC audio stats polling (5s)
+  Timer? _deadPeerTimer;            // 30s no-remote-peer guard: ends call if peer never returns
   Timer? _ringbackFallbackTimer;    // Fallback: call_ringing WS gelmezse 3s sonra ringback başlat
   StreamSubscription<List<ConnectivityResult>>? _networkSub;  // Network change monitor
   ConnectivityResult? _prevNetworkType;  // For networkChange false-positive suppression
@@ -912,6 +913,8 @@ class CallService {
     _statsTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       if (state.value.status != CallStatus.active || _roomAdapter.room == null) {
         _statsTimer?.cancel();
+        _deadPeerTimer?.cancel();
+        _deadPeerTimer = null;
         return;
       }
       final remotePeerCount = _roomAdapter.room!.remoteParticipants.length;
@@ -919,6 +922,22 @@ class CallService {
       _cpLog('LK', 'healthTick | remotePeers=$remotePeerCount quality=$quality callId=${state.value.callId}');
       if (remotePeerCount == 0 && state.value.status == CallStatus.active) {
         _cpLog('LK', 'healthTick: NO REMOTE PEERS (one-way audio risk) | callId=${state.value.callId}');
+        if (_deadPeerTimer == null || !_deadPeerTimer!.isActive) {
+          _cpLog('LK', 'deadPeerTimer START (30s) | callId=${state.value.callId}');
+          _deadPeerTimer = Timer(const Duration(seconds: 30), () {
+            if (state.value.status == CallStatus.active &&
+                (_roomAdapter.room?.remoteParticipants.isEmpty ?? true)) {
+              _cpLog('LK', 'deadPeerTimer FIRED — no peers for 30s, ending call | callId=${state.value.callId}');
+              endCall();
+            }
+          });
+        }
+      } else {
+        if (_deadPeerTimer != null) {
+          _cpLog('LK', 'deadPeerTimer CANCELLED — peer reconnected | callId=${state.value.callId}');
+          _deadPeerTimer?.cancel();
+          _deadPeerTimer = null;
+        }
       }
     });
   }
@@ -926,6 +945,8 @@ class CallService {
   void _stopStatsMonitor() {
     _statsTimer?.cancel();
     _statsTimer = null;
+    _deadPeerTimer?.cancel();
+    _deadPeerTimer = null;
   }
 
   // ── Network Change Monitor (logs only — LiveKit handles reconnect) ────────
@@ -1249,6 +1270,27 @@ class CallService {
           }
         } catch (e) {
           _cpLog('RECOVERY', 'checkActiveCall ringing-verify FAILED | $e (non-fatal)');
+        }
+      }
+      return;
+    }
+
+    // Active/reconnecting while WS reconnects or app resumes: the call may have ended on the
+    // backend (callee dropped without HTTP /end, ghost cleanup, network partition). Verify so
+    // the caller is not stuck in a zombie active state indefinitely.
+    if (currentStatus == CallStatus.active || currentStatus == CallStatus.reconnecting) {
+      final activeCallId = state.value.callId;
+      if (activeCallId != null) {
+        try {
+          final backendStatus = await _repository.getCallStatus(activeCallId);
+          _cpLog('RECOVERY', 'checkActiveCall (active) → backendStatus=$backendStatus callId=$activeCallId');
+          if (backendStatus == 'ended' || backendStatus == 'rejected' || backendStatus == 'missed') {
+            _cpLog('RECOVERY', 'checkActiveCall → zombie active cleared | callId=$activeCallId backendStatus=$backendStatus');
+            await _notif.endAllCalls();
+            await _hangUpLocally(status: CallStatus.ended, endReason: EndReason.remote);
+          }
+        } catch (e) {
+          _cpLog('RECOVERY', 'checkActiveCall active-verify FAILED | $e (non-fatal)');
         }
       }
       return;

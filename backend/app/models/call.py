@@ -20,6 +20,7 @@ class Call(Base):
     caller_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     callee_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     room_name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
+    livekit_url: Mapped[Optional[str]] = mapped_column(String(300), nullable=True)
     # calling | active | ended | rejected | missed
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="calling")
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

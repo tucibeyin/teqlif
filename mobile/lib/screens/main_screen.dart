@@ -81,9 +81,12 @@ class _MainScreenState extends ConsumerState<MainScreen> with WidgetsBindingObse
       CategoryService.clearCache(); // arka plandan dönüşte kategori cache'i yenile
       // App arka plandan döndü: aktif sekmenin TTL'i dolmuşsa SWR ile yenile
       _maybeRefreshCurrentTab();
-      // Stale ringing guard: WS zaten bağlıysa reconnect olmaz → checkActiveCall
-      // tetiklenmez. Background'da call timeout/miss olmuşsa bu catch eder.
-      if (ref.read(callServiceProvider).state.value.status == CallStatus.ringing) {
+      // Stale call guard: WS zaten bağlıysa reconnect olmaz → checkActiveCall
+      // tetiklenmez. Background'da call timeout/miss/drop olmuşsa bu catch eder.
+      final callStatus = ref.read(callServiceProvider).state.value.status;
+      if (callStatus == CallStatus.ringing ||
+          callStatus == CallStatus.active ||
+          callStatus == CallStatus.reconnecting) {
         ref.read(callServiceProvider).checkActiveCall();
       }
     } else if (state == AppLifecycleState.paused ||
