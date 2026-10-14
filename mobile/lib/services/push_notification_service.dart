@@ -209,6 +209,13 @@ Future<void> _showCallNotification({
     }
   }
 
+  // Stale ringing notifications from previous timed-out calls block new incoming calls
+  // on Android: flutter_callkit_incoming auto-declines new calls while another is "active".
+  // End all before showing the new one so the slate is clean.
+  try {
+    await FlutterCallkitIncoming.endAllCalls();
+    debugPrint('[FCM][BG][${DateTime.now().toIso8601String()}] endAllCalls (pre-show cleanup) | callId=$callId');
+  } catch (_) {}
   await FlutterCallkitIncoming.showCallkitIncoming(params);
   debugPrint('[FCM][BG][${DateTime.now().toIso8601String()}] showCallkitIncoming → done | callId=$callId');
 }

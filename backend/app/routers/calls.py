@@ -327,6 +327,11 @@ async def _mark_call_unreachable(call_id: int, caller_id: int, callee_id: int) -
             await db.commit()
             # Callee'ye call_missed bildirimi — callee IncomingCallBar'ı kapatabilsin.
             await _ws_broadcast(callee_id, {"type": "call_missed", "call_id": call_id})
+            # Callee background'daysa WS ulaşmaz; FCM ile de gönder —
+            # background isolate FlutterCallkitIncoming.endCall() çağırarak bildirimi kapatır,
+            # böylece sonraki aramada hasActiveCall=true kaynaklı otomatik red engellenir.
+            if callee and caller:
+                asyncio.create_task(_send_missed_call_push(callee, caller, call_id))
             try:
                 await clear_call_redis(call_id)
             except Exception as _e:
