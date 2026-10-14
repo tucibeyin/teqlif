@@ -11,6 +11,7 @@ import 'package:http/http.dart' as http;
 import 'package:permission_handler/permission_handler.dart';
 import 'storage_service.dart';
 import 'call_service.dart';
+import 'auth_service.dart';
 import 'localization_service.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -587,7 +588,9 @@ class PushNotificationService {
       } else if (event is CallEventActionDidUpdateDevicePushTokenVoip) {
         _cpLog('TOKEN', 'VoIP token async update (PKPushRegistry) → notifAdapter.registerTokens');
         try {
-          await providerContainer.read(callServiceProvider).notifAdapter.registerTokens();
+          await providerContainer.read(callServiceProvider).notifAdapter.registerTokens(
+            authService: providerContainer.read(authServiceProvider),
+          );
           _cpLog('TOKEN', 'VoIP async update → notifAdapter done');
         } catch (e) {
           _cpLog('TOKEN', 'VoIP async update FAILED | $e');
@@ -749,13 +752,18 @@ class PushNotificationService {
       // onTokenRefresh listener yalnızca bir kez eklenmeli.
       _messaging.onTokenRefresh.listen((t) {
         _cpLog('TOKEN', 'FCM onTokenRefresh → re-registering via notifAdapter');
-        providerContainer.read(callServiceProvider).notifAdapter.registerTokens(fcmToken: t);
+        providerContainer.read(callServiceProvider).notifAdapter.registerTokens(
+          fcmToken: t,
+          authService: providerContainer.read(authServiceProvider),
+        );
       });
 
     }
 
     // Token kaydı her initialize() çağrısında yapılır — izin durumu fark etmez.
-    await providerContainer.read(callServiceProvider).notifAdapter.registerTokens();
+    await providerContainer.read(callServiceProvider).notifAdapter.registerTokens(
+      authService: providerContainer.read(authServiceProvider),
+    );
 
     // Android: OEM pil optimizasyonu FCM yüksek öncelikli mesajları engelleyebilir.
     // Muafiyet istenmemişse sistem diyaloğunu göster (yalnızca bir kez).
@@ -781,7 +789,9 @@ class PushNotificationService {
 
   static Future<void> refreshToken() async {
     _cpLog('TOKEN', 'refreshToken called → notifAdapter.registerTokens');
-    await providerContainer.read(callServiceProvider).notifAdapter.registerTokens();
+    await providerContainer.read(callServiceProvider).notifAdapter.registerTokens(
+      authService: providerContainer.read(authServiceProvider),
+    );
   }
 
 }
