@@ -4,7 +4,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Ekim 2026 — Cache V1.1 S1-S7 tam implementasyon (2e974c21)
+**Son güncelleme:** Ekim 2026 — Cache V1.2 SWR + Repository katmanı (b2486884)
 
 ---
 
@@ -24,6 +24,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 19. [Stream Recording — aiortc Gizli Abone](#19-stream-recording--aiortc-gizli-abone)
 20. [HostStream MVVM Refactor + ICE Retry](#20-hoststream-mvvm-refactor--ice-retry)
 22. [Cache V1.1 — Feed Entity Store ve ID-List Mimarisi](#22-cache-v11--feed-entity-store-ve-id-list-mimarisi)
+23. [Cache V1.2 — SWR Geçişi ve Repository ADR §22 Uyumu](#23-cache-v12--swr-geçişi-ve-repository-adr-22-uyumu)
 
 ---
 
@@ -1736,4 +1737,53 @@ ViewModel `http.get()` ve `StorageService.getToken()` çağıramaz. Tüm API ça
 ### Prefetch (S6 — ADR §8)
 
 `PublicProfileViewModel.warmup(username)` fire-and-forget; `_warming` Set guard eş zamanlı in-flight'ı engeller. Feed kartı long-press anında seller profili ön-ısıtılır.
+
+---
+
+## 23. Cache V1.2 — SWR Geçişi ve Repository ADR §22 Uyumu
+
+**Commit:** `b2486884`  
+**Tarih:** 2026-10-14  
+**Analiz:** `documents/cache/V1.2/01_findings.md`
+
+### SWR (Stale-While-Revalidate) Geçişi
+
+Uygulama genelinde `CacheService.getData()` → `getWithStaleness()` geçişi yapıldı.
+
+| Davranış | getData() (eski) | getWithStaleness() (yeni) |
+|----------|-----------------|--------------------------|
+| TTL dolmuşsa | `null` → spinner | stale data → hemen göster |
+| Arka plan refresh | sadece boş gelince | her zaman |
+| Spinner | her TTL dolmasında | ilk açılışta (cache yoksa) |
+
+Etkilenen sayfalar: Mesajlar, Bildirimler, İstekler, Engellenen kullanıcılar, Takip listesi, Bildirim tercihleri, Puanlar, Herkese açık profil, Ana sayfa, Profil, Pro Araçları (Rakip Radar + Talep Trendleri).
+
+### async build() Race Condition Düzeltmesi
+
+`MessagesTabViewModel`, `RequestsTabViewModel` — `async build()` + `Future.microtask(() => load())` kombinasyonu race condition'a yol açıyordu: Riverpod state `AsyncLoading` kalır, microtask `state.hasValue == false` iken ateşlenir, `load()` early-return yapar. **Düzeltme:** `build()` senkron; `StorageService.currentUserIdSync` getter eklendi (JWT sync parse, `_cachedToken`'dan).
+
+### Repository Katmanı — ADR §22 Tam Uyum
+
+V1.1'de yalnızca `HomeRepository` / `SearchRepository` vardı. V1.2'de 5 ViewModel'deki doğrudan `http.get()` + `StorageService.getToken()` çağrıları temizlendi:
+
+| Repository | Kapsam |
+|-----------|--------|
+| `UserRepository` | Engellenen kullanıcılar, takip listesi, follow toggle |
+| `RatingsRepository` | Alınan/verilen puanlar, yanıt, puan gönderme |
+| `NotificationPrefsRepository` | Bildirim tercihleri okuma/yazma |
+| `ListingService` (genişletildi) | `getMyActiveListings()` — Competitor Radar için |
+
+**Kural (ADR §8 eki):**
+- Query: `ApiService.get<T>()` SWR stream — cache → network, ETag/304 destekli
+- Mutation: `ApiClient.call()` — token refresh, 429 rate-limit, 5xx retry korumalı
+- ViewModel `CacheService`'e doğrudan erişmez; Repository `getCached()` senkron metodu expose eder
+- Her mutation başarı durumunda `clearData(key)` ile cache'i invalidate eder
+
+### StreamSubscription Pattern
+
+`build()` senkron kalır; `ApiService.get()` stream'i `StreamSubscription` ile tüketilir. `ref.onDispose(() => _sub?.cancel())` ile disposed notifier hatası ve bellek sızıntısı önlenir. `await for` kullanılmaz — `build()` async yapardı.
+
+### Pro Tools Cache
+
+Competitor Radar (`cache_competitor_radar_listings`, `cache_radar_{id}`, `cache_velocity_{id}`) ve Talep Trendleri (`cache_demand_trends_{cat}_{subcat}`) 30dk TTL ile cache'lenir. Filtre değişiminde ilgili anahtar türetilir; `build()` içinde static `_keyFor()` helper kullanılır (state'e erişim yoktur).
 
