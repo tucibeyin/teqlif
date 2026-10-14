@@ -485,7 +485,7 @@ class _SummarySectionState extends State<_SummarySection> {
               children: [
                 _CategoryBadge(label: categoryLabel),
                 if (s.subcategory != null)
-                  _CategoryBadge(label: s.subcategory!, secondary: true),
+                  _CategoryBadge(label: loc.tOr('subcat_${s.subcategory}', s.subcategory!), secondary: true),
               ],
             ),
             const SizedBox(height: 10),
