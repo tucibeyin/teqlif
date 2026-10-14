@@ -1243,6 +1243,7 @@ class CallService {
           _cpLog('RECOVERY', 'checkActiveCall (ringing) → backendStatus=$backendStatus callId=$stalledCallId');
           if (backendStatus == 'ended' || backendStatus == 'rejected' || backendStatus == 'missed') {
             _cpLog('RECOVERY', 'checkActiveCall → stale ringing cleared | callId=$stalledCallId backendStatus=$backendStatus');
+            await _notif.endAllCalls();
             await _notif.reportCallEnded(callId: stalledCallId.toString());
             _setState(CallState(status: CallStatus.idle));
           }

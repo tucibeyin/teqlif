@@ -20,6 +20,7 @@ import 'package:flutter/material.dart';
 
 import '../config/theme.dart';
 import 'viewmodels/main_view_model.dart';
+import '../services/call_service.dart' show callServiceProvider, CallStatus;
 
 /// Global visibility notifier for the Live tab.
 /// Prevents background ghost joining of streams when the user is on other tabs.
@@ -80,6 +81,11 @@ class _MainScreenState extends ConsumerState<MainScreen> with WidgetsBindingObse
       CategoryService.clearCache(); // arka plandan dönüşte kategori cache'i yenile
       // App arka plandan döndü: aktif sekmenin TTL'i dolmuşsa SWR ile yenile
       _maybeRefreshCurrentTab();
+      // Stale ringing guard: WS zaten bağlıysa reconnect olmaz → checkActiveCall
+      // tetiklenmez. Background'da call timeout/miss olmuşsa bu catch eder.
+      if (ref.read(callServiceProvider).state.value.status == CallStatus.ringing) {
+        ref.read(callServiceProvider).checkActiveCall();
+      }
     } else if (state == AppLifecycleState.paused ||
                state == AppLifecycleState.detached) {
       ref.read(mainViewModelProvider.notifier).handleLifecyclePausedOrDetached(_kTabNames[_currentIndex]);
