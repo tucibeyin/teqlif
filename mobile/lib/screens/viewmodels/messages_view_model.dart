@@ -255,7 +255,7 @@ class NotificationsTabViewModel extends AutoDisposeAsyncNotifier<NotificationsUi
   StreamSubscription<Map<String, dynamic>>? _sub;
 
   @override
-  FutureOr<NotificationsUiState> build() async {
+  FutureOr<NotificationsUiState> build() {
     _sub = PushNotificationService.notificationStream.stream.listen((_) => load(silent: true));
     ref.onDispose(() => _sub?.cancel());
 
