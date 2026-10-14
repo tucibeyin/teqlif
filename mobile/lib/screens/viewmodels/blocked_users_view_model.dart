@@ -1,10 +1,6 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:http/http.dart' as http;
-import '../../core/network/api_client.dart';
-import '../../services/cache_service.dart';
-import '../../services/storage_service.dart';
+import '../../repositories/user_repository.dart';
 
 class BlockedUsersState {
   final List<dynamic> blockedUsers;
@@ -12,55 +8,44 @@ class BlockedUsersState {
 }
 
 class BlockedUsersViewModel extends AutoDisposeAsyncNotifier<BlockedUsersState> {
-  CacheService get _cache => ref.read(cacheServiceProvider);
-
-  Future<Map<String, String>> _headers() async {
-    final token = await StorageService.getToken();
-    return ref.read(apiClientProvider).buildApiHeaders(token, json: true);
-  }
+  StreamSubscription<List<dynamic>>? _sub;
 
   @override
-  FutureOr<BlockedUsersState> build() async {
-    // SWR: cache varsa hemen göster
-    final cached = _cache.getWithStaleness(StorageService.cacheBlockedUsers)?.data;
-    if (cached != null) {
-      state = AsyncValue.data(BlockedUsersState(blockedUsers: cached as List));
-    }
+  FutureOr<BlockedUsersState> build() {
+    final repo = ref.read(userRepositoryProvider);
+    final cachedRaw = repo.getCachedBlockedUsers();
 
-    final resp = await http.get(
-      Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/users/blocked'),
-      headers: await _headers(),
+    _sub?.cancel();
+    _sub = repo.getBlockedUsers().listen(
+      (users) {
+        if (state.hasValue) {
+          state = AsyncValue.data(BlockedUsersState(blockedUsers: users));
+        }
+      },
+      onError: (_) {},
     );
-    if (resp.statusCode == 200) {
-      final users = jsonDecode(resp.body) as List;
-      await _cache.saveData(StorageService.cacheBlockedUsers, users,
-          ttl: const Duration(minutes: 10));
-      return BlockedUsersState(blockedUsers: users);
-    } else {
-      if (state.value != null) return state.value!;
-      throw Exception('Failed to load blocked users');
-    }
+    ref.onDispose(() => _sub?.cancel());
+
+    return BlockedUsersState(
+      blockedUsers: cachedRaw != null ? (cachedRaw as List) : const [],
+    );
   }
 
   Future<void> unblock(String username, int userId) async {
+    final current = state.value;
+    if (current == null) return;
+
+    // Optimistic update
+    final updated = List.from(current.blockedUsers)
+      ..removeWhere((u) => u['id'] == userId);
+    state = AsyncValue.data(BlockedUsersState(blockedUsers: updated));
+
     try {
-      final resp = await http.delete(
-        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/users/${Uri.encodeComponent(username)}/block'),
-        headers: await _headers(),
-      );
-      if (resp.statusCode == 200 || resp.statusCode == 404) {
-        final current = state.value;
-        if (current != null) {
-          final updated = List.from(current.blockedUsers)..removeWhere((u) => u['id'] == userId);
-          state = AsyncValue.data(BlockedUsersState(blockedUsers: updated));
-          await _cache.saveData(StorageService.cacheBlockedUsers, updated,
-              ttl: const Duration(minutes: 10));
-        }
-      } else {
-        throw Exception('Failed to unblock');
-      }
-    } catch (e) {
-      throw Exception('Unblock failed');
+      await ref.read(userRepositoryProvider).unblockUser(username);
+      // Repository clearData yaptı — stream yeniden fire etmez; optimistic yeterli
+    } catch (_) {
+      state = AsyncValue.data(current);
+      rethrow;
     }
   }
 }

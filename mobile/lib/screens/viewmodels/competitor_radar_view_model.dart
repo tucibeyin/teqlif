@@ -1,11 +1,8 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:http/http.dart' as http;
-import '../../core/network/api_client.dart';
-import '../../services/cache_service.dart';
-import '../../services/storage_service.dart';
 import '../../services/analytics_service.dart';
+import '../../services/cache_service.dart';
+import '../../services/listing_service.dart';
 import '../../models/listing_filter_state.dart';
 
 class CompetitorRadarState {
@@ -42,7 +39,8 @@ class CompetitorRadarState {
     return CompetitorRadarState(
       listings: listings ?? this.listings,
       listingsLoading: listingsLoading ?? this.listingsLoading,
-      selectedListing: clearSelectedListing ? null : (selectedListing ?? this.selectedListing),
+      selectedListing:
+          clearSelectedListing ? null : (selectedListing ?? this.selectedListing),
       radarData: clearRadarData ? null : (radarData ?? this.radarData),
       velocityData: clearVelocityData ? null : (velocityData ?? this.velocityData),
       loadingData: loadingData ?? this.loadingData,
@@ -54,13 +52,15 @@ class CompetitorRadarState {
 class CompetitorRadarViewModel extends AutoDisposeNotifier<CompetitorRadarState> {
   CacheService get _cache => ref.read(cacheServiceProvider);
 
-  static const _kListingsKey = 'cache_competitor_radar_listings';
   static String _radarKey(int id) => 'cache_radar_$id';
   static String _velocityKey(int id) => 'cache_velocity_$id';
 
+  StreamSubscription<List<Map<String, dynamic>>>? _listingsSub;
+
   @override
   CompetitorRadarState build() {
-    final cachedListings = _cache.getWithStaleness(_kListingsKey)?.data;
+    final listingService = ref.read(listingServiceProvider);
+    final cachedListings = listingService.getCachedMyActiveListings();
     final listings = cachedListings != null
         ? (cachedListings as List).cast<Map<String, dynamic>>()
         : <Map<String, dynamic>>[];
@@ -72,9 +72,13 @@ class CompetitorRadarViewModel extends AutoDisposeNotifier<CompetitorRadarState>
 
     if (selectedListing != null) {
       final id = selectedListing['id'] as int;
-      radarData = _cache.getWithStaleness(_radarKey(id))?.data as Map<String, dynamic>?;
-      velocityData = _cache.getWithStaleness(_velocityKey(id))?.data as Map<String, dynamic>?;
+      radarData =
+          _cache.getWithStaleness(_radarKey(id))?.data as Map<String, dynamic>?;
+      velocityData =
+          _cache.getWithStaleness(_velocityKey(id))?.data as Map<String, dynamic>?;
     }
+
+    ref.onDispose(() => _listingsSub?.cancel());
 
     Future.microtask(() => loadListings());
 
@@ -88,56 +92,41 @@ class CompetitorRadarViewModel extends AutoDisposeNotifier<CompetitorRadarState>
     );
   }
 
-  Future<List<Map<String, dynamic>>> _fetchListingsPage(int offset) async {
-    final token = await StorageService.getToken();
-    if (token == null) return [];
-    var url = '${ref.read(apiClientProvider).config.baseUrl}/listings/my?limit=50&offset=$offset&active=true';
-    if (state.filter.searchQuery != null && state.filter.searchQuery!.isNotEmpty) {
-      url += '&q=${Uri.encodeComponent(state.filter.searchQuery!)}';
-    }
-    if (state.filter.category != null && state.filter.category!.isNotEmpty) {
-      url += '&category=${Uri.encodeComponent(state.filter.category!)}';
-    }
-    if (state.filter.subcategory != null && state.filter.subcategory!.isNotEmpty) {
-      url += '&subcategory=${Uri.encodeComponent(state.filter.subcategory!)}';
-    }
-    if (state.filter.dateFrom != null && state.filter.dateTo != null) {
-      url += '&date_from=${state.filter.dateFrom!.toIso8601String().substring(0, 10)}';
-      url += '&date_to=${state.filter.dateTo!.toIso8601String().substring(0, 10)}';
-    }
-    try {
-      final resp = await http.get(Uri.parse(url), headers: {'Authorization': 'Bearer $token'});
-      if (resp.statusCode == 200) {
-        return (jsonDecode(resp.body) as List).cast<Map<String, dynamic>>();
-      }
-    } catch (_) {}
-    return [];
-  }
-
   Future<void> loadListings() async {
     final hasCache = state.listings.isNotEmpty;
     if (!hasCache) state = state.copyWith(listingsLoading: true);
-    final results = await _fetchListingsPage(0);
-    await _cache.saveData(_kListingsKey, results, ttl: const Duration(minutes: 30));
 
-    final prevId = state.selectedListing?['id'];
-    final stillHere = prevId != null ? results.any((r) => r['id'] == prevId) : false;
+    _listingsSub?.cancel();
+    _listingsSub = ref
+        .read(listingServiceProvider)
+        .getMyActiveListings(
+          query: state.filter.searchQuery,
+          category: state.filter.category,
+          subcategory: state.filter.subcategory,
+        )
+        .listen(
+      (results) {
+        final prevId = state.selectedListing?['id'];
+        final stillHere =
+            prevId != null ? results.any((r) => r['id'] == prevId) : false;
+        final nextSelected =
+            stillHere ? state.selectedListing : (results.isNotEmpty ? results.first : null);
 
-    Map<String, dynamic>? nextSelected = state.selectedListing;
-    if (!stillHere) {
-      nextSelected = results.isNotEmpty ? results.first : null;
-    }
+        state = state.copyWith(
+          listings: results,
+          listingsLoading: false,
+          selectedListing: nextSelected,
+          clearSelectedListing: nextSelected == null,
+        );
 
-    state = state.copyWith(
-      listings: results,
-      listingsLoading: false,
-      selectedListing: nextSelected,
-      clearSelectedListing: nextSelected == null,
+        if (nextSelected != null) {
+          loadData();
+        }
+      },
+      onError: (_) {
+        state = state.copyWith(listingsLoading: false);
+      },
     );
-
-    if (nextSelected != null) {
-      await loadData();
-    }
   }
 
   Future<void> loadData() async {
@@ -146,8 +135,10 @@ class CompetitorRadarViewModel extends AutoDisposeNotifier<CompetitorRadarState>
     final id = listing['id'] as int;
     final category = listing['category'] as String? ?? '';
 
-    final cachedRadar = _cache.getWithStaleness(_radarKey(id))?.data as Map<String, dynamic>?;
-    final cachedVelocity = _cache.getWithStaleness(_velocityKey(id))?.data as Map<String, dynamic>?;
+    final cachedRadar =
+        _cache.getWithStaleness(_radarKey(id))?.data as Map<String, dynamic>?;
+    final cachedVelocity =
+        _cache.getWithStaleness(_velocityKey(id))?.data as Map<String, dynamic>?;
 
     if (cachedRadar != null) {
       state = state.copyWith(
@@ -156,7 +147,8 @@ class CompetitorRadarViewModel extends AutoDisposeNotifier<CompetitorRadarState>
         loadingData: false,
       );
     } else {
-      state = state.copyWith(loadingData: true, clearRadarData: true, clearVelocityData: true);
+      state = state.copyWith(
+          loadingData: true, clearRadarData: true, clearVelocityData: true);
     }
 
     try {
@@ -166,33 +158,38 @@ class CompetitorRadarViewModel extends AutoDisposeNotifier<CompetitorRadarState>
       ]);
 
       state = state.copyWith(
-        radarData: results[0] as Map<String, dynamic>?,
-        velocityData: results[1] as Map<String, dynamic>?,
+        radarData: results[0],
+        velocityData: results[1],
         loadingData: false,
       );
       if (results[0] != null) {
         await _cache.saveData(_radarKey(id), results[0], ttl: const Duration(minutes: 30));
       }
       if (results[1] != null) {
-        await _cache.saveData(_velocityKey(id), results[1], ttl: const Duration(minutes: 30));
+        await _cache.saveData(_velocityKey(id), results[1],
+            ttl: const Duration(minutes: 30));
       }
     } catch (_) {
       state = state.copyWith(loadingData: false);
     }
   }
-  
+
   void updateFilter(ListingFilterState filter) {
     state = state.copyWith(filter: filter);
     loadListings();
   }
-  
+
   void selectListing(Map<String, dynamic> listing) {
-    if (state.selectedListing != null && state.selectedListing!['id'] == listing['id']) return;
+    if (state.selectedListing != null &&
+        state.selectedListing!['id'] == listing['id']) {
+      return;
+    }
     state = state.copyWith(selectedListing: listing);
     loadData();
   }
 }
 
-final competitorRadarProvider = NotifierProvider.autoDispose<CompetitorRadarViewModel, CompetitorRadarState>(
+final competitorRadarProvider =
+    NotifierProvider.autoDispose<CompetitorRadarViewModel, CompetitorRadarState>(
   () => CompetitorRadarViewModel(),
 );

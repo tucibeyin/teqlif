@@ -1,10 +1,6 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:http/http.dart' as http;
-import 'package:teqlif/core/network/api_client.dart';
-import '../../services/cache_service.dart';
-import '../../services/storage_service.dart';
+import '../../repositories/ratings_repository.dart';
 
 class MyRatingsState {
   final List<dynamic> receivedRatings;
@@ -17,83 +13,57 @@ class MyRatingsState {
 }
 
 class MyRatingsViewModel extends AutoDisposeAsyncNotifier<MyRatingsState> {
-  CacheService get _cache => ref.read(cacheServiceProvider);
+  StreamSubscription<List<dynamic>>? _receivedSub;
+  StreamSubscription<List<dynamic>>? _givenSub;
 
   @override
-  FutureOr<MyRatingsState> build() async {
-    // SWR: cache varsa hemen göster
-    final cachedReceived = _cache.getWithStaleness(StorageService.cacheMyRatingsReceived)?.data;
-    final cachedGiven = _cache.getWithStaleness(StorageService.cacheMyRatingsGiven)?.data;
-    if (cachedReceived != null && cachedGiven != null) {
-      state = AsyncValue.data(MyRatingsState(
-        receivedRatings: cachedReceived as List,
-        givenRatings: cachedGiven as List,
-      ));
-    }
-    _markAsRead(); // fire and forget
-    return _fetchRatings();
-  }
+  FutureOr<MyRatingsState> build() {
+    final repo = ref.read(ratingsRepositoryProvider);
+    final cachedReceived = repo.getCachedReceived();
+    final cachedGiven = repo.getCachedGiven();
 
-  Future<void> _markAsRead() async {
-    final token = await StorageService.getToken();
-    if (token == null) return;
-    try {
-      await http.patch(
-        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/ratings/me/mark-read'),
-        headers: {'Authorization': 'Bearer $token'},
-      );
-    } catch (_) {}
-  }
+    _receivedSub?.cancel();
+    _givenSub?.cancel();
 
-  Future<MyRatingsState> _fetchRatings() async {
-    final token = await StorageService.getToken();
-    if (token == null) return const MyRatingsState();
-    
-    final futures = await Future.wait([
-      http.get(Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/ratings/me/received'), headers: {'Authorization': 'Bearer $token'}),
-      http.get(Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/ratings/me/given'), headers: {'Authorization': 'Bearer $token'}),
-    ]);
-    
-    List<dynamic> received = [];
-    List<dynamic> given = [];
+    _receivedSub = repo.getReceivedRatings().listen(
+      (received) {
+        if (state.hasValue) {
+          state = AsyncValue.data(state.value!.copyWith(receivedRatings: received));
+        }
+      },
+      onError: (_) {},
+    );
 
-    if (futures[0].statusCode == 200) {
-      received = jsonDecode(futures[0].body) as List;
-      await _cache.saveData(StorageService.cacheMyRatingsReceived, received,
-          ttl: const Duration(minutes: 10));
-    }
-    if (futures[1].statusCode == 200) {
-      given = jsonDecode(futures[1].body) as List;
-      await _cache.saveData(StorageService.cacheMyRatingsGiven, given,
-          ttl: const Duration(minutes: 10));
-    }
-    return MyRatingsState(receivedRatings: received, givenRatings: given);
-  }
+    _givenSub = repo.getGivenRatings().listen(
+      (given) {
+        if (state.hasValue) {
+          state = AsyncValue.data(state.value!.copyWith(givenRatings: given));
+        }
+      },
+      onError: (_) {},
+    );
 
-  Future<void> reload() async {
-    await _cache.clearData(StorageService.cacheMyRatingsReceived);
-    await _cache.clearData(StorageService.cacheMyRatingsGiven);
-    state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() => _fetchRatings());
+    ref.onDispose(() {
+      _receivedSub?.cancel();
+      _givenSub?.cancel();
+    });
+
+    // Mark-as-read fire-and-forget — hata durumunda sessiz geç
+    Future.microtask(() async {
+      try {
+        await ref.read(ratingsRepositoryProvider).markAsRead();
+      } catch (_) {}
+    });
+
+    return MyRatingsState(
+      receivedRatings: cachedReceived != null ? (cachedReceived as List) : const [],
+      givenRatings: cachedGiven != null ? (cachedGiven as List) : const [],
+    );
   }
 
   Future<bool> submitReply(int ratingId, String text) async {
     try {
-      final token = await StorageService.getToken();
-      if (token == null) return false;
-      final resp = await http.post(
-        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/ratings/reply/$ratingId'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({'reply': text}),
-      );
-      if (resp.statusCode == 200) {
-        reload();
-        return true;
-      }
-      return false;
+      return await ref.read(ratingsRepositoryProvider).submitReply(ratingId, text);
     } catch (_) {
       return false;
     }
@@ -101,28 +71,23 @@ class MyRatingsViewModel extends AutoDisposeAsyncNotifier<MyRatingsState> {
 
   Future<bool> saveRating(int userId, int score, String? comment) async {
     try {
-      final token = await StorageService.getToken();
-      if (token == null) return false;
-      final resp = await http.post(
-        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/ratings/$userId'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'score': score,
-          'comment': comment?.isEmpty == true ? null : comment,
-        }),
-      );
-      if (resp.statusCode == 200) {
-        reload();
-        return true;
-      }
-      return false;
+      return await ref.read(ratingsRepositoryProvider).saveRating(userId, score, comment);
     } catch (_) {
       return false;
     }
   }
+}
+
+// MyRatingsState copyWith helper (private — dosya içinde)
+extension _MyRatingsStateCopyWith on MyRatingsState {
+  MyRatingsState copyWith({
+    List<dynamic>? receivedRatings,
+    List<dynamic>? givenRatings,
+  }) =>
+      MyRatingsState(
+        receivedRatings: receivedRatings ?? this.receivedRatings,
+        givenRatings: givenRatings ?? this.givenRatings,
+      );
 }
 
 final myRatingsProvider = AsyncNotifierProvider.autoDispose<MyRatingsViewModel, MyRatingsState>(

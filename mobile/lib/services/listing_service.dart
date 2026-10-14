@@ -210,6 +210,31 @@ class ListingService {
     } catch (_) {}
     return null;
   }
+
+  // ── Competitor Radar için aktif ilanlar ─────────────────────────────────
+
+  dynamic getCachedMyActiveListings({String? query, String? category, String? subcategory}) =>
+      _cache.getWithStaleness(_activeListingsKey(query: query, category: category, subcategory: subcategory))?.data;
+
+  Stream<List<Map<String, dynamic>>> getMyActiveListings({
+    String? query,
+    String? category,
+    String? subcategory,
+  }) {
+    final params = StringBuffer('?limit=50&offset=0&active=true');
+    if (query != null && query.isNotEmpty) params.write('&q=${Uri.encodeComponent(query)}');
+    if (category != null && category.isNotEmpty) params.write('&category=${Uri.encodeComponent(category)}');
+    if (subcategory != null && subcategory.isNotEmpty) params.write('&subcategory=${Uri.encodeComponent(subcategory)}');
+    return _apiService.get<List<Map<String, dynamic>>>(
+      url: '${_api.config.baseUrl}/listings/my$params',
+      cacheKey: _activeListingsKey(query: query, category: category, subcategory: subcategory),
+      fromJson: (raw) => (raw as List).cast<Map<String, dynamic>>(),
+      cacheTtl: const Duration(minutes: 30),
+    );
+  }
+
+  static String _activeListingsKey({String? query, String? category, String? subcategory}) =>
+      'cache_my_active_listings_${query ?? ''}_${category ?? ''}_${subcategory ?? ''}';
 }
 
 final listingServiceProvider = Provider<ListingService>((ref) =>

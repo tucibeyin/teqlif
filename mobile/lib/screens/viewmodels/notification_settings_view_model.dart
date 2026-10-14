@@ -1,11 +1,7 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:http/http.dart' as http;
-import 'package:teqlif/core/network/api_client.dart';
-import '../../services/cache_service.dart';
-import '../../services/storage_service.dart';
+import '../../repositories/notification_prefs_repository.dart';
 
 class NotificationSettingsState {
   final Map<String, bool> prefs;
@@ -56,10 +52,11 @@ class NotificationSettingsState {
   }
 }
 
-class NotificationSettingsViewModel extends AutoDisposeAsyncNotifier<NotificationSettingsState> {
-  CacheService get _cache => ref.read(cacheServiceProvider);
+class NotificationSettingsViewModel
+    extends AutoDisposeAsyncNotifier<NotificationSettingsState> {
+  StreamSubscription<Map<String, dynamic>>? _sub;
 
-  TimeOfDay _parseTime(String hhmm) {
+  static TimeOfDay _parseTime(String hhmm) {
     try {
       final parts = hhmm.split(':');
       return TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
@@ -68,10 +65,10 @@ class NotificationSettingsViewModel extends AutoDisposeAsyncNotifier<Notificatio
     }
   }
 
-  String _formatTime(TimeOfDay t) =>
+  static String _formatTime(TimeOfDay t) =>
       '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 
-  NotificationSettingsState _parseData(Map<String, dynamic> data) {
+  static NotificationSettingsState _fromMap(Map<String, dynamic> data) {
     final initialPrefs = const NotificationSettingsState().prefs;
     final newPrefs = Map<String, bool>.from(initialPrefs);
     for (final k in newPrefs.keys) {
@@ -88,84 +85,56 @@ class NotificationSettingsViewModel extends AutoDisposeAsyncNotifier<Notificatio
     );
   }
 
+  Map<String, dynamic> _toPayload(NotificationSettingsState s) => {
+        ...s.prefs,
+        'bid_threshold_tl': s.bidThreshold,
+        'quiet_hours_enabled': s.quietEnabled,
+        'quiet_from': _formatTime(s.quietFrom),
+        'quiet_to': _formatTime(s.quietTo),
+        'receive_blast_notifications': s.receiveBlastNotifications,
+        'analytics_opt_out': s.analyticsOptOut,
+      };
+
   @override
-  FutureOr<NotificationSettingsState> build() async {
-    // SWR: cache varsa hemen göster
-    final cached = _cache.getWithStaleness(StorageService.cacheNotificationSettings)?.data;
-    if (cached != null) {
-      state = AsyncValue.data(_parseData(Map<String, dynamic>.from(cached as Map)));
-    }
+  FutureOr<NotificationSettingsState> build() {
+    final repo = ref.read(notificationPrefsRepositoryProvider);
+    final cachedRaw = repo.getCached();
+    final initial = cachedRaw != null
+        ? _fromMap(Map<String, dynamic>.from(cachedRaw as Map))
+        : const NotificationSettingsState();
 
-    final token = await StorageService.getToken();
-    if (token == null) throw Exception('Unauthenticated');
-
-    final resp = await http.get(
-      Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/auth/notification-prefs'),
-      headers: {'Authorization': 'Bearer $token'},
+    _sub?.cancel();
+    _sub = repo.getPrefs().listen(
+      (data) {
+        if (state.hasValue) {
+          state = AsyncValue.data(_fromMap(data));
+        }
+      },
+      onError: (_) {},
     );
+    ref.onDispose(() => _sub?.cancel());
 
-    if (resp.statusCode == 200) {
-      final data = jsonDecode(resp.body) as Map<String, dynamic>;
-      await _cache.saveData(StorageService.cacheNotificationSettings, data,
-          ttl: const Duration(minutes: 30));
-      return _parseData(data);
-    } else {
-      if (state.value != null) return state.value!;
-      throw Exception('Failed to load preferences');
-    }
+    return initial;
   }
 
-  Map<String, dynamic> _buildPayload(NotificationSettingsState s) => {
-    ...s.prefs,
-    'bid_threshold_tl': s.bidThreshold,
-    'quiet_hours_enabled': s.quietEnabled,
-    'quiet_from': _formatTime(s.quietFrom),
-    'quiet_to': _formatTime(s.quietTo),
-    'receive_blast_notifications': s.receiveBlastNotifications,
-    'analytics_opt_out': s.analyticsOptOut,
-  };
-
   Future<void> _patch(NotificationSettingsState newState) async {
-    final token = await StorageService.getToken();
-    if (token == null) return;
     try {
-      await http.patch(
-        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/auth/notification-prefs'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode(_buildPayload(newState)),
-      );
-      // Ayar değişti — cache'i temizle ki sonraki build() taze veri çeksin
-      await _cache.clearData(StorageService.cacheNotificationSettings);
+      await ref
+          .read(notificationPrefsRepositoryProvider)
+          .patchPrefs(_toPayload(newState));
     } catch (_) {}
   }
 
   Future<void> togglePref(String key, bool value) async {
     final current = state.value;
     if (current == null) return;
-    
-    final newPrefs = Map<String, bool>.from(current.prefs);
-    newPrefs[key] = value;
-    
+    final newPrefs = Map<String, bool>.from(current.prefs)..[key] = value;
     final newState = current.copyWith(prefs: newPrefs);
     state = AsyncValue.data(newState);
-    
-    final token = await StorageService.getToken();
-    if (token == null) return;
     try {
-      final resp = await http.patch(
-        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/auth/notification-prefs'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode(_buildPayload(newState)),
-      );
-      if (resp.statusCode >= 400) {
-        state = AsyncValue.data(current);
-      }
+      await ref
+          .read(notificationPrefsRepositoryProvider)
+          .patchPrefs(_toPayload(newState));
     } catch (_) {
       state = AsyncValue.data(current);
     }
@@ -198,9 +167,8 @@ class NotificationSettingsViewModel extends AutoDisposeAsyncNotifier<Notificatio
   Future<void> setQuietTime({required bool isFrom, required TimeOfDay time}) async {
     final current = state.value;
     if (current == null) return;
-    final newState = isFrom
-        ? current.copyWith(quietFrom: time)
-        : current.copyWith(quietTo: time);
+    final newState =
+        isFrom ? current.copyWith(quietFrom: time) : current.copyWith(quietTo: time);
     state = AsyncValue.data(newState);
     await _patch(newState);
   }
@@ -214,6 +182,7 @@ class NotificationSettingsViewModel extends AutoDisposeAsyncNotifier<Notificatio
   }
 }
 
-final notificationSettingsProvider = AsyncNotifierProvider.autoDispose<NotificationSettingsViewModel, NotificationSettingsState>(
+final notificationSettingsProvider =
+    AsyncNotifierProvider.autoDispose<NotificationSettingsViewModel, NotificationSettingsState>(
   () => NotificationSettingsViewModel(),
 );
