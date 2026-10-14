@@ -36,13 +36,14 @@ class DemandTrendsState {
 class DemandTrendsViewModel extends AutoDisposeNotifier<DemandTrendsState> {
   CacheService get _cache => ref.read(cacheServiceProvider);
 
-  String _cacheKey() =>
-      'cache_demand_trends_${state.filter.category ?? ''}_${state.filter.subcategory ?? ''}';
+  static String _keyFor(ListingFilterState filter) =>
+      'cache_demand_trends_${filter.category ?? ''}_${filter.subcategory ?? ''}';
+
+  String get _cacheKey => _keyFor(state.filter);
 
   @override
   DemandTrendsState build() {
-    // Başlangıç filtresi default (kategori yok) — key sabit
-    final cached = _cache.getWithStaleness('cache_demand_trends__')?.data;
+    final cached = _cache.getWithStaleness(_keyFor(const ListingFilterState()))?.data;
     final trends = cached != null
         ? ((cached as Map<String, dynamic>)['trends'] as List? ?? [])
             .cast<Map<String, dynamic>>()
@@ -72,14 +73,19 @@ class DemandTrendsViewModel extends AutoDisposeNotifier<DemandTrendsState> {
       final raw = (data['trends'] as List?) ?? [];
       final trends = raw.cast<Map<String, dynamic>>();
       state = state.copyWith(trends: trends, loading: false);
-      await _cache.saveData(_cacheKey(), data, ttl: const Duration(minutes: 30));
+      await _cache.saveData(_cacheKey, data, ttl: const Duration(minutes: 30));
     } catch (_) {
       if (!hasCached) state = state.copyWith(error: 'error', loading: false);
     }
   }
 
   void updateFilter(ListingFilterState filter) {
-    state = state.copyWith(filter: filter, trends: const [], loading: true);
+    final cached = _cache.getWithStaleness(_keyFor(filter))?.data;
+    final trends = cached != null
+        ? ((cached as Map<String, dynamic>)['trends'] as List? ?? [])
+            .cast<Map<String, dynamic>>()
+        : <Map<String, dynamic>>[];
+    state = state.copyWith(filter: filter, trends: trends, loading: trends.isEmpty);
     load();
   }
 }

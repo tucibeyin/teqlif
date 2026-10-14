@@ -157,6 +157,7 @@ class MessagesTabViewModel extends AutoDisposeAsyncNotifier<ConversationsUiState
         conversations: data,
         loading: false,
         hasError: false,
+        myUserId: state.value!.myUserId ?? StorageService.currentUserIdSync,
       ));
     } catch (e) {
       state = AsyncValue.data(state.value!.copyWith(
