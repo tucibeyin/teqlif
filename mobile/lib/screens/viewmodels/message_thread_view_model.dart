@@ -87,7 +87,9 @@ class MessageThreadViewModel
     if (current == null || !current.hasMore || current.loadingMore) return;
     state = AsyncValue.data(current.copyWith(loadingMore: true));
     try {
-      final oldest = current.messages.first.id;
+      final oldest = current.messages
+          .firstWhere((m) => m.id > 0, orElse: () => current.messages.first)
+          .id;
       final page = await ref
           .read(messageRepositoryProvider)
           .getPage(arg, oldest);

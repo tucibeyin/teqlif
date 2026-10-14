@@ -1284,6 +1284,11 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
         });
       }
     });
+    _scrollCtrl.addListener(() {
+      if (_scrollCtrl.position.pixels >= _scrollCtrl.position.maxScrollExtent - 150) {
+        ref.read(messageThreadProvider(widget.otherUserId).notifier).loadPreviousPage();
+      }
+    });
     _initScreen();
   }
 
