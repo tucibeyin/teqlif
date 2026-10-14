@@ -4,7 +4,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Ekim 2026 — HostStream MVVM tam ayrımı + ICE retry (bc6998ff)
+**Son güncelleme:** Ekim 2026 — Cache V1.1 S1-S7 tam implementasyon (2e974c21)
 
 ---
 
@@ -23,6 +23,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 18. [AI Proxy Mimarisi — Redis Keşfi](#18-ai-proxy-mimarisi--redis-keşfi)
 19. [Stream Recording — aiortc Gizli Abone](#19-stream-recording--aiortc-gizli-abone)
 20. [HostStream MVVM Refactor + ICE Retry](#20-hoststream-mvvm-refactor--ice-retry)
+22. [Cache V1.1 — Feed Entity Store ve ID-List Mimarisi](#22-cache-v11--feed-entity-store-ve-id-list-mimarisi)
 
 ---
 
@@ -1688,4 +1689,51 @@ View'da yalnızca gerçek UI state kaldı: `_wasBackgrounded`, thumbnail timer, 
 ### Bildirim Mimarisi
 
 `teqlif-backup-failed@.service`: systemd `OnFailure=` tetiklenince `notify_backup_failed.sh` çalışır. Script `.env.backup`'tan `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` okur, journalctl son 5 satırıyla Telegram mesajı gönderir. Watchdog (Katman A) + filesystem yaşı (Katman B) + anlık OnFailure bildirim (Katman C) — 3 bağımsız izleme katmanı.
+
+---
+
+## 22. Cache V1.1 — Feed Entity Store ve ID-List Mimarisi
+
+**Commit:** `2e974c21` (S7), `d3bf5728` (S2), `fb711758` (S4), `aeb12557` (S6)  
+**Tarih:** 2026-10-14  
+**Analiz:** `documents/cache/V1.1/01_findings.md`
+
+### Feed Cache Mimarisi
+
+Feed cache'ler artık tam JSON değil, yalnızca ID listesi saklar. Listing verisi `entity_listing_{id}` anahtarıyla `api_cache` Hive box'unda tek kayıtta tutulur.
+
+```
+api_cache (Hive)
+  entity_listing_42  → { id, title, price, status, ... }   ← tek kaynak
+  entity_listing_17  → { ... }
+
+  homeCache (ayrı box)
+  home_feed_recent   → [42, 17, 98, ...]                    ← yalnızca ID listesi
+```
+
+**Kurallar:**
+- `HomeRepository.saveFeed(List)` → her listing'i `CacheService.saveEntity('listing', id, data)` ile yazar, homeCache'e ID listesi saklar
+- `HomeRepository.loadCache()` → ID listesini okur, her ID için `CacheService.getEntity('listing', id)` çağırır
+- `SearchRepository._appendCache()` → aynı entity store'a yazar
+- `entityProvider` Riverpod family → widget'lar entity'yi reaktif okur: `ref.watch(entityProvider(('listing', id)))`
+- Bir entity güncellendiğinde tüm feed görünümleri (home, explore, public profile) otomatik tutarlı kalır
+
+### Migration
+
+`CacheService.init()` içinde `_kApiCacheVersion = 2` kontrolü bulunur. Uygulama güncellenince eski tam-JSON `api_cache` içeriği otomatik silinir; `homeCache._kCacheVersion = 3` ile eski ID-list-öncesi homeCache de sıfırlanır. İlk açılışta network fetch tetiklenir, entity store dolar.
+
+### Image Cache (S2)
+
+Tüm `CachedNetworkImage` / `CachedNetworkImageProvider` widget'larında:
+- `cacheManager: TeqlifCacheManager()` — 2 günlük disk TTL, maks 300 dosya
+- `cacheKey: 'listing_{id}_photo_{i}'` / `'user_{id}_avatar'` / `'stream_{id}_thumb'` — presigned URL rotasyonunda disk hit korunur
+- `memCacheWidth` — decode-time boyut ipucu; avatar 88–240px, listing card 144–400px, full screen 800px
+
+### Repository Katmanı (S4 — ADR §8)
+
+ViewModel `http.get()` ve `StorageService.getToken()` çağıramaz. Tüm API çağrıları `HomeRepository` / `SearchRepository` üzerinden geçer. `loadMore()` başarılı yanıtı disk cache'e merge eder (maks 60 ilan).
+
+### Prefetch (S6 — ADR §8)
+
+`PublicProfileViewModel.warmup(username)` fire-and-forget; `_warming` Set guard eş zamanlı in-flight'ı engeller. Feed kartı long-press anında seller profili ön-ısıtılır.
 
