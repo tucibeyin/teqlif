@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../../services/image_cache_manager.dart';
 import 'package:http/http.dart' as http;
 import 'package:teqlif/core/network/api_client.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -253,6 +254,7 @@ class _HostBanner extends ConsumerWidget {
             child: ClipOval(
               child: thumbnailUrl != null
                   ? CachedNetworkImage(
+                      cacheKey: 'user_${username}_avatar', cacheManager: TeqlifCacheManager(),
                       memCacheWidth: 400, memCacheHeight: 400, imageUrl: ref.read(apiClientProvider).imgUrl(thumbnailUrl!),
                       fit: BoxFit.cover,
                       errorWidget: (_, _, _) => _fallback(),
@@ -328,6 +330,7 @@ class _RaidTargetCard extends ConsumerWidget {
                     const BorderRadius.vertical(top: Radius.circular(13)),
                 child: thumbUrl != null
                     ? CachedNetworkImage(
+                        cacheKey: 'stream_${data['stream_id'] as int}_thumb', cacheManager: TeqlifCacheManager(),
                         memCacheWidth: 400, memCacheHeight: 400, imageUrl: ref.read(apiClientProvider).imgUrl(thumbUrl),
                         fit: BoxFit.cover,
                         placeholder: (_, _) => const ShimmerBox(

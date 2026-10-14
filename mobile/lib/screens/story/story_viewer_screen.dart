@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../../services/image_cache_manager.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
@@ -755,6 +756,8 @@ class _GroupPageState extends ConsumerState<_GroupPage> with TickerProviderState
       child: Center(
         child: CachedNetworkImage(
           imageUrl: url,
+          cacheManager: TeqlifCacheManager(),
+          memCacheWidth: 800,
           fit: BoxFit.contain,
           placeholder: (_, _) => const CircularProgressIndicator(
             color: Colors.white54,
@@ -815,6 +818,9 @@ class _GroupPageState extends ConsumerState<_GroupPage> with TickerProviderState
                     child: resolved != null
                         ? CachedNetworkImage(
                             imageUrl: resolved,
+                            cacheKey: 'user_${user.username}_avatar',
+                            cacheManager: TeqlifCacheManager(),
+                            memCacheWidth: 80,
                             fit: BoxFit.cover,
                             errorWidget: (_, _, _) =>
                                 _InitialsBubble(username: user.username),
@@ -1067,6 +1073,9 @@ class _GroupPageState extends ConsumerState<_GroupPage> with TickerProviderState
               child: resolved != null
                   ? CachedNetworkImage(
                       imageUrl: resolved,
+                      cacheKey: 'user_${user.username}_avatar',
+                      cacheManager: TeqlifCacheManager(),
+                      memCacheWidth: 80,
                       fit: BoxFit.cover,
                       errorWidget: (_, _, _) =>
                           _InitialsBubble(username: user.username),

@@ -1,5 +1,6 @@
 import 'viewmodels/purchase_detail_view_model.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../services/image_cache_manager.dart';
 import 'package:flutter/material.dart';
 import '../ui_library/components/overlays/teq_snackbar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -70,6 +71,9 @@ class PurchaseDetailScreen extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(12),
                 child: CachedNetworkImage(
                   imageUrl: ref.read(apiClientProvider).imgUrl(thumbnailUrl),
+                  cacheKey: listingId != null ? 'listing_${listingId}_photo_0' : null,
+                  cacheManager: TeqlifCacheManager(),
+                  memCacheWidth: 400,
                   height: 220,
                   fit: BoxFit.cover,
                   errorWidget: (_, _, _) => _imagePlaceholder(),
@@ -263,6 +267,8 @@ class PurchaseDetailScreen extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(12),
                 child: CachedNetworkImage(
                   imageUrl: ref.read(apiClientProvider).imgUrl(proofImageUrl),
+                  cacheManager: TeqlifCacheManager(),
+                  memCacheWidth: 400,
                   fit: BoxFit.cover,
                   errorWidget: (_, _, _) => Container(
                     height: 200,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:teqlif/core/network/api_client.dart';
+import '../services/image_cache_manager.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
@@ -77,7 +78,7 @@ class FollowListScreen extends ConsumerWidget {
                     radius: 22,
                     backgroundColor: kPrimary.withValues(alpha: 0.12),
                     backgroundImage: rawImg != null
-                        ? CachedNetworkImageProvider(ref.read(apiClientProvider).imgUrl(rawImg))
+                        ? CachedNetworkImageProvider(ref.read(apiClientProvider).imgUrl(rawImg), cacheKey: 'user_${u['id']}_avatar', cacheManager: TeqlifCacheManager())
                         : null,
                     child: rawImg == null
                         ? Text(

@@ -5,6 +5,7 @@ import '../models/direct_sale.dart';
 import '../utils/error_helper.dart';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import '../services/image_cache_manager.dart';
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:flutter/material.dart";
 import "../services/localization_service.dart";
@@ -170,6 +171,10 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
                                 child: thumbnailUrl != null && thumbnailUrl.isNotEmpty
                                     ? CachedNetworkImage(
                                         imageUrl: ref.read(apiClientProvider).imgUrl(thumbnailUrl),
+                                        cacheKey: 'listing_${(item['id'] as num).toInt()}_photo_0',
+                                        cacheManager: TeqlifCacheManager(),
+                                        memCacheWidth: 144,
+                                        memCacheHeight: 144,
                                         width: 72,
                                         height: 72,
                                         fit: BoxFit.cover,
@@ -340,6 +345,10 @@ class _DirectSaleCard extends ConsumerWidget {
                 child: imageUrl != null && imageUrl.isNotEmpty
                     ? CachedNetworkImage(
                         imageUrl: ref.read(apiClientProvider).imgUrl(imageUrl),
+                        cacheKey: 'listing_${saleId}_photo_0',
+                        cacheManager: TeqlifCacheManager(),
+                        memCacheWidth: 144,
+                        memCacheHeight: 144,
                         width: 72,
                         height: 72,
                         fit: BoxFit.cover,

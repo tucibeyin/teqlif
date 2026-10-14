@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../services/image_cache_manager.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:teqlif/core/network/api_client.dart';
 import '../services/localization_service.dart';
@@ -249,7 +250,7 @@ class _CallTile extends ConsumerWidget {
             backgroundColor: cs.surfaceContainerHighest,
             backgroundImage: item.otherAvatar != null &&
                     item.otherAvatar!.isNotEmpty
-                ? CachedNetworkImageProvider(ref.read(apiClientProvider).imgUrl(item.otherAvatar))
+                ? CachedNetworkImageProvider(ref.read(apiClientProvider).imgUrl(item.otherAvatar), cacheKey: 'user_${item.otherUserId}_avatar', cacheManager: TeqlifCacheManager())
                 : null,
             child: item.otherAvatar == null || item.otherAvatar!.isEmpty
                 ? Text(

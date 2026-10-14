@@ -1,6 +1,7 @@
 import 'viewmodels/my_ratings_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../services/image_cache_manager.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:teqlif/core/network/api_client.dart';
 import '../config/app_colors.dart';
@@ -239,7 +240,7 @@ class _RatingCardState extends ConsumerState<_RatingCard> {
                     radius: 20,
                     backgroundColor: kPrimary.withValues(alpha: 0.1),
                     backgroundImage: avatarUrl != null
-                        ? CachedNetworkImageProvider(ref.read(apiClientProvider).imgUrl(avatarUrl))
+                        ? CachedNetworkImageProvider(ref.read(apiClientProvider).imgUrl(avatarUrl), cacheKey: 'user_${username}_avatar', cacheManager: TeqlifCacheManager())
                         : null,
                     child: avatarUrl == null
                         ? Text(

@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import '../services/image_cache_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -34,6 +35,8 @@ class _FullscreenImageDialog extends StatelessWidget {
                     maxScale: 4.0,
                     child: CachedNetworkImage(
                       imageUrl: imageUrl,
+                      cacheManager: TeqlifCacheManager(),
+                      memCacheWidth: 800,
                       fit: BoxFit.contain,
                       errorWidget: (_, _, _) => const Icon(
                         Icons.image_not_supported,

@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../services/image_cache_manager.dart';
 import 'package:teqlif/core/network/api_client.dart';
 import '../services/localization_service.dart';
 import '../config/app_colors.dart';
@@ -258,6 +259,9 @@ class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen>
                       child: avatarUrl != null
                           ? CachedNetworkImage(
                               imageUrl: avatarUrl,
+                              cacheKey: 'user_${username}_avatar',
+                              cacheManager: TeqlifCacheManager(),
+                              memCacheWidth: 240,
                               fit: BoxFit.cover,
                               placeholder: (_, _) =>
                                   _InitialAvatar(username: username),

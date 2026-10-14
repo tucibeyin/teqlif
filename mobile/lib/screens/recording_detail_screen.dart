@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import '../services/image_cache_manager.dart';
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -748,6 +749,9 @@ class _AuctionCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(6),
                 child: CachedNetworkImage(
                   imageUrl: auction.proofImageUrl!,
+                  cacheManager: TeqlifCacheManager(),
+                  memCacheWidth: 88,
+                  memCacheHeight: 88,
                   width: 44,
                   height: 44,
                   fit: BoxFit.cover,
@@ -901,6 +905,9 @@ class _DirectSaleCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(6),
                 child: CachedNetworkImage(
                   imageUrl: sale.productImageUrl!,
+                  cacheManager: TeqlifCacheManager(),
+                  memCacheWidth: 88,
+                  memCacheHeight: 88,
                   width: 44,
                   height: 44,
                   fit: BoxFit.cover,
@@ -1094,7 +1101,7 @@ class _ViewerCardState extends State<_ViewerCard> {
                   child: CircleAvatar(
                     radius: 18,
                     backgroundImage: v.avatarUrl != null
-                        ? CachedNetworkImageProvider(v.avatarUrl!)
+                        ? CachedNetworkImageProvider(v.avatarUrl!, cacheKey: 'user_${v.userId}_avatar', cacheManager: TeqlifCacheManager())
                         : null,
                     child: v.avatarUrl == null
                         ? const Icon(Icons.person, size: 18)
@@ -1417,7 +1424,7 @@ class _ParticipantRow extends StatelessWidget {
           CircleAvatar(
             radius: 18,
             backgroundImage: participant.avatarUrl != null
-                ? CachedNetworkImageProvider(participant.avatarUrl!)
+                ? CachedNetworkImageProvider(participant.avatarUrl!, cacheKey: 'user_${participant.userId}_avatar', cacheManager: TeqlifCacheManager())
                 : null,
             child: participant.avatarUrl == null
                 ? const Icon(Icons.person, size: 18)
@@ -1458,7 +1465,7 @@ class _BidRow extends StatelessWidget {
             CircleAvatar(
               radius: 15,
               backgroundImage: bid.avatarUrl != null
-                  ? CachedNetworkImageProvider(bid.avatarUrl!)
+                  ? CachedNetworkImageProvider(bid.avatarUrl!, cacheKey: 'user_${bid.userId}_avatar', cacheManager: TeqlifCacheManager())
                   : null,
               child: bid.avatarUrl == null
                   ? const Icon(Icons.person, size: 15)
@@ -1502,7 +1509,7 @@ class _OrderRow extends StatelessWidget {
             CircleAvatar(
               radius: 15,
               backgroundImage: order.avatarUrl != null
-                  ? CachedNetworkImageProvider(order.avatarUrl!)
+                  ? CachedNetworkImageProvider(order.avatarUrl!, cacheKey: 'user_${order.userId}_avatar', cacheManager: TeqlifCacheManager())
                   : null,
               child: order.avatarUrl == null
                   ? const Icon(Icons.person, size: 15)
@@ -1547,7 +1554,7 @@ class _GiftEventRow extends StatelessWidget {
             CircleAvatar(
               radius: 15,
               backgroundImage: event.avatarUrl != null
-                  ? CachedNetworkImageProvider(event.avatarUrl!)
+                  ? CachedNetworkImageProvider(event.avatarUrl!, cacheKey: 'user_${event.userId}_avatar', cacheManager: TeqlifCacheManager())
                   : null,
               child: event.avatarUrl == null
                   ? const Icon(Icons.person, size: 15)

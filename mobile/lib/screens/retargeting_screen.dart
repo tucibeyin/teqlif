@@ -2,6 +2,7 @@ import 'dart:async';
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:flutter/material.dart";
 import 'package:cached_network_image/cached_network_image.dart';
+import '../services/image_cache_manager.dart';
 import "../services/localization_service.dart";
 import 'package:teqlif/core/network/api_client.dart';
 import '../config/app_colors.dart';
@@ -173,6 +174,9 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
                         imageUrl != null
                           ? CachedNetworkImage(
                               imageUrl: imageUrl,
+                              cacheKey: 'listing_${lid}_photo_0',
+                              cacheManager: TeqlifCacheManager(),
+                              memCacheWidth: 400,
                               fit: BoxFit.cover,
                               placeholder: (_, _) => Container(color: AppColors.border(context)),
                               errorWidget: (_, _, _) => Container(color: AppColors.border(context)))
@@ -1040,6 +1044,9 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
                         imageUrl != null
                             ? CachedNetworkImage(
                                 imageUrl: imageUrl,
+                                cacheKey: 'listing_${(item['id'] as int)}_photo_0',
+                                cacheManager: TeqlifCacheManager(),
+                                memCacheWidth: 256,
                                 fit: BoxFit.cover,
                                 placeholder: (_, _) => Container(color: AppColors.border(context)),
                                 errorWidget: (_, _, _) => Container(color: AppColors.border(context)))

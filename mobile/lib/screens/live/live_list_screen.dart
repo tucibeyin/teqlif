@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../services/image_cache_manager.dart';
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:flutter/material.dart";
 import "../../services/localization_service.dart";
@@ -629,6 +630,9 @@ class _StreamerAvatarCard extends ConsumerWidget {
                         child: imageUrl != null && imageUrl.isNotEmpty
                             ? CachedNetworkImage(
                                 imageUrl: imageUrl,
+                                cacheKey: 'user_${username}_avatar',
+                                cacheManager: TeqlifCacheManager(),
+                                memCacheWidth: 124,
                                 fit: BoxFit.cover,
                                 width: double.infinity,
                                 height: double.infinity,
@@ -800,6 +804,9 @@ class _StreamGridTile extends ConsumerWidget {
               if (hasThumbnail)
                 CachedNetworkImage(
                   imageUrl: ref.read(apiClientProvider).imgUrl(stream.thumbnailUrl),
+                  cacheKey: 'stream_${stream.id}_thumb',
+                  cacheManager: TeqlifCacheManager(),
+                  memCacheWidth: 400,
                   fit: BoxFit.cover,
                   placeholder: (_, _) => const Center(
                     child: CircularProgressIndicator(strokeWidth: 2),

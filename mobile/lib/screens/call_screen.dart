@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import '../services/image_cache_manager.dart';
 import 'package:proximity_sensor/proximity_sensor.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -309,7 +310,13 @@ class _CallScreenState extends ConsumerState<CallScreen> {
             children: [
               // Background
               if (avatarUrl != null)
-                CachedNetworkImage(imageUrl: avatarUrl, fit: BoxFit.cover)
+                CachedNetworkImage(
+                  imageUrl: avatarUrl,
+                  cacheKey: 'user_${username}_avatar',
+                  cacheManager: TeqlifCacheManager(),
+                  memCacheWidth: 400,
+                  fit: BoxFit.cover,
+                )
               else
                 Container(color: AppColors.bg(context)),
 
@@ -439,6 +446,9 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                               child: avatarUrl != null && avatarUrl.isNotEmpty
                                   ? CachedNetworkImage(
                                       imageUrl: avatarUrl,
+                                      cacheKey: 'user_${username}_avatar',
+                                      cacheManager: TeqlifCacheManager(),
+                                      memCacheWidth: 240,
                                       fit: BoxFit.cover,
                                       placeholder: (_, _) =>
                                           _Initials(username: username),
@@ -1019,6 +1029,9 @@ class _ParticipantStrip extends ConsumerWidget {
                     child: p.avatar != null && p.avatar!.isNotEmpty
                         ? CachedNetworkImage(
                             imageUrl: ref.read(apiClientProvider).imgUrl(p.avatar!),
+                            cacheKey: 'user_${p.userId}_avatar',
+                            cacheManager: TeqlifCacheManager(),
+                            memCacheWidth: 80,
                             fit: BoxFit.cover,
                           )
                         : Container(
@@ -1173,7 +1186,7 @@ class _InviteToCallModalState extends ConsumerState<InviteToCallModal> {
                     return ListTile(
                       leading: CircleAvatar(
                         backgroundImage: (avatar != null && avatar.isNotEmpty)
-                            ? CachedNetworkImageProvider(ref.read(apiClientProvider).imgUrl(avatar))
+                            ? CachedNetworkImageProvider(ref.read(apiClientProvider).imgUrl(avatar), cacheKey: 'user_${uid}_avatar', cacheManager: TeqlifCacheManager())
                             : null,
                         child: (avatar == null || avatar.isEmpty)
                             ? Text(username.isNotEmpty ? username[0].toUpperCase() : '?')

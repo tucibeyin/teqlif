@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math' show min;
 import 'package:cached_network_image/cached_network_image.dart';
+import '../services/image_cache_manager.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
@@ -1163,6 +1164,8 @@ class _ChatAvatar extends ConsumerWidget {
 
     return ClipOval(
       child: CachedNetworkImage(
+        cacheKey: 'user_${username}_avatar',
+        cacheManager: TeqlifCacheManager(),
         memCacheWidth: 400, memCacheHeight: 400, imageUrl: _resolveImageUrl(imageUrl!),
         width: _size,
         height: _size,

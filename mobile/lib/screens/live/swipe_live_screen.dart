@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../utils/number_formatter.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../services/image_cache_manager.dart';
 import 'package:http/http.dart' as http;
 import 'package:video_player/video_player.dart';
 import 'package:confetti/confetti.dart';
@@ -1548,6 +1549,9 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
               children: [
                 CachedNetworkImage(
                   imageUrl: ref.read(apiClientProvider).imgUrl(stream.thumbnailUrl!),
+                  cacheKey: 'stream_${stream.id}_thumb',
+                  cacheManager: TeqlifCacheManager(),
+                  memCacheWidth: 400,
                   fit: BoxFit.cover,
                   placeholder: (_, _) => _darkBg(),
                   errorWidget: (_, _, _) => _darkBg(),
@@ -1735,6 +1739,9 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
       return CachedNetworkImage(
         key: const ValueKey('live_thumb'),
         imageUrl: ref.read(apiClientProvider).imgUrl(widget.stream.thumbnailUrl!),
+        cacheKey: 'stream_${widget.stream.id}_thumb',
+        cacheManager: TeqlifCacheManager(),
+        memCacheWidth: 400,
         fit: BoxFit.cover,
         placeholder: (_, _) => _darkBg(),
         errorWidget: (_, _, _) => _darkBg(),
@@ -2195,6 +2202,9 @@ class _ListingVideoPageState extends ConsumerState<_ListingVideoPage> {
       return CachedNetworkImage(
         key: ValueKey('thumb_${listing['id']}'),
         imageUrl: ref.read(apiClientProvider).imgUrl(thumbUrl),
+        cacheKey: 'listing_${listing['id'] as int}_photo_0',
+        cacheManager: TeqlifCacheManager(),
+        memCacheWidth: 400,
         fit: BoxFit.cover,
         placeholder: (_, _) => const ColoredBox(color: Colors.black),
         errorWidget: (_, _, _) => const ColoredBox(color: Colors.black),

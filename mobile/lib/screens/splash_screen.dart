@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:app_badge_plus/app_badge_plus.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../services/image_cache_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:in_app_update/in_app_update.dart';
 import 'package:teqlif/core/network/api_client.dart';
@@ -132,7 +133,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
 
   Future<void> _precache(String url) async {
     try {
-      await precacheImage(CachedNetworkImageProvider(url), context);
+      await precacheImage(CachedNetworkImageProvider(url, cacheManager: TeqlifCacheManager()), context);
     } catch (_) {}
   }
 

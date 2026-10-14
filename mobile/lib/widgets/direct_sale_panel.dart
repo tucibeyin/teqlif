@@ -1,6 +1,7 @@
 // ignore_for_file: use_build_context_synchronously
 import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../services/image_cache_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -696,6 +697,10 @@ class _ActivePanel extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(8),
                     child: CachedNetworkImage(
                       imageUrl: ref.read(apiClientProvider).imgUrl(state.displayImageUrl),
+                      cacheKey: state.listingId != null ? 'listing_${state.listingId}_photo_0' : null,
+                      cacheManager: TeqlifCacheManager(),
+                      memCacheWidth: 104,
+                      memCacheHeight: 104,
                       width: 52,
                       height: 52,
                       fit: BoxFit.cover,
@@ -1026,6 +1031,9 @@ class _ProductDetailSheetState extends ConsumerState<_ProductDetailSheet> {
         borderRadius: BorderRadius.circular(12),
         child: CachedNetworkImage(
           imageUrl: url,
+          cacheKey: widget.initialState.listingId != null ? 'listing_${widget.initialState.listingId}_photo_0' : null,
+          cacheManager: TeqlifCacheManager(),
+          memCacheWidth: 400,
           width: double.infinity,
           height: 220,
           fit: BoxFit.cover,
@@ -1107,6 +1115,9 @@ class _ListingImageGallery extends ConsumerWidget {
                 onTap: () => showFullscreenImage(ctx, ref.read(apiClientProvider).imgUrl(urls[i])),
                 child: CachedNetworkImage(
                   imageUrl: ref.read(apiClientProvider).imgUrl(urls[i]),
+                  cacheKey: 'listing_${listingId}_photo_$i',
+                  cacheManager: TeqlifCacheManager(),
+                  memCacheWidth: 400,
                   fit: BoxFit.cover,
                   errorWidget: (_, _, _) => const Center(
                     child: Icon(Icons.image_not_supported, color: Colors.white38, size: 48),
@@ -1553,6 +1564,10 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
                   borderRadius: BorderRadius.circular(8),
                   child: CachedNetworkImage(
                     imageUrl: ref.read(apiClientProvider).imgUrl(widget.state.displayImageUrl),
+                    cacheKey: widget.state.listingId != null ? 'listing_${widget.state.listingId}_photo_0' : null,
+                    cacheManager: TeqlifCacheManager(),
+                    memCacheWidth: 96,
+                    memCacheHeight: 96,
                     width: 48,
                     height: 48,
                     fit: BoxFit.cover,
@@ -2030,6 +2045,10 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
                             child: thumbUrl != null && thumbUrl.isNotEmpty
                                 ? CachedNetworkImage(
                                     imageUrl: thumbUrl,
+                                    cacheKey: 'listing_${item['id'] as int}_photo_0',
+                                    cacheManager: TeqlifCacheManager(),
+                                    memCacheWidth: 76,
+                                    memCacheHeight: 76,
                                     width: 38,
                                     height: 38,
                                     fit: BoxFit.cover,

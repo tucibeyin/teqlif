@@ -1,6 +1,7 @@
 import '../ui_library/components/overlays/teq_snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../services/image_cache_manager.dart';
 import 'package:teqlif/core/network/api_client.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/theme.dart';
@@ -71,7 +72,7 @@ class BlockedUsersScreen extends ConsumerWidget {
                     radius: 22,
                     backgroundColor: kPrimary.withValues(alpha: 0.12),
                     backgroundImage:
-                        rawImg != null ? CachedNetworkImageProvider(ref.read(apiClientProvider).imgUrl(rawImg)) : null,
+                        rawImg != null ? CachedNetworkImageProvider(ref.read(apiClientProvider).imgUrl(rawImg), cacheKey: 'user_${u['id']}_avatar', cacheManager: TeqlifCacheManager()) : null,
                     child: rawImg == null
                         ? Text(
                             initial,

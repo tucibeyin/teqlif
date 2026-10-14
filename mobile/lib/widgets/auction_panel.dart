@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../services/image_cache_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/localization_service.dart';
@@ -646,6 +647,8 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                               itemCount: imageUrls.length,
                               onPageChanged: (i) => setSt(() => pageIdx[0] = i),
                               itemBuilder: (_, i) => CachedNetworkImage(
+                                cacheKey: 'listing_${listing['id'] as int}_photo_$i',
+                                cacheManager: TeqlifCacheManager(),
                                 memCacheWidth: 400,
                                 memCacheHeight: 400,
                                 imageUrl: imageUrls[i],
@@ -2242,6 +2245,8 @@ class _StartAuctionDialogState extends ConsumerState<_StartAuctionDialog> {
                                 borderRadius: BorderRadius.circular(6),
                                 child: url != null && url.isNotEmpty
                                     ? CachedNetworkImage(
+                                        cacheKey: 'listing_${lItem['id'] as int}_photo_0',
+                                        cacheManager: TeqlifCacheManager(),
                                         memCacheWidth: 400,
                                         memCacheHeight: 400,
                                         imageUrl: url,

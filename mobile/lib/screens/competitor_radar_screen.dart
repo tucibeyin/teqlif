@@ -10,6 +10,7 @@ import '../ui_library/components/overlays/teq_toast.dart';
 import '../utils/number_formatter.dart';
 import 'viewmodels/competitor_radar_view_model.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../services/image_cache_manager.dart';
 import '../widgets/pro_paywall_overlay.dart';
 
 class CompetitorRadarScreen extends ConsumerWidget {
@@ -189,6 +190,9 @@ class CompetitorRadarScreen extends ConsumerWidget {
                     imageUrl != null
                         ? CachedNetworkImage(
                             imageUrl: imageUrl,
+                            cacheKey: 'listing_${item['id'] as int}_photo_0',
+                            cacheManager: TeqlifCacheManager(),
+                            memCacheWidth: 256,
                             fit: BoxFit.cover,
                             placeholder: (_, _) => Container(color: AppColors.border(context)),
                             errorWidget: (_, _, _) => Container(

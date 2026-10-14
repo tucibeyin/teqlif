@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/localization_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../services/image_cache_manager.dart';
 import 'package:teqlif/core/network/api_client.dart';
 import '../config/app_colors.dart';
 import '../services/call_service.dart' show callServiceProvider, CallStatus;
@@ -484,7 +485,7 @@ class _IncomingCallBar extends ConsumerWidget {
                       backgroundColor: AppColors.surfaceVariant(context),
                       backgroundImage:
                           avatarUrl != null && avatarUrl!.isNotEmpty
-                          ? CachedNetworkImageProvider(ref.read(apiClientProvider).imgUrl(avatarUrl))
+                          ? CachedNetworkImageProvider(ref.read(apiClientProvider).imgUrl(avatarUrl!), cacheKey: 'user_${username}_avatar', cacheManager: TeqlifCacheManager())
                           : null,
                       child: avatarUrl == null || avatarUrl!.isEmpty
                           ? Text(
@@ -750,7 +751,7 @@ class _GroupInviteBanner extends ConsumerWidget {
               radius: 22,
               backgroundColor: Colors.grey.shade800,
               backgroundImage: (inviterAvatar != null && inviterAvatar.isNotEmpty)
-                  ? CachedNetworkImageProvider(ref.read(apiClientProvider).imgUrl(inviterAvatar))
+                  ? CachedNetworkImageProvider(ref.read(apiClientProvider).imgUrl(inviterAvatar), cacheKey: 'user_${inviterUsername}_avatar', cacheManager: TeqlifCacheManager())
                   : null,
               child: (inviterAvatar == null || inviterAvatar.isEmpty)
                   ? Text(inviterUsername.isNotEmpty ? inviterUsername[0].toUpperCase() : '?',

@@ -13,6 +13,7 @@ import '../../services/media_compressor.dart';
 import '../../models/story.dart';
 import '../../providers/story_provider.dart';
 import '../../screens/story/story_viewer_screen.dart';
+import '../../services/image_cache_manager.dart';
 import '../../services/storage_service.dart';
 import '../../services/story_service.dart';
 import '../../services/localization_service.dart';
@@ -535,6 +536,7 @@ class _StoryGroupItem extends ConsumerWidget {
                     child: ClipOval(
                       child: resolvedUrl != null && resolvedUrl.isNotEmpty
                           ? CachedNetworkImage(
+                              cacheKey: 'user_${group.user.username}_avatar', cacheManager: TeqlifCacheManager(),
                               memCacheWidth: 400, memCacheHeight: 400, imageUrl: resolvedUrl,
                               fit: BoxFit.cover,
                               width: double.infinity,

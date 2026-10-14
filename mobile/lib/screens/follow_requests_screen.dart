@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../services/image_cache_manager.dart';
 
 import 'package:teqlif/core/network/api_client.dart';
 import '../config/app_colors.dart';
@@ -222,7 +223,7 @@ class FollowRequestsScreen extends ConsumerWidget {
                 CircleAvatar(
                   radius: 24,
                   backgroundColor: AppColors.surfaceVariant(context),
-                  backgroundImage: avatarUrl != null ? CachedNetworkImageProvider(ref.read(apiClientProvider).imgUrl(avatarUrl)) : null,
+                  backgroundImage: avatarUrl != null ? CachedNetworkImageProvider(ref.read(apiClientProvider).imgUrl(avatarUrl), cacheKey: 'user_${username}_avatar', cacheManager: TeqlifCacheManager()) : null,
                   child: avatarUrl == null
                       ? Text(
                           fullName.isNotEmpty ? fullName[0].toUpperCase() : '?',

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/localization_service.dart';
 import 'package:teqlif/core/network/api_client.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../services/image_cache_manager.dart';
 
 void _uiLog(String component, String event, String detail) {
   debugPrint('[UI_CALL][$component][${DateTime.now().toIso8601String()}] $event | $detail');
@@ -207,7 +208,9 @@ class _GlobalCallOverlayState extends ConsumerState<GlobalCallOverlay> {
                                   backgroundColor: Colors.white24,
                                   backgroundImage: cs.otherAvatar!.isNotEmpty
                                       ? CachedNetworkImageProvider(
-                                          ref.read(apiClientProvider).imgUrl(cs.otherAvatar!))
+                                          ref.read(apiClientProvider).imgUrl(cs.otherAvatar!),
+                                          cacheKey: cs.otherUsername != null ? 'user_${cs.otherUsername}_avatar' : null,
+                                          cacheManager: TeqlifCacheManager())
                                       : null,
                                   child: cs.otherAvatar!.isEmpty &&
                                           cs.otherUsername != null

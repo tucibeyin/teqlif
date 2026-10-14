@@ -1,6 +1,7 @@
 import 'viewmodels/purchases_view_model.dart';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../services/image_cache_manager.dart';
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:flutter/material.dart";
 import "../services/localization_service.dart";
@@ -192,6 +193,10 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> {
                                     child: thumbnailUrl != null && thumbnailUrl.isNotEmpty
                                         ? CachedNetworkImage(
                                             imageUrl: ref.read(apiClientProvider).imgUrl(thumbnailUrl),
+                                            cacheKey: item['listing_id'] != null ? 'listing_${item['listing_id'] as int}_photo_0' : null,
+                                            cacheManager: TeqlifCacheManager(),
+                                            memCacheWidth: 144,
+                                            memCacheHeight: 144,
                                             width: 72,
                                             height: 72,
                                             fit: BoxFit.cover,

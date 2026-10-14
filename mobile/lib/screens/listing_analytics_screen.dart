@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../services/image_cache_manager.dart';
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:flutter/material.dart";
 import "../services/localization_service.dart";
@@ -216,6 +217,9 @@ class _ListingAnalyticsScreenState extends ConsumerState<ListingAnalyticsScreen>
                           if (metric.imageUrl != null)
                             CachedNetworkImage(
                               imageUrl: metric.imageUrl!,
+                              cacheKey: 'listing_${metric.id}_photo_0',
+                              cacheManager: TeqlifCacheManager(),
+                              memCacheWidth: 240,
                               fit: BoxFit.cover,
                               errorWidget: (_, _, _) => Container(
                                 color: AppColors.surfaceVariant(context),

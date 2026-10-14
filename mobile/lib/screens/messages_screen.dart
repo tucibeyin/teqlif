@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../services/image_cache_manager.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/gestures.dart';
 import "package:flutter_riverpod/flutter_riverpod.dart";
@@ -424,7 +425,11 @@ class _MessagesTabState extends ConsumerState<_MessagesTab>
                     backgroundColor: kPrimary.withValues(alpha: 0.15),
                     backgroundImage:
                         otherAvatarUrl != null && otherAvatarUrl.isNotEmpty
-                        ? CachedNetworkImageProvider(ref.read(apiClientProvider).imgUrl(otherAvatarUrl))
+                        ? CachedNetworkImageProvider(
+                            ref.read(apiClientProvider).imgUrl(otherAvatarUrl),
+                            cacheKey: 'user_${otherId}_avatar',
+                            cacheManager: TeqlifCacheManager(),
+                          )
                         : null,
                     child: otherAvatarUrl == null || otherAvatarUrl.isEmpty
                         ? Text(
@@ -682,7 +687,11 @@ class _RequestsListTab extends ConsumerWidget {
               backgroundColor: kPrimary.withValues(alpha: 0.15),
               backgroundImage:
                   otherAvatarUrl != null && otherAvatarUrl.isNotEmpty
-                  ? CachedNetworkImageProvider(ref.read(apiClientProvider).imgUrl(otherAvatarUrl))
+                  ? CachedNetworkImageProvider(
+                      ref.read(apiClientProvider).imgUrl(otherAvatarUrl),
+                      cacheKey: 'user_${otherId}_avatar',
+                      cacheManager: TeqlifCacheManager(),
+                    )
                   : null,
               child: otherAvatarUrl == null || otherAvatarUrl.isEmpty
                   ? Text(
@@ -2107,6 +2116,9 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
             borderRadius: BorderRadius.circular(12),
             child: CachedNetworkImage(
               imageUrl: ref.read(apiClientProvider).imgUrl(thumbUrl ?? mediaUrl ?? ''),
+              cacheManager: TeqlifCacheManager(),
+              memCacheWidth: 200,
+              memCacheHeight: 200,
               width: 200,
               height: 200,
               fit: BoxFit.cover,
@@ -2140,6 +2152,9 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
                 child: thumbUrl != null
                     ? CachedNetworkImage(
                         imageUrl: ref.read(apiClientProvider).imgUrl(thumbUrl),
+                        cacheManager: TeqlifCacheManager(),
+                        memCacheWidth: 200,
+                        memCacheHeight: 200,
                         width: 200,
                         height: 200,
                         fit: BoxFit.cover,
@@ -3208,6 +3223,9 @@ class _ContextBanner extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(6),
                 child: CachedNetworkImage(
                   imageUrl: ref.read(apiClientProvider).imgUrl(thumbnailUrl),
+                  cacheManager: TeqlifCacheManager(),
+                  memCacheWidth: 88,
+                  memCacheHeight: 88,
                   width: 44,
                   height: 44,
                   fit: BoxFit.cover,
@@ -3518,6 +3536,8 @@ class _FullScreenImagePage extends ConsumerWidget {
         child: InteractiveViewer(
           child: CachedNetworkImage(
             imageUrl: url,
+            cacheManager: TeqlifCacheManager(),
+            memCacheWidth: 800,
             fit: BoxFit.contain,
             placeholder: (_, _) =>
                 const CircularProgressIndicator(color: Colors.white),

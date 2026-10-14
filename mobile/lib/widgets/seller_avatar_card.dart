@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import '../services/image_cache_manager.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
 import 'package:teqlif/core/network/api_client.dart';
@@ -52,6 +53,8 @@ class SellerAvatarCard extends ConsumerWidget {
                     child: ClipOval(
                       child: avatarUrl != null
                           ? CachedNetworkImage(
+                              cacheKey: 'user_${username}_avatar',
+                              cacheManager: TeqlifCacheManager(),
                               memCacheWidth: 400, memCacheHeight: 400, imageUrl: avatarUrl,
                               fit: BoxFit.cover,
                               placeholder: (context, url) => _buildPlaceholder(context, initial),

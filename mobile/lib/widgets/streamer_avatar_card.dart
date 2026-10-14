@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import '../services/image_cache_manager.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/localization_service.dart';
 import '../config/app_colors.dart';
@@ -57,6 +58,8 @@ class StreamerAvatarCard extends ConsumerWidget {
                       child: ClipOval(
                         child: imageUrl != null && imageUrl.isNotEmpty
                             ? CachedNetworkImage(
+                                cacheKey: 'user_${username}_avatar',
+                                cacheManager: TeqlifCacheManager(),
                                 memCacheWidth: 400, memCacheHeight: 400, imageUrl: imageUrl,
                                 fit: BoxFit.cover,
                                 width: double.infinity,

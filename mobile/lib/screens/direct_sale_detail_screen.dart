@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import '../services/image_cache_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -84,6 +85,9 @@ class _Body extends ConsumerWidget {
               borderRadius: BorderRadius.circular(12),
               child: CachedNetworkImage(
                 imageUrl: ref.read(apiClientProvider).imgUrl(imageUrl),
+                cacheKey: 'listing_${summary.saleId}_photo_0',
+                cacheManager: TeqlifCacheManager(),
+                memCacheWidth: 400,
                 width: double.infinity,
                 height: 220,
                 fit: BoxFit.cover,

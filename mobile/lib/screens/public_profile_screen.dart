@@ -1,6 +1,7 @@
 import 'package:intl/intl.dart';
 import '../widgets/ratings/expandable_comment.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../services/image_cache_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/analytics_service.dart';
@@ -736,6 +737,9 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
                       photo != null
                           ? CachedNetworkImage(
                               imageUrl: photo,
+                              cacheKey: 'listing_${listing['id'] as int}_photo_0',
+                              cacheManager: TeqlifCacheManager(),
+                              memCacheWidth: 240,
                               fit: BoxFit.cover,
                               placeholder: (_, _) => const Center(
                                 child: CircularProgressIndicator(
@@ -807,7 +811,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
     Widget avatarWidget = CircleAvatar(
       radius: 44,
       backgroundColor: kPrimary.withValues(alpha: 0.15),
-      backgroundImage: rawImg != null ? CachedNetworkImageProvider(ref.read(apiClientProvider).imgUrl(rawImg)) : null,
+      backgroundImage: rawImg != null ? CachedNetworkImageProvider(ref.read(apiClientProvider).imgUrl(rawImg), cacheKey: 'user_${widget.username}_avatar', cacheManager: TeqlifCacheManager()) : null,
       child: rawImg == null
           ? Text(
               initial,
@@ -1385,7 +1389,7 @@ class _PublicRatingItemState extends State<_PublicRatingItem> {
                   radius: 20,
                   backgroundColor: kPrimary.withValues(alpha: 0.12),
                   backgroundImage:
-                      raterImg != null ? CachedNetworkImageProvider(providerContainer.read(apiClientProvider).imgUrl(raterImg)) : null,
+                      raterImg != null ? CachedNetworkImageProvider(providerContainer.read(apiClientProvider).imgUrl(raterImg), cacheKey: 'user_${rater['username']}_avatar', cacheManager: TeqlifCacheManager()) : null,
                   child: raterImg == null
                       ? Text(
                           raterInitial,
