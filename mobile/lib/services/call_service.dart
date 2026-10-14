@@ -1232,6 +1232,27 @@ class CallService {
     final currentStatus = state.value.status;
     _cpLog('RECOVERY', 'checkActiveCall ENTER | currentStatus=${currentStatus.name}');
 
+    // Ringing while WS reconnects: the call may have timed out on the backend while
+    // the app was in background. Verify with the backend; if terminal, reset to idle
+    // so the next incoming call is not auto-rejected by the hasActiveCall guard.
+    if (currentStatus == CallStatus.ringing) {
+      final stalledCallId = state.value.callId;
+      if (stalledCallId != null) {
+        try {
+          final backendStatus = await _repository.getCallStatus(stalledCallId);
+          _cpLog('RECOVERY', 'checkActiveCall (ringing) → backendStatus=$backendStatus callId=$stalledCallId');
+          if (backendStatus == 'ended' || backendStatus == 'rejected' || backendStatus == 'missed') {
+            _cpLog('RECOVERY', 'checkActiveCall → stale ringing cleared | callId=$stalledCallId backendStatus=$backendStatus');
+            await _notif.reportCallEnded(callId: stalledCallId.toString());
+            _setState(CallState(status: CallStatus.idle));
+          }
+        } catch (e) {
+          _cpLog('RECOVERY', 'checkActiveCall ringing-verify FAILED | $e (non-fatal)');
+        }
+      }
+      return;
+    }
+
     if (currentStatus != CallStatus.idle) {
       _cpLog('RECOVERY', 'checkActiveCall SKIPPED | non-idle state=${currentStatus.name} (no-op)');
       return;
