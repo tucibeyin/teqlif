@@ -21,7 +21,7 @@ class HomeRepository {
   static const _kKeyVersion        = 'home_cache_version';
   static const _kKeyTimestamp      = 'home_cache_timestamp';
   static const _kCacheVersion      = 2;
-  static const _kCacheTtlMs        = 30 * 60 * 1000;
+  static const _kCacheTtlMs        = 15 * 60 * 1000;
 
   Future<Box> _box() => Hive.openBox(_kBoxName);
 

@@ -152,7 +152,7 @@ class MessagesTabViewModel extends AutoDisposeAsyncNotifier<ConversationsUiState
 
     try {
       final data = await ref.read(notificationServiceProvider).getConversations();
-      await _cache.saveData(StorageService.cacheMessages, data);
+      await _cache.saveData(StorageService.cacheMessages, data, ttl: const Duration(minutes: 5));
       state = AsyncValue.data(state.value!.copyWith(
         conversations: data,
         loading: false,
@@ -277,7 +277,7 @@ class NotificationsTabViewModel extends AutoDisposeAsyncNotifier<NotificationsUi
 
     try {
       final data = await ref.read(notificationServiceProvider).getNotifications();
-      await _cache.saveData(StorageService.cacheNotifications, data);
+      await _cache.saveData(StorageService.cacheNotifications, data, ttl: const Duration(minutes: 5));
       state = AsyncValue.data(state.value!.copyWith(
         notifications: data,
         loading: false,
@@ -346,7 +346,7 @@ class RequestsTabViewModel extends AutoDisposeAsyncNotifier<ConversationsUiState
     }
     try {
       final data = await ref.read(notificationServiceProvider).getMessageRequests();
-      await _cache.saveData(StorageService.cacheMessageRequests, data);
+      await _cache.saveData(StorageService.cacheMessageRequests, data, ttl: const Duration(minutes: 5));
       state = AsyncValue.data(state.value!.copyWith(
         conversations: data,
         loading: false,
