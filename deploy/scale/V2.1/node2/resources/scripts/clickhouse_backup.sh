@@ -35,6 +35,12 @@ else
     done
     tar -czf "${DEST}.tar.gz" -C "${BACKUP_DIR}" "$(basename "${DEST}")"
     rm -rf "${DEST}"
+
+    # Fallback başarılı mı kontrol et (tar.gz oluştu ve boyutu > 0)
+    if [[ ! -s "${DEST}.tar.gz" ]]; then
+        logger -p user.err "teqlif clickhouse_backup: fallback BAŞARISIZ — tar.gz boş veya yok"
+        exit 1
+    fi
 fi
 
 find "${BACKUP_DIR}" -name '*.tar.gz' -mtime +${RETENTION_DAYS} -delete
@@ -44,8 +50,7 @@ redis-cli -h 10.10.0.1 -p 6379 -a "${CORE_REDIS_PASS}" --no-auth-warning \
     HSET teqlif:agent:job_ok clickhouse_backup "${TIMESTAMP_NOW}" >/dev/null 2>&1 || true
 
 if [[ "${BACKUP_METHOD}" == "fallback" ]]; then
-    logger -p user.warning "teqlif clickhouse_backup: native fallback kullanıldı — birincil yöntemler başarısız (${TIMESTAMP_NOW})"
-    exit 2
+    logger -p user.warning "teqlif clickhouse_backup: native fallback kullanıldı (birincil yöntemler kurulu değil)"
 fi
 
 echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) clickhouse_backup: OK (${BACKUP_METHOD})"
