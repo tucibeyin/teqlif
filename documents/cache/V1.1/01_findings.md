@@ -8,7 +8,7 @@
 
 ## 0. Uyum Gereksinimleri
 
-Bu döküman kapsamındaki **her değişiklik**, aşağıdaki kurallara tam uyumlu olmak zorundadır.
+Bu döküman kapsamındaki **her bulgunun implementasyonu** Clean Code, Clean Architecture, ADR, Development Workflow ve MVVM prensiplerine uygun olmak zorundadır. Aşağıdaki §0.1–§0.5 maddeleri bu prensiplerin teqlif projesine özgü somut karşılıklarıdır; implementasyon başlamadan okunur ve uyulur.
 
 ### 0.1 `teqlif_architectural_decisions.md` Önce Okunur
 
