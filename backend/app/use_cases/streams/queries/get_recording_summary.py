@@ -124,11 +124,7 @@ class GetRecordingSummaryQuery:
                 b.id, b.bidder_id AS user_id, b.bidder_username AS username,
                 u.profile_image_thumb_url AS avatar_url,
                 b.amount, b.created_at,
-                CASE
-                    WHEN :rec_start IS NOT NULL
-                    THEN EXTRACT(EPOCH FROM (b.created_at - CAST(:rec_start AS timestamptz)))
-                    ELSE NULL
-                END AS offset_secs
+                EXTRACT(EPOCH FROM (b.created_at - CAST(:rec_start AS timestamptz))) AS offset_secs
             FROM bids b
             LEFT JOIN users u ON u.id = b.bidder_id
             WHERE b.auction_id = :auction_id
@@ -185,11 +181,7 @@ class GetRecordingSummaryQuery:
                 dso.id, dso.buyer_id AS user_id, u.username,
                 u.profile_image_thumb_url AS avatar_url,
                 dso.quantity, dso.unit_price, dso.created_at,
-                CASE
-                    WHEN :rec_start IS NOT NULL
-                    THEN EXTRACT(EPOCH FROM (dso.created_at - CAST(:rec_start AS timestamptz)))
-                    ELSE NULL
-                END AS offset_secs
+                EXTRACT(EPOCH FROM (dso.created_at - CAST(:rec_start AS timestamptz))) AS offset_secs
             FROM direct_sale_orders dso
             LEFT JOIN users u ON u.id = dso.buyer_id
             WHERE dso.sale_id = :sale_id
@@ -218,11 +210,7 @@ class GetRecordingSummaryQuery:
                 ge.sender_id AS user_id, u.username,
                 u.profile_image_thumb_url AS avatar_url,
                 ge.gift_name, ge.cost_teqlik, ge.host_share, ge.sent_at,
-                CASE
-                    WHEN :rec_start IS NOT NULL
-                    THEN EXTRACT(EPOCH FROM (ge.sent_at - CAST(:rec_start AS timestamptz)))
-                    ELSE NULL
-                END AS offset_secs
+                EXTRACT(EPOCH FROM (ge.sent_at - CAST(:rec_start AS timestamptz))) AS offset_secs
             FROM gift_events ge
             LEFT JOIN users u ON u.id = ge.sender_id
             WHERE ge.stream_id = :stream_id
@@ -260,11 +248,7 @@ class GetRecordingSummaryQuery:
         rows = (await self._db.execute(text("""
             SELECT user_id, username, avatar_url, content, is_host, is_mod,
                    created_at,
-                   CASE
-                       WHEN :rec_start IS NOT NULL
-                       THEN EXTRACT(EPOCH FROM (created_at - CAST(:rec_start AS timestamptz)))
-                       ELSE NULL
-                   END AS offset_secs
+                   EXTRACT(EPOCH FROM (created_at - CAST(:rec_start AS timestamptz))) AS offset_secs
             FROM stream_chat_messages
             WHERE stream_id = :stream_id
               AND is_hidden = FALSE
