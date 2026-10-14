@@ -281,7 +281,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                   // ══════════════════════════════════════════════════════════
                   if (!state.hasFilter) ...[
                     // ── Geri Bak shelf ────────────────────────────────────
-                    if (state.isHesitatedLoading || state.hesitatedListings.isNotEmpty)
+                    if (state.hesitatedListings.isNotEmpty)
                       SliverToBoxAdapter(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -306,20 +306,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                             ),
                             SizedBox(
                               height: 130,
-                              child: state.isHesitatedLoading && state.hesitatedListings.isEmpty
-                                  ? ListView.builder(
-                                      scrollDirection: Axis.horizontal,
-                                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                                      itemCount: 4,
-                                      itemBuilder: (_, _) => Container(
-                                        width: 100,
-                                        margin: const EdgeInsetsDirectional.only(end: 8),
-                                        child: ShimmerBox(
-                                          borderRadius: BorderRadius.circular(10),
-                                        ),
-                                      ),
-                                    )
-                                  : ListView.builder(
+                              child: ListView.builder(
                                 scrollDirection: Axis.horizontal,
                                 padding: const EdgeInsets.symmetric(horizontal: 14),
                                 itemCount: state.hesitatedListings.length,
