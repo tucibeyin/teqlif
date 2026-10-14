@@ -108,10 +108,10 @@ class PublicProfileViewModel extends AutoDisposeFamilyAsyncNotifier<PublicProfil
   }
 
   void _emitCachedIfAvailable(PublicProfileArgs arg) {
-    final cachedUser = _cache.getData(_profileKey(arg.username));
+    final cachedUser = _cache.getWithStaleness(_profileKey(arg.username))?.data;
     if (cachedUser == null) return;
-    final cachedListings = _cache.getData(_listingsKey(arg.username));
-    final cachedRatings = _cache.getData(_ratingsKey(arg.username));
+    final cachedListings = _cache.getWithStaleness(_listingsKey(arg.username))?.data;
+    final cachedRatings = _cache.getWithStaleness(_ratingsKey(arg.username))?.data;
     state = AsyncValue.data(PublicProfileState(
       user: Map<String, dynamic>.from(cachedUser as Map),
       listings: (cachedListings as List?) ?? const [],
@@ -186,7 +186,7 @@ class PublicProfileViewModel extends AutoDisposeFamilyAsyncNotifier<PublicProfil
   // §12.7 — fire-and-forget prefetch; View beklemez.
   Future<void> warmup(String username) async {
     if (_warming.contains(username)) return;
-    if (_cache.getData(_profileKey(username)) != null) return;
+    if (_cache.getWithStaleness(_profileKey(username))?.data != null) return;
     _warming.add(username);
     try {
       await _fetchFresh(PublicProfileArgs(username: username));

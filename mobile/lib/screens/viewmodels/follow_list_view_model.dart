@@ -49,7 +49,7 @@ class FollowListViewModel extends AutoDisposeFamilyAsyncNotifier<FollowListState
   @override
   FutureOr<FollowListState> build(FollowListArgs arg) async {
     // SWR: cache varsa hemen göster
-    final cached = _cache.getData(_cacheKey(arg));
+    final cached = _cache.getWithStaleness(_cacheKey(arg))?.data;
     if (cached != null) {
       state = AsyncValue.data(FollowListState(users: cached as List));
     }
@@ -66,7 +66,7 @@ class FollowListViewModel extends AutoDisposeFamilyAsyncNotifier<FollowListState
           ttl: const Duration(minutes: 5));
       return FollowListState(users: users);
     } else {
-      if (cached != null) return state.value!; // ağ hatası — cache'i koru
+      if (state.value != null) return state.value!; // ağ hatası — cache'i koru
       final body = jsonDecode(resp.body) as Map<String, dynamic>;
       final err = body['error'] as Map<String, dynamic>? ?? {};
       throw AppException(

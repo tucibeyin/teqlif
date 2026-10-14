@@ -83,7 +83,8 @@ class HomeViewModel extends AutoDisposeAsyncNotifier<HomeState> {
 
   Future<void> _fetchInitial({bool bypassCache = false}) async {
     final current = state.value ?? const HomeState();
-    state = AsyncValue.data(current.copyWith(isLoading: true, hasError: false));
+    final hasCache = current.recentListings.isNotEmpty;
+    state = AsyncValue.data(current.copyWith(isLoading: !hasCache, hasError: false));
 
     try {
       if (current.hasFilter) {
@@ -117,7 +118,8 @@ class HomeViewModel extends AutoDisposeAsyncNotifier<HomeState> {
   }
 
   Future<void> _fetchHesitated() async {
-    state = AsyncValue.data(state.value!.copyWith(isHesitatedLoading: true));
+    final hasCache = state.value?.hesitatedListings.isNotEmpty ?? false;
+    state = AsyncValue.data(state.value!.copyWith(isHesitatedLoading: !hasCache));
     try {
       final items = await _repo.fetchHesitated();
       await _repo.saveHesitated(items);

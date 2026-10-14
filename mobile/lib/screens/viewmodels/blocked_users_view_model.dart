@@ -22,7 +22,7 @@ class BlockedUsersViewModel extends AutoDisposeAsyncNotifier<BlockedUsersState> 
   @override
   FutureOr<BlockedUsersState> build() async {
     // SWR: cache varsa hemen göster
-    final cached = _cache.getData(StorageService.cacheBlockedUsers);
+    final cached = _cache.getWithStaleness(StorageService.cacheBlockedUsers)?.data;
     if (cached != null) {
       state = AsyncValue.data(BlockedUsersState(blockedUsers: cached as List));
     }
@@ -37,7 +37,7 @@ class BlockedUsersViewModel extends AutoDisposeAsyncNotifier<BlockedUsersState> 
           ttl: const Duration(minutes: 10));
       return BlockedUsersState(blockedUsers: users);
     } else {
-      if (cached != null) return state.value!;
+      if (state.value != null) return state.value!;
       throw Exception('Failed to load blocked users');
     }
   }

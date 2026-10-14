@@ -111,7 +111,7 @@ class ProfileViewModel extends AutoDisposeAsyncNotifier<ProfileUiState> {
 
     return ProfileUiState(
       user: localInfo,
-      loading: true,
+      loading: localInfo == null,
     );
   }
 

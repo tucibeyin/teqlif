@@ -22,8 +22,8 @@ class MyRatingsViewModel extends AutoDisposeAsyncNotifier<MyRatingsState> {
   @override
   FutureOr<MyRatingsState> build() async {
     // SWR: cache varsa hemen göster
-    final cachedReceived = _cache.getData(StorageService.cacheMyRatingsReceived);
-    final cachedGiven = _cache.getData(StorageService.cacheMyRatingsGiven);
+    final cachedReceived = _cache.getWithStaleness(StorageService.cacheMyRatingsReceived)?.data;
+    final cachedGiven = _cache.getWithStaleness(StorageService.cacheMyRatingsGiven)?.data;
     if (cachedReceived != null && cachedGiven != null) {
       state = AsyncValue.data(MyRatingsState(
         receivedRatings: cachedReceived as List,

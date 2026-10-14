@@ -91,7 +91,7 @@ class NotificationSettingsViewModel extends AutoDisposeAsyncNotifier<Notificatio
   @override
   FutureOr<NotificationSettingsState> build() async {
     // SWR: cache varsa hemen göster
-    final cached = _cache.getData(StorageService.cacheNotificationSettings);
+    final cached = _cache.getWithStaleness(StorageService.cacheNotificationSettings)?.data;
     if (cached != null) {
       state = AsyncValue.data(_parseData(Map<String, dynamic>.from(cached as Map)));
     }
@@ -110,7 +110,7 @@ class NotificationSettingsViewModel extends AutoDisposeAsyncNotifier<Notificatio
           ttl: const Duration(minutes: 30));
       return _parseData(data);
     } else {
-      if (cached != null) return state.value!;
+      if (state.value != null) return state.value!;
       throw Exception('Failed to load preferences');
     }
   }
