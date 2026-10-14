@@ -291,6 +291,8 @@ Future<HomeFeedPage> loadMore({required int page, int? maxId}) async {
 
 `home_view_model.dart` `loadMore()` → `_repo.loadMore(page: nextPage, maxId: current.lastMaxId)` çağrısına indirgenir.
 
+**Pull-to-refresh sıfırlama:** `onRefresh` (sayfa 0 yenileme) `fetchRecent(page: 0)` → `saveFeed(jsonEncode(page.listings))` çağırır; bu çağrı `api_cache` box'taki `home_feed_recent` anahtarını biriktirilmiş listeyle birlikte **eze**r. `loadMore()` ise her zaman önce `loadCache()` ile mevcut listeyi okur, merge eder, tekrar yazar. İki kod yolu birbirinden ayrı tutulur; refresh'te `loadMore()` çağrılmaz.
+
 Aynı pattern `SearchRepository.loadMoreRecent()` ve `SearchRepository.loadMoreForYou()` olarak oluşturulur.
 
 **Doğrulama:** 3 sayfa kaydır → arka plana al → geri dön → liste korunmuş; sayfa 0'dan fazlası görünüyor.
@@ -645,6 +647,15 @@ async def get_for_you_feed(..., response: Response):
 | Auth / payment (SECURITY_CRITICAL) | `no-store` |
 
 `private` = yalnızca istemci cache'ler, Cloudflare edge'e geçmez. `public` = Cloudflare edge cache'leyebilir.
+
+**Cloudflare — Authorization Header Kısıtı:**
+
+Cloudflare, `Authorization` header'ı içeren request'leri varsayılan olarak cache'lemez. `public` direktifi tek başına yetmez; `/api/catalog` ve `/api/cities` endpoint'leri için aşağıdakilerden biri uygulanmalıdır:
+
+- **Seçenek A (Tercih):** Mobil `ApiClient`'ta bu iki endpoint için `Authorization` header'ı çıkarılır. Bu endpoint'ler public veri döner, kimlik doğrulama gerektirmez.
+- **Seçenek B:** Cloudflare dashboard'da Cache Rules → "Bypass cache on cookie/header" için `catalog` ve `cities` path'lerinde `Authorization` header'ı yoksayılır.
+
+Seçenek A, backend değişikliği gerektirmeyen ve güvenlik açısından daha temiz yaklaşımdır; seçeneğin ADR'ye (`§23 Cloudflare Cache Rules`) kaydedilmesi gerekir.
 
 **Doğrulama:** `curl -I https://api.teqlif.com/feed/recent` response header'ında `Cache-Control: private, max-age=300` görünüyor. `/api/catalog` için Cloudflare dashboard'da cache HIT oranı artıyor.
 
