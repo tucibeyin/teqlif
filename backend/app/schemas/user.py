@@ -150,6 +150,7 @@ class ResendCode(BaseModel):
 DEFAULT_NOTIF_PREFS = {
     "messages": True,
     "follows": True,
+    "story_likes": True,
     "auction_won": True,
     "stream_started": True,
     "new_listing": True,
@@ -169,6 +170,7 @@ DEFAULT_NOTIF_PREFS = {
 class NotificationPrefs(BaseModel):
     messages: bool = True
     follows: bool = True
+    story_likes: bool = True
     auction_won: bool = True
     stream_started: bool = True
     new_listing: bool = True

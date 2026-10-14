@@ -87,7 +87,7 @@ async def toggle_story_like(
     db: AsyncSession = Depends(get_db),
 ):
     """Hikayeyi beğen / beğeniyi kaldır (toggle). Güncel `likes_count` ve `is_liked` döner."""
-    return await LikeService(db).toggle_story_like(story_id, current_user.id)
+    return await LikeService(db).toggle_story_like(story_id, current_user.id, current_user.username)
 
 
 @router.post("/{story_id}/view", status_code=status.HTTP_204_NO_CONTENT)

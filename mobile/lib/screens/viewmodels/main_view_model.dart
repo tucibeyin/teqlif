@@ -290,6 +290,7 @@ class MainViewModel extends AutoDisposeAsyncNotifier<MainState> {
 
       case 'follow_accepted':
       case 'follow':
+      case 'story_liked':
         final username = data['sender_username'] as String? ?? '';
         if (username.isNotEmpty) {
           _navigate(MainNavigationEvent.toProfile, username);

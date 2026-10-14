@@ -2421,6 +2421,14 @@
       }
     }
   },
+  "notifStoryLiked": "@{username} понравилась ваша история",
+  "@notifStoryLiked": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
   "notifMessage": "@{username} прислал(-а) вам сообщение",
   "@notifMessage": {
     "placeholders": {

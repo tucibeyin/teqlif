@@ -99,19 +99,29 @@ class LikeService:
 
     # ── Hikaye Beğeni Toggle ──────────────────────────────────────────────────
 
-    async def toggle_story_like(self, story_id: int, user_id: int) -> dict:
+    async def toggle_story_like(
+        self,
+        story_id: int,
+        user_id: int,
+        sender_username: str,
+    ) -> dict:
         """
         Hikayeyi beğen / beğeniyi kaldır (toggle).
         Güncel `likes_count` ve `is_liked` durumu döner.
+        Beğeni eklendiğinde hikaye sahibine push bildirimi gönderilir (öz-beğeni hariç).
         """
-        # Hikaye kontrolü
-        story_exists = await self.db.scalar(
-            select(Story.id).where(
+        import asyncio
+        from app.routers.notifications import push_notification
+
+        # Hikaye + sahip kontrolü
+        row = (await self.db.execute(
+            select(Story.id, Story.user_id).where(
                 Story.id == story_id, Story.expires_at > func.now()
             )
-        )
-        if not story_exists:
+        )).first()
+        if not row:
             raise NotFoundException(code="STORY_NOT_FOUND")
+        story_owner_id: int = row.user_id
 
         existing = await self.db.scalar(
             select(StoryLike).where(
@@ -147,6 +157,22 @@ class LikeService:
             "[LIKES] Hikaye beğeni %s | story_id=%s user_id=%s likes_count=%s",
             action, story_id, user_id, count,
         )
+
+        if is_liked and story_owner_id != user_id:
+            asyncio.create_task(push_notification(
+                user_id=story_owner_id,
+                notif={
+                    "type": "story_liked",
+                    "i18n": {
+                        "title_key": "notifStoryLiked",
+                        "title_params": {"username": sender_username},
+                    },
+                    "related_id": story_id,   # cleanup için story_id saklanır
+                    "sender_username": sender_username,
+                },
+                pref_key="story_likes",
+            ))
+
         return {"likes_count": count, "is_liked": is_liked}
 
     # ── Canlı Yayın Kalp (Add-Only) ───────────────────────────────────────────

@@ -2401,6 +2401,14 @@
       }
     }
   },
+  "notifStoryLiked": "أعجب @{username} بقصتك",
+  "@notifStoryLiked": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
   "notifMessage": "أرسل @{username} رسالة إليك",
   "@notifMessage": {
     "placeholders": {

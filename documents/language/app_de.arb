@@ -2418,6 +2418,14 @@
       }
     }
   },
+  "notifStoryLiked": "@{username} hat deine Story gefällt",
+  "@notifStoryLiked": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
   "notifMessage": "@{username} hat dir eine Nachricht gesendet",
   "@notifMessage": {
     "placeholders": {

@@ -25,11 +25,12 @@ from datetime import datetime, timedelta, timezone
 from typing import List
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, text
+from sqlalchemy import select, func, text, delete as sql_delete
 
 from fastapi import UploadFile
 
 from app.config import settings
+from app.models.notification import Notification
 from app.models.story import Story, StoryView
 from app.models.user import User
 from app.models.follow import Follow
@@ -562,6 +563,12 @@ class StoryService:
             await storage.delete_object(storage.url_to_key(story.thumbnail_url))
 
         try:
+            await self.db.execute(
+                sql_delete(Notification).where(
+                    Notification.type == "story_liked",
+                    Notification.related_id == story_id,
+                )
+            )
             await self.db.delete(story)
             await self.db.commit()
         except Exception as exc:
@@ -628,6 +635,22 @@ class StoryService:
                     story.id,
                     exc,
                     exc_info=True,
+                )
+                capture_exception(exc)
+
+        # story_liked bildirimlerini toplu temizle
+        expired_ids = [s.id for s in expired]
+        if expired_ids:
+            try:
+                await db.execute(
+                    sql_delete(Notification).where(
+                        Notification.type == "story_liked",
+                        Notification.related_id.in_(expired_ids),
+                    )
+                )
+            except Exception as exc:
+                logger.error(
+                    "[STORY CLEANUP] Bildirim temizleme hatası | %s", exc, exc_info=True
                 )
                 capture_exception(exc)
 

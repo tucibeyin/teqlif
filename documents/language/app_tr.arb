@@ -2418,6 +2418,14 @@
       }
     }
   },
+  "notifStoryLiked": "@{username} hikayeni beğendi",
+  "@notifStoryLiked": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
   "notifMessage": "@{username} size mesaj gönderdi",
   "@notifMessage": {
     "placeholders": {
