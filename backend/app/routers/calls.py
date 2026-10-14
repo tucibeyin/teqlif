@@ -275,7 +275,7 @@ async def _push_await_ring(
     except Exception as exc:
         logger.exception("[CALL_PROCESS][RING] _push_await_ring send push UNHANDLED | call_id=%d %s", call_id, exc)
 
-    ack = await ws_manager.wait_for_call_ack(call_id, timeout=8.0)
+    ack = await ws_manager.wait_for_call_ack(call_id, timeout=12.0)
     if ack:
         logger.info(
             "[CALL_PROCESS][RING] _push_await_ring: push ACK → call_ringing | call_id=%d caller=%d",
@@ -284,7 +284,7 @@ async def _push_await_ring(
         await _ws_broadcast(caller_id, {"type": "call_ringing", "call_id": call_id})
     else:
         logger.info(
-            "[CALL_PROCESS][RING] _push_await_ring: 8s timeout → call_unreachable | call_id=%d caller=%d",
+            "[CALL_PROCESS][RING] _push_await_ring: 12s timeout → call_unreachable | call_id=%d caller=%d",
             call_id, caller_id,
         )
         await _ws_broadcast(caller_id, {"type": "call_unreachable", "call_id": call_id})
@@ -331,6 +331,11 @@ async def _mark_call_unreachable(call_id: int, caller_id: int, callee_id: int) -
                 await clear_call_redis(call_id)
             except Exception as _e:
                 logger.warning("[CALL_PROCESS][RING] clear_call_redis FAILED | call_id=%d %s", call_id, _e)
+            try:
+                await clear_presence(caller_id)
+                await clear_presence(callee_id)
+            except Exception as _pe:
+                logger.warning("[CALL_PROCESS][RING] clear_presence FAILED | call_id=%d %s", call_id, _pe)
             await _delete_lk_room(room_name)
             logger.info("[CALL_PROCESS][RING] call marked missed (unreachable) | call_id=%d", call_id)
     except Exception as exc:
