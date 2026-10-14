@@ -1,4 +1,5 @@
 import time
+from pathlib import Path
 from aioapns import APNs, NotificationRequest, PushType
 from app.config import settings
 from app.core.logger import get_logger
@@ -28,8 +29,9 @@ def get_apns_client(sandbox: bool) -> APNs | None:
 
     try:
         if _use_token_auth():
+            key_content = Path(settings.apns_key_path).read_text()
             _apns_clients[sandbox] = APNs(
-                key=settings.apns_key_path,
+                key=key_content,
                 key_id=settings.apns_key_id,
                 team_id=settings.apns_team_id,
                 topic=f"{settings.ios_bundle_id}.voip",
@@ -104,4 +106,6 @@ async def send_voip_push(
             return False, is_bad_token
     except Exception as e:
         logger.error("[CALL_PROCESS][APNS] VoIP push EXCEPTION | %s", e, exc_info=True)
+        _apns_clients[effective_sandbox] = None
+        _apns_last_failures[effective_sandbox] = time.monotonic()
         return False, False
