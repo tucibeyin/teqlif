@@ -466,18 +466,21 @@ class PushNotificationService {
         final callId = data['call_id']?.toString() ?? 'NULL';
         final caller = data['caller_username']?.toString() ?? 'NULL';
         _cpLog('PUSH', 'CallEventActionCallIncoming | callId=$callId caller=$caller');
+        // HTTP ACK: backend'in wait_for_call_ack BLPOP'unu tetikle.
+        // iOS: VoIP push'tan ana engine'e geliş; Android: background isolate'ten
+        // showCallkitIncoming → bu event ana engine'de ateşlenir. Her iki platform da
+        // burada ACK gönderir (background isolate'in providerContainer'ı başlatılmamış
+        // olabileceğinden background'daki await ACK güvenilmez).
+        if (callId != 'NULL') {
+          http.post(Uri.parse('${providerContainer.read(apiClientProvider).config.baseUrl}/calls/$callId/ack'))
+              .timeout(const Duration(seconds: 5))
+              .then((_) {}, onError: (_) {});
+          _cpLog('PUSH', 'CallEventActionCallIncoming | HTTP ACK fired | callId=$callId');
+        }
         if (Platform.isIOS) {
           final appWasForeground = data['app_was_foreground'] as bool? ?? false;
           _callKitAutoDismissExpected = appWasForeground;
           _cpLog('PUSH', 'CallEventActionCallIncoming | autoDismissExpected=$_callKitAutoDismissExpected');
-          // VoIP push alındı → hemen HTTP ACK gönder. WS bağlı olmayabilir (reconnecting),
-          // WS'e güvenmek yerine anlık HTTP ile backend'in BLPOP'unu tetikliyoruz.
-          if (callId != 'NULL') {
-            http.post(Uri.parse('${providerContainer.read(apiClientProvider).config.baseUrl}/calls/$callId/ack'))
-                .timeout(const Duration(seconds: 5))
-                .then((_) {}, onError: (_) {});
-            _cpLog('PUSH', 'CallEventActionCallIncoming | HTTP ACK fired | callId=$callId');
-          }
         }
         await providerContainer.read(callServiceProvider).onIncomingCall({
           ...data,
