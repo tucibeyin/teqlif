@@ -126,7 +126,7 @@ class GetRecordingSummaryQuery:
                 b.amount, b.created_at,
                 CASE
                     WHEN :rec_start IS NOT NULL
-                    THEN EXTRACT(EPOCH FROM (b.created_at - :rec_start))
+                    THEN EXTRACT(EPOCH FROM (b.created_at - CAST(:rec_start AS timestamptz)))
                     ELSE NULL
                 END AS offset_secs
             FROM bids b
@@ -187,7 +187,7 @@ class GetRecordingSummaryQuery:
                 dso.quantity, dso.unit_price, dso.created_at,
                 CASE
                     WHEN :rec_start IS NOT NULL
-                    THEN EXTRACT(EPOCH FROM (dso.created_at - :rec_start))
+                    THEN EXTRACT(EPOCH FROM (dso.created_at - CAST(:rec_start AS timestamptz)))
                     ELSE NULL
                 END AS offset_secs
             FROM direct_sale_orders dso
@@ -220,7 +220,7 @@ class GetRecordingSummaryQuery:
                 ge.gift_name, ge.cost_teqlik, ge.host_share, ge.sent_at,
                 CASE
                     WHEN :rec_start IS NOT NULL
-                    THEN EXTRACT(EPOCH FROM (ge.sent_at - :rec_start))
+                    THEN EXTRACT(EPOCH FROM (ge.sent_at - CAST(:rec_start AS timestamptz)))
                     ELSE NULL
                 END AS offset_secs
             FROM gift_events ge
@@ -262,7 +262,7 @@ class GetRecordingSummaryQuery:
                    created_at,
                    CASE
                        WHEN :rec_start IS NOT NULL
-                       THEN EXTRACT(EPOCH FROM (created_at - :rec_start))
+                       THEN EXTRACT(EPOCH FROM (created_at - CAST(:rec_start AS timestamptz)))
                        ELSE NULL
                    END AS offset_secs
             FROM stream_chat_messages
