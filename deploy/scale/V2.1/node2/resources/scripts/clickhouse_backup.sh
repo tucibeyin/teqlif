@@ -9,6 +9,10 @@ TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 DEST="${BACKUP_DIR}/teqlif_analytics_${TIMESTAMP}"
 BACKUP_METHOD="primary"
 
+CH_PASS="${CLICKHOUSE_DEFAULT_PASSWORD:-}"
+CH_PASS_ARG=()
+[[ -n "${CH_PASS}" ]] && CH_PASS_ARG=(--password "${CH_PASS}")
+
 install -d "${BACKUP_DIR}"
 
 # Yöntem 1: clickhouse-backup (tercih edilen, atomik snapshot)
@@ -16,7 +20,7 @@ if clickhouse-backup create --tables 'teqlif_analytics.*' "${DEST}" 2>/dev/null;
     :
 # Yöntem 2: SQL BACKUP komutu
 elif clickhouse-client \
-        --host 127.0.0.1 --port 9000 --user default \
+        --host 127.0.0.1 --port 9000 --user default "${CH_PASS_ARG[@]}" \
         --query "BACKUP DATABASE teqlif_analytics TO Disk('backups', 'teqlif_analytics_${TIMESTAMP}.zip')" \
         2>/dev/null; then
     BACKUP_METHOD="sql"
@@ -25,7 +29,7 @@ else
     BACKUP_METHOD="fallback"
     mkdir -p "${DEST}"
     for TABLE in user_events feed_analytics search_events swipe_live_events direct_sale_events; do
-        clickhouse-client --host 127.0.0.1 --port 9000 --user default \
+        clickhouse-client --host 127.0.0.1 --port 9000 --user default "${CH_PASS_ARG[@]}" \
             --query "SELECT * FROM teqlif_analytics.${TABLE} FORMAT Native" \
             > "${DEST}/${TABLE}.native"
     done
