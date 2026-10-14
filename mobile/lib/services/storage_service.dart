@@ -61,6 +61,22 @@ class StorageService {
     }
   }
 
+  /// In-memory token'dan userId çözer — await gerektirmez.
+  /// Token belleğe yüklenmemişse null döner (login sonrası her zaman dolu).
+  static int? get currentUserIdSync {
+    final token = _cachedToken;
+    if (token == null) return null;
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return null;
+      final payload = utf8.decode(base64Url.decode(base64Url.normalize(parts[1])));
+      final map = jsonDecode(payload);
+      return int.tryParse(map['sub'].toString());
+    } catch (_) {
+      return null;
+    }
+  }
+
   static const _userEmailKey = 'teqlif_user_email';
   static const _userNameKey = 'teqlif_user_name';
   static const _userFullNameKey = 'teqlif_user_fullname';

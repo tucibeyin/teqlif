@@ -114,7 +114,7 @@ class MessagesTabViewModel extends AutoDisposeAsyncNotifier<ConversationsUiState
   bool _loadInProgress = false;
 
   @override
-  FutureOr<ConversationsUiState> build() async {
+  FutureOr<ConversationsUiState> build() {
     _fcmSub = PushNotificationService.notificationStream.stream.listen((_) => load(silent: true));
     _wsSub = ref.read(wsServiceProvider).messageStream.stream.listen((data) {
       if (data['type'] == 'message') {
@@ -128,12 +128,12 @@ class MessagesTabViewModel extends AutoDisposeAsyncNotifier<ConversationsUiState
       _wsSub?.cancel();
     });
 
-    final info = await StorageService.getUserInfo();
-    final myUserId = info?['id'] as int?;
+    final myUserId = StorageService.currentUserIdSync;
 
-    final cached = _cache.getData(StorageService.cacheMessages);
+    final result = _cache.getWithStaleness(StorageService.cacheMessages);
+    final cached = result?.data;
 
-    Future.microtask(() => load(silent: cached != null));
+    Future.microtask(() => load(silent: true));
 
     return ConversationsUiState(
       myUserId: myUserId,
@@ -152,7 +152,7 @@ class MessagesTabViewModel extends AutoDisposeAsyncNotifier<ConversationsUiState
 
     try {
       final data = await ref.read(notificationServiceProvider).getConversations();
-      await _cache.saveData(StorageService.cacheMessages, data, ttl: const Duration(minutes: 5));
+      await _cache.saveData(StorageService.cacheMessages, data, ttl: const Duration(hours: 1));
       state = AsyncValue.data(state.value!.copyWith(
         conversations: data,
         loading: false,
@@ -259,9 +259,10 @@ class NotificationsTabViewModel extends AutoDisposeAsyncNotifier<NotificationsUi
     _sub = PushNotificationService.notificationStream.stream.listen((_) => load(silent: true));
     ref.onDispose(() => _sub?.cancel());
 
-    final cached = _cache.getData(StorageService.cacheNotifications);
+    final result = _cache.getWithStaleness(StorageService.cacheNotifications);
+    final cached = result?.data;
 
-    Future.microtask(() => load(silent: cached != null));
+    Future.microtask(() => load(silent: true));
 
     return NotificationsUiState(
       notifications: cached != null ? (cached as List) : [],
@@ -277,7 +278,7 @@ class NotificationsTabViewModel extends AutoDisposeAsyncNotifier<NotificationsUi
 
     try {
       final data = await ref.read(notificationServiceProvider).getNotifications();
-      await _cache.saveData(StorageService.cacheNotifications, data, ttl: const Duration(minutes: 5));
+      await _cache.saveData(StorageService.cacheNotifications, data, ttl: const Duration(hours: 1));
       state = AsyncValue.data(state.value!.copyWith(
         notifications: data,
         loading: false,
@@ -318,7 +319,7 @@ class RequestsTabViewModel extends AutoDisposeAsyncNotifier<ConversationsUiState
   bool _loadInProgress = false;
 
   @override
-  FutureOr<ConversationsUiState> build() async {
+  FutureOr<ConversationsUiState> build() {
     _fcmSub = PushNotificationService.notificationStream.stream.listen((_) => load(silent: true));
     _wsSub = ref.read(wsServiceProvider).messageStream.stream.listen((data) {
       if (data['type'] == 'message') load(silent: true);
@@ -328,9 +329,10 @@ class RequestsTabViewModel extends AutoDisposeAsyncNotifier<ConversationsUiState
       _wsSub?.cancel();
     });
 
-    final cached = _cache.getData(StorageService.cacheMessageRequests);
+    final result = _cache.getWithStaleness(StorageService.cacheMessageRequests);
+    final cached = result?.data;
 
-    Future.microtask(() => load(silent: cached != null));
+    Future.microtask(() => load(silent: true));
 
     return ConversationsUiState(
       conversations: cached != null ? (cached as List) : [],
@@ -346,7 +348,7 @@ class RequestsTabViewModel extends AutoDisposeAsyncNotifier<ConversationsUiState
     }
     try {
       final data = await ref.read(notificationServiceProvider).getMessageRequests();
-      await _cache.saveData(StorageService.cacheMessageRequests, data, ttl: const Duration(minutes: 5));
+      await _cache.saveData(StorageService.cacheMessageRequests, data, ttl: const Duration(hours: 1));
       state = AsyncValue.data(state.value!.copyWith(
         conversations: data,
         loading: false,
