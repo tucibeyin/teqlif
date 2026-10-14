@@ -594,6 +594,8 @@ async def start_call(
                                 title=title, body=body, related_id=current_user.id))
             await db.commit()
 
+            asyncio.create_task(clear_presence(current_user.id))
+            asyncio.create_task(clear_presence(stale_callee_id))
             await _ws_broadcast(stale_callee_id, {"type": "call_missed", "call_id": stale_call_id})
             await _delete_lk_room(stale_room_name)
             if stale_callee:

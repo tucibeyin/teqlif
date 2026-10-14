@@ -2293,6 +2293,13 @@ async def delayed_call_timeout_task(ctx: dict, call_id: int, caller_id: int, cal
             except Exception as _re:
                 logger.warning("[CALL_PROCESS][ARQ] delayed_call_timeout_task: clear_call_redis FAILED | call_id=%d %s", call_id, _re)
 
+            try:
+                from app.services.call_presence import clear_presence as _clear_presence
+                await _clear_presence(caller_id)
+                await _clear_presence(callee_id)
+            except Exception as _pe:
+                logger.warning("[CALL_PROCESS][ARQ] delayed_call_timeout_task: clear_presence FAILED | call_id=%d %s", call_id, _pe)
+
             # İki tarafa da missed event'i at
             await ws_manager.publish("dm_broadcast", f"dm:{caller_id}", {"type": "call_missed", "call_id": call_id})
             await ws_manager.publish("dm_broadcast", f"dm:{callee_id}", {"type": "call_missed", "call_id": call_id})
@@ -2394,12 +2401,19 @@ async def cleanup_ghost_calls_task(ctx: dict) -> None:
 
             rooms_to_delete = []
 
+            from app.services.call_presence import clear_presence as _clear_presence_ghost
+
             for call in ghost_calls:
                 if call.status == "calling":
                     logger.warning("Ghost call cleaned up: %d changed from calling to missed", call.id)
                     call.status = "missed"
                     call.ended_at = now  # FIX: ended_at eksikti
                     rooms_to_delete.append(call.room_name)
+                    try:
+                        await _clear_presence_ghost(call.caller_id)
+                        await _clear_presence_ghost(call.callee_id)
+                    except Exception as _gpe:
+                        logger.warning("[CALL_PROCESS][GHOST] clear_presence FAILED call_id=%d %s", call.id, _gpe)
                     # FIX: WS bildirimi — kullanıcılar ekranda takılı kalmasın
                     try:
                         await ws_manager.publish("dm_broadcast", f"dm:{call.caller_id}", {"type": "call_missed", "call_id": call.id})
@@ -2418,6 +2432,11 @@ async def cleanup_ghost_calls_task(ctx: dict) -> None:
                         call.status = "ended"
                         call.ended_at = now
                         rooms_to_delete.append(call.room_name)
+                        try:
+                            await _clear_presence_ghost(call.caller_id)
+                            await _clear_presence_ghost(call.callee_id)
+                        except Exception as _gpe:
+                            logger.warning("[CALL_PROCESS][GHOST] clear_presence FAILED call_id=%d %s", call.id, _gpe)
                         # FIX: WS bildirimi
                         try:
                             await ws_manager.publish("dm_broadcast", f"dm:{call.caller_id}", {"type": "call_ended", "call_id": call.id})
