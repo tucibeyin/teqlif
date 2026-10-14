@@ -3,9 +3,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/network/api_client.dart';
 import '../models/direct_sale.dart';
+import '../services/cache_service.dart';
 import '../services/direct_sale_service.dart';
 import '../services/listing_service.dart';
 import '../services/localization_service.dart';
+import '../services/storage_service.dart';
 import '../core/error_mapper.dart';
 import '../utils/error_helper.dart';
 import 'stream_commerce_notifier.dart';
@@ -18,8 +20,9 @@ void _dsLog(String phase, String msg) {
 
 class DirectSaleHostNotifier extends StreamCommerceNotifier<DirectSaleState> {
   final DirectSaleService _dsService;
+  final CacheService _cache;
 
-  DirectSaleHostNotifier(int streamId, ApiClient api, this._dsService)
+  DirectSaleHostNotifier(int streamId, ApiClient api, this._dsService, this._cache)
       : super(streamId, DirectSaleState.idle(), api) {
     unawaited(_prefetch());
   }
@@ -66,6 +69,7 @@ class DirectSaleHostNotifier extends StreamCommerceNotifier<DirectSaleState> {
           status: 'ended',
           endReason: j['end_reason'] as String?,
         );
+        _cache.clearData(StorageService.cacheStreams);
       case 'direct_sale_cancelled':
         state = state.copyWith(status: 'cancelled');
     }
@@ -193,6 +197,7 @@ final directSaleHostProvider = StateNotifierProvider.family
     streamId,
     ref.watch(apiClientProvider),
     ref.watch(directSaleServiceProvider),
+    ref.watch(cacheServiceProvider),
   ),
 );
 

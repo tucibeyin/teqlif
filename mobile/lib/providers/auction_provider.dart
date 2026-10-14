@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/network/api_client.dart';
 import '../models/auction.dart';
 import '../services/auction_service.dart';
+import '../services/cache_service.dart';
+import '../services/storage_service.dart';
 import 'stream_commerce_notifier.dart';
 
 /// Bir [streamId] için açık artırma state'ini yönetir.
@@ -10,8 +12,9 @@ import 'stream_commerce_notifier.dart';
 /// auction domain logic'ini içerir.
 class AuctionNotifier extends StreamCommerceNotifier<AuctionState> {
   final AuctionService _auctionService;
+  final CacheService _cache;
 
-  AuctionNotifier(int streamId, ApiClient api, this._auctionService)
+  AuctionNotifier(int streamId, ApiClient api, this._auctionService, this._cache)
       : super(streamId, AuctionState.idle(), api) {
     unawaited(_prefetch());
   }
@@ -42,6 +45,11 @@ class AuctionNotifier extends StreamCommerceNotifier<AuctionState> {
         isBoughtItNow: true,
         buyerUsername: buyerUsername,
       );
+      _cache.clearData(StorageService.cacheAuctions);
+      _cache.clearData(StorageService.cacheStreams);
+    } else if (type == 'auction_ended') {
+      _cache.clearData(StorageService.cacheAuctions);
+      _cache.clearData(StorageService.cacheStreams);
     }
     // direct_sale_* ve diğer event tipleri görmezden gelinir
   }
@@ -61,5 +69,6 @@ final auctionProvider =
     streamId,
     ref.watch(apiClientProvider),
     ref.watch(auctionServiceProvider),
+    ref.watch(cacheServiceProvider),
   ),
 );
