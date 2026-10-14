@@ -103,10 +103,15 @@ class NotificationService {
     ));
   }
 
-  /// Mesaj geçmişi — hata durumunda exception fırlatır; çağıran hata durumunu göstermelidir.
-  Future<List<dynamic>> getMessages(int otherUserId) {
+  /// Mesaj geçmişi — son 50 mesaj (backend MSG_PAGE_SIZE=50).
+  /// [beforeId] verilirse o ID'den önce gelen 50 mesajı döner (önceki sayfa).
+  Future<List<dynamic>> getMessages(int otherUserId, {int? beforeId}) {
+    final params = beforeId != null ? '?before_id=$beforeId&limit=50' : '';
     return _api.callList(
-      () async => http.get(Uri.parse('${_api.config.baseUrl}/messages/$otherUserId'), headers: await _headers()),
+      () async => http.get(
+        Uri.parse('${_api.config.baseUrl}/messages/$otherUserId$params'),
+        headers: await _headers(),
+      ),
     );
   }
 

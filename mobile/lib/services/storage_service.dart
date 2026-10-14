@@ -46,6 +46,11 @@ class StorageService {
   static const cacheNotificationSettings   = 'cache_notification_settings';
   static const cacheBlockedUsers           = 'cache_blocked_users';
 
+  // DM thread cache — dinamik anahtarlar (metot bazlı)
+  static String cacheThreadKey(int userId) => 'cache_chat_$userId';
+  static String cacheDmImageKey(int msgId)  => 'dm_img_$msgId';
+  static String cacheDmThumbKey(int msgId)  => 'dm_thumb_$msgId';
+
   /// Mevcut oturumdaki kullanıcının ID'sini JWT token üzerinden çözer.
   static Future<int?> getCurrentUserId() async {
     final token = await getToken();

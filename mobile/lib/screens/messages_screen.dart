@@ -24,7 +24,6 @@ import 'package:teqlif/core/network/api_client.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../utils/number_formatter.dart';
-import '../services/api_service.dart';
 import '../services/connectivity_service.dart';
 import '../services/notification_service.dart';
 import '../services/offline_queue_service.dart';
@@ -59,6 +58,8 @@ import '../utils/snackbar_helper.dart';
 import 'my_ratings_screen.dart';
 import 'viewmodels/messages_view_model.dart';
 import 'viewmodels/direct_chat_request_view_model.dart';
+import 'viewmodels/message_thread_view_model.dart';
+import '../models/direct_message.dart';
 import '../ui_library/components/buttons/teq_voice_button.dart';
 
 class MessagesScreen extends ConsumerStatefulWidget {
@@ -1221,11 +1222,10 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
     with WidgetsBindingObserver {
   final _textCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
-  List<Map<String, dynamic>> _messages = [];
   final Set<int> _freshMsgIds = {};
-  bool _loading = true;
+  final List<Map<String, dynamic>> _optimisticMessages = [];
+  List<Map<String, dynamic>> _archiveMessages = [];
   bool _sending = false;
-  bool _error = false;
   bool _isOtherTyping = false;
   StreamSubscription<Map<String, dynamic>>? _wsSub;
   int? _myUserId;
@@ -1289,76 +1289,14 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _loadMessages(bypassCache: true);
+    if (state == AppLifecycleState.resumed) {
+      ref.read(messageThreadProvider(widget.otherUserId).notifier).refresh();
+    }
   }
 
   Future<void> _initScreen() async {
-    final info = await StorageService.getUserInfo();
-    _myUserId = info?['id'] as int?;
-    await _loadMessages();
+    _myUserId = StorageService.currentUserIdSync ?? await StorageService.getCurrentUserId();
     _listenWs();
-  }
-
-  Future<void> _loadMessages({bool bypassCache = false}) async {
-    if (mounted) {
-      setState(() {
-        _loading = true;
-        _error = false;
-      });
-    }
-    try {
-      // SWR: önce Hive cache (anlık), sonra API (taze)
-      await for (final data in ref.read(apiServiceProvider).get<List<Map<String, dynamic>>>(
-        url: '${ref.read(apiClientProvider).config.baseUrl}/messages/${widget.otherUserId}',
-        cacheKey: 'chat_${widget.otherUserId}',
-        cacheTtl: const Duration(minutes: 2),
-        bypassCache: bypassCache,
-        fromJson: (raw) => (raw as List)
-            .map((m) => Map<String, dynamic>.from(m as Map))
-            .toList(),
-      )) {
-        if (!mounted) return;
-        // Bekleyen kuyruk mesajlarını API yanıtına birleştir
-        final pending = OfflineQueueService.getPendingForReceiver(
-          widget.otherUserId,
-        );
-        final merged = List<Map<String, dynamic>>.from(data);
-        for (final p in pending) {
-          // API zaten teslim ettiyse gösterme
-          final alreadyIn = data.any(
-            (m) =>
-                m['content'] == p['content'] &&
-                (m['sender_id'] as int?) == _myUserId,
-          );
-          if (!alreadyIn) {
-            merged.add({
-              'id': -(p['queued_at'] as int),
-              'sender_id': _myUserId,
-              'receiver_id': widget.otherUserId,
-              'content': p['content'] as String,
-              'is_read': false,
-              'created_at': DateTime.fromMillisecondsSinceEpoch(
-                p['queued_at'] as int,
-              ).toUtc().toIso8601String(),
-              '_pending': true,
-              '_local_id': p['local_id'] as String?,
-            });
-          }
-        }
-        setState(() {
-          _messages = merged;
-          _loading = false;
-        });
-        _scrollToBottom(animate: false);
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _loading = false;
-          _error = true;
-        });
-      }
-    }
   }
 
   Future<void> _loadArchive() async {
@@ -1373,7 +1311,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
           .map((m) => Map<String, dynamic>.from(m as Map))
           .toList();
       setState(() {
-        _messages = [...archiveMaps, ..._messages];
+        _archiveMessages = archiveMaps;
         _archiveLoaded = true;
         _archiveLoading = false;
       });
@@ -1387,21 +1325,14 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
       final type = data['type'] as String?;
 
       if (type == 'connected') {
-        _loadMessages();
+        ref.read(messageThreadProvider(widget.otherUserId).notifier).refresh();
         return;
       }
 
       if (type == 'messages_read') {
         final byUserId = data['by_user_id'] as int?;
-        if (byUserId == widget.otherUserId && mounted) {
-          setState(() {
-            _messages = _messages.map((m) {
-              if ((m['sender_id'] as int?) == _myUserId) {
-                return {...m, 'is_read': true};
-              }
-              return m;
-            }).toList();
-          });
+        if (byUserId == widget.otherUserId) {
+          ref.read(messageThreadProvider(widget.otherUserId).notifier).handleWsEvent(data);
         }
         return;
       }
@@ -1430,9 +1361,8 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
 
       if (type == 'message_deleted') {
         final id = data['id'];
-        if (mounted) {
-          setState(() => _messages.removeWhere((m) => m['id'] == id));
-        }
+        if (mounted) setState(() => _optimisticMessages.removeWhere((m) => m['id'] == id));
+        ref.read(messageThreadProvider(widget.otherUserId).notifier).handleWsEvent(data);
         return;
       }
 
@@ -1451,23 +1381,19 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
       if ((senderId == _myUserId && receiverId == widget.otherUserId) ||
           (senderId == widget.otherUserId && receiverId == _myUserId)) {
         final msgId = data['id'];
-        final exists = _messages.any((m) => m['id'] == msgId);
-        if (!exists && mounted) {
-          setState(() {
-            if (senderId == _myUserId) {
-              _messages.removeWhere(
-                (m) =>
-                    (m['id'] as int) < 0 &&
-                    m['content'] == data['content'] &&
-                    m['sender_id'] == _myUserId,
-              );
-            }
-            _messages.add(data);
-            if (msgId > 0) _freshMsgIds.add(msgId);
-          });
-          Future.delayed(const Duration(milliseconds: 600), () {
-            if (mounted) setState(() => _freshMsgIds.remove(msgId));
-          });
+        if (mounted) {
+          if (senderId == _myUserId) {
+            setState(() => _optimisticMessages.removeWhere(
+              (m) => (m['id'] as int) < 0 && m['content'] == data['content'],
+            ));
+          }
+          ref.read(messageThreadProvider(widget.otherUserId).notifier).handleWsEvent(data);
+          if (msgId != null && msgId > 0) {
+            setState(() => _freshMsgIds.add(msgId as int));
+            Future.delayed(const Duration(milliseconds: 600), () {
+              if (mounted) setState(() => _freshMsgIds.remove(msgId));
+            });
+          }
           _scrollToBottom();
         }
       }
@@ -1552,12 +1478,11 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
       if (streamed.statusCode == 200 || streamed.statusCode == 201) {
         final msg = Map<String, dynamic>.from(jsonDecode(body) as Map);
         final msgId = msg['id'];
-        setState(() {
-          if (tempId != null) _messages.removeWhere((m) => m['id'] == tempId);
-          if (msgId != null && !_messages.any((m) => m['id'] == msgId)) {
-            _messages.add(msg);
-          }
-        });
+        if (tempId != null) setState(() => _optimisticMessages.removeWhere((m) => m['id'] == tempId));
+        if (msgId != null) {
+          ref.read(messageThreadProvider(widget.otherUserId).notifier)
+              .addConfirmedMessage(DirectMessage.fromJson(msg));
+        }
         _scrollToBottom();
       } else {
         String errMsg = loc.t("attachSendFailed");
@@ -1576,9 +1501,9 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
         if (mounted) {
           if (tempId != null) {
             setState(() {
-              final idx = _messages.indexWhere((m) => m['id'] == tempId);
+              final idx = _optimisticMessages.indexWhere((m) => m['id'] == tempId);
               if (idx >= 0) {
-                _messages[idx] = {..._messages[idx], '_failed': true, '_error': errMsg};
+                _optimisticMessages[idx] = {..._optimisticMessages[idx], '_failed': true, '_error': errMsg};
               }
             });
           } else {
@@ -1590,9 +1515,9 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
       if (mounted) {
         if (tempId != null) {
           setState(() {
-            final idx = _messages.indexWhere((m) => m['id'] == tempId);
+            final idx = _optimisticMessages.indexWhere((m) => m['id'] == tempId);
             if (idx >= 0) {
-              _messages[idx] = {..._messages[idx], '_failed': true, '_error': loc.t("attachSendFailed")};
+              _optimisticMessages[idx] = {..._optimisticMessages[idx], '_failed': true, '_error': loc.t("attachSendFailed")};
             }
           });
         } else {
@@ -1708,7 +1633,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
     // Optimistik balon — yükleme sırasında yerel önizleme göster
     final tempId = -DateTime.now().millisecondsSinceEpoch;
     setState(() {
-      _messages.add({
+      _optimisticMessages.add({
         'id': tempId,
         'sender_id': _myUserId,
         'receiver_id': widget.otherUserId,
@@ -2117,6 +2042,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
             child: CachedNetworkImage(
               imageUrl: ref.read(apiClientProvider).imgUrl(thumbUrl ?? mediaUrl ?? ''),
               cacheManager: TeqlifCacheManager(),
+              cacheKey: StorageService.cacheDmImageKey(msgId),
               memCacheWidth: 200,
               memCacheHeight: 200,
               width: 200,
@@ -2153,6 +2079,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
                     ? CachedNetworkImage(
                         imageUrl: ref.read(apiClientProvider).imgUrl(thumbUrl),
                         cacheManager: TeqlifCacheManager(),
+                        cacheKey: StorageService.cacheDmThumbKey(msgId),
                         memCacheWidth: 200,
                         memCacheHeight: 200,
                         width: 200,
@@ -2413,14 +2340,9 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
       ),
     );
     if (scope == null || !mounted) return;
-    // Optimistik kaldır
-    setState(() => _messages.removeWhere((m) => m['id'] == messageId));
-    final ok = await ref.read(notificationServiceProvider).deleteMessage(messageId, scope: scope);
-    if (!mounted) return;
-    if (!ok) {
-      TeqSnackBar.show(message: loc.t("msgDeleteMessageFailed"));
-      _loadMessages();
-    }
+    final ok = await ref.read(messageThreadProvider(widget.otherUserId).notifier)
+        .deleteMessage(messageId, scope: scope);
+    if (!ok) TeqSnackBar.show(message: loc.t("msgDeleteMessageFailed"));
   }
 
   Future<void> _send() async {
@@ -2434,7 +2356,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
     final tempId = -DateTime.now().millisecondsSinceEpoch;
     if (_myUserId != null && mounted) {
       setState(
-        () => _messages.add({
+        () => _optimisticMessages.add({
           'id': tempId,
           'sender_id': _myUserId,
           'receiver_id': widget.otherUserId,
@@ -2458,9 +2380,9 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
       if (mounted) {
         setState(() {
           _sending = false;
-          final idx = _messages.indexWhere((m) => m['id'] == tempId);
+          final idx = _optimisticMessages.indexWhere((m) => m['id'] == tempId);
           if (idx >= 0) {
-            _messages[idx] = {..._messages[idx], '_local_id': localId};
+            _optimisticMessages[idx] = {..._optimisticMessages[idx], '_local_id': localId};
           }
         });
       }
@@ -2483,14 +2405,14 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
           listingId: widget.listingId,
         );
         setState(() {
-          final idx = _messages.indexWhere((m) => m['id'] == tempId);
+          final idx = _optimisticMessages.indexWhere((m) => m['id'] == tempId);
           if (idx >= 0) {
-            _messages[idx] = {..._messages[idx], '_local_id': localId};
+            _optimisticMessages[idx] = {..._optimisticMessages[idx], '_local_id': localId};
           }
         });
       } else {
         // Başarı → WS onaylı mesajı ekleyecek; optimistik geçiciyi sil
-        setState(() => _messages.removeWhere((m) => m['id'] == tempId));
+        setState(() => _optimisticMessages.removeWhere((m) => m['id'] == tempId));
       }
     }
   }
@@ -2529,6 +2451,15 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
   @override
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
+    final vmAsync = ref.watch(messageThreadProvider(widget.otherUserId));
+    final vmState = vmAsync.valueOrNull ?? const MessageThreadState();
+    final messages = [
+      ..._archiveMessages,
+      ...vmState.messages.map((m) => m.toJson()),
+      ..._optimisticMessages,
+    ];
+    final loading = vmState.loading;
+    final hasError = vmState.hasError;
     return Scaffold(
       appBar: AppBar(
         title: GestureDetector(
@@ -2606,21 +2537,21 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
           ),
           _CallPermissionRow(otherUserId: widget.otherUserId),
           Expanded(
-            child: _loading
+            child: loading
                 ? const Center(
                     child: CircularProgressIndicator(color: kPrimary),
                   )
                 : Column(
                     children: [
-                      if (_error && _messages.isNotEmpty)
-                        StaleDataBanner(onRetry: _loadMessages),
+                      if (hasError && messages.isNotEmpty)
+                        StaleDataBanner(onRetry: () => ref.read(messageThreadProvider(widget.otherUserId).notifier).refresh()),
                       Expanded(
-                        child: _error && _messages.isEmpty
+                        child: hasError && messages.isEmpty
                             ? NetworkErrorWidget(
                                 scrollable: true,
-                                onRetry: _loadMessages,
+                                onRetry: () => ref.read(messageThreadProvider(widget.otherUserId).notifier).refresh(),
                               )
-                            : _messages.isEmpty
+                            : messages.isEmpty
                             ? Center(
                                 child: Text(
                                   loc.t("msgNoChat"),
@@ -2637,14 +2568,14 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
                                   horizontal: 12,
                                   vertical: 12,
                                 ),
-                                itemCount: _messages.length +
+                                itemCount: messages.length +
                                     (widget.hasArchive && !_archiveLoaded ? 1 : 0),
                                 itemBuilder: (context, i) {
                                   // Last item in reverse list = top of chat
                                   // Show "load older" button at the very top
                                   if (widget.hasArchive &&
                                       !_archiveLoaded &&
-                                      i == _messages.length) {
+                                      i == messages.length) {
                                     return Padding(
                                       padding: const EdgeInsets.symmetric(
                                         vertical: 8,
@@ -2680,7 +2611,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
                                     );
                                   }
                                   final msg =
-                                      _messages[_messages.length - 1 - i];
+                                      messages[messages.length - 1 - i];
                                   final senderId = msg['sender_id'] as int?;
                                   final isMe = senderId == _myUserId;
                                   final time = _timeLabel(
