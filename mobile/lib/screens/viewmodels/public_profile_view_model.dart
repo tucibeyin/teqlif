@@ -76,6 +76,7 @@ class PublicProfileState {
 
 class PublicProfileViewModel extends AutoDisposeFamilyAsyncNotifier<PublicProfileState, PublicProfileArgs> {
   CacheService get _cache => ref.read(cacheServiceProvider);
+  final _warming = <String>{};
 
   Future<Map<String, String>> _authHeaders() async {
     final token = await StorageService.getToken();
@@ -180,6 +181,19 @@ class PublicProfileViewModel extends AutoDisposeFamilyAsyncNotifier<PublicProfil
       isBlocked: isBlocked,
       ratingSummary: ratingSummary,
     );
+  }
+
+  // §12.7 — fire-and-forget prefetch; View beklemez.
+  Future<void> warmup(String username) async {
+    if (_warming.contains(username)) return;
+    if (_cache.getData(_profileKey(username)) != null) return;
+    _warming.add(username);
+    try {
+      await _fetchFresh(PublicProfileArgs(username: username));
+    } catch (_) {
+    } finally {
+      _warming.remove(username);
+    }
   }
 
   void updateFilter(ListingFilterState filter) {

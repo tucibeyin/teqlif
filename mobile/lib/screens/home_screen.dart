@@ -30,6 +30,7 @@ import '../ui_library/components/filters/teq_filter_bar.dart';
 import '../widgets/network_error_widget.dart';
 import '../widgets/stale_data_banner.dart';
 import 'viewmodels/home_view_model.dart';
+import 'viewmodels/public_profile_view_model.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -650,6 +651,11 @@ class _GridItemState extends ConsumerState<_GridItem> {
   }
 
   Future<void> _showLongPressMenu() async {
+    final sellerUsername = (widget.listing['user'] as Map?)?['username'] as String?;
+    if (sellerUsername != null) {
+      ref.read(publicProfileProvider(PublicProfileArgs(username: sellerUsername)).notifier)
+          .warmup(sellerUsername);
+    }
     final loc = ref.read(localizationProvider);
     await showModalBottomSheet<void>(
       context: context,
