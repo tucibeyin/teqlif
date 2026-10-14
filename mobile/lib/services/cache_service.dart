@@ -133,6 +133,28 @@ class CacheService {
       }
     }
     await _box.deleteAll(toDelete);
+
+    // LRU kırpma: 200 anahtar limitini aşınca en eski kayıtları sil
+    const maxKeys = 200;
+    if (_box.length > maxKeys) {
+      final entries = <MapEntry<String, int>>[];
+      for (final key in _box.keys.cast<String>()) {
+        final raw = _box.get(key);
+        if (raw == null) continue;
+        try {
+          final decoded = jsonDecode(raw);
+          if (decoded is Map && decoded.containsKey('_t')) {
+            entries.add(MapEntry(key, (decoded['_t'] as num).toInt()));
+          }
+        } catch (_) {}
+      }
+      entries.sort((a, b) => a.value.compareTo(b.value));
+      final keysToDelete = entries
+          .take(_box.length - maxKeys)
+          .map((e) => e.key)
+          .toList();
+      await _box.deleteAll(keysToDelete);
+    }
   }
 }
 

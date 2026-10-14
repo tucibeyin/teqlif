@@ -1,7 +1,7 @@
 import hashlib
 import json
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -30,11 +30,13 @@ async def _load_pack(lang: str, db: AsyncSession) -> dict[str, str]:
 @router.get("/{lang}")
 async def get_language_pack(
     lang: str,
+    response: Response,
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     if lang not in _SUPPORTED_LANGS:
         raise BadRequestException(code="UNSUPPORTED_LANGUAGE")
 
+    response.headers["Cache-Control"] = "public, max-age=3600, stale-while-revalidate=86400"
     redis = await get_redis()
     cached = await redis.get(_cache_key(lang))
     if cached:

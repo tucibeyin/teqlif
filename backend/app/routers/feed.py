@@ -6,7 +6,7 @@ from app.core.logger import get_logger
 
 logger = get_logger(__name__)
 from pydantic import BaseModel
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 import numpy as np
@@ -102,6 +102,7 @@ async def mark_not_interested(
 
 @router.get("/recent")
 async def get_recent_mixed_feed(
+    response: Response,
     page: int = Query(default=0, ge=0, le=50),
     since_id: int | None = Query(default=None, description="Delta fetching (pull-to-refresh) için en son bilinen ID"),
     max_id: int | None = Query(default=None, description="Eski sayfalara giderken (infinite scroll) kullanılan en küçük ID"),
@@ -114,6 +115,7 @@ async def get_recent_mixed_feed(
     Misafirler: sadece son ilanlar, enjeksiyon yok.
     exclude_ids: virgülle ayrılmış ilan ID'leri (for-you bölümünde gösterilenleri tekrar gösterme).
     """
+    response.headers["Cache-Control"] = "private, max-age=300, stale-while-revalidate=900"
     user_id = current_user.id if current_user else None
     parsed_exclude = []
     if exclude_ids:
@@ -126,6 +128,7 @@ async def get_recent_mixed_feed(
 
 @router.get("/for-you")
 async def get_for_you_feed(
+    response: Response,
     page: int = Query(default=0, ge=0, le=25),
     cursor: Optional[int] = Query(default=None, description="Son görülen ilan ID'si (keyset pagination)"),
     uow: SqlAlchemyUnitOfWork = Depends(get_uow),
@@ -138,6 +141,7 @@ async def get_for_you_feed(
     - varsa pgvector cosine distance ile en yakın ilanlar
     - Sayfa başına 20 ilan, maks 25 sayfa (500 ilan havuzu Redis'te 15 dk önbelleklenir)
     """
+    response.headers["Cache-Control"] = "private, max-age=300, stale-while-revalidate=900"
     return await FeedQueries(uow).get_foryou_feed(current_user.id, page)
 
 

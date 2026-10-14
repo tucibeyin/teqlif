@@ -1,7 +1,7 @@
 import hashlib
 import json
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Response
 from fastapi_cache.decorator import cache
 from sqlalchemy import select
 
@@ -111,6 +111,7 @@ async def get_catalog_version() -> dict:
 
 @router.get("")
 @cache(expire=86400, key_builder=static_schema_key_builder)
-async def get_catalog() -> dict:
+async def get_catalog(response: Response) -> dict:
+    response.headers["Cache-Control"] = "public, max-age=86400, stale-while-revalidate=3600"
     data = await _build_catalog()
     return {"version": _compute_version(data), **data}
