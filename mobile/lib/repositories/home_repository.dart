@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 
 import 'package:teqlif/core/network/api_client.dart';
 import '../models/listing_filter_state.dart';
+import '../services/cache_service.dart';
 import '../services/storage_service.dart';
 
 class HomeFeedPage {
@@ -37,13 +38,16 @@ class HomeRepository {
   static const _kKeyHesitated = 'feed_hesitated';
   static const _kKeyVersion   = 'home_cache_version';
   static const _kKeyTimestamp = 'home_cache_timestamp';
-  static const _kCacheVersion = 2;
+  // §12.8 — bumped to 3: homeCache now stores ID lists, entities in api_cache
+  static const _kCacheVersion = 3;
   static const _kCacheTtlMs   = 15 * 60 * 1000;
   static const _kMaxCached    = 60; // 3 sayfa × 20 ilan
+  static const _kEntityTtl    = Duration(hours: 2);
 
   final ApiClient _client;
+  final CacheService _cache;
 
-  HomeRepository(this._client);
+  HomeRepository(this._client, this._cache);
 
   // ── HTTP ─────────────────────────────────────────────────────────────────────
 
@@ -101,7 +105,7 @@ class HomeRepository {
     return jsonDecode(resp.body) as List<dynamic>;
   }
 
-  // §12.5 — Başarılı yanıtı mevcut disk cache'iyle merge ederek kaydeder.
+  // §12.5 + §12.8 — Merged listeyi diske yazar (entity store + ID listesi).
   Future<HomeFeedPage> loadMore({required int page, int? maxId}) async {
     final token = await StorageService.getToken();
     if (token == null) throw Exception('unauthenticated');
@@ -113,12 +117,12 @@ class HomeRepository {
 
     final feedPage = _parsePage(resp.body, page);
     final existing = (await loadCache())?.recentListings ?? <dynamic>[];
-    final merged = [...existing, ...feedPage.listings]
+    final merged   = [...existing, ...feedPage.listings]
         .fold<List<dynamic>>([], (acc, e) =>
             acc.any((x) => x['id'] == e['id']) ? acc : [...acc, e])
         .take(_kMaxCached)
         .toList();
-    await saveFeed(jsonEncode(merged));
+    await saveFeed(merged);
 
     return feedPage;
   }
@@ -134,7 +138,7 @@ class HomeRepository {
     } catch (_) {}
   }
 
-  // ── Disk Cache ────────────────────────────────────────────────────────────────
+  // ── Disk Cache (§12.8 — ID-list format) ──────────────────────────────────────
 
   Future<Box> _box() => Hive.openBox(_kBoxName);
 
@@ -158,20 +162,22 @@ class HomeRepository {
       final hesitatedRaw = box.get(_kKeyHesitated) as String?;
       if (feedRaw == null) return null;
 
-      List<dynamic> recent    = [];
-      int totalPages          = 1;
+      // §12.8 — ID listesini entity store'dan resolve et
+      final decoded       = jsonDecode(feedRaw) as List<dynamic>;
+      final List<dynamic> recent;
+      if (decoded.isNotEmpty && decoded.first is int) {
+        // Yeni format: ID listesi → entity store'dan resolve
+        recent = decoded
+            .whereType<int>()
+            .map((id) => _cache.getEntity('listing', id))
+            .whereType<Map<String, dynamic>>()
+            .toList();
+      } else {
+        // Eski format: tam JSON (migration sonrası bu dal kullanılmaz)
+        recent = decoded;
+      }
+
       List<dynamic> hesitated = [];
-
-      try {
-        final parsed = jsonDecode(feedRaw);
-        if (parsed is List) {
-          recent = parsed;
-        } else {
-          recent     = (parsed['listings'] ?? []) as List<dynamic>;
-          totalPages = parsed['pagination']?['total_pages'] ?? 1;
-        }
-      } catch (_) {}
-
       if (hesitatedRaw != null) {
         try {
           hesitated = jsonDecode(hesitatedRaw) as List<dynamic>;
@@ -181,27 +187,38 @@ class HomeRepository {
       return HomeCache(
         recentListings:    recent,
         hesitatedListings: hesitated,
-        totalPages:        totalPages,
+        totalPages:        1,
       );
     } catch (_) {
       return null;
     }
   }
 
-  Future<void> saveFeed(String feedJson) async {
+  // §12.8 — Listing listesini entity store'a yazar; homeCache'e ID listesi saklar.
+  Future<void> saveFeed(List<dynamic> listings) async {
+    final ids = <int>[];
+    for (final item in listings) {
+      final map = item as Map?;
+      final id  = map?['id'] as int?;
+      if (id != null) {
+        ids.add(id);
+        await _cache.saveEntity(
+          'listing', id, Map<String, dynamic>.from(map!),
+          ttl: _kEntityTtl,
+        );
+      }
+    }
     final box = await _box();
-    await box.put(_kKeyFeed, feedJson);
+    await box.put(_kKeyFeed, jsonEncode(ids));
     await box.put(_kKeyVersion, _kCacheVersion);
     await box.put(_kKeyTimestamp, DateTime.now().millisecondsSinceEpoch);
   }
 
-  Future<void> saveHesitated(String json) =>
-      _box().then((b) => b.put(_kKeyHesitated, json));
+  Future<void> saveHesitated(List<dynamic> items) =>
+      _box().then((b) => b.put(_kKeyHesitated, jsonEncode(items)));
 
   Future<void> prependFeed(List<dynamic> prepended) async {
-    final box = await _box();
-    await box.put(_kKeyFeed, jsonEncode(prepended));
-    await box.put(_kKeyTimestamp, DateTime.now().millisecondsSinceEpoch);
+    await saveFeed(prepended);
   }
 
   Future<void> clearCache() async {
@@ -232,5 +249,8 @@ class HomeRepository {
 }
 
 final homeRepositoryProvider = Provider<HomeRepository>(
-  (ref) => HomeRepository(ref.watch(apiClientProvider)),
+  (ref) => HomeRepository(
+    ref.watch(apiClientProvider),
+    ref.watch(cacheServiceProvider),
+  ),
 );

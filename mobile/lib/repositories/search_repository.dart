@@ -4,6 +4,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:http/http.dart' as http;
 
 import 'package:teqlif/core/network/api_client.dart';
+import '../services/cache_service.dart';
 import '../services/storage_service.dart';
 
 class SearchFeedPage {
@@ -14,16 +15,18 @@ class SearchFeedPage {
 }
 
 class SearchRepository {
-  static const _kBoxName         = 'searchCache';
-  static const _kKeyForYou       = 'search_for_you';
-  static const _kKeyRecent       = 'search_recent';
-  static const _kMaxCached       = 60;
+  static const _kBoxName   = 'searchCache';
+  static const _kKeyForYou = 'search_for_you';
+  static const _kKeyRecent = 'search_recent';
+  static const _kMaxCached = 60;
+  static const _kEntityTtl = Duration(hours: 2);
 
   final ApiClient _client;
+  final CacheService _cache;
 
-  SearchRepository(this._client);
+  SearchRepository(this._client, this._cache);
 
-  // ── loadMoreForYou — §12.5 disk kalıcılığı ───────────────────────────────────
+  // ── loadMoreForYou — §12.5 + §12.8 ──────────────────────────────────────────
 
   Future<SearchFeedPage> loadMoreForYou({required int page}) async {
     final token = await StorageService.getToken();
@@ -33,26 +36,28 @@ class SearchRepository {
       headers: {'Authorization': 'Bearer $token'},
     );
     if (resp.statusCode != 200) throw Exception('HTTP ${resp.statusCode}');
-    final data       = jsonDecode(resp.body) as List<dynamic>;
-    final exhausted  = data.length < 20;
+    final data      = jsonDecode(resp.body) as List<dynamic>;
+    final exhausted = data.length < 20;
     await _appendCache(_kKeyForYou, data);
     return SearchFeedPage(listings: data, exhausted: exhausted);
   }
 
-  // ── loadMoreRecent — §12.5 disk kalıcılığı ───────────────────────────────────
+  // ── loadMoreRecent — §12.5 + §12.8 ───────────────────────────────────────────
 
   Future<SearchFeedPage> loadMoreRecent({
     required int page,
     Set<int> excludeIds = const {},
   }) async {
-    final token      = await StorageService.getToken();
-    final headers    = token != null ? {'Authorization': 'Bearer $token'} : <String, String>{};
-    final exclude    = excludeIds.isNotEmpty ? '&exclude_ids=${excludeIds.join(',')}' : '';
-    final url        = '${_client.config.baseUrl}/feed/recent?page=$page$exclude';
-    final resp       = await http.get(Uri.parse(url), headers: headers);
+    final token   = await StorageService.getToken();
+    final headers = token != null ? {'Authorization': 'Bearer $token'} : <String, String>{};
+    final exclude = excludeIds.isNotEmpty ? '&exclude_ids=${excludeIds.join(',')}' : '';
+    final resp    = await http.get(
+      Uri.parse('${_client.config.baseUrl}/feed/recent?page=$page$exclude'),
+      headers: headers,
+    );
     if (resp.statusCode != 200) throw Exception('HTTP ${resp.statusCode}');
-    final data       = jsonDecode(resp.body) as List<dynamic>;
-    final exhausted  = data.length < 20;
+    final data      = jsonDecode(resp.body) as List<dynamic>;
+    final exhausted = data.length < 20;
     await _appendCache(_kKeyRecent, data);
     return SearchFeedPage(listings: data, exhausted: exhausted);
   }
@@ -61,23 +66,41 @@ class SearchRepository {
 
   Future<void> _appendCache(String key, List<dynamic> newItems) async {
     try {
+      // §12.8 — entity store'a yaz
+      for (final item in newItems) {
+        final id = (item as Map?)?['id'] as int?;
+        if (id != null) {
+          await _cache.saveEntity('listing', id,
+              Map<String, dynamic>.from(item!), ttl: _kEntityTtl);
+        }
+      }
+
+      // searchCache box'a ID listesi yaz
       final box      = await Hive.openBox(_kBoxName);
-      final existing = _decodeList(box.get(key) as String?);
-      final merged   = [...existing, ...newItems]
-          .fold<List<dynamic>>([], (acc, e) =>
-              acc.any((x) => x['id'] == e['id']) ? acc : [...acc, e])
-          .take(_kMaxCached)
+      final existing = _decodeIds(box.get(key) as String?);
+      final newIds   = newItems
+          .whereType<Map>()
+          .map((e) => e['id'] as int?)
+          .whereType<int>()
           .toList();
+      final merged   = {...existing, ...newIds}.take(_kMaxCached).toList();
       await box.put(key, jsonEncode(merged));
     } catch (_) {}
   }
 
-  List<dynamic> _decodeList(String? raw) {
+  List<int> _decodeIds(String? raw) {
     if (raw == null) return [];
-    try { return jsonDecode(raw) as List<dynamic>; } catch (_) { return []; }
+    try {
+      return (jsonDecode(raw) as List<dynamic>).whereType<int>().toList();
+    } catch (_) {
+      return [];
+    }
   }
 }
 
 final searchRepositoryProvider = Provider<SearchRepository>(
-  (ref) => SearchRepository(ref.watch(apiClientProvider)),
+  (ref) => SearchRepository(
+    ref.watch(apiClientProvider),
+    ref.watch(cacheServiceProvider),
+  ),
 );

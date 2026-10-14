@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../repositories/home_repository.dart';
@@ -106,7 +105,7 @@ class HomeViewModel extends AutoDisposeAsyncNotifier<HomeState> {
 
   Future<void> _fetchRecent() async {
     final page = await _repo.fetchRecent(page: 0);
-    await _repo.saveFeed(jsonEncode(page.listings));
+    await _repo.saveFeed(page.listings);
     state = AsyncValue.data(state.value!.copyWith(
       recentListings: page.listings,
       totalPages:     page.totalPages,
@@ -121,7 +120,7 @@ class HomeViewModel extends AutoDisposeAsyncNotifier<HomeState> {
     state = AsyncValue.data(state.value!.copyWith(isHesitatedLoading: true));
     try {
       final items = await _repo.fetchHesitated();
-      await _repo.saveHesitated(jsonEncode(items));
+      await _repo.saveHesitated(items);
       state = AsyncValue.data(state.value!.copyWith(
         hesitatedListings:  items,
         isHesitatedLoading: false,

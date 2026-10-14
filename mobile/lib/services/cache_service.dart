@@ -16,13 +16,26 @@ import 'package:hive_flutter/hive_flutter.dart';
 ///   • DIP — [cacheServiceProvider] aracılığıyla Riverpod'a enjekte edilir;
 ///     testlerde `ProviderContainer` ile mock subclass geçilebilir.
 class CacheService {
-  static const _boxName = 'api_cache';
+  static const _boxName         = 'api_cache';
+  // §12.8 — version bump'ı entity store formatına geçişi tetikler.
+  static const _kApiCacheVersion = 2;
+  static const _kVersionKey      = '__api_cache_v';
   static late Box<String> _box;
 
   /// Uygulama başlangıcında (runApp öncesi) çağrılmalıdır.
   static Future<void> init() async {
     await Hive.initFlutter();
     _box = await Hive.openBox<String>(_boxName);
+    await _migrate();
+  }
+
+  static Future<void> _migrate() async {
+    final stored = int.tryParse(_box.get(_kVersionKey) ?? '0') ?? 0;
+    if (stored < _kApiCacheVersion) {
+      // Eski tam-JSON cache'leri temizle; entity store sıfırdan dolar.
+      await _box.clear();
+      await _box.put(_kVersionKey, _kApiCacheVersion.toString());
+    }
   }
 
   // ── Veri metodları (instance) ─────────────────────────────────────────────
@@ -114,6 +127,24 @@ class CacheService {
     }
   }
 
+  // ── §12.8 Entity Store ────────────────────────────────────────────────────────
+
+  /// Listing / user entity'sini api_cache'e yazar.
+  Future<void> saveEntity(
+    String type,
+    int id,
+    Map<String, dynamic> data, {
+    Duration ttl = const Duration(hours: 2),
+  }) =>
+      saveData('entity_${type}_$id', data, ttl: ttl);
+
+  /// Entity'yi senkron olarak okur; yoksa ya da bayatsa null.
+  Map<String, dynamic>? getEntity(String type, int id) =>
+      getData('entity_${type}_$id') as Map<String, dynamic>?;
+
+  /// api_cache box'unu tamamen temizler (migration için).
+  Future<void> clearAll() => _box.clear();
+
   /// Süresi dolmuş tüm kayıtları siler (arka plan bakımı için).
   static Future<void> clearExpired() async {
     final now = DateTime.now().millisecondsSinceEpoch;
@@ -159,3 +190,8 @@ class CacheService {
 }
 
 final cacheServiceProvider = Provider<CacheService>((_) => CacheService());
+
+/// §12.8 — Entity'yi api_cache'den senkron okur.
+final entityProvider = Provider.family<Map<String, dynamic>?, (String, int)>(
+  (ref, args) => ref.watch(cacheServiceProvider).getEntity(args.$1, args.$2),
+);
