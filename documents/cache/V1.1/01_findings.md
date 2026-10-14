@@ -91,7 +91,7 @@ Flutter-spesifik:
 | `cache_my_ratings_*` | LIFECYCLE | 10 min | — | `clearData` refresh'te | ✅ |
 | `cache_blocked_users` | LIFECYCLE | 10 min | — | `clearData` blokta | ✅ |
 | `cache_notification_settings` | SCHEMA_VERSIONED | 30 min | — | `clearData` ayar değişince | ✅ |
-| `cache_feed` | ALGORITHMIC | — | — | kullanım yeri doğrulanmamış | 🟡 |
+| `cache_feed` | — | — | — | `StorageService`'te tanımlı, hiçbir ViewModel yazamıyor — dead code; §12.9 temizliği kapsamında kaldırılır | 🔴 §12.9 |
 | `user_wallet_data` | LIFECYCLE | default 5 min | — | `clearData` ödeme sonrası | ✅ |
 | `follow_list_*` | LIFECYCLE | 5 min | — | TTL | ✅ |
 
@@ -255,7 +255,7 @@ Kural: `memCacheWidth = round(renderWidth_dp × devicePixelRatio)`. Layout sabit
 **Öncelik:** P2
 **Dosya:** `mobile/lib/repositories/home_repository.dart`, `mobile/lib/screens/viewmodels/home_view_model.dart:235`, `mobile/lib/screens/viewmodels/search_view_model.dart:445,503`
 
-Bu bulgunun uygulanabilmesi için §12.11 (HomeRepository refactor) önce tamamlanmalıdır; `loadMore()` Repository'ye taşındıktan sonra aynı sprint içinde cache yazması eklenir.
+`loadMore()` API çağrısı §12.11 kapsamında `HomeRepository`'ye taşındıktan sonra disk kalıcılığı aynı Repository metoduna eklenir; §12.11 ve §12.5 tek PR'da birleşir (S4).
 
 `loadMore()` başarılı yanıtları yalnızca state'e yazıyor, Hive cache'e değil. Uygulama arka plana alınıp geri dönüldüğünde yalnızca sayfa 0 görünür; kullanıcının kaydırdığı ilan listesi kaybolur.
 
@@ -277,7 +277,7 @@ Future<HomeFeedPage> loadMore({required int page, int? maxId}) async {
 
   // Biriktirilen listeyi limitle ve diske yaz
   const kMaxCachedListings = 60; // 3 sayfa × 20 ilan
-  final current = await _loadCurrentFeed();
+  final current = (await loadCache())?.recentListings ?? <dynamic>[];
   final merged = [...current, ...more]
       .fold<List<dynamic>>([], (acc, e) =>
           acc.any((x) => x['id'] == e['id']) ? acc : [...acc, e])
@@ -359,16 +359,20 @@ ADR §8 gereği prefetch ViewModel metodunu View'dan tetikler; ancak View, ViewM
 **Uygulama:**
 
 ```dart
-// PublicProfileViewModel — yeni metod
+// PublicProfileViewModel — alan ve yeni metod
+final _warming = <String>{}; // eş zamanlı warmup fetch'lerini izler
+
 Future<void> warmup(String username) async {
-  // Zaten cache'te güncel veri varsa çıkış
+  if (_warming.contains(username)) return; // zaten in-flight
   final cached = ref.read(cacheServiceProvider).getData(_profileKey(username));
-  if (cached != null) return;
-  // Cache yoksa arka planda çek; state değiştirmez
+  if (cached != null) return; // zaten cache'te güncel veri var
+  _warming.add(username);
   try {
     await _fetchProfile(PublicProfileArg(username: username));
   } catch (_) {
     // warmup başarısız olursa ekran normal flow ile yükler
+  } finally {
+    _warming.remove(username);
   }
 }
 ```
@@ -428,10 +432,18 @@ api_cache (Hive)
 
 3. Feed widget'ları ID'ye göre `EntityStore`'dan resolve eder:
    ```dart
-   final listing = ref.watch(entityProvider('listing', id));
+   // entity_store.dart — Riverpod provider tanımı
+   final entityProvider = Provider.family<Map<String, dynamic>?, (String, int)>(
+     (ref, args) => ref.watch(cacheServiceProvider).getEntity(args.$1, args.$2),
+   );
+
+   // Feed widget'ı
+   final listing = ref.watch(entityProvider(('listing', item.id)));
    ```
 
-**Kısıt:** Bu refactor tüm feed, arama ve profil akışlarını değiştirir. Uygulama öncesinde `documents/cache/V1.1/00_entity_store_design.md` tasarım dökümanı oluşturulur ve ADR'ye `§22 Entity Normalization` olarak eklenir.
+**Kısıt — Migration:** S7 deploy öncesinde `CacheService.clearAll()` çağrısı ile `api_cache` box temizlenir. Mevcut `home_feed_recent` vb. full-JSON cache'leri ID-list formatıyla uyumsuz olduğundan ilk açılışta network fetch tetikler; box boş gelir, entity store'a yazılır.
+
+**ADR §22 (S7 tamamlandığında eklenir):** Feed cache'ler ID listesi saklar; entity verisi `entity_<type>_<id>` anahtarında tek kayıtta tutulur. Tek entity güncellendiğinde tüm feed görünümleri tutarlı kalır.
 
 **Doğrulama:** Bir ilan fiyatı değişince tüm feed ve profil listelerinde aynı anda güncelleniyor; hiçbir görünümde bayat fiyat kalmıyor.
 
@@ -654,9 +666,9 @@ ADR §17 (nodeMonitor bölümü) Uptime Kuma için "MariaDB backend" yazıyor ve
 | S4 | §12.11 + §12.5 | P1 + P2 |
 | S5 | §12.6 + §12.13 | P2 |
 | S6 | §12.7 | P3 |
-| S7 | §12.8 (tasarım dökümanı önce) | P3 |
+| S7 | §12.8 | P3 |
 
-S1 → S7 ardışık uygulanır. S4 (§12.11 + §12.5) aynı sprint: `HomeRepository` refactor ile loadMore disk kalıcılığı aynı PR'da birleşir. S7 başlamadan `documents/cache/V1.1/00_entity_store_design.md` tamamlanmış olmalıdır.
+S1 → S7 ardışık uygulanır. S4 (§12.11 + §12.5) aynı sprint: `HomeRepository` refactor ile loadMore disk kalıcılığı aynı PR'da birleşir. S7 deploy öncesinde `CacheService.clearAll()` çağrısı ile `api_cache` box temizlenir (§12.8 Migration kısıtı).
 
 ---
 
