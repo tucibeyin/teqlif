@@ -4020,71 +4020,6 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
     );
   }
 
-  void _showAllTxnsModal(BuildContext context, TranslationPack loc) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => DraggableScrollableSheet(
-        initialChildSize: 0.7,
-        maxChildSize: 0.95,
-        minChildSize: 0.4,
-        expand: false,
-        builder: (ctx, scrollCtrl) => Column(
-          children: [
-            // Tutamaç
-            Padding(
-              padding: const EdgeInsets.only(top: 12, bottom: 8),
-              child: Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-            ),
-            // Başlık
-            Padding(
-              padding: const EdgeInsetsDirectional.fromSTEB(20, 0, 8, 8),
-              child: Row(
-                children: [
-                  Text(
-                    loc.t('walletAllTxnsTitle'),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.close_rounded),
-                    onPressed: () => Navigator.pop(ctx),
-                  ),
-                ],
-              ),
-            ),
-            const Divider(height: 1),
-            // İşlem listesi
-            Expanded(
-              child: ListView.builder(
-                controller: scrollCtrl,
-                padding: const EdgeInsetsDirectional.fromSTEB(20, 8, 20, 32),
-                itemCount: _txns.length,
-                itemBuilder: (_, i) => _buildTxnRow(_txns[i], loc),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   // Harcama özeti: spend_* türlerini topla
   Map<String, int> get _spendingSummary {
     final map = <String, int>{};
@@ -4122,15 +4057,12 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: _load,
-        child: ListView(
-          padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 32),
-          children: [
-            const SizedBox(height: 16),
-
-            // ── Bakiye kartı ──────────────────────────────────────────
-            Container(
+      body: Column(
+        children: [
+          // ── Bakiye kartı — sabit üst ──────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
               decoration: BoxDecoration(
@@ -4171,69 +4103,63 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                 ],
               ),
             ),
+          ),
 
-            const SizedBox(height: 24),
-
-            // ── Harcama özeti ─────────────────────────────────────────
-            if (summary.isNotEmpty) ...[
-              Text(
-                loc.t('walletSpendingSummary'),
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 15,
-                ),
-              ),
-              const SizedBox(height: 10),
-              ...summary.entries.map(
-                (e) => _SummaryRow(
-                  label: _typeLabels(loc)[e.key] ?? e.key,
-                  amount: e.value,
-                ),
-              ),
-              const SizedBox(height: 20),
-            ],
-
-            // ── İşlem geçmişi ─────────────────────────────────────────
-            if (_txns.isNotEmpty) ...[
-              Text(
-                loc.t('walletTxnHistory'),
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 15,
-                ),
-              ),
-              const SizedBox(height: 10),
-              ..._txns.take(20).map((t) => _buildTxnRow(t, loc)),
-              if (_txns.length > 20) ...[
-                const SizedBox(height: 4),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () => _showAllTxnsModal(context, loc),
-                    icon: const Icon(Icons.expand_more_rounded, size: 18),
-                    label: Text(loc.t('walletSeeAllTxns', {'n': _txns.length.toString()})),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+          // ── İşlem listesi — kaydırılabilir orta ──────────────────
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _load,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+                children: [
+                  // ── Harcama özeti ──────────────────────────────────
+                  if (summary.isNotEmpty) ...[
+                    Text(
+                      loc.t('walletSpendingSummary'),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
                       ),
                     ),
-                  ),
-                ),
-              ],
-              const SizedBox(height: 24),
-            ] else if (!_loading) ...[
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Text(
-                  loc.t('walletNoTxns'),
-                  style: const TextStyle(color: Colors.grey),
-                ),
-              ),
-            ],
+                    const SizedBox(height: 10),
+                    ...summary.entries.map(
+                      (e) => _SummaryRow(
+                        label: _typeLabels(loc)[e.key] ?? e.key,
+                        amount: e.value,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
 
-            // ── Yakında bildirimi ─────────────────────────────────────
-            Container(
+                  // ── İşlem geçmişi ──────────────────────────────────
+                  if (_txns.isNotEmpty) ...[
+                    Text(
+                      loc.t('walletTxnHistory'),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    ..._txns.map((t) => _buildTxnRow(t, loc)),
+                  ] else if (!_loading) ...[
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      child: Text(
+                        loc.t('walletNoTxns'),
+                        style: const TextStyle(color: Colors.grey),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+
+          // ── Yakında bildirimi — sabit alt ─────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -4266,8 +4192,8 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
