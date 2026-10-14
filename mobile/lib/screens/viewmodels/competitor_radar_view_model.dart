@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import '../../core/network/api_client.dart';
+import '../../services/cache_service.dart';
 import '../../services/storage_service.dart';
 import '../../services/analytics_service.dart';
 import '../../models/listing_filter_state.dart';
@@ -51,10 +52,40 @@ class CompetitorRadarState {
 }
 
 class CompetitorRadarViewModel extends AutoDisposeNotifier<CompetitorRadarState> {
+  CacheService get _cache => ref.read(cacheServiceProvider);
+
+  static const _kListingsKey = 'cache_competitor_radar_listings';
+  static String _radarKey(int id) => 'cache_radar_$id';
+  static String _velocityKey(int id) => 'cache_velocity_$id';
+
   @override
   CompetitorRadarState build() {
+    final cachedListings = _cache.getWithStaleness(_kListingsKey)?.data;
+    final listings = cachedListings != null
+        ? (cachedListings as List).cast<Map<String, dynamic>>()
+        : <Map<String, dynamic>>[];
+
+    Map<String, dynamic>? selectedListing =
+        listings.isNotEmpty ? listings.first : null;
+    Map<String, dynamic>? radarData;
+    Map<String, dynamic>? velocityData;
+
+    if (selectedListing != null) {
+      final id = selectedListing['id'] as int;
+      radarData = _cache.getWithStaleness(_radarKey(id))?.data as Map<String, dynamic>?;
+      velocityData = _cache.getWithStaleness(_velocityKey(id))?.data as Map<String, dynamic>?;
+    }
+
     Future.microtask(() => loadListings());
-    return const CompetitorRadarState();
+
+    return CompetitorRadarState(
+      listings: listings,
+      listingsLoading: listings.isEmpty,
+      selectedListing: selectedListing,
+      radarData: radarData,
+      velocityData: velocityData,
+      loadingData: selectedListing != null && radarData == null,
+    );
   }
 
   Future<List<Map<String, dynamic>>> _fetchListingsPage(int offset) async {
@@ -84,23 +115,26 @@ class CompetitorRadarViewModel extends AutoDisposeNotifier<CompetitorRadarState>
   }
 
   Future<void> loadListings() async {
-    state = state.copyWith(listingsLoading: true);
+    final hasCache = state.listings.isNotEmpty;
+    if (!hasCache) state = state.copyWith(listingsLoading: true);
     final results = await _fetchListingsPage(0);
+    await _cache.saveData(_kListingsKey, results, ttl: const Duration(minutes: 30));
+
     final prevId = state.selectedListing?['id'];
     final stillHere = prevId != null ? results.any((r) => r['id'] == prevId) : false;
-    
+
     Map<String, dynamic>? nextSelected = state.selectedListing;
     if (!stillHere) {
       nextSelected = results.isNotEmpty ? results.first : null;
     }
-    
+
     state = state.copyWith(
       listings: results,
       listingsLoading: false,
       selectedListing: nextSelected,
       clearSelectedListing: nextSelected == null,
     );
-    
+
     if (nextSelected != null) {
       await loadData();
     }
@@ -111,24 +145,37 @@ class CompetitorRadarViewModel extends AutoDisposeNotifier<CompetitorRadarState>
     if (listing == null) return;
     final id = listing['id'] as int;
     final category = listing['category'] as String? ?? '';
-    
-    state = state.copyWith(
-      loadingData: true,
-      clearRadarData: true,
-      clearVelocityData: true,
-    );
-    
+
+    final cachedRadar = _cache.getWithStaleness(_radarKey(id))?.data as Map<String, dynamic>?;
+    final cachedVelocity = _cache.getWithStaleness(_velocityKey(id))?.data as Map<String, dynamic>?;
+
+    if (cachedRadar != null) {
+      state = state.copyWith(
+        radarData: cachedRadar,
+        velocityData: cachedVelocity,
+        loadingData: false,
+      );
+    } else {
+      state = state.copyWith(loadingData: true, clearRadarData: true, clearVelocityData: true);
+    }
+
     try {
       final results = await Future.wait([
         ref.read(analyticsServiceProvider).competitorRadar(id),
         ref.read(analyticsServiceProvider).categoryVelocity(category, listingId: id),
       ]);
-      
+
       state = state.copyWith(
-        radarData: results[0],
-        velocityData: results[1],
+        radarData: results[0] as Map<String, dynamic>?,
+        velocityData: results[1] as Map<String, dynamic>?,
         loadingData: false,
       );
+      if (results[0] != null) {
+        await _cache.saveData(_radarKey(id), results[0], ttl: const Duration(minutes: 30));
+      }
+      if (results[1] != null) {
+        await _cache.saveData(_velocityKey(id), results[1], ttl: const Duration(minutes: 30));
+      }
     } catch (_) {
       state = state.copyWith(loadingData: false);
     }

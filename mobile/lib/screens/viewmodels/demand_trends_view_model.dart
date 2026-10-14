@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../services/analytics_service.dart';
+import '../../services/cache_service.dart';
 import '../../models/listing_filter_state.dart';
 
 class DemandTrendsState {
@@ -33,14 +34,31 @@ class DemandTrendsState {
 }
 
 class DemandTrendsViewModel extends AutoDisposeNotifier<DemandTrendsState> {
+  CacheService get _cache => ref.read(cacheServiceProvider);
+
+  String _cacheKey() =>
+      'cache_demand_trends_${state.filter.category ?? ''}_${state.filter.subcategory ?? ''}';
+
   @override
   DemandTrendsState build() {
+    // Başlangıç filtresi default (kategori yok) — key sabit
+    final cached = _cache.getWithStaleness('cache_demand_trends__')?.data;
+    final trends = cached != null
+        ? ((cached as Map<String, dynamic>)['trends'] as List? ?? [])
+            .cast<Map<String, dynamic>>()
+        : <Map<String, dynamic>>[];
+
     Future.microtask(() => load());
-    return const DemandTrendsState();
+
+    return DemandTrendsState(
+      trends: trends,
+      loading: trends.isEmpty,
+    );
   }
 
   Future<void> load() async {
-    state = state.copyWith(loading: true, clearError: true);
+    final hasCached = state.trends.isNotEmpty;
+    if (!hasCached) state = state.copyWith(loading: true, clearError: true);
     try {
       final data = await ref.read(analyticsServiceProvider).demandTrends(
         weeks: 8,
@@ -48,21 +66,20 @@ class DemandTrendsViewModel extends AutoDisposeNotifier<DemandTrendsState> {
         subcategory: state.filter.subcategory,
       );
       if (data == null) {
-        state = state.copyWith(error: 'no_data', loading: false);
+        if (!hasCached) state = state.copyWith(error: 'no_data', loading: false);
         return;
       }
       final raw = (data['trends'] as List?) ?? [];
-      state = state.copyWith(
-        trends: raw.cast<Map<String, dynamic>>(),
-        loading: false,
-      );
+      final trends = raw.cast<Map<String, dynamic>>();
+      state = state.copyWith(trends: trends, loading: false);
+      await _cache.saveData(_cacheKey(), data, ttl: const Duration(minutes: 30));
     } catch (_) {
-      state = state.copyWith(error: 'error', loading: false);
+      if (!hasCached) state = state.copyWith(error: 'error', loading: false);
     }
   }
 
   void updateFilter(ListingFilterState filter) {
-    state = state.copyWith(filter: filter);
+    state = state.copyWith(filter: filter, trends: const [], loading: true);
     load();
   }
 }
