@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 
 import '../../../core/network/api_client.dart';
 import '../../../models/stream.dart';
+import '../../../repositories/search_repository.dart';
 import '../../../services/analytics_service.dart';
 import '../../../services/api_service.dart';
 import '../../../services/storage_service.dart';
@@ -466,32 +467,20 @@ class SearchViewModel extends AutoDisposeAsyncNotifier<SearchState> {
     // Misafir kullanıcı — /feed/recent API sayfalama
     state = AsyncValue.data(current.copyWith(recentLoadingMore: true));
     try {
-      final token = await StorageService.getToken();
-      final headers = token != null ? {'Authorization': 'Bearer $token'} : <String, String>{};
-      final excludeParams = current.forYouIds.isNotEmpty
-          ? '&exclude_ids=${current.forYouIds.join(',')}'
-          : '';
-      final url = '${ref.read(apiClientProvider).config.baseUrl}/feed/recent?page=${current.recentPage}$excludeParams';
-
-      final resp = await http.get(Uri.parse(url), headers: headers);
+      final page = await ref.read(searchRepositoryProvider).loadMoreRecent(
+        page:       current.recentPage,
+        excludeIds: current.forYouIds,
+      );
 
       final newState = state.value;
       if (newState == null) return;
 
-      if (resp.statusCode == 200) {
-        final data = jsonDecode(resp.body) as List;
-        state = AsyncValue.data(newState.copyWith(
-          recentListings: [...newState.recentListings, ...data],
-          recentPage: newState.recentPage + 1,
-          recentExhausted: data.length < 20,
-          recentLoadingMore: false,
-        ));
-      } else {
-        state = AsyncValue.data(newState.copyWith(
-          recentExhausted: true,
-          recentLoadingMore: false,
-        ));
-      }
+      state = AsyncValue.data(newState.copyWith(
+        recentListings:    [...newState.recentListings, ...page.listings],
+        recentPage:        newState.recentPage + 1,
+        recentExhausted:   page.exhausted,
+        recentLoadingMore: false,
+      ));
     } catch (_) {
       final newState = state.value;
       if (newState != null) {
@@ -508,36 +497,21 @@ class SearchViewModel extends AutoDisposeAsyncNotifier<SearchState> {
     
     state = AsyncValue.data(current.copyWith(forYouLoadingMore: true));
     try {
-      final token = await StorageService.getToken();
-      if (token == null) {
-        state = AsyncValue.data(state.value!.copyWith(forYouLoadingMore: false));
-        return;
-      }
-      
-      final resp = await http.get(
-        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/feed/for-you?page=${current.forYouPage}'),
-        headers: {'Authorization': 'Bearer $token'},
+      final page = await ref.read(searchRepositoryProvider).loadMoreForYou(
+        page: current.forYouPage,
       );
-      
+
       final newState = state.value;
       if (newState == null) return;
 
-      if (resp.statusCode == 200) {
-        final data = jsonDecode(resp.body) as List;
-        final existingIds = newState.exploreListings.map((e) => e['id']).toSet();
-        final uniqueData = data.where((e) => !existingIds.contains(e['id'])).toList();
-        state = AsyncValue.data(newState.copyWith(
-          exploreListings: [...newState.exploreListings, ...uniqueData],
-          forYouPage: newState.forYouPage + 1,
-          forYouExhausted: data.length < 20,
-          forYouLoadingMore: false,
-        ));
-      } else {
-        state = AsyncValue.data(newState.copyWith(
-          forYouExhausted: true,
-          forYouLoadingMore: false,
-        ));
-      }
+      final existingIds = newState.exploreListings.map((e) => e['id']).toSet();
+      final unique      = page.listings.where((e) => !existingIds.contains(e['id'])).toList();
+      state = AsyncValue.data(newState.copyWith(
+        exploreListings:   [...newState.exploreListings, ...unique],
+        forYouPage:        newState.forYouPage + 1,
+        forYouExhausted:   page.exhausted,
+        forYouLoadingMore: false,
+      ));
     } catch (_) {
       final newState = state.value;
       if (newState != null) {
