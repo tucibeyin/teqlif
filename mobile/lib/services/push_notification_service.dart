@@ -16,8 +16,13 @@ import 'localization_service.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:teqlif/core/network/api_client.dart';
+import 'package:teqlif/core/config/app_config.dart';
 import '../utils/china_market_detector.dart';
 import '../main.dart' show providerContainer;
+
+/// Background isolate'ten güvenle okunabilir base URL.
+/// String.fromEnvironment compile-time sabit — providerContainer gerektirmez.
+String get _bgBaseUrl => AppConfig.fromEnvironment().baseUrl;
 
 void _cpLog(String phase, String msg) {
   debugPrint('[CALL_PROCESS][${DateTime.now().toIso8601String()}][$phase] $msg');
@@ -62,7 +67,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     // bu yüzden ACK ondan önce gitmelidir.
     if (callId.isNotEmpty) {
       try {
-        await http.post(Uri.parse('${providerContainer.read(apiClientProvider).config.baseUrl}/calls/$callId/ack')).timeout(const Duration(seconds: 5));
+        await http.post(Uri.parse('$_bgBaseUrl/calls/$callId/ack')).timeout(const Duration(seconds: 5));
         debugPrint('[FCM][BG] HTTP ACK sent | callId=$callId');
       } catch (e) {
         debugPrint('[FCM][BG] HTTP ACK failed (non-fatal) | callId=$callId | $e');
@@ -248,7 +253,7 @@ Future<void> _backgroundNotifResponseHandler(NotificationResponse response) asyn
         return;
       }
       var r = await http.post(
-        Uri.parse('${providerContainer.read(apiClientProvider).config.baseUrl}/calls/$callId/reject'),
+        Uri.parse('$_bgBaseUrl/calls/$callId/reject'),
         headers: {'Authorization': 'Bearer $authToken'},
       );
       debugPrint('[FLNP][BG] reject yanıtı: ${r.statusCode}');
@@ -259,7 +264,7 @@ Future<void> _backgroundNotifResponseHandler(NotificationResponse response) asyn
         final refreshToken = await StorageService.getRefreshToken();
         if (refreshToken != null) {
           final refreshResp = await http.post(
-            Uri.parse('${providerContainer.read(apiClientProvider).config.baseUrl}/auth/refresh'),
+            Uri.parse('$_bgBaseUrl/auth/refresh'),
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode({'refresh_token': refreshToken}),
           );
@@ -271,7 +276,7 @@ Future<void> _backgroundNotifResponseHandler(NotificationResponse response) asyn
               await StorageService.saveToken(newAccess);
               if (newRefresh != null) await StorageService.saveRefreshToken(newRefresh);
               r = await http.post(
-                Uri.parse('${providerContainer.read(apiClientProvider).config.baseUrl}/calls/$callId/reject'),
+                Uri.parse('$_bgBaseUrl/calls/$callId/reject'),
                 headers: {'Authorization': 'Bearer $newAccess'},
               );
               debugPrint('[FLNP][BG] reject retry yanıtı: ${r.statusCode}');
