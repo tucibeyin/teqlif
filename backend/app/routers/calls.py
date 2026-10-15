@@ -46,6 +46,7 @@ from app.core.exceptions import AppException, NotFoundException, BadRequestExcep
 from app.services.apns_service import send_voip_push
 from app.services.firebase_service import send_push
 from app.services.edge_orchestrator import orchestrator, ServiceType
+from app.services.livekit_service import lk_broadcast_delete
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/calls", tags=["calls"])
@@ -72,10 +73,6 @@ def _make_livekit_token(room_name: str, user: User) -> str:
         .to_jwt()
     )
 
-
-async def _delete_lk_room(room_name: str, livekit_url: str | None = None) -> None:
-    from app.services.livekit_service import lk_broadcast_delete
-    await lk_broadcast_delete(room_name, livekit_url=livekit_url)
 
 
 @router.get("/{call_id}/callee-token")
@@ -328,7 +325,7 @@ async def _mark_call_unreachable(call_id: int, caller_id: int, callee_id: int) -
                 await clear_presence(callee_id)
             except Exception as _pe:
                 logger.warning("[CALL_PROCESS][RING] clear_presence FAILED | call_id=%d %s", call_id, _pe)
-            await _delete_lk_room(room_name, livekit_url=room_lk_url)
+            await lk_broadcast_delete(room_name, livekit_url=room_lk_url)
             logger.info("[CALL_PROCESS][RING] call marked missed (unreachable) | call_id=%d", call_id)
     except Exception as exc:
         logger.exception("[CALL_PROCESS][RING] _mark_call_unreachable UNHANDLED | call_id=%d %s", call_id, exc)
@@ -601,7 +598,7 @@ async def start_call(
             asyncio.create_task(clear_presence(current_user.id))
             asyncio.create_task(clear_presence(stale_callee_id))
             await _ws_broadcast(stale_callee_id, {"type": "call_missed", "call_id": stale_call_id})
-            await _delete_lk_room(stale_room_name, livekit_url=stale_lk_url)
+            await lk_broadcast_delete(stale_room_name, livekit_url=stale_lk_url)
             if stale_callee:
                 await db.refresh(stale_callee)
                 await _send_missed_call_push(stale_callee, current_user, stale_call_id)
@@ -910,7 +907,7 @@ async def reject_call(
             logger.warning("[CALL_PROCESS][IN] reject_call FCM push FAILED | call_id=%d %s", call_id_val, _e)
 
     # LK room'u sil — reject sonrası oda askıda kalıyordu
-    await _delete_lk_room(room_name, livekit_url=room_lk_url_reject)
+    await lk_broadcast_delete(room_name, livekit_url=room_lk_url_reject)
 
     logger.info(
         "[CALL_PROCESS][IN] reject_call OK | call_id=%d callee=%d caller=%d room=%s",
@@ -1001,7 +998,7 @@ async def end_call(
             )
         except Exception as push_err:
             logger.warning(f"[Calls] Failed to send 'call_ended' push: {push_err}")
-    await _delete_lk_room(room_name, livekit_url=room_lk_url_end)
+    await lk_broadcast_delete(room_name, livekit_url=room_lk_url_end)
 
     logger.info(
         "[CALL_PROCESS][END] end_call OK | call_id=%d by=%d duration=%ss",
@@ -1094,7 +1091,7 @@ async def missed_call(
             logger.warning("[CALL_PROCESS][END] missed_call: clear_call_redis FAILED | call_id=%d %s", call.id, _e)
 
         await _ws_broadcast(call.callee_id, {"type": "call_missed", "call_id": call.id})
-        await _delete_lk_room(call.room_name, livekit_url=call.livekit_url)
+        await lk_broadcast_delete(call.room_name, livekit_url=call.livekit_url)
 
         if callee:
             # commit sonrası expire olan attribute'ları yenile
