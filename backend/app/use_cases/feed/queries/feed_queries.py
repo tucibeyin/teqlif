@@ -1293,8 +1293,11 @@ class FeedQueries:
                 id_clause = "AND l.id < :max_id"
                 params["max_id"] = max_id
             else:
-                params["off"] = page * self._RECENT_PAGE_SIZE
-                offset_clause = "OFFSET :off"
+                if not exclude_ids:
+                    # Anonymous user, seen tracker yok — page offset gerekli
+                    params["off"] = page * self._RECENT_PAGE_SIZE
+                    offset_clause = "OFFSET :off"
+                # Authenticated: exclude_ids seen pozisyonunu tutuyor, OFFSET gerekmez
                 
             order_clause = "ORDER BY l.id DESC"
             if since_id:
