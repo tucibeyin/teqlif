@@ -2049,15 +2049,8 @@ async def cleanup_stale_streams_task(ctx: dict) -> None:
                 return
 
             try:
-                async with aiohttp.ClientSession() as session:
-                    svc = RoomService(
-                        session,
-                        (await orchestrator.allocate_node(ServiceType.MEDIA))["livekit_url"],
-                        settings.livekit_api_key,
-                        settings.livekit_api_secret,
-                    )
-                    res = await svc.list_rooms(ListRoomsRequest())
-                    active_rooms = {r.name: r.num_participants for r in res.rooms}
+                from app.services.livekit_service import lk_list_all_rooms_with_participants as _lk_rooms_p
+                active_rooms = await _lk_rooms_p()
             except Exception as lk_exc:
                 logger.warning("[Worker] Stale stream cleanup: LiveKit API erişilemedi | %s", lk_exc)
                 return
@@ -2246,6 +2239,7 @@ async def delayed_call_timeout_task(ctx: dict, call_id: int, caller_id: int, cal
                 return  # Zaten kabul edilmiş veya sonlanmış
 
             room_name = call.room_name
+            room_lk_url = call.livekit_url
             logger.info(
                 "[CALL_PROCESS][END] delayed_call_timeout_task FIRING | call_id=%d caller_id=%d callee_id=%d room=%s",
                 call_id, caller_id, callee_id, room_name
@@ -2319,22 +2313,8 @@ async def delayed_call_timeout_task(ctx: dict, call_id: int, caller_id: int, cal
             # (o task status=calling/active arar; biz zaten missed'e çektik).
             # Room silinmezse LK'da ghost oda birikir.
             logger.info("[CALL_PROCESS][END] delayed_call_timeout_task: deleting LK room | room=%s call_id=%d", room_name, call_id)
-            try:
-                from livekit.api import LiveKitAPI, DeleteRoomRequest
-                from app.config import settings as _settings
-                async with LiveKitAPI(
-                    url=_(await orchestrator.allocate_node(ServiceType.MEDIA))["livekit_url"],
-                    api_key=_settings.livekit_api_key,
-                    api_secret=_settings.livekit_api_secret,
-                ) as api:
-                    await api.room.delete_room(DeleteRoomRequest(room=room_name))
-                logger.info("[CALL_PROCESS][END] LK room deleted | room=%s call_id=%d", room_name, call_id)
-            except Exception as lk_exc:
-                err = str(lk_exc).lower()
-                if "not_found" in err or "does not exist" in err:
-                    logger.debug("[CALL_PROCESS][END] LK room already gone | room=%s", room_name)
-                else:
-                    logger.warning("[CALL_PROCESS][END] LK room delete FAILED | room=%s call_id=%d err=%s", room_name, call_id, lk_exc)
+            from app.services.livekit_service import lk_broadcast_delete as _lk_del
+            await _lk_del(room_name, livekit_url=room_lk_url)
 
             logger.info(
                 "[CALL_PROCESS][END] delayed_call_timeout_task DONE | call_id=%d status=missed room=%s",
@@ -2383,20 +2363,15 @@ async def cleanup_ghost_calls_task(ctx: dict) -> None:
                 return
             logger.info("[CALL_PROCESS][END] cleanup_ghost_calls_task: found %d ghost call(s)", len(ghost_calls))
 
-            # LiveKit oda listesini çek — HATA DURUMUNDA active aramalara dokunma
-            lk_rooms = None  # None = API çağrısı başarısız, [] = başarılı ama oda yok
+            # Tüm LK node'larından oda listesi — HATA DURUMUNDA active aramalara dokunma
+            # lk_rooms = None → en az bir node'a erişilemedi (güvenli taraf: dokunma)
+            # lk_rooms = set() → tüm node'lar başarılı ama hiç oda yok
+            lk_rooms: set[str] | None = None
             try:
-                async with aiohttp.ClientSession() as session:
-                    svc = RoomService(
-                        session,
-                        (await orchestrator.allocate_node(ServiceType.MEDIA))["livekit_url"],
-                        settings.livekit_api_key,
-                        settings.livekit_api_secret,
-                    )
-                    res = await svc.list_rooms(ListRoomsRequest())
-                    lk_rooms = [r.name for r in res.rooms]
+                from app.services.livekit_service import lk_list_all_rooms as _lk_list
+                lk_rooms = await _lk_list()
             except Exception as e:
-                logger.error("LiveKit list_rooms failed in cleanup_ghost_calls_task: %s", e)
+                logger.error("LiveKit lk_list_all_rooms failed in cleanup_ghost_calls_task: %s", e)
                 # lk_rooms = None kalır → aktif aramalara dokunulmaz
 
             rooms_to_delete = []
@@ -2447,20 +2422,10 @@ async def cleanup_ghost_calls_task(ctx: dict) -> None:
 
             await db.commit()
 
-            # FIX: Ghost call room'larını LiveKit'ten de sil
+            # Ghost call room'larını tüm LK node'larından sil
+            from app.services.livekit_service import lk_broadcast_delete as _lk_del_ghost
             for room_name in rooms_to_delete:
-                try:
-                    from livekit.api import LiveKitAPI, DeleteRoomRequest
-                    async with LiveKitAPI(
-                        url=(await orchestrator.allocate_node(ServiceType.MEDIA))["livekit_url"],
-                        api_key=settings.livekit_api_key,
-                        api_secret=settings.livekit_api_secret,
-                    ) as api:
-                        await api.room.delete_room(DeleteRoomRequest(room=room_name))
-                except Exception as lk_err:
-                    err_msg = str(lk_err).lower()
-                    if "not_found" not in err_msg and "does not exist" not in err_msg:
-                        logger.warning("Ghost call LK room delete failed | room=%s | %s", room_name, lk_err)
+                await _lk_del_ghost(room_name)
 
         logger.info("[CALL_PROCESS][END] cleanup_ghost_calls_task DONE")
         await _agent_ok(ctx, "cleanup_ghost_calls_task")
@@ -2482,24 +2447,15 @@ async def delayed_close_stream_task(ctx: dict, room_name: str) -> None:
     Restart-safe: ARQ job Redis'te saklandığı için VPS yeniden başlasa bile çalışır.
     """
     try:
-        import aiohttp
-        from livekit.api.room_service import RoomService, ListRoomsRequest
-        from app.config import settings
         from app.database import AsyncSessionLocal
         from app.use_cases.streams.commands.force_close_stream import force_close_stream
+        from app.services.livekit_service import lk_list_all_rooms as _lk_list_stream
 
         try:
-            async with aiohttp.ClientSession() as session:
-                svc = RoomService(
-                    session,
-                    (await orchestrator.allocate_node(ServiceType.MEDIA))["livekit_url"],
-                    settings.livekit_api_key,
-                    settings.livekit_api_secret,
-                )
-                res = await svc.list_rooms(ListRoomsRequest())
-                if any(r.name == room_name for r in res.rooms):
-                    logger.info("[Worker] LiveKit odası hâlâ aktif, kapatma iptal | room=%s", room_name)
-                    return
+            active_room_names = await _lk_list_stream()
+            if room_name in active_room_names:
+                logger.info("[Worker] LiveKit odası hâlâ aktif, kapatma iptal | room=%s", room_name)
+                return
         except Exception:
             logger.warning("[Worker] LiveKit API kontrolü başarısız, kapatmaya devam | room=%s", room_name)
 

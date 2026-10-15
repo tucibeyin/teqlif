@@ -43,6 +43,21 @@ class EdgeOrchestrator:
                     logger.error(f"JSON parse error: {e}")
         return result
 
+    async def all_media_nodes(self) -> List[Dict[str, Any]]:
+        """Tüm sağlıklı media node'larını döner; metrik yoksa settings.edge_livekit_urls fallback."""
+        all_m = await self.get_all_metrics()
+        nodes = [
+            m for m in all_m
+            if "media" in m.get("node_type", [])
+            and m.get("services", {}).get("livekit", {}).get("healthy", False)
+            and m.get("livekit_url")
+        ]
+        if not nodes:
+            from app.config import settings as _s
+            return [{"livekit_url": url, "node_id": f"fallback-{i}"}
+                    for i, url in enumerate(_s.edge_livekit_urls) if url]
+        return nodes
+
     async def allocate_node(self, service_type: ServiceType) -> Dict[str, Any]:
         """Servis tipine göre en uygun node'u seçer; metrik yoksa config fallback."""
         all_m = await self.get_all_metrics()
