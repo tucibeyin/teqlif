@@ -1793,16 +1793,20 @@ Competitor Radar (`cache_competitor_radar_listings`, `cache_radar_{id}`, `cache_
 
 ## 24. feed:recent ZSET Tutarlılık Kuralları
 
-**Commit:** `41fe789e` (kısmi fallback), `042f38bf` (buffer + leak fix)  
-**Tarih:** 2026-10-15
+**Commit:** `41fe789e` (kısmi fallback), `042f38bf` (leak fix), `3654b949` (post-filter supplement — geçici), temiz mimari: bu commit  
+**Tarih:** 2026-10-15 → 2026-10-16
 
 ### Problem
 
-`feed:recent` Redis ZSET yalnızca `create_listing` / `update_listing` use case'lerinden besleniyordu. `toggle_listing`, `auction_commands` (BIN + accept_bid) ve doğrudan SQL ile eklenen ilanlar ZSET'i güncellemiyordu. Sonuç: ZSET'te `active` olmayan stale entry'ler birikti; `get_mixed_recent_feed` page=0'da sadece 4–6 ilan döndürdü.
+`feed:recent` Redis ZSET yalnızca `create_listing` / `update_listing` use case'lerinden besleniyordu. `toggle_listing`, `auction_commands` (BIN + accept_bid) ve doğrudan SQL ile eklenen ilanlar ZSET'i güncellemiyordu. Sonuç: ZSET'te `active` olmayan stale entry'ler birikti; `get_mixed_recent_feed` page=0'da sadece 4–6 ilan döndürdü. Kök neden: servis başlangıcında ZSET hiç doldurulmuyordu.
 
-### Karar
+### Karar — Üç Katmanlı Sorumluluk
 
-**ZSET'i saf active-listing indeksi olarak tut.** Her status değişimi ZSET'i güncellemeli:
+**1. Startup Warm-up (`sync_feed_cache.py` + `sync_main.py`)** — _yetkili kaynak_  
+`ExecStartPre` adımında `sync_main.py` çalışır; bu script `warm_feed_cache()` çağırır. ZSET < 50 item ise DB'deki tüm `status='active'` ilan ID'lerini (max 2000) score=id ile `zadd` eder. İdempotent: ZSET doluysa dokunmaz.
+
+**2. Real-time Güncellemeler (tüm status-change path'leri)** — _güncel tutar_  
+Her status değişimi ZSET'i anında günceller:
 
 | Durum | Çağrılacak |
 |-------|-----------|
@@ -1816,11 +1820,10 @@ Competitor Radar (`cache_competitor_radar_listings`, `cache_radar_{id}`, `cache_
 
 **Toggle düzeltmesi:** Daha önce reactivating'de `cleanup_listing_redis` çağrılıyordu — bu ZSET'ten çıkarıyordu. Düzeltme: `cache_listing` + `push_to_recent_feed_cache`.
 
-### Stale Entry'lere Dayanıklılık (Savunma Katmanı)
-
-Beklenmedik stale entry'lere karşı `get_mixed_recent_feed` page=0'da ZSET'ten `_RECENT_PAGE_SIZE × 5` (100) ID çeker (buffer). DB `status='active'` filtresinden sonra `_RECENT_PAGE_SIZE`'a (20) kırpar. Bu, ZSET'te azami %95 stale rate'e kadar dayanıklıdır.
+**3. Query Katmanı (`feed_queries.py`)** — _güvenlik ağı_  
+`get_mixed_recent_feed` tam `_RECENT_PAGE_SIZE` (20) ID çeker. ZSET boş veya yetersizse DB fallback devreye girer. Buffer veya post-filter supplement **yoktur** — bunlar startup warm-up'ın görevidir.
 
 ### Lazy Cache Refill
 
-DB fallback tetiklendiğinde (`feed:recent` eksikse veya yetersizse) bulunan active ID'ler `zadd "feed:recent"` ile ZSET'e eklenir. Bu sayede ilk API çağrısından sonra ZSET otomatik dolmaya başlar.
+DB fallback tetiklendiğinde (`feed:recent` eksikse veya yetersizse) bulunan active ID'ler `zadd "feed:recent"` ile ZSET'e eklenir. Startup warm-up'tan sonra bu yol nadiren tetiklenir.
 

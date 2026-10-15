@@ -1256,10 +1256,9 @@ class FeedQueries:
             if raw_ids:
                 base_ids = [int(x) for x in raw_ids]
         else:
-            # İlk yükleme — ZSET stale entry'lerine karşı 5x buffer ile çek.
-            # Inactive listing'ler DB filtresinde düşeceği için fazladan çekmek gerekir.
+            # İlk yükleme (page 0) - en yüksek score'lu X ilan
             offset = page * self._RECENT_PAGE_SIZE
-            raw_ids = await redis.zrevrange("feed:recent", offset, offset + self._RECENT_PAGE_SIZE * 5 - 1)
+            raw_ids = await redis.zrevrange("feed:recent", offset, offset + self._RECENT_PAGE_SIZE - 1)
             if raw_ids:
                 base_ids = [int(x) for x in raw_ids]
 
@@ -1340,45 +1339,6 @@ class FeedQueries:
              base_ids = [lid for lid in base_ids if lid in rows and rows[lid][0].user_id != user_id]
         else:
              base_ids = [lid for lid in base_ids if lid in rows]
-        # Buffer fetch sayfa boyutunu aşabilir; fallback dışında tam sayıya kırp.
-        if not is_fallback:
-            base_ids = base_ids[:self._RECENT_PAGE_SIZE]
-
-        # ZSET buffer'ı yeterli active listing sağlayamadıysa DB'den tamamla ve ZSET'i refill et.
-        # Durum: ZSET var (is_fallback=False) ama içindeki çoğu entry inactive/eksik (seed, bypass insert vb.)
-        if not is_fallback and not since_id and len(base_ids) < self._RECENT_PAGE_SIZE:
-            _needed = self._RECENT_PAGE_SIZE - len(base_ids)
-            _excl    = list(set(base_ids) | set(exclude_ids or []))
-            _uid_c   = "AND l.user_id != :uid" if user_id else ""
-            _excl_c  = f"AND l.id NOT IN ({','.join(str(i) for i in _excl)})" if _excl else ""
-            _id_c    = "AND l.id < :max_id" if max_id else ""
-            _p: dict = {"lim": _needed}
-            if user_id: _p["uid"]    = user_id
-            if max_id:  _p["max_id"] = max_id
-            _sup_q = await self.uow.session.execute(text(f"""
-                SELECT l.id FROM listings l
-                WHERE l.status = 'active' AND l.status != 'deleted'
-                {_uid_c} {_excl_c} {_id_c}
-                ORDER BY l.id DESC LIMIT :lim
-            """), _p)
-            _sup_ids = [r.id for r in _sup_q]
-            if _sup_ids:
-                _sup_rows = await self.uow.session.execute(
-                    select(Listing, User)
-                    .join(User, User.id == Listing.user_id)
-                    .where(Listing.id.in_(_sup_ids), Listing.status == ListingStatus.ACTIVE)
-                )
-                for _l, _u in _sup_rows.all():
-                    rows[_l.id] = (_l, _u)
-                _sup_f = [lid for lid in _sup_ids if lid in rows]
-                if user_id:
-                    _sup_f = [lid for lid in _sup_f if rows[lid][0].user_id != user_id]
-                base_ids = base_ids + _sup_f
-                try:
-                    await redis.zadd("feed:recent", {str(lid): lid for lid in _sup_ids})
-                except Exception:
-                    pass
-
         counts, liked_set = await LikeService.batch_listing_likes(self.uow.session, base_ids, user_id)
 
         recent_uids = list({rows[lid][1].id for lid in base_ids if lid in rows})
