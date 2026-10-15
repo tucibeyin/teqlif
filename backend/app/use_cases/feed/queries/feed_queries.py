@@ -1256,9 +1256,10 @@ class FeedQueries:
             if raw_ids:
                 base_ids = [int(x) for x in raw_ids]
         else:
-            # İlk yükleme (page 0) - en yüksek score'lu X ilan
+            # İlk yükleme — ZSET stale entry'lerine karşı 5x buffer ile çek.
+            # Inactive listing'ler DB filtresinde düşeceği için fazladan çekmek gerekir.
             offset = page * self._RECENT_PAGE_SIZE
-            raw_ids = await redis.zrevrange("feed:recent", offset, offset + self._RECENT_PAGE_SIZE - 1)
+            raw_ids = await redis.zrevrange("feed:recent", offset, offset + self._RECENT_PAGE_SIZE * 5 - 1)
             if raw_ids:
                 base_ids = [int(x) for x in raw_ids]
 
@@ -1339,6 +1340,9 @@ class FeedQueries:
              base_ids = [lid for lid in base_ids if lid in rows and rows[lid][0].user_id != user_id]
         else:
              base_ids = [lid for lid in base_ids if lid in rows]
+        # Buffer fetch sayfa boyutunu aşabilir; fallback dışında tam sayıya kırp.
+        if not is_fallback:
+            base_ids = base_ids[:self._RECENT_PAGE_SIZE]
 
         counts, liked_set = await LikeService.batch_listing_likes(self.uow.session, base_ids, user_id)
 

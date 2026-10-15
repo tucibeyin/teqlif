@@ -695,6 +695,10 @@ class AuctionCommands:
             capture_exception(exc)
             raise DatabaseException(code="PURCHASE_SAVE_FAILED")
 
+        if listing_id:
+            from app.services.feed.listing_cache_service import remove_from_recent_feed_cache
+            fire_and_forget(remove_from_recent_feed_cache(listing_id))
+
         # DM WS broadcast (satıcı→alıcı mesajı her iki tarafa bildir)
         try:
             now_iso = datetime.now(timezone.utc).isoformat()
@@ -908,6 +912,8 @@ class AuctionCommands:
             _prev_active = (listing.status == ListingStatus.ACTIVE)
             async def _deactivate_listing():
                 listing.status = ListingStatus.PASSIVE
+                from app.services.feed.listing_cache_service import remove_from_recent_feed_cache
+                fire_and_forget(remove_from_recent_feed_cache(listing.id))
             async def _reactivate_listing():
                 listing.status = ListingStatus.ACTIVE if _prev_active else ListingStatus.PASSIVE
             await saga.step("deactivate_listing", do=_deactivate_listing, compensate=_reactivate_listing)
