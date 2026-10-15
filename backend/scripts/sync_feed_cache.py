@@ -1,14 +1,13 @@
 """
-feed:recent Redis ZSET'ini aktif ilanlarla doldurur.
+feed:recent Redis ZSET'ini aktif ilanlarla yeniden oluşturur.
 
 Servis başlangıcında (ExecStartPre / sync_main.py) çalışır.
-ZSET boş veya eksikse DB'deki tüm active listing ID'lerini yükler.
-ZSET zaten doluysa dokunmaz — idempotent.
+Her seferinde ZSET'i sıfırdan inşa eder: DEL + ZADD ile DB'deki tüm
+active listing ID'lerini yükler. Bu sayede stale entry kalmaz.
 
 Kural: ZSET her zaman yalnızca status='active' ilan ID'lerini içerir.
 Score = listing.id → ID sırasına göre sıralama = oluşturulma sırasına göre sıralama.
 """
-import logging
 import os
 import sys
 
@@ -24,21 +23,14 @@ import sqlalchemy as sa
 from app.database import AsyncSessionLocal
 from app.utils.redis_client import get_redis
 
-logger = logging.getLogger(__name__)
-
-_ZSET_KEY       = "feed:recent"
-_MAX_ENTRIES    = 2000
-_WARM_THRESHOLD = 50   # Bu sayının altındaysa yeniden doldur
+_ZSET_KEY    = "feed:recent"
+_MAX_ENTRIES = 2000
 
 
 async def warm_feed_cache() -> None:
-    """feed:recent ZSET'ini DB'den doldurur (yalnızca eksikse)."""
+    """feed:recent ZSET'ini DB'den sıfırdan yeniden inşa eder."""
     redis = await get_redis()
-
-    current_size = await redis.zcard(_ZSET_KEY)
-    if current_size >= _WARM_THRESHOLD:
-        logger.info("[sync_feed_cache] feed:recent zaten dolu (%d item), atlandı.", current_size)
-        return
+    old_size = await redis.zcard(_ZSET_KEY)
 
     async with AsyncSessionLocal() as session:
         result = await session.execute(
@@ -51,18 +43,15 @@ async def warm_feed_cache() -> None:
         ids = [row.id for row in result]
 
     if not ids:
-        logger.info("[sync_feed_cache] DB'de aktif ilan yok, ZSET doldurulmadı.")
+        print("[sync_feed_cache] DB'de aktif ilan yok, ZSET doldurulmadı.")
         return
 
+    await redis.delete(_ZSET_KEY)
     mapping = {str(lid): lid for lid in ids}
     await redis.zadd(_ZSET_KEY, mapping)
-    logger.info(
-        "[sync_feed_cache] feed:recent dolduruldu: %d item (önceki: %d).",
-        len(ids), current_size,
-    )
+    print(f"[sync_feed_cache] feed:recent yenilendi: {len(ids)} item (önceki: {old_size}).")
 
 
 if __name__ == "__main__":
     import asyncio
-    logging.basicConfig(level=logging.INFO)
     asyncio.run(warm_feed_cache())

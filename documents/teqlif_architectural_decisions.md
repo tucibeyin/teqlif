@@ -1803,7 +1803,7 @@ Competitor Radar (`cache_competitor_radar_listings`, `cache_radar_{id}`, `cache_
 ### Karar — Üç Katmanlı Sorumluluk
 
 **1. Startup Warm-up (`sync_feed_cache.py` + `sync_main.py`)** — _yetkili kaynak_  
-`ExecStartPre` adımında `sync_main.py` çalışır; bu script `warm_feed_cache()` çağırır. ZSET < 50 item ise DB'deki tüm `status='active'` ilan ID'lerini (max 2000) score=id ile `zadd` eder. İdempotent: ZSET doluysa dokunmaz.
+`ExecStartPre` adımında `sync_main.py` çalışır; bu script `warm_feed_cache()` çağırır. Her seferinde `DEL feed:recent` + `zadd` ile DB'deki tüm `status='active'` ilan ID'lerini (max 2000, score=id) yeniden inşa eder. Stale entry kalmaz, eksik entry oluşmaz.
 
 **2. Real-time Güncellemeler (tüm status-change path'leri)** — _güncel tutar_  
 Her status değişimi ZSET'i anında günceller:
