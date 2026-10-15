@@ -1134,15 +1134,16 @@ Her değişiklik öncesinde `teqlif_architectural_decisions.md` okunur.
 
 ### Adımlar
 
-1. **Local geliştirme** — Mac'te kod yazılır
+1. **Local geliştirme** — Mac'te clean code, clean architecture ve bu dosyadaki kararlara uygun kod yazılır
 2. **`git push`** — Mac'ten GitHub'a push edilir
 3. **`git pull` (node'da)** — İlgili node'da `git pull` çalıştırılır (git kullanıcısı zaten tanımlı, `sudo` gerekmez)
 4. **Config ayarı** — Gerekirse node'da `.env` veya sistem konfigürasyonu düzenlenir (`ssh nodex` ile direkt)
 5. **Canlı log izleme** — `sudo journalctl -u <servis> -f` ile loglar izlenir; hata varsa adım 1'e dön
-6. **Test onayı** — Kullanıcıdan onay alınır
+6. **Test onayı** — Kullanıcıdan test onayı alınır
 7. **Dokümantasyon** — Yapılan değişiklik bu dosyaya veya ilgili `documents/` dosyasına commit numarasıyla kaydedilir
 8. **Node izleme** — Bir süre node hataları gözlemlenir; hata varsa adım 1'e dön
-9. **Cleanup** — Geçici dosyalar, test verileri temizlenir; iş tamamlandı
+9. **Sistem Mimarisi Güncellemesi** — `teqlif/deploy/scale/` dizini altında yapılanlar ile ilgili güncelleme yapılır
+10. **Cleanup** — Geçici dosyalar, test verileri temizlenir; iş tamamlandı
 
 ### Servis restart
 
