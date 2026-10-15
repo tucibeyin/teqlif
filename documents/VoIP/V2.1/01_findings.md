@@ -151,6 +151,7 @@ Bir VoIP call'da temizlenmesi gereken tüm state katmanları:
 | `livekit_url` DB'de saklama | ✅ | V2.1 çok-node mimarisinin doğal gereği |
 | Migration `zzzzzp` (ADD COLUMN IF NOT EXISTS) | ✅ | Tek `op.execute()`, asyncpg uyumlu |
 | `lk_broadcast_delete` + `lk_list_all_rooms` | ✅ | 1 node, shared-Redis ve isolated multi-node'da doğru |
+| `EndReason.remote` enum üyesi | ✅ | Mevcut `switch` wildcard (`_`) ile uyumlu, call_screen UI etkilenmez |
 
 ---
 
@@ -166,4 +167,5 @@ Bir VoIP call'da temizlenmesi gereken tüm state katmanları:
 | `4fccef53` | Zombie cleanup Fix 1–4 (active doğrulama, app resume genişletme, dead peer timer, livekit_url DB) |
 | `e9e14073` | Generic multi-node LK admin API — `lk_broadcast_delete` + `lk_list_all_rooms` |
 | `6e98ddea` | `_delete_lk_room` wrapper kaldırıldı — `lk_broadcast_delete` direkt çağrı |
-| `<sonraki>` | `lk_list_all_rooms` reachable==0 guard + 4s timeout; `svc` NameError düzeltmesi |
+| `f0fb3cda` | `lk_list_all_rooms` reachable==0 guard + 4s timeout; `svc` NameError düzeltmesi |
+| `214037f8` | `EndReason.remote` enum üyesi eklendi — zombie-active recovery compile hatası |
