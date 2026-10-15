@@ -1268,7 +1268,10 @@ class FeedQueries:
             base_ids = [lid for lid in base_ids if lid not in exclude_ids]
             
         # 2. Redis'te veri yoksa veya yetersizse DB Fallback
-        if not base_ids:
+        # since_id hariç: Redis sayfa dolduramadıysa da DB'ye düş.
+        # feed:recent ZSET eksik olabilir (service layer bypass'lı eklenen ilanlar
+        # push_to_recent_feed_cache'i tetiklemez). Lazy refill ZSET'i tamamlar.
+        if not base_ids or (not since_id and len(base_ids) < self._RECENT_PAGE_SIZE):
             is_fallback = True
             
             uid_clause = ""
