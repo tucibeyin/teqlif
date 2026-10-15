@@ -8,4 +8,5 @@ enum EndReason {
   error,            // LiveKit/API kalıcı hata
   unreachable,      // callee push ACK gelmedi (8s) — cihaz kapalı/ulaşılamaz
   callForbidden,    // server CALL_FORBIDDEN — arama izni yok
+  remote,           // backend ended/rejected/missed — karşı taraf veya timeout bitirdi (zombie recovery)
 }
