@@ -4,7 +4,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Ekim 2026 — Cache V1.2 SWR + Repository katmanı (b2486884)
+**Son güncelleme:** Ekim 2026 — feed:recent ZSET tutarlılık kuralları (042f38bf)
 
 ---
 
@@ -25,6 +25,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 20. [HostStream MVVM Refactor + ICE Retry](#20-hoststream-mvvm-refactor--ice-retry)
 22. [Cache V1.1 — Feed Entity Store ve ID-List Mimarisi](#22-cache-v11--feed-entity-store-ve-id-list-mimarisi)
 23. [Cache V1.2 — SWR Geçişi ve Repository ADR §22 Uyumu](#23-cache-v12--swr-geçişi-ve-repository-adr-22-uyumu)
+24. [feed:recent ZSET Tutarlılık Kuralları](#24-feedrecent-zset-tutarlılık-kuralları)
 
 ---
 
@@ -1787,4 +1788,39 @@ V1.1'de yalnızca `HomeRepository` / `SearchRepository` vardı. V1.2'de 5 ViewMo
 ### Pro Tools Cache
 
 Competitor Radar (`cache_competitor_radar_listings`, `cache_radar_{id}`, `cache_velocity_{id}`) ve Talep Trendleri (`cache_demand_trends_{cat}_{subcat}`) 30dk TTL ile cache'lenir. Filtre değişiminde ilgili anahtar türetilir; `build()` içinde static `_keyFor()` helper kullanılır (state'e erişim yoktur).
+
+---
+
+## 24. feed:recent ZSET Tutarlılık Kuralları
+
+**Commit:** `41fe789e` (kısmi fallback), `042f38bf` (buffer + leak fix)  
+**Tarih:** 2026-10-15
+
+### Problem
+
+`feed:recent` Redis ZSET yalnızca `create_listing` / `update_listing` use case'lerinden besleniyordu. `toggle_listing`, `auction_commands` (BIN + accept_bid) ve doğrudan SQL ile eklenen ilanlar ZSET'i güncellemiyordu. Sonuç: ZSET'te `active` olmayan stale entry'ler birikti; `get_mixed_recent_feed` page=0'da sadece 4–6 ilan döndürdü.
+
+### Karar
+
+**ZSET'i saf active-listing indeksi olarak tut.** Her status değişimi ZSET'i güncellemeli:
+
+| Durum | Çağrılacak |
+|-------|-----------|
+| `create_listing` → active | `push_to_recent_feed_cache(listing)` |
+| `update_listing` → active | `push_to_recent_feed_cache(listing)` |
+| `update_listing` → passive/deleted | `remove_from_recent_feed_cache(id)` |
+| `toggle_listing` → active (reactivate) | `cache_listing(listing)` + `push_to_recent_feed_cache(listing)` |
+| `toggle_listing` → passive | `cleanup_listing_redis(id)` (içinde `remove_from_recent_feed_cache`) |
+| `auction BIN / accept_bid` → passive | `remove_from_recent_feed_cache(id)` |
+| `delete_listing` | `invalidate_listing(id)` (içinde `remove_from_recent_feed_cache`) |
+
+**Toggle düzeltmesi:** Daha önce reactivating'de `cleanup_listing_redis` çağrılıyordu — bu ZSET'ten çıkarıyordu. Düzeltme: `cache_listing` + `push_to_recent_feed_cache`.
+
+### Stale Entry'lere Dayanıklılık (Savunma Katmanı)
+
+Beklenmedik stale entry'lere karşı `get_mixed_recent_feed` page=0'da ZSET'ten `_RECENT_PAGE_SIZE × 5` (100) ID çeker (buffer). DB `status='active'` filtresinden sonra `_RECENT_PAGE_SIZE`'a (20) kırpar. Bu, ZSET'te azami %95 stale rate'e kadar dayanıklıdır.
+
+### Lazy Cache Refill
+
+DB fallback tetiklendiğinde (`feed:recent` eksikse veya yetersizse) bulunan active ID'ler `zadd "feed:recent"` ile ZSET'e eklenir. Bu sayede ilk API çağrısından sonra ZSET otomatik dolmaya başlar.
 
