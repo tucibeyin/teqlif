@@ -48,7 +48,9 @@ class StoryGroupsNotifier
   }
 
   Future<void> refresh() async {
-    state = const AsyncLoading();
+    // Mevcut veri varsa shimmer gösterme — sadece sessizce güncelle.
+    // İlk yüklemede (veri yoksa) normal loading davranışı korunur.
+    if (!state.hasValue) state = const AsyncLoading();
     try {
       await for (final groups in ref.read(apiServiceProvider).get<List<UserStoryGroup>>(
         url: _url,
@@ -107,7 +109,7 @@ class MyStoriesNotifier extends AutoDisposeAsyncNotifier<List<StoryItem>> {
   }
 
   Future<void> refresh() async {
-    state = const AsyncLoading();
+    if (!state.hasValue) state = const AsyncLoading();
     try {
       await for (final items in ref.read(apiServiceProvider).get<List<StoryItem>>(
         url: _url,
