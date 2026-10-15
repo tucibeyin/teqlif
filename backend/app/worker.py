@@ -2063,14 +2063,24 @@ async def cleanup_stale_streams_task(ctx: dict) -> None:
                     should_close = True
                 else:
                     # Oda var ve katılımcı var — host hâlâ orada mı?
+                    should_close = False
                     try:
-                        part_res = await svc.list_participants(
-                            ListParticipantsRequest(room=stream.room_name)
-                        )
+                        node = await orchestrator.allocate_node(ServiceType.MEDIA)
+                        async with aiohttp.ClientSession(
+                            timeout=aiohttp.ClientTimeout(total=4)
+                        ) as _sess:
+                            svc = RoomService(
+                                _sess, node["livekit_url"],
+                                settings.livekit_api_key, settings.livekit_api_secret,
+                            )
+                            part_res = await svc.list_participants(
+                                ListParticipantsRequest(room=stream.room_name)
+                            )
                         host_identity = str(stream.host_id)
                         host_present = any(p.identity == host_identity for p in part_res.participants)
                         should_close = not host_present
-                    except Exception:
+                    except Exception as _pe:
+                        logger.warning("[Worker] Host presence check failed for room=%s: %s", stream.room_name, _pe)
                         should_close = False  # API hatasında güvenli taraf: kapatma
 
                 if should_close:

@@ -26,17 +26,19 @@ async def lk_list_all_rooms() -> set[str]:
     """
     Tüm sağlıklı media node'larına ListRooms atar, oda isimlerinin union'ını döner.
     Bir node'a erişilemezse loglanır ama diğerleri sorgulanmaya devam eder.
-    Tüm node'lar başarısızsa boş set döner — çağrı kodu bunu None gibi ele almalı.
+    Hiçbir node'a erişilemediyse RuntimeError fırlatır — çağıran yer boş kümeyi
+    "aktif oda yok" olarak yorumlayıp aktif kayıtları silmesin.
     """
     nodes = await orchestrator.all_media_nodes()
     all_rooms: set[str] = set()
     reachable = 0
+    _timeout = aiohttp.ClientTimeout(total=4.0)
     for node in nodes:
         url = node.get("livekit_url", "")
         if not url:
             continue
         try:
-            async with aiohttp.ClientSession() as session:
+            async with aiohttp.ClientSession(timeout=_timeout) as session:
                 svc = RoomService(session, url, settings.livekit_api_key, settings.livekit_api_secret)
                 res = await svc.list_rooms(ListRoomsRequest())
                 all_rooms.update(r.name for r in res.rooms)
@@ -44,7 +46,10 @@ async def lk_list_all_rooms() -> set[str]:
         except Exception as exc:
             logger.warning("[LK] lk_list_all_rooms: node=%s unreachable | %s", url, exc)
 
-    logger.debug("[LK] lk_list_all_rooms: %d node(s) queried, %d rooms found", reachable, len(all_rooms))
+    if nodes and reachable == 0:
+        raise RuntimeError("[LK] Hiçbir LiveKit node'una erişilemedi — aktif kayıtlara dokunulmayacak")
+
+    logger.debug("[LK] lk_list_all_rooms: %d/%d node erişildi, %d room", reachable, len(nodes), len(all_rooms))
     return all_rooms
 
 
@@ -55,12 +60,13 @@ async def lk_list_all_rooms_with_participants() -> dict[str, int]:
     """
     nodes = await orchestrator.all_media_nodes()
     rooms: dict[str, int] = {}
+    _timeout = aiohttp.ClientTimeout(total=4.0)
     for node in nodes:
         url = node.get("livekit_url", "")
         if not url:
             continue
         try:
-            async with aiohttp.ClientSession() as session:
+            async with aiohttp.ClientSession(timeout=_timeout) as session:
                 svc = RoomService(session, url, settings.livekit_api_key, settings.livekit_api_secret)
                 res = await svc.list_rooms(ListRoomsRequest())
                 for r in res.rooms:

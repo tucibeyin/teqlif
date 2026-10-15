@@ -1,6 +1,6 @@
 # VoIP V2.1 — Bulgular ve Düzeltmeler
 
-> Commit aralığı: `3743764a` → `e9e14073`  
+> Commit aralığı: `3743764a` → `6e98ddea`  
 > Tarih: Ekim 2026  
 > Kapsam: Zombie call cleanup, multi-node LK URL sabitlenmesi, generic LK admin API
 
@@ -103,7 +103,7 @@ Tüm sağlıklı media node'larını döner. Metrik yoksa `settings.edge_livekit
 
 | Dosya | Task / Endpoint | Eski | Yeni |
 |---|---|---|---|
-| `calls.py` | `_delete_lk_room` | `allocate_node` | `lk_broadcast_delete` (+ `call.livekit_url` hint) |
+| `calls.py` | tüm LK oda silme noktaları | `_delete_lk_room` wrapper | `lk_broadcast_delete` direkt |
 | `worker.py` | `delayed_call_timeout_task` | `allocate_node` | `lk_broadcast_delete` |
 | `worker.py` | `cleanup_ghost_calls_task` list | `allocate_node` | `lk_list_all_rooms` |
 | `worker.py` | `cleanup_ghost_calls_task` delete | `allocate_node` | `lk_broadcast_delete` |
@@ -165,3 +165,5 @@ Bir VoIP call'da temizlenmesi gereken tüm state katmanları:
 | `8b0608e5` | `endAllCalls` + app resume ringing check |
 | `4fccef53` | Zombie cleanup Fix 1–4 (active doğrulama, app resume genişletme, dead peer timer, livekit_url DB) |
 | `e9e14073` | Generic multi-node LK admin API — `lk_broadcast_delete` + `lk_list_all_rooms` |
+| `6e98ddea` | `_delete_lk_room` wrapper kaldırıldı — `lk_broadcast_delete` direkt çağrı |
+| `<sonraki>` | `lk_list_all_rooms` reachable==0 guard + 4s timeout; `svc` NameError düzeltmesi |
