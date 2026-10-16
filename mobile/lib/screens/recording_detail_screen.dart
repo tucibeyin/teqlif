@@ -10,9 +10,10 @@ import '../models/replay_event.dart';
 import '../services/localization_service.dart';
 import 'viewmodels/recording_detail_view_model.dart';
 import 'recording_detail/auctions_tab.dart';
+import 'recording_detail/direct_sales_tab.dart';
+import 'recording_detail/gifts_tab.dart';
 import 'recording_detail/overview_tab.dart';
 import 'recording_detail/participants_tab.dart';
-import 'recording_detail/sales_gifts_tab.dart';
 
 class RecordingDetailScreen extends ConsumerStatefulWidget {
   final int streamId;
@@ -38,7 +39,7 @@ class _RecordingDetailScreenState extends ConsumerState<RecordingDetailScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
     _tabController.addListener(() => setState(() {}));
     _tabHintPulse = AnimationController(
       vsync: this,
@@ -212,7 +213,8 @@ class _RecordingDetailScreenState extends ConsumerState<RecordingDetailScreen>
               tabs: [
                 Tab(text: loc.t('recordingParticipantTabOverall')),
                 Tab(text: loc.t('recordingDetailAuctions')),
-                Tab(text: loc.t('recordingTabSalesGifts')),
+                Tab(text: loc.t('recordingDetailDirectSales')),
+                Tab(text: loc.t('recordingDetailGifts')),
                 Tab(text: loc.t('recordingTabParticipants')),
               ],
             ),
@@ -240,8 +242,11 @@ class _RecordingDetailScreenState extends ConsumerState<RecordingDetailScreen>
                           loc: loc,
                           durationSecs: duration,
                         ),
-                        SalesGiftsTab(
+                        DirectSalesTab(
                           directSales: s.summary!.directSales,
+                          loc: loc,
+                        ),
+                        GiftsTab(
                           gifts: s.summary!.gifts,
                           loc: loc,
                         ),
