@@ -57,6 +57,7 @@ _CONTINUOUS_REGISTRY: dict[str, int] = {
     "check_search_alerts_task":        15,
     "backfill_listing_quality_scores_task": 60,
     "cleanup_stale_streams_task":      2,
+    "retry_failed_chat_dumps_task":    30,
 }
 
 # Birleşik registry: sürekli (sabit) + batch (schedule.yaml'dan)

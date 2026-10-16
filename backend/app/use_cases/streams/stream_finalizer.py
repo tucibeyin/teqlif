@@ -1,7 +1,7 @@
 import json
 from datetime import datetime, timezone
 
-from sqlalchemy import update
+from sqlalchemy import update, delete as sa_delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
@@ -11,32 +11,37 @@ from app.models.enums import StreamStatus
 from app.constants import ws_types as WS
 from app.utils.redis_client import get_redis
 from app.core.logger import get_logger
+from app.core.logger import capture_exception
 from app.use_cases.chat.chat_utils import chat_key
 
 logger = get_logger(__name__)
 
 
-async def _dump_chat_to_db(stream: LiveStream, db: AsyncSession) -> None:
-    """Redis'teki chat geçmişini stream_chat_messages tablosuna dump eder."""
+async def dump_chat_to_db(stream_id: int, db: AsyncSession) -> bool:
+    """Redis'teki chat geçmişini stream_chat_messages tablosuna dump eder.
+
+    Returns True on success (including empty chat), False on error.
+    Idempotent: DELETE + INSERT in a single transaction.
+    """
     try:
         redis = await get_redis()
-        key = chat_key(stream.id)
+        key = chat_key(stream_id)
         raw_messages = await redis.lrange(key, 0, -1)
         if not raw_messages:
-            return
+            return True
 
         rows = []
         for raw in raw_messages:
             try:
                 msg = json.loads(raw)
             except (json.JSONDecodeError, ValueError):
-                logger.warning("[Finalizer] stream_id=%s bozuk chat JSON atlandı", stream.id)
+                logger.warning("[Finalizer] stream_id=%s bozuk chat JSON atlandı", stream_id)
                 continue
             content = (msg.get("content") or "").strip()
             if not content:
                 continue
             rows.append({
-                "stream_id":  stream.id,
+                "stream_id":  stream_id,
                 "user_id":    msg.get("user_id"),
                 "username":   msg.get("username", ""),
                 "avatar_url": msg.get("profile_image_url"),
@@ -48,15 +53,18 @@ async def _dump_chat_to_db(stream: LiveStream, db: AsyncSession) -> None:
             })
 
         if not rows:
-            return
+            return True
 
-        await db.execute(
-            pg_insert(StreamChatMessage).values(rows).on_conflict_do_nothing()
-        )
+        await db.execute(sa_delete(StreamChatMessage).where(StreamChatMessage.stream_id == stream_id))
+        await db.execute(pg_insert(StreamChatMessage).values(rows))
         await db.commit()
-        logger.info("[Finalizer] Chat dump tamamlandı | stream_id=%s mesaj=%d", stream.id, len(rows))
-    except Exception:
-        logger.error("[Finalizer] Chat dump başarısız | stream_id=%s", stream.id, exc_info=True)
+        logger.info("[Finalizer] Chat dump tamamlandı | stream_id=%s mesaj=%d", stream_id, len(rows))
+        return True
+    except Exception as exc:
+        await db.rollback()
+        logger.error("[Finalizer] Chat dump başarısız | stream_id=%s", stream_id, exc_info=True)
+        capture_exception(exc)
+        return False
 
 
 async def finalize_stream(stream: LiveStream, db: AsyncSession) -> None:
@@ -92,7 +100,7 @@ async def finalize_stream(stream: LiveStream, db: AsyncSession) -> None:
     await db.commit()
 
     # 4. Chat dump — Redis'teki mesajları DB'ye yaz
-    await _dump_chat_to_db(stream, db)
+    dump_ok = await dump_chat_to_db(stream.id, db)
 
     # 5. LiveKit room sil (idempotent — 404 sessizce geçilir)
     try:
@@ -103,7 +111,7 @@ async def finalize_stream(stream: LiveStream, db: AsyncSession) -> None:
 
     # 6. Redis temizle — Faz 8 canonical şeması: stream_id bazlı key'ler
     try:
-        await redis.delete(
+        base_keys = [
             f"live:viewers:{stream.id}",
             f"live:peak_viewers:{stream.id}",
             f"live:viewer_set:{stream.id}",
@@ -112,8 +120,10 @@ async def finalize_stream(stream: LiveStream, db: AsyncSession) -> None:
             f"live:host_reconnect:{stream.id}",
             f"stream:stats:{stream.id}",
             f"stream:likes:{stream.id}",
-            chat_key(stream.id),  # dump sonrası chat geçmişini temizle
-        )
+        ]
+        if dump_ok:
+            base_keys.append(chat_key(stream.id))
+        await redis.delete(*base_keys)
     except Exception:
         logger.error("finalize_stream: Redis temizliği başarısız | stream_id=%s", stream.id, exc_info=True)
 

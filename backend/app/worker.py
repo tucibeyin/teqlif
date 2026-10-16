@@ -527,6 +527,63 @@ async def cleanup_old_stream_chat_messages_task(ctx: dict) -> None:
         raise
 
 
+# ── Task: Başarısız Chat Dump'larını Yeniden Dene ────────────────────────────
+
+async def retry_failed_chat_dumps_task(ctx: dict) -> None:
+    """
+    Her 30 dakikada bir çalışır; finalize sırasında DB'ye yazılamayan
+    chat geçmişlerini yeniden dener.
+
+    Strateji:
+    - Son 2 saatte kapanmış (ended_at) stream'leri DB'den sorgular.
+    - Her stream için Redis'te chat key var mı kontrol eder.
+    - Key varsa → dump_ok dönene kadar yeniden yazar → başarılıysa key'i siler.
+    - 2 saatlik pencere: aynı stream maksimum 4 kez retry edilir.
+      2 saat sonra sorgu dışına düşer; Redis key 24h TTL'inde expire olur.
+    """
+    try:
+        from app.database import AsyncSessionLocal
+        from sqlalchemy import text
+        from app.use_cases.streams.stream_finalizer import dump_chat_to_db
+        from app.use_cases.chat.chat_utils import chat_key
+        from app.utils.redis_client import get_redis
+
+        redis = await get_redis()
+
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(text("""
+                SELECT id FROM live_streams
+                WHERE ended_at > NOW() - INTERVAL '2 hours'
+                  AND ended_at < NOW() - INTERVAL '5 minutes'
+            """))
+            stream_ids = [row[0] for row in result.fetchall()]
+
+        if not stream_ids:
+            await _agent_ok(ctx, "retry_failed_chat_dumps_task")
+            return
+
+        retried = 0
+        for stream_id in stream_ids:
+            key = chat_key(stream_id)
+            if not await redis.exists(key):
+                continue
+            async with AsyncSessionLocal() as db:
+                ok = await dump_chat_to_db(stream_id, db)
+            if ok:
+                await redis.delete(key)
+                retried += 1
+                logger.info("[Worker] Chat dump retry başarılı | stream_id=%s", stream_id)
+            else:
+                logger.warning("[Worker] Chat dump retry başarısız | stream_id=%s", stream_id)
+
+        logger.info("[Worker] retry_failed_chat_dumps_task tamamlandı | kontrol=%d retry=%d", len(stream_ids), retried)
+        await _agent_ok(ctx, "retry_failed_chat_dumps_task")
+    except Exception as exc:
+        logger.error("[Worker] retry_failed_chat_dumps_task başarısız | %s", str(exc), exc_info=True)
+        capture_exception(exc)
+        raise
+
+
 # ── Task: GC5 — Eski Live Streams Temizle ────────────────────────────────────
 
 async def cleanup_old_streams_task(ctx: dict) -> None:
@@ -4229,6 +4286,7 @@ class WorkerSettings:
         nsfw_backfill_task,
         rebuild_faiss_index_task,
         cleanup_stale_streams_task,
+        retry_failed_chat_dumps_task,
         auto_close_stream_if_host_absent_task,
         delayed_close_stream_task,
         delayed_call_timeout_task,
@@ -4279,6 +4337,8 @@ class WorkerSettings:
         cron(notify_new_recordings_task, hour={5, 6}, minute={0}),
         # Her gün 04:30 UTC — replay olmayan stream'lerin chat satırlarını temizle
         cron(cleanup_old_stream_chat_messages_task, hour=4, minute=30),
+        # Her 30 dakikada — finalize sırasında başarısız olan chat dump'larını yeniden dene
+        cron(retry_failed_chat_dumps_task, minute={0, 30}),
 
         # ── Batch görevler — schedule.yaml'dan okunur ─────────────────────────
         *build_cron_jobs(_SCHEDULE_FUNCTIONS),
