@@ -1231,6 +1231,7 @@ class FeedQueries:
         redis = await get_redis()
         base_ids = []
         is_fallback = False
+        print(f"[feed:debug] page={page} max_id={max_id} since_id={since_id} user_id={user_id}")
         
         # -- Backend Seen Tracker --
         seen_key = f"feed:seen:{user_id}" if user_id else None
@@ -1403,6 +1404,11 @@ class FeedQueries:
                 except Exception as exc:
                     logger.warning("[MixedRecent] Seen tracker hatası: %s", exc)
 
+        if result:
+            ids_in_result = [r["id"] for r in result]
+            print(f"[feed:debug] → count={len(result)} min_id={min(ids_in_result)} max_id_result={max(ids_in_result)} is_fallback={is_fallback}")
+        else:
+            print(f"[feed:debug] → EMPTY is_fallback={is_fallback}")
         return result
 
 
