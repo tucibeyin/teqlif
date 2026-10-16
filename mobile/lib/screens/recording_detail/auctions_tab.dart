@@ -218,7 +218,9 @@ class _PriceLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const green = Color(0xFF16A34A);
+    final green = AppColors.isDark(context)
+        ? const Color(0xFF4ADE80)
+        : const Color(0xFF16A34A);
     final finalStr = rdPrice(auction.finalPrice!, lang);
 
     if (auction.isBoughtItNow) {
