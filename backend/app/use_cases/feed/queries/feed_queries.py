@@ -1372,8 +1372,13 @@ class FeedQueries:
             interests = await self.get_user_interests(user_id)
             if interests:
                 top_cats = list(interests.keys())[:3]
+                # Cursor bozulmasını önle: interest item'ları organic aralığının içinde tut.
+                # seen_key ile tam dedup, min_id ile cursor koruma.
+                _min_organic = min(base_ids) if base_ids else 0
+                _all_excl = list(set(base_ids + (exclude_ids or [])))
                 interest_items = await self._fetch_interest_items(
-                    user_id, top_cats, base_ids, len(self._INTEREST_SLOTS), page
+                    user_id, top_cats, _all_excl, len(self._INTEREST_SLOTS),
+                    min_id=_min_organic,
                 )
                 result = self._inject_at_slots(result, interest_items, self._INTEREST_SLOTS)
 
@@ -1417,11 +1422,15 @@ class FeedQueries:
         categories: list[str],
         exclude_ids: list[int],
         count: int,
-        page: int = 0,
+        min_id: int = 0,
     ) -> list[dict]:
-        """Kullanıcının ilgi kategorilerinden, base listesinde olmayan ilanlar."""
+        """Kullanıcının ilgi kategorilerinden, gösterilmemiş ilanlar.
+
+        min_id: interest item ID'lerini organic minimum ile sınırlar — max_id
+        cursor'unu bozan düşük-ID enjeksiyonunu engeller.
+        """
         excl = f"AND l.id NOT IN ({','.join(str(i) for i in exclude_ids)})" if exclude_ids else ""
-        offset = page * count
+        min_filter = "AND l.id >= :min_id" if min_id > 0 else ""
         res = await self.uow.session.execute(
             text(f"""
                 SELECT l.id FROM listings l
@@ -1430,10 +1439,11 @@ class FeedQueries:
                   AND l.user_id != :uid
                   AND l.category = ANY(:cats)
                   {excl}
+                  {min_filter}
                 ORDER BY l.created_at DESC
-                LIMIT :lim OFFSET :off
+                LIMIT :lim
             """),
-            {"uid": user_id, "cats": categories, "lim": count, "off": offset},
+            {"uid": user_id, "cats": categories, "lim": count, "min_id": min_id},
         )
         ids = [r.id for r in res]
         if not ids:
