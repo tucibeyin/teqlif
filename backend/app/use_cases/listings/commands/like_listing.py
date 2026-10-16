@@ -50,6 +50,13 @@ class LikeListingCommand:
 
             # TODO: EventBus publish ListingLikedEvent
             await self.uow.session.flush()
+            # Stale Redis cache'i temizle; flush DB'ye yazdı ama Redis hâlâ eski sayıyı tutar.
+            try:
+                from app.utils.redis_client import get_redis
+                redis = await get_redis()
+                await redis.delete(f"listing:engagement:{listing_id}")
+            except Exception:
+                pass
             from app.services.like_service import LikeService
             counts, _ = await LikeService.batch_listing_likes(self.uow.session, [listing_id])
             count = counts.get(listing_id, 0)
