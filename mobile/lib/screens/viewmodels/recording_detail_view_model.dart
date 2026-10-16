@@ -13,6 +13,7 @@ class RecordingDetailState {
   final RecordingUrlData? urlData;
   final RecordingDetail? summary;
   final bool summaryLoading;
+  final bool summaryFailed;
   final String? urlError;
   final List<ReplayEvent> timeline;
   final bool replayEnabled;
@@ -21,6 +22,7 @@ class RecordingDetailState {
     this.urlData,
     this.summary,
     this.summaryLoading = false,
+    this.summaryFailed = false,
     this.urlError,
     this.timeline = const [],
     this.replayEnabled = false,
@@ -30,6 +32,7 @@ class RecordingDetailState {
     RecordingUrlData? urlData,
     RecordingDetail? summary,
     bool? summaryLoading,
+    bool? summaryFailed,
     String? urlError,
     bool clearUrlError = false,
     List<ReplayEvent>? timeline,
@@ -39,6 +42,7 @@ class RecordingDetailState {
       urlData: urlData ?? this.urlData,
       summary: summary ?? this.summary,
       summaryLoading: summaryLoading ?? this.summaryLoading,
+      summaryFailed: summaryFailed ?? this.summaryFailed,
       urlError: clearUrlError ? null : (urlError ?? this.urlError),
       timeline: timeline ?? this.timeline,
       replayEnabled: replayEnabled ?? this.replayEnabled,
@@ -53,7 +57,11 @@ class RecordingDetailNotifier
   @override
   FutureOr<RecordingDetailState> build(int streamId) async {
     _streamId = streamId;
-    return _loadAll();
+    final initial = await _loadAll();
+    // URL yüklendikten hemen sonra summary fetch'i başlat.
+    // Future.microtask build() döndükten sonra çalışır — state hazır.
+    Future.microtask(fetchSummary);
+    return initial;
   }
 
   Future<RecordingDetailState> _loadAll() async {
@@ -102,7 +110,7 @@ class RecordingDetailNotifier
   /// Commerce özet verisi — talep üzerine yüklenir.
   Future<void> fetchSummary() async {
     final current = state.valueOrNull ?? const RecordingDetailState();
-    if (current.summary != null) return;
+    if (current.summary != null || current.summaryLoading || current.summaryFailed) return;
 
     state = AsyncValue.data(current.copyWith(summaryLoading: true));
 
@@ -120,6 +128,7 @@ class RecordingDetailNotifier
           (state.valueOrNull ?? const RecordingDetailState()).copyWith(
             summary: value,
             summaryLoading: false,
+            summaryFailed: false,
             timeline: timeline,
             replayEnabled: replayEnabled,
           ),
@@ -128,9 +137,17 @@ class RecordingDetailNotifier
         handleError(error, ref.read(localizationProvider));
         state = AsyncValue.data(
           (state.valueOrNull ?? const RecordingDetailState())
-              .copyWith(summaryLoading: false),
+              .copyWith(summaryLoading: false, summaryFailed: true),
         );
     }
+  }
+
+  /// Başarısız summary fetch'i yeniden dener.
+  Future<void> retrySummary() async {
+    final current = state.valueOrNull ?? const RecordingDetailState();
+    if (current.summary != null) return;
+    state = AsyncValue.data(current.copyWith(summaryFailed: false));
+    await fetchSummary();
   }
 
   List<ReplayEvent> _buildTimeline(RecordingDetail detail, TranslationPack loc) => [

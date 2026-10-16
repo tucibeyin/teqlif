@@ -111,12 +111,6 @@ class _RecordingDetailScreenState
 
   Widget _buildBody(
       BuildContext context, RecordingDetailState s, TranslationPack loc) {
-    // Kick off summary fetch on first data render
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        ref.read(recordingDetailProvider(widget.streamId).notifier).fetchSummary();
-      }
-    });
 
     // Init or recover player
     if (s.urlError != null && s.urlError == 'RECORDING_EXPIRED') {
@@ -184,7 +178,33 @@ class _RecordingDetailScreenState
               child: Center(child: CircularProgressIndicator()),
             )
           else if (s.summary != null)
-            _SummarySection(detail: s.summary!, loc: loc),
+            _SummarySection(detail: s.summary!, loc: loc)
+          else if (s.summaryFailed)
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.error_outline,
+                        color: AppColors.textTertiary(context), size: 32),
+                    const SizedBox(height: 8),
+                    Text(
+                      loc.t('errorGeneric'),
+                      style: TextStyle(color: AppColors.textSecondary(context)),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    TextButton(
+                      onPressed: () => ref
+                          .read(recordingDetailProvider(widget.streamId).notifier)
+                          .retrySummary(),
+                      child: Text(loc.t('retry')),
+                    ),
+                  ],
+                ),
+              ),
+            ),
         ],
       ),
     );
