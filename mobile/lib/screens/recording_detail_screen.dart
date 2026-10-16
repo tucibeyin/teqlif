@@ -69,7 +69,7 @@ class _RecordingDetailScreenState
         allowFullScreen: true,
         allowMuting: true,
         showControls: true,
-        aspectRatio: 16 / 9,
+        aspectRatio: _vpCtrl!.value.aspectRatio,
       );
       setState(() => _playerInitialized = true);
     }).catchError((_) {
@@ -136,7 +136,9 @@ class _RecordingDetailScreenState
         children: [
           // ── Video player ──────────────────────────────────────────────
           AspectRatio(
-            aspectRatio: 16 / 9,
+            aspectRatio: _playerInitialized && _vpCtrl != null
+                ? _vpCtrl!.value.aspectRatio
+                : 16 / 9,
             child: Container(
               color: Colors.black,
               child: s.urlData == null
