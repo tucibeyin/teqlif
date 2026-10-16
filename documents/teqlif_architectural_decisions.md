@@ -4,7 +4,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Ekim 2026 — feed:recent ZSET tutarlılık kuralları (042f38bf)
+**Son güncelleme:** Ekim 2026 — Recording Detail V1.5 analitik dashboard (`d2b17e5e`)
 
 ---
 
@@ -26,6 +26,8 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 22. [Cache V1.1 — Feed Entity Store ve ID-List Mimarisi](#22-cache-v11--feed-entity-store-ve-id-list-mimarisi)
 23. [Cache V1.2 — SWR Geçişi ve Repository ADR §22 Uyumu](#23-cache-v12--swr-geçişi-ve-repository-adr-22-uyumu)
 24. [feed:recent ZSET Tutarlılık Kuralları](#24-feedrecent-zset-tutarlılık-kuralları)
+25. [Chat Dump Güvenilirliği — Kayıp Önleme](#25-chat-dump-güvenilirliği--kayıp-önleme)
+26. [Recording Detail V1.5 — Analitik Sekme Dashboard](#26-recording-detail-v15--analitik-sekme-dashboard-commit-c1e66024-d2b17e5e)
 
 ---
 
@@ -1882,4 +1884,95 @@ Son 2 saat içinde biten stream'leri DB'den sorgular, Redis'te `chat_key()` varl
 | `backend/app/use_cases/streams/stream_finalizer.py` | `dump_chat_to_db` rename + bool return + DELETE+INSERT + rollback + `capture_exception` |
 | `backend/app/worker.py` | `retry_failed_chat_dumps_task` + `WorkerSettings.functions` + cron (30 dk) |
 | `deploy/scale/V2.1/teqlif-agent/modules/watchdog.py` | `_CONTINUOUS_REGISTRY` kaydı |
+
+---
+
+## 26. Recording Detail V1.5 — Analitik Sekme Dashboard (commit `c1e66024`, `d2b17e5e`)
+
+### Problem
+
+`recording_detail_screen.dart` mevcut haliyle (1730 satır, monolitik) yalnızca video oynatıcı ve temel yayın özetini gösteriyordu. Müzayede, satış, hediye ve katılımcı verisi `GET /api/streams/{id}/recording-summary` endpoint'inden zaten geliyordu; ancak UI'da gösterilmiyordu.
+
+### Karar
+
+Backend değişikliği yapılmadan Flutter katmanında 4 sekmeli analitik dashboard oluşturuldu. Monolitik dosya SRP'ye uygun 15+ widget dosyasına bölündü.
+
+### Sekme Yapısı
+
+```
+[Özet] [Müzayedeler] [Satış & Hediye] [Katılımcılar]
+                                              ↓
+                          [Genel] [Teklif] [Alışveriş] [Hediye] [Chat]
+```
+
+Dış `TabBarView`: `NeverScrollableScrollPhysics` — iç swipe ile çakışmayı önler.  
+İç `TabBarView` (Katılımcılar): `ClampingScrollPhysics` — yatay swipe ile 5 alt sekme arasında geçiş.
+
+### Scrollable Tab Bar + Yanıp Sönen Ok
+
+Her iki tab bar da `isScrollable: true, tabAlignment: TabAlignment.start` ile yapılandırılır. Tab isimleri tam görünür; kesilme olmaz.
+
+Görünür alanın dışında sekme varken sağ kenarda `FadeTransition` + gradient + `Icons.chevron_right_rounded` yanıp söner. Son sekme seçilince kaybolur.
+
+```dart
+AnimationController _tabHintPulse = AnimationController(
+  vsync: this, duration: const Duration(milliseconds: 700))
+  ..repeat(reverse: true);
+
+bool get _hasMoreRight => controller.index < tabs.length - 1;
+```
+
+### Fiyat ve Teqliq Formatlama Kuralları
+
+**`rd_formatters.dart`** (`mobile/lib/screens/recording_detail/widgets/`) tüm recording detail bileşenlerinde kullanılan helper dosyasıdır:
+
+```dart
+String rdPrice(num amount, String lang)   // → '₺1.234,56'  (locale-aware)
+String rdTeqliq(num amount, String lang)  // → '1.234 teqliq'
+```
+
+- `toStringAsFixed()` bu ekranda kullanılmaz; her fiyat `rdPrice()`, her teqliq değeri `rdTeqliq()` üzerinden geçer.
+- Yazım kuralı: her zaman `teqliq` (küçük harf). `Teqlik`, `TQL`, `Teqliq` kullanılmaz.
+- `TeqNumberFormatter.format(amount, locale: rdLocale(lang))` binlik ayraç ve virgül/nokta tercihini locale'ye göre otomatik ayarlar.
+
+### Katılımcı Aggregation (ViewModel Katmanı)
+
+`_buildParticipants(RecordingDetail)` → `List<RecordingParticipantActivity>` ViewModel'da (`recording_detail_view_model.dart`) çalışır. View salt okuma yapar.
+
+Aggregation mantığı: `auctions[].bids`, `directSales[].orders`, `gifts.events`, `chatMessages` → userId bazında haritada biriktirilir → `monetaryTotal` azalana göre sıralanır → `RecordingDetailState.participants` olarak state'e yazılır.
+
+`RecordingParticipantActivity.timeline`: `late final` ile bir kez hesaplanır; her build'de yeniden sıralanmaz (jank önlemi).
+
+### Dosya Yapısı
+
+```
+mobile/lib/screens/recording_detail/
+  overview_tab.dart
+  auctions_tab.dart
+  sales_gifts_tab.dart
+  participants_tab.dart
+  participants/
+    overall_sub_tab.dart
+    bids_sub_tab.dart
+    shopping_sub_tab.dart
+    gifts_sub_tab.dart
+    chat_sub_tab.dart
+  widgets/
+    rd_formatters.dart        ← rdPrice / rdTeqliq / rdLocale
+    metric_grid.dart
+    activity_timeline.dart
+    price_curve_painter.dart
+    gift_bars_painter.dart
+    podium_widget.dart
+    stacked_avatars.dart
+    participant_card.dart
+    modal_sheet.dart
+```
+
+### Kural
+
+- `rd_formatters.dart` sadece bu ekrana özeldir; global util'e taşınmaz.
+- Yeni tab ya da widget eklenirken `loc` (veya `loc.lang`) parametre olarak geçirilir; `context` üzerinden `InheritedWidget` ile çekilmez.
+- `GiftBarsChart`, `ParticipantCard` gibi widget'lar `lang` parametresi alır; daha üst seviyede `loc.lang` olarak beslenir.
+- Tam plan ve tüm implementasyon detayları: `documents/stream/V1.5/01_findings.md`
 

@@ -672,3 +672,79 @@ View içindeki sıralama: Her iç sekme kendi `StatefulWidget` state'inde lokal 
 ## Bağımlılıklar
 
 Yeni dış kütüphane eklenmez. Tüm çizimler `CustomPainter` ile yapılır. Mevcut bağımlılıklar kullanılır: `cached_network_image`, `flutter_riverpod`, `chewie`, `video_player`.
+
+---
+
+## UX / Formatlama Düzeltmeleri (commit `d2b17e5e`)
+
+Commit `c1e66024` ile dağıtılan V1.5'e yapılan düzeltmeler.
+
+### Yeni Dosya: `rd_formatters.dart`
+
+`mobile/lib/screens/recording_detail/widgets/rd_formatters.dart`
+
+```dart
+String rdLocale(String lang) {
+  const map = {'tr':'tr_TR','en':'en_US','ar':'ar_SA','ru':'ru_RU','de':'de_DE'};
+  return map[lang] ?? 'tr_TR';
+}
+
+String rdPrice(num amount, String lang) =>
+    '₺${TeqNumberFormatter.format(amount, locale: rdLocale(lang))}';
+
+String rdTeqliq(num amount, String lang) =>
+    '${TeqNumberFormatter.format(amount, locale: rdLocale(lang))} teqliq';
+```
+
+**Kural:** Tüm fiyatlar `rdPrice(amount, loc.lang)`, tüm teqliq değerleri `rdTeqliq(amount, loc.lang)` ile gösterilir. `toStringAsFixed()` kullanımı yasaktır. `TeqNumberFormatter.format()` binlik ayraç ve locale desteği sağlar.
+
+### Teqliq Yazım Kuralı
+
+- Doğru: `teqliq` (küçük harf)
+- Yanlış: `Teqlik`, `TQL`, `Teqliq`, `teqlik`
+
+Tüm ekranlarda, tüm dillerde küçük harf `teqliq` kullanılır.
+
+### Scrollable Tab Bar
+
+Her iki tab bar da (`recording_detail_screen.dart` dış TabBar, `participants_tab.dart` iç TabBar) `isScrollable: true, tabAlignment: TabAlignment.start` ile yapılandırılır. Bu, uzun sekme isimlerinin kesilmesini önler; kullanıcı yatayda kaydırarak tüm sekmelere erişir.
+
+```dart
+TabBar(
+  isScrollable: true,
+  tabAlignment: TabAlignment.start,
+  ...
+)
+```
+
+### Yanıp Sönen Ok Göstergesi
+
+Görünür alanın dışında sekme bulunduğunda sağ kenarda `FadeTransition` + gradient + `Icons.chevron_right_rounded` göstergesi belirer. `AnimationController.repeat(reverse: true)` ile 700ms aralıklı yanıp söner. Son sekme seçildiğinde otomatik kaybolur.
+
+```dart
+AnimationController _tabHintPulse = AnimationController(
+  vsync: this,
+  duration: const Duration(milliseconds: 700),
+)..repeat(reverse: true);
+
+bool get _hasMoreRight => controller.index < tabs.length - 1;
+```
+
+`_TabBarWithHint` widget'ı hem `recording_detail_screen.dart` hem `participants_tab.dart`'ta kullanılır.
+
+### Etkilenen Dosyalar
+
+| Dosya | Değişiklik |
+|-------|-----------|
+| `widgets/rd_formatters.dart` | Yeni: rdLocale / rdPrice / rdTeqliq |
+| `overview_tab.dart` | rdPrice + rdTeqliq, _TopSupporterCard'a lang parametresi |
+| `auctions_tab.dart` | rdPrice (_PriceLabel, _BidRow), rd_formatters import |
+| `sales_gifts_tab.dart` | rdPrice + rdTeqliq, GiftBarsChart'a lang, _SaleModal/_GiftEventRow/_OrderRow'a loc |
+| `widgets/gift_bars_painter.dart` | rdTeqliq, GiftBarsChart/GiftBar'a lang parametresi |
+| `widgets/participant_card.dart` | rdPrice + rdTeqliq, lang parametresi eklendi |
+| `participants/overall_sub_tab.dart` | ParticipantCard'a lang: loc.lang geçirildi |
+| `participants/bids_sub_tab.dart` | rdPrice, _BidChip'e lang parametresi |
+| `participants/shopping_sub_tab.dart` | rdPrice |
+| `participants/gifts_sub_tab.dart` | rdTeqliq |
+| `recording_detail_screen.dart` | AnimationController + _TabBarWithHint |
+| `participants_tab.dart` | StatefulWidget'a dönüştürüldü, AnimationController + hint |
