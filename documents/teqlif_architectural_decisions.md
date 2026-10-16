@@ -1827,3 +1827,45 @@ Her status değişimi ZSET'i anında günceller:
 
 DB fallback tetiklendiğinde (`feed:recent` eksikse veya yetersizse) bulunan active ID'ler `zadd "feed:recent"` ile ZSET'e eklenir. Startup warm-up'tan sonra bu yol nadiren tetiklenir.
 
+---
+
+## 25. Chat Dump Güvenilirliği — Kayıp Önleme
+
+**Commit:** `14219db0`  
+**Tarih:** 2026-10-16  
+**Analiz:** `documents/backup/V1.1/01_findings.md`
+
+### Problem
+
+`finalize_stream` içinde `_dump_chat_to_db` hata durumunda `None` dönüyor, `finalize_stream` sonucu kontrol etmiyordu. Step 6'da chat key her koşulda siliniyordu. DB bağlantı hatası veya asyncpg zaman aşımında mesajlar kalıcı olarak kayboluyordu.
+
+### Karar
+
+**1. `dump_chat_to_db(stream_id, db) -> bool`**  
+`_` prefix kaldırıldı — worker da çağırıyor. `bool` döner: `True` başarı, `False` hata. Hata durumunda `db.rollback()` + `capture_exception`. Boş chat başarı sayılır.
+
+**2. İdempotency: DELETE + INSERT**  
+`stream_chat_messages` tablosunda `id BIGSERIAL` dışında unique constraint yok — `on_conflict_do_nothing` etkisiz. Aynı transaction'da önce `sa_delete`, ardından `pg_insert`. Retry her zaman temiz bir slate'e yazar. Migration gerekmez.
+
+**3. `finalize_stream` step 6 koşullu**  
+`dump_ok = await dump_chat_to_db(stream.id, db)`. Chat key yalnızca `dump_ok is True` iken silinir; diğer 8 Redis key etkilenmez. Başarısız dump 24 saatlik TTL boyunca Redis'te kalır.
+
+**4. `retry_failed_chat_dumps_task` (ARQ default worker, her 30 dk)**  
+Son 2 saat içinde biten stream'leri DB'den sorgular, Redis'te `chat_key()` varlığını kontrol eder, mevcutsa `dump_chat_to_db` çağırır. 2 saatlik pencere = maksimum 4 retry. `chat_key()` import'u string literal değil — format coupling yok.
+
+**5. Watchdog**  
+`_CONTINUOUS_REGISTRY["retry_failed_chat_dumps_task"] = 30`
+
+### Kural
+
+- `dump_chat_to_db` tek sorumluluk: sadece dump yapar, Redis key silmez, stream state değiştirmez.
+- Worker Redis key formatına değil `chat_utils.chat_key()` fonksiyonuna bağımlı.
+
+### Etkilenen Dosyalar
+
+| Dosya | Değişiklik |
+|-------|-----------|
+| `backend/app/use_cases/streams/stream_finalizer.py` | `dump_chat_to_db` rename + bool return + DELETE+INSERT + rollback + `capture_exception` |
+| `backend/app/worker.py` | `retry_failed_chat_dumps_task` + `WorkerSettings.functions` + cron (30 dk) |
+| `deploy/scale/V2.1/teqlif-agent/modules/watchdog.py` | `_CONTINUOUS_REGISTRY` kaydı |
+
