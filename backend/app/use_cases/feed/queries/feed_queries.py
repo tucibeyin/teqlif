@@ -1231,7 +1231,6 @@ class FeedQueries:
         redis = await get_redis()
         base_ids = []
         is_fallback = False
-        print(f"[feed:debug] page={page} max_id={max_id} since_id={since_id} user_id={user_id}", flush=True)
         
         # -- Backend Seen Tracker --
         seen_key = f"feed:seen:{user_id}" if user_id else None
@@ -1367,13 +1366,16 @@ class FeedQueries:
              except Exception as e:
                  logger.error(f"[FeedQueries] Lazy Cache Refill hatası: {e}")
 
-        # ── İlgi enjeksiyonu (tüm sayfalar) ──────────────────────────────────────
-        if user_id:
+        # ── İlgi enjeksiyonu (since_id=delta fetch hariç) ────────────────────────
+        # since_id: yalnızca gerçekten yeni ilanlar isteniyor; interest enjeksiyonu
+        # orada anlamsız ve eski ilanları "yeni" gibi gösteriyor.
+        if user_id and not since_id:
             interests = await self.get_user_interests(user_id)
             if interests:
                 top_cats = list(interests.keys())[:3]
-                # Cursor bozulmasını önle: interest item'ları organic aralığının içinde tut.
-                # seen_key ile tam dedup, min_id ile cursor koruma.
+                # Cursor bozulmasını önle: interest item ID'leri >= min(organic) olmalı.
+                # Aksi takdirde Flutter min(tüm ID'ler)'i max_id cursor olarak gönderir
+                # ve büyük ID aralıkları atlanır.
                 _min_organic = min(base_ids) if base_ids else 0
                 _all_excl = list(set(base_ids + (exclude_ids or [])))
                 interest_items = await self._fetch_interest_items(
@@ -1409,11 +1411,6 @@ class FeedQueries:
                 except Exception as exc:
                     logger.warning("[MixedRecent] Seen tracker hatası: %s", exc)
 
-        if result:
-            ids_in_result = [r["id"] for r in result]
-            print(f"[feed:debug] → count={len(result)} min_id={min(ids_in_result)} max_id_result={max(ids_in_result)} is_fallback={is_fallback}", flush=True)
-        else:
-            print(f"[feed:debug] → EMPTY is_fallback={is_fallback}", flush=True)
         return result
 
 
