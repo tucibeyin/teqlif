@@ -4,7 +4,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Ekim 2026 — Recording Detail V1.5 analitik dashboard (`d2b17e5e`)
+**Son güncelleme:** Ekim 2026 — Recording Detail V1.5 arama kutusu (`65101e02`)
 
 ---
 
@@ -27,7 +27,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 23. [Cache V1.2 — SWR Geçişi ve Repository ADR §22 Uyumu](#23-cache-v12--swr-geçişi-ve-repository-adr-22-uyumu)
 24. [feed:recent ZSET Tutarlılık Kuralları](#24-feedrecent-zset-tutarlılık-kuralları)
 25. [Chat Dump Güvenilirliği — Kayıp Önleme](#25-chat-dump-güvenilirliği--kayıp-önleme)
-26. [Recording Detail V1.5 — Analitik Sekme Dashboard](#26-recording-detail-v15--analitik-sekme-dashboard-commit-c1e66024-d2b17e5e)
+26. [Recording Detail V1.5 — Analitik Sekme Dashboard](#26-recording-detail-v15--analitik-sekme-dashboard-commit-c1e66024-d2b17e5e-65101e02)
 
 ---
 
@@ -1887,7 +1887,7 @@ Son 2 saat içinde biten stream'leri DB'den sorgular, Redis'te `chat_key()` varl
 
 ---
 
-## 26. Recording Detail V1.5 — Analitik Sekme Dashboard (commit `c1e66024`, `d2b17e5e`)
+## 26. Recording Detail V1.5 — Analitik Sekme Dashboard (commit `c1e66024`, `d2b17e5e`, `65101e02`)
 
 ### Problem
 
@@ -1968,6 +1968,14 @@ mobile/lib/screens/recording_detail/
     participant_card.dart
     modal_sheet.dart
 ```
+
+### Arama Kutusu (commit `65101e02`)
+
+`AuctionsTab` ve `ParticipantsTab`'a `TeqSearchField` eklendi.
+
+- `AuctionsTab`: ürün adına göre filtreler (`a.itemName.toLowerCase().contains(q)`); sort + search birleşik `_filtered` getter'da.
+- `ParticipantsTab`: kullanıcı adına göre filtreler; filtrelenmiş `p` listesi 5 alt tab'ın tamamına (`OverallSubTab`, `BidsSubTab`, `ShoppingSubTab`, `GiftsSubTab`, `ChatSubTab`) geçirilir.
+- ARB: `recordingSearchAuctions`, `recordingSearchParticipants` (5 dil).
 
 ### Kural
 
