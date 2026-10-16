@@ -114,6 +114,11 @@ class AgentDB:
         """, (job_name, now, expected_every_m, now))
         await self._db.commit()
 
+    async def get_all_job_health(self) -> list[dict]:
+        cur = await self._db.execute("SELECT * FROM job_health ORDER BY job_name")
+        rows = await cur.fetchall()
+        return [dict(r) for r in rows]
+
     async def get_stale_jobs(self) -> list[dict]:
         """Beklenen interval'den fazla geçmesine rağmen çalışmayan job'lar."""
         cur = await self._db.execute("""

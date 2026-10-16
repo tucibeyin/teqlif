@@ -3503,11 +3503,11 @@ class _FavoritesScreenState extends ConsumerState<_FavoritesScreen> {
                           if (rawUrls is List) {
                             imgs = rawUrls;
                           } else if (rawUrls is String && rawUrls.isNotEmpty) {
+                            List<dynamic>? decoded;
                             try {
-                              imgs = (jsonDecode(rawUrls) as List?) ?? [];
-                            } catch (_) {
-                              imgs = [];
-                            }
+                              decoded = jsonDecode(rawUrls) as List?;
+                            } catch (_) {}
+                            imgs = decoded ?? [];
                           } else {
                             imgs = [];
                           }

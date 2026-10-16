@@ -20,6 +20,7 @@ from modules.janitor import TTLJanitor
 from modules.healer import SelfHealer
 from modules.certs import CertWatcher
 from modules.cleaner import ScheduledCleaner
+from modules.reporter import MorningReporter
 
 __version__ = "1.1.0"
 
@@ -75,6 +76,7 @@ async def main() -> None:
         ScheduledCleaner(cfg, db),
         SelfHealer(cfg, db),
         CertWatcher(cfg, db),
+        MorningReporter(cfg, db),
     ]
 
     # Servis bazlı recording modülü keşfi
