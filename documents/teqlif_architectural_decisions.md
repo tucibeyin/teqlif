@@ -1622,6 +1622,20 @@ Kurulum: `sudo bash deploy/scale/V2.1/node5/setup/setup_recorder.sh`
 | `teqlif-livekit` | node3, node4 | `ws://127.0.0.1:7880` |
 | `teqlif-livekit-staging` | node5 | `ws://127.0.0.1:7890` |
 
+### Video PTS Kaynağı — Server-Side Monotonic Clock
+
+**Commit:** `<sonraki commit>`  
+**Sorun:** Video PTS, `event.timestamp_us` (gönderenin RTP saatinden türetilen telefon tarafı timestamp) ile hesaplanıyordu. Telefon RTP saati 90 kHz'de çalışır; microsaniyeye dönüştürme sırasında sender clock drift'i veya livekit-rtc'nin sistematik sapması PTS değerlerini sıkıştırarak kaydın gerçek zamandan daha kısa sürede oynatılmasına neden oluyordu.
+
+**Karar:** PTS her zaman `time.monotonic()` (server-side duvar saati, microsaniye) ile hesaplanır.
+
+```python
+# livekit_subscriber.py — _record_video
+ts_us = int(time.monotonic() * 1_000_000)
+```
+
+`event.timestamp_us` artık kullanılmaz. Server monotonic clock, network burst veya kısa kesinti ardından toplu gelen frame'lerde küçük PTS sıkışması yaratabilir; ancak kayıt doğruluğu (gerçek zamana yakın süre) için sender clock bağımsızlığı daha kritiktir.
+
 ---
 
 ## 20. HostStream MVVM Refactor + ICE Retry

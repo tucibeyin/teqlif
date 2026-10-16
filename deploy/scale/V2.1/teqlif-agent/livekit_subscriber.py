@@ -26,8 +26,6 @@ import sys
 import time
 from pathlib import Path
 
-import time
-
 import av
 from fractions import Fraction
 from livekit import rtc
@@ -251,7 +249,7 @@ async def _run(
                 else:
                     frame = frame.reformat(format="yuv420p")
 
-                ts_us = getattr(event, 'timestamp_us', int(time.monotonic() * 1_000_000))
+                ts_us = int(time.monotonic() * 1_000_000)
                 pkts = writer.write_video(frame, ts_us)
                 if vframe_count <= 3:
                     logger.info("VIDEO encode → %d paket (frame=%d)", pkts, vframe_count)
