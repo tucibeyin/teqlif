@@ -15,6 +15,10 @@ import telegram as tg
 logger = logging.getLogger("teqlif-agent.reporter")
 
 _REPORT_UTC_HOUR = 7   # 10:00 TR
+# Redis lock key — ilk tetikleyen gönderir; lider şartı yok.
+# nodeMonitor gibi app-dışı node'lar bu modülü yüklemese de rapor gider.
+_LOCK_KEY = "teqlif:agent:morning_report_lock"
+_LOCK_TTL = 3600   # 1 saat — aynı gün ikinci tetiklenmeyi engeller
 
 # Gece batch penceresi (01:50-06:30 UTC) — günlük job'lar
 _DAILY_BATCH_JOBS: list[str] = [
@@ -65,14 +69,25 @@ class MorningReporter:
         self._db             = db
         self._last_reported: date | None = None
 
-    async def run(self, is_leader: bool) -> None:
-        if not is_leader:
-            return
+    async def run(self, _is_leader: bool) -> None:
         now_utc = datetime.now(timezone.utc)
         today   = now_utc.date()
         if now_utc.hour != _REPORT_UTC_HOUR:
             return
         if self._last_reported == today:
+            return
+        # Redis SETNX ile distributed lock — ilk tetikleyen gönderir
+        try:
+            import aioredis
+            redis = await aioredis.from_url(self._cfg.redis_url, decode_responses=True)
+            lock_val = today.isoformat()
+            acquired = await redis.set(_LOCK_KEY, lock_val, nx=True, ex=_LOCK_TTL)
+            await redis.aclose()
+        except Exception as exc:
+            logger.debug("Reporter Redis lock alınamadı: %s", exc)
+            return
+        if not acquired:
+            self._last_reported = today  # başkası gönderdi, bu node tekrar denemesin
             return
         self._last_reported = today
         try:
