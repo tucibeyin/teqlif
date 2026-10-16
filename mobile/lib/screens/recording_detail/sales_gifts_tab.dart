@@ -31,26 +31,11 @@ class SalesGiftsTab extends StatefulWidget {
 
 class _SalesGiftsTabState extends State<SalesGiftsTab> {
   _SaleSort _saleSort = _SaleSort.newest;
-  _GiftSort _giftSort = _GiftSort.mostTeqlik;
 
   List<RecordingDirectSale> get _sortedSales {
     final list = [...widget.directSales];
     if (_saleSort == _SaleSort.mostSold) {
       list.sort((a, b) => b.soldCount.compareTo(a.soldCount));
-    }
-    return list;
-  }
-
-  List<RecordingGiftEvent> get _sortedGiftEvents {
-    final list = [...widget.gifts.events];
-    switch (_giftSort) {
-      case _GiftSort.mostTeqlik:
-        list.sort((a, b) => b.costTeqlik.compareTo(a.costTeqlik));
-      case _GiftSort.newest:
-        list.sort((a, b) {
-          if (a.sentAt == null || b.sentAt == null) return 0;
-          return b.sentAt!.compareTo(a.sentAt!);
-        });
     }
     return list;
   }
@@ -90,17 +75,19 @@ class _SalesGiftsTabState extends State<SalesGiftsTab> {
 
         // ── Hediyeler ────────────────────────────────────────────────────
         if (hasGifts) ...[
-          _SortHeader<_GiftSort>(
-            title: '${widget.loc.t("recordingDetailGifts")} (${widget.gifts.senderCount} ${widget.loc.t("giftSenderCount").replaceAll("{count}", "").trim()})',
-            current: _giftSort,
-            options: [
-              (_GiftSort.mostTeqlik, widget.loc.t('recordingSortMostGifts')),
-              (_GiftSort.newest,     widget.loc.t('recordingSortNewest')),
-            ],
-            onChanged: (v) => setState(() => _giftSort = v),
+          _GiftSummaryCard(
+            gifts: widget.gifts,
+            loc: widget.loc,
+            onTap: () => showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              backgroundColor: Colors.transparent,
+              builder: (_) => _GiftSendersModal(
+                events: widget.gifts.events,
+                loc: widget.loc,
+              ),
+            ),
           ),
-          const SizedBox(height: 10),
-          _GiftSummaryCard(gifts: widget.gifts, loc: widget.loc),
           const SizedBox(height: 12),
           Text(
             widget.loc.t('recordingGiftDistribution'),
@@ -112,16 +99,9 @@ class _SalesGiftsTabState extends State<SalesGiftsTab> {
           ),
           const SizedBox(height: 8),
           GiftBarsChart(
-            gifts: RecordingGifts(
-              totalTeqlik: widget.gifts.totalTeqlik,
-              totalHostShare: widget.gifts.totalHostShare,
-              senderCount: widget.gifts.senderCount,
-              events: _sortedGiftEvents,
-            ),
+            gifts: widget.gifts,
             lang: widget.loc.lang,
           ),
-          const SizedBox(height: 12),
-          ..._sortedGiftEvents.map((e) => _GiftEventRow(event: e, loc: widget.loc)),
         ],
       ],
     );
@@ -245,55 +225,115 @@ class _SaleCard extends StatelessWidget {
 class _GiftSummaryCard extends StatelessWidget {
   final RecordingGifts gifts;
   final TranslationPack loc;
+  final VoidCallback? onTap;
 
-  const _GiftSummaryCard({required this.gifts, required this.loc});
+  const _GiftSummaryCard({
+    required this.gifts,
+    required this.loc,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.card(context),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border(context)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF97316).withAlpha(26),
-              borderRadius: BorderRadius.circular(6),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.card(context),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.border(context)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF97316).withAlpha(26),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: const Icon(Icons.card_giftcard,
+                  color: Color(0xFFF97316), size: 22),
             ),
-            child: const Icon(Icons.card_giftcard,
-                color: Color(0xFFF97316), size: 22),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  rdTeqliq(gifts.totalTeqlik, loc.lang),
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary(context),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    rdTeqliq(gifts.totalTeqlik, loc.lang),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary(context),
+                    ),
                   ),
-                ),
-                Text(
-                  loc.t('giftSenderCount')
-                      .replaceAll('{count}', '${gifts.senderCount}'),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textSecondary(context),
+                  Text(
+                    loc.t('giftSenderCount')
+                        .replaceAll('{count}', '${gifts.senderCount}'),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondary(context),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+            if (onTap != null)
+              Icon(Icons.chevron_right, color: AppColors.textTertiary(context)),
+          ],
+        ),
       ),
+    );
+  }
+}
+
+class _GiftSendersModal extends StatefulWidget {
+  final List<RecordingGiftEvent> events;
+  final TranslationPack loc;
+
+  const _GiftSendersModal({required this.events, required this.loc});
+
+  @override
+  State<_GiftSendersModal> createState() => _GiftSendersModalState();
+}
+
+class _GiftSendersModalState extends State<_GiftSendersModal> {
+  _GiftSort _sort = _GiftSort.mostTeqlik;
+
+  List<RecordingGiftEvent> get _sorted {
+    final list = [...widget.events];
+    switch (_sort) {
+      case _GiftSort.mostTeqlik:
+        list.sort((a, b) => b.costTeqlik.compareTo(a.costTeqlik));
+      case _GiftSort.newest:
+        list.sort((a, b) {
+          if (a.sentAt == null || b.sentAt == null) return 0;
+          return b.sentAt!.compareTo(a.sentAt!);
+        });
+    }
+    return list;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return RecordingModalSheet(
+      title: widget.loc.t('recordingDetailGifts'),
+      children: [
+        _SortHeader<_GiftSort>(
+          title: widget.loc
+              .t('giftSenderCount')
+              .replaceAll('{count}', '${widget.events.length}'),
+          current: _sort,
+          options: [
+            (_GiftSort.mostTeqlik, widget.loc.t('recordingSortMostGifts')),
+            (_GiftSort.newest,     widget.loc.t('recordingSortNewest')),
+          ],
+          onChanged: (v) => setState(() => _sort = v),
+        ),
+        const SizedBox(height: 8),
+        ..._sorted.map((e) => _GiftEventRow(event: e, loc: widget.loc)),
+      ],
     );
   }
 }
