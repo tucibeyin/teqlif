@@ -225,10 +225,10 @@ class _PriceLabel extends StatelessWidget {
 
     if (auction.isBoughtItNow) {
       return Row(mainAxisSize: MainAxisSize.min, children: [
-        const Icon(Icons.flash_on, size: 13, color: green),
+        Icon(Icons.flash_on, size: 13, color: green),
         const SizedBox(width: 2),
         Text(finalStr,
-            style: const TextStyle(
+            style: TextStyle(
                 color: green, fontWeight: FontWeight.bold, fontSize: 13)),
       ]);
     }
@@ -244,16 +244,16 @@ class _PriceLabel extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 4),
-        const Icon(Icons.arrow_forward, size: 11, color: green),
+        Icon(Icons.arrow_forward, size: 11, color: green),
         const SizedBox(width: 3),
         Text(finalStr,
-            style: const TextStyle(
+            style: TextStyle(
                 color: green, fontWeight: FontWeight.bold, fontSize: 13)),
       ]);
     }
 
     return Text(finalStr,
-        style: const TextStyle(
+        style: TextStyle(
             color: green, fontWeight: FontWeight.bold, fontSize: 13));
   }
 }
