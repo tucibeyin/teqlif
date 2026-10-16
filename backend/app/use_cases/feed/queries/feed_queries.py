@@ -1342,6 +1342,11 @@ class FeedQueries:
              base_ids = [lid for lid in base_ids if lid in rows and rows[lid][0].user_id != user_id]
         else:
              base_ids = [lid for lid in base_ids if lid in rows]
+
+        # next_cursor: organik minimum ID (interest enjeksiyonundan önce).
+        # since_id delta fetch'te cursor güncellenmez (zaten en üste eklenir).
+        next_cursor: int | None = min(base_ids) if base_ids and not since_id else None
+
         counts, liked_set = await LikeService.batch_listing_likes(self.uow.session, base_ids, user_id)
 
         recent_uids = list({rows[lid][1].id for lid in base_ids if lid in rows})
@@ -1373,14 +1378,11 @@ class FeedQueries:
             interests = await self.get_user_interests(user_id)
             if interests:
                 top_cats = list(interests.keys())[:3]
-                # Cursor bozulmasını önle: interest item ID'leri >= min(organic) olmalı.
-                # Aksi takdirde Flutter min(tüm ID'ler)'i max_id cursor olarak gönderir
-                # ve büyük ID aralıkları atlanır.
-                _min_organic = min(base_ids) if base_ids else 0
+                # next_cursor = min(organic base_ids) backend'den gönderiliyor.
+                # Flutter artık kendi hesaplamıyor → min_id kısıtlaması gerekmiyor.
                 _all_excl = list(set(base_ids + (exclude_ids or [])))
                 interest_items = await self._fetch_interest_items(
                     user_id, top_cats, _all_excl, len(self._INTEREST_SLOTS),
-                    min_id=_min_organic,
                 )
                 result = self._inject_at_slots(result, interest_items, self._INTEREST_SLOTS)
 
@@ -1411,7 +1413,7 @@ class FeedQueries:
                 except Exception as exc:
                     logger.warning("[MixedRecent] Seen tracker hatası: %s", exc)
 
-        return result
+        return result, next_cursor
 
 
     async def _fetch_interest_items(self,

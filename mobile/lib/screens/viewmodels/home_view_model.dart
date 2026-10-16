@@ -177,9 +177,9 @@ class HomeViewModel extends AutoDisposeAsyncNotifier<HomeState> {
 
       final existingIds = current.recentListings.map((e) => e['id']).toSet();
       final unique      = page.listings.where((e) => !existingIds.contains(e['id'])).toList();
-      final newMinId    = unique.isNotEmpty
-          ? unique.map((e) => e['id'] as int).reduce((a, b) => a < b ? a : b)
-          : current.lastMaxId;
+      // next_cursor backend'den geliyor: organik minimum ID.
+      // Interest enjeksiyonu cursor'ı artık bozmaz.
+      final newMinId = page.minId ?? current.lastMaxId;
 
       state = AsyncValue.data(current.copyWith(
         recentListings: [...current.recentListings, ...unique],

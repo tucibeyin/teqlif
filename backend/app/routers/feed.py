@@ -100,12 +100,17 @@ async def mark_not_interested(
     await redis.expire(key, 14 * 86400)
 
 
-@router.get("/recent")
+class RecentFeedResponse(BaseModel):
+    items: list[dict]
+    next_cursor: int | None = None
+
+
+@router.get("/recent", response_model=RecentFeedResponse)
 async def get_recent_mixed_feed(
     response: Response,
     page: int = Query(default=0, ge=0, le=50),
     since_id: int | None = Query(default=None, description="Delta fetching (pull-to-refresh) için en son bilinen ID"),
-    max_id: int | None = Query(default=None, description="Eski sayfalara giderken (infinite scroll) kullanılan en küçük ID"),
+    max_id: int | None = Query(default=None, description="Eski sayfalara giderken (infinite scroll) kullanılan next_cursor değeri"),
     exclude_ids: str = Query(default=""),
     uow: SqlAlchemyUnitOfWork = Depends(get_uow),
     current_user: User | None = Depends(get_current_user_optional),
@@ -113,7 +118,9 @@ async def get_recent_mixed_feed(
     """
     Son ilanlar + ilgi enjeksiyonu (pos 5,10,15) + sponsored (page 0, pos 2,7,12).
     Misafirler: sadece son ilanlar, enjeksiyon yok.
-    exclude_ids: virgülle ayrılmış ilan ID'leri (for-you bölümünde gösterilenleri tekrar gösterme).
+    Yanıt: {items: [...], next_cursor: int|null}
+      - next_cursor: organik minimum ID; Flutter bunu bir sonraki isteğe max_id olarak gönderir.
+      - since_id yanıtında next_cursor=null (delta fetch cursor güncellemez).
     """
     response.headers["Cache-Control"] = "private, max-age=300, stale-while-revalidate=900"
     user_id = current_user.id if current_user else None
@@ -123,7 +130,10 @@ async def get_recent_mixed_feed(
             parsed_exclude = [int(x) for x in exclude_ids.split(",") if x.strip().isdigit()]
         except (ValueError, AttributeError):
             parsed_exclude = []
-    return await FeedQueries(uow).get_mixed_recent_feed(user_id, page, since_id, max_id, exclude_ids=parsed_exclude or None)
+    items, next_cursor = await FeedQueries(uow).get_mixed_recent_feed(
+        user_id, page, since_id, max_id, exclude_ids=parsed_exclude or None
+    )
+    return RecentFeedResponse(items=items, next_cursor=next_cursor)
 
 
 @router.get("/for-you")

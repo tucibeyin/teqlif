@@ -235,15 +235,14 @@ class HomeRepository {
 
   HomeFeedPage _parsePage(String body, int page) {
     final parsed = jsonDecode(body);
+    // New format: {"items": [...], "next_cursor": int|null}
     final listings = parsed is List
         ? parsed
-        : ((parsed['listings'] ?? []) as List<dynamic>);
-    final totalPages = parsed is List
-        ? (listings.length < 20 ? page : 9999)
-        : ((parsed['pagination']?['total_pages'] ?? 1) as int);
-    final minId = listings.isNotEmpty
-        ? listings.map((e) => e['id'] as int).reduce((a, b) => a < b ? a : b)
-        : null;
+        : ((parsed['items'] ?? parsed['listings'] ?? []) as List<dynamic>);
+    final totalPages = listings.length < 20 ? page : 9999;
+    // next_cursor: backend'in hesapladığı organik minimum ID.
+    // since_id yanıtında null döner (delta fetch cursor güncellemez).
+    final minId = parsed is Map ? parsed['next_cursor'] as int? : null;
     return HomeFeedPage(listings: listings, totalPages: totalPages, minId: minId);
   }
 }
