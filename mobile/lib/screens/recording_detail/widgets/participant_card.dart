@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 
 import '../../../models/recording.dart';
-import 'stacked_avatars.dart';
 import 'activity_timeline.dart';
+import 'rd_formatters.dart';
+import 'stacked_avatars.dart';
 
 class ParticipantCard extends StatelessWidget {
   final RecordingParticipantActivity participant;
   final int rank;
+  final String lang;
   final double? durationSecs;
   final VoidCallback? onTap;
 
@@ -14,6 +16,7 @@ class ParticipantCard extends StatelessWidget {
     super.key,
     required this.participant,
     required this.rank,
+    required this.lang,
     this.durationSecs,
     this.onTap,
   });
@@ -61,7 +64,7 @@ class ParticipantCard extends StatelessWidget {
                       ),
                       if (p.monetaryTotal > 0)
                         Text(
-                          '₺${p.monetaryTotal.toStringAsFixed(0)}',
+                          rdPrice(p.monetaryTotal, lang),
                           style: TextStyle(
                             fontSize: 12,
                             color: cs.primary,
@@ -124,7 +127,7 @@ class ParticipantCard extends StatelessWidget {
     if (p.gifts.isNotEmpty) {
       chips.add(_Chip(
         icon: Icons.card_giftcard_rounded,
-        label: '${p.giftTeqlik}⚡',
+        label: rdTeqliq(p.giftTeqlik, lang),
         color: const Color(0xFFE91E63),
       ));
     }

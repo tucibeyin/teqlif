@@ -32,15 +32,24 @@ class _RecordingDetailScreenState extends ConsumerState<RecordingDetailScreen>
   bool _recovering = false;
   double _replayPosSecs = 0.0;
   late final TabController _tabController;
+  late final AnimationController _tabHintPulse;
+  late final Animation<double> _tabHintFade;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    _tabController.addListener(() => setState(() {}));
+    _tabHintPulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    )..repeat(reverse: true);
+    _tabHintFade = CurvedAnimation(parent: _tabHintPulse, curve: Curves.easeInOut);
   }
 
   @override
   void dispose() {
+    _tabHintPulse.dispose();
     _tabController.dispose();
     _vpCtrl?.removeListener(_onPlayerTick);
     _chewieCtrl?.dispose();
@@ -196,15 +205,10 @@ class _RecordingDetailScreenState extends ConsumerState<RecordingDetailScreen>
         SliverPersistentHeader(
           pinned: true,
           delegate: _TabBarDelegate(
-            tabBar: TabBar(
+            child: _TabBarWithHint(
               controller: _tabController,
-              indicatorColor: kPrimary,
-              labelColor: kPrimary,
-              unselectedLabelColor: AppColors.textSecondary(context),
-              labelStyle:
-                  const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-              unselectedLabelStyle: const TextStyle(fontSize: 13),
-              indicatorSize: TabBarIndicatorSize.label,
+              hintFade: _tabHintFade,
+              surfaceColor: AppColors.surface(context),
               tabs: [
                 Tab(text: loc.t('recordingParticipantTabOverall')),
                 Tab(text: loc.t('recordingDetailAuctions')),
@@ -265,15 +269,17 @@ class _RecordingDetailScreenState extends ConsumerState<RecordingDetailScreen>
 // ── Tab bar delegate ──────────────────────────────────────────────────────────
 
 class _TabBarDelegate extends SliverPersistentHeaderDelegate {
-  final TabBar tabBar;
+  final Widget child;
   final Color color;
 
-  _TabBarDelegate({required this.tabBar, required this.color});
+  _TabBarDelegate({required this.child, required this.color});
+
+  static const double _kTabBarHeight = 46.0;
 
   @override
-  double get minExtent => tabBar.preferredSize.height + 1;
+  double get minExtent => _kTabBarHeight + 1;
   @override
-  double get maxExtent => tabBar.preferredSize.height + 1;
+  double get maxExtent => _kTabBarHeight + 1;
 
   @override
   Widget build(
@@ -281,8 +287,9 @@ class _TabBarDelegate extends SliverPersistentHeaderDelegate {
     return Container(
       color: color,
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          tabBar,
+          SizedBox(height: _kTabBarHeight, child: child),
           Divider(height: 1, color: AppColors.border(context)),
         ],
       ),
@@ -291,7 +298,79 @@ class _TabBarDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   bool shouldRebuild(_TabBarDelegate old) =>
-      old.tabBar != tabBar || old.color != color;
+      old.child != child || old.color != color;
+}
+
+// ── Scrollable tab bar with "more" hint ───────────────────────────────────────
+
+class _TabBarWithHint extends StatelessWidget {
+  final TabController controller;
+  final List<Tab> tabs;
+  final Animation<double> hintFade;
+  final Color surfaceColor;
+
+  const _TabBarWithHint({
+    required this.controller,
+    required this.tabs,
+    required this.hintFade,
+    required this.surfaceColor,
+  });
+
+  bool get _hasMoreRight => controller.index < tabs.length - 1;
+
+  @override
+  Widget build(BuildContext context) {
+    final tabBar = TabBar(
+      controller: controller,
+      isScrollable: true,
+      tabAlignment: TabAlignment.start,
+      indicatorColor: kPrimary,
+      labelColor: kPrimary,
+      unselectedLabelColor: AppColors.textSecondary(context),
+      labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+      unselectedLabelStyle: const TextStyle(fontSize: 13),
+      indicatorSize: TabBarIndicatorSize.label,
+      padding: EdgeInsets.zero,
+      tabs: tabs,
+    );
+
+    if (!_hasMoreRight) return tabBar;
+
+    return Stack(
+      children: [
+        tabBar,
+        Positioned(
+          right: 0,
+          top: 0,
+          bottom: 0,
+          child: IgnorePointer(
+            child: FadeTransition(
+              opacity: hintFade,
+              child: Container(
+                width: 48,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: [
+                      surfaceColor.withAlpha(0),
+                      surfaceColor.withAlpha(230),
+                    ],
+                  ),
+                ),
+                alignment: Alignment.center,
+                child: Icon(
+                  Icons.chevron_right_rounded,
+                  size: 20,
+                  color: AppColors.textSecondary(context),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 // ── Recovery banner ───────────────────────────────────────────────────────────

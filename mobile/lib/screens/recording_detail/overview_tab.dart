@@ -7,6 +7,7 @@ import '../../services/category_service.dart';
 import '../../services/localization_service.dart';
 import 'widgets/metric_grid.dart';
 import 'widgets/podium_widget.dart';
+import 'widgets/rd_formatters.dart';
 import 'widgets/stacked_avatars.dart';
 
 class OverviewTab extends StatelessWidget {
@@ -91,7 +92,7 @@ class OverviewTab extends StatelessWidget {
           tiles: [
             MetricTile(
               label: loc.t('recordingMetricRevenue'),
-              value: '₺${m.totalRevenue.toStringAsFixed(0)}',
+              value: rdPrice(m.totalRevenue, loc.lang),
               icon: Icons.attach_money_rounded,
               valueColor: kPrimary,
             ),
@@ -117,7 +118,7 @@ class OverviewTab extends StatelessWidget {
             ),
             MetricTile(
               label: loc.t('recordingMetricGifts'),
-              value: '${detail.gifts.totalTeqlik}⚡',
+              value: rdTeqliq(detail.gifts.totalTeqlik, loc.lang),
               icon: Icons.card_giftcard_outlined,
               valueColor: const Color(0xFFF97316),
             ),
@@ -139,6 +140,7 @@ class OverviewTab extends StatelessWidget {
           _TopSupporterCard(
             participant: participants.first,
             label: loc.t('recordingTopSupporterLabel'),
+            lang: loc.lang,
           ),
         ],
 
@@ -184,8 +186,13 @@ class OverviewTab extends StatelessWidget {
 class _TopSupporterCard extends StatelessWidget {
   final RecordingParticipantActivity participant;
   final String label;
+  final String lang;
 
-  const _TopSupporterCard({required this.participant, required this.label});
+  const _TopSupporterCard({
+    required this.participant,
+    required this.label,
+    required this.lang,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -251,7 +258,7 @@ class _TopSupporterCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '₺${p.monetaryTotal.toStringAsFixed(0)}',
+                rdPrice(p.monetaryTotal, lang),
                 style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w800,
@@ -260,7 +267,7 @@ class _TopSupporterCard extends StatelessWidget {
               ),
               if (p.giftTeqlik > 0)
                 Text(
-                  '${p.giftTeqlik}⚡',
+                  rdTeqliq(p.giftTeqlik, lang),
                   style: const TextStyle(
                     fontSize: 12,
                     color: Color(0xFFF97316),

@@ -10,7 +10,7 @@ import 'participants/gifts_sub_tab.dart';
 import 'participants/overall_sub_tab.dart';
 import 'participants/shopping_sub_tab.dart';
 
-class ParticipantsTab extends StatelessWidget {
+class ParticipantsTab extends StatefulWidget {
   final List<RecordingParticipantActivity> participants;
   final double? durationSecs;
   final TranslationPack loc;
@@ -23,8 +23,42 @@ class ParticipantsTab extends StatelessWidget {
   });
 
   @override
+  State<ParticipantsTab> createState() => _ParticipantsTabState();
+}
+
+class _ParticipantsTabState extends State<ParticipantsTab>
+    with TickerProviderStateMixin {
+  late final TabController _sub;
+  late final AnimationController _hintPulse;
+  late final Animation<double> _hintFade;
+
+  @override
+  void initState() {
+    super.initState();
+    _sub = TabController(length: 5, vsync: this);
+    _sub.addListener(() => setState(() {}));
+    _hintPulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    )..repeat(reverse: true);
+    _hintFade = CurvedAnimation(parent: _hintPulse, curve: Curves.easeInOut);
+  }
+
+  @override
+  void dispose() {
+    _hintPulse.dispose();
+    _sub.dispose();
+    super.dispose();
+  }
+
+  bool get _hasMoreRight => _sub.index < 4;
+
+  @override
   Widget build(BuildContext context) {
-    if (participants.isEmpty) {
+    final p = widget.participants;
+    final loc = widget.loc;
+
+    if (p.isEmpty) {
       return Center(
         child: Text(
           loc.t('recordingNoBuyers'),
@@ -33,7 +67,7 @@ class ParticipantsTab extends StatelessWidget {
       );
     }
 
-    final subTabLabels = [
+    final labels = [
       loc.t('recordingParticipantTabOverall'),
       loc.t('recordingParticipantTabBids'),
       loc.t('recordingParticipantTabShopping'),
@@ -41,52 +75,82 @@ class ParticipantsTab extends StatelessWidget {
       loc.t('recordingParticipantTabChat'),
     ];
 
-    return DefaultTabController(
-      length: 5,
-      child: Column(
-        children: [
-          _SubTabBar(labels: subTabLabels),
-          Expanded(
-            child: TabBarView(
-              physics: const ClampingScrollPhysics(),
-              children: [
-                OverallSubTab(
-                  participants: participants,
-                  loc: loc,
-                  durationSecs: durationSecs,
-                ),
-                BidsSubTab(participants: participants, loc: loc),
-                ShoppingSubTab(participants: participants, loc: loc),
-                GiftsSubTab(participants: participants, loc: loc),
-                ChatSubTab(participants: participants, loc: loc),
-              ],
-            ),
-          ),
-        ],
-      ),
+    final tabBar = TabBar(
+      controller: _sub,
+      isScrollable: true,
+      tabAlignment: TabAlignment.start,
+      indicatorColor: kPrimary,
+      labelColor: kPrimary,
+      unselectedLabelColor: AppColors.textSecondary(context),
+      labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+      unselectedLabelStyle: const TextStyle(fontSize: 13),
+      indicatorSize: TabBarIndicatorSize.label,
+      padding: EdgeInsets.zero,
+      tabs: labels.map((l) => Tab(text: l)).toList(),
     );
-  }
-}
 
-class _SubTabBar extends StatelessWidget {
-  final List<String> labels;
-  const _SubTabBar({required this.labels});
+    final surfaceColor = AppColors.surface(context);
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: AppColors.surface(context),
-      child: TabBar(
-        isScrollable: true,
-        tabAlignment: TabAlignment.start,
-        indicatorColor: kPrimary,
-        labelColor: kPrimary,
-        unselectedLabelColor: AppColors.textSecondary(context),
-        labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-        unselectedLabelStyle: const TextStyle(fontSize: 13),
-        indicatorSize: TabBarIndicatorSize.label,
-        tabs: labels.map((l) => Tab(text: l)).toList(),
-      ),
+    return Column(
+      children: [
+        Container(
+          color: surfaceColor,
+          height: 44,
+          child: Stack(
+            children: [
+              tabBar,
+              if (_hasMoreRight)
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  bottom: 0,
+                  child: IgnorePointer(
+                    child: FadeTransition(
+                      opacity: _hintFade,
+                      child: Container(
+                        width: 40,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                            colors: [
+                              surfaceColor.withAlpha(0),
+                              surfaceColor.withAlpha(220),
+                            ],
+                          ),
+                        ),
+                        alignment: Alignment.center,
+                        child: Icon(
+                          Icons.chevron_right_rounded,
+                          size: 18,
+                          color: AppColors.textSecondary(context),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        Divider(height: 1, color: AppColors.border(context)),
+        Expanded(
+          child: TabBarView(
+            controller: _sub,
+            physics: const ClampingScrollPhysics(),
+            children: [
+              OverallSubTab(
+                participants: p,
+                loc: loc,
+                durationSecs: widget.durationSecs,
+              ),
+              BidsSubTab(participants: p, loc: loc),
+              ShoppingSubTab(participants: p, loc: loc),
+              GiftsSubTab(participants: p, loc: loc),
+              ChatSubTab(participants: p, loc: loc),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../config/app_colors.dart';
 import '../../../models/recording.dart';
 import '../../../services/localization_service.dart';
+import '../widgets/rd_formatters.dart';
 
 class GiftsSubTab extends StatelessWidget {
   final List<RecordingParticipantActivity> participants;
@@ -110,7 +111,7 @@ class _GifterCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    '${p.giftTeqlik}⚡',
+                    rdTeqliq(p.giftTeqlik, loc.lang),
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
@@ -142,7 +143,7 @@ class _GifterCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          '${g.giftName} · ${g.costTeqlik}⚡',
+                          '${g.giftName} · ${rdTeqliq(g.costTeqlik, loc.lang)}',
                           style: const TextStyle(
                             fontSize: 11,
                             color: pink,

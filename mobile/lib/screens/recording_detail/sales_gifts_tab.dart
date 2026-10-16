@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../config/app_colors.dart';
 import '../../models/recording.dart';
+import 'widgets/rd_formatters.dart';
 import '../../services/image_cache_manager.dart';
 import '../../services/localization_service.dart';
 import '../public_profile_screen.dart';
@@ -117,9 +118,10 @@ class _SalesGiftsTabState extends State<SalesGiftsTab> {
               senderCount: widget.gifts.senderCount,
               events: _sortedGiftEvents,
             ),
+            lang: widget.loc.lang,
           ),
           const SizedBox(height: 12),
-          ..._sortedGiftEvents.map((e) => _GiftEventRow(event: e)),
+          ..._sortedGiftEvents.map((e) => _GiftEventRow(event: e, loc: widget.loc)),
         ],
       ],
     );
@@ -139,7 +141,7 @@ class _SaleCard extends StatelessWidget {
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
-        builder: (_) => _SaleModal(sale: sale),
+        builder: (_) => _SaleModal(sale: sale, loc: loc),
       ),
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
@@ -171,7 +173,7 @@ class _SaleCard extends StatelessWidget {
                     children: [
                       if (sale.price != null)
                         Text(
-                          '₺${sale.price!.toStringAsFixed(2)}',
+                          rdPrice(sale.price!, loc.lang),
                           style: const TextStyle(
                             color: Color(0xFF6366F1),
                             fontWeight: FontWeight.bold,
@@ -273,7 +275,7 @@ class _GiftSummaryCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${gifts.totalTeqlik} Teqlik',
+                  rdTeqliq(gifts.totalTeqlik, loc.lang),
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: AppColors.textPrimary(context),
@@ -298,7 +300,8 @@ class _GiftSummaryCard extends StatelessWidget {
 
 class _GiftEventRow extends StatelessWidget {
   final RecordingGiftEvent event;
-  const _GiftEventRow({required this.event});
+  final TranslationPack loc;
+  const _GiftEventRow({required this.event, required this.loc});
 
   @override
   Widget build(BuildContext context) {
@@ -341,7 +344,7 @@ class _GiftEventRow extends StatelessWidget {
               ),
             ),
             Text(
-              '${event.costTeqlik} TQL',
+              rdTeqliq(event.costTeqlik, loc.lang),
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 13,
@@ -357,14 +360,15 @@ class _GiftEventRow extends StatelessWidget {
 
 class _SaleModal extends StatelessWidget {
   final RecordingDirectSale sale;
-  const _SaleModal({required this.sale});
+  final TranslationPack loc;
+  const _SaleModal({required this.sale, required this.loc});
 
   @override
   Widget build(BuildContext context) {
     return RecordingModalSheet(
       title: sale.title,
       children: sale.orders
-          .map((o) => _OrderRow(order: o))
+          .map((o) => _OrderRow(order: o, loc: loc))
           .toList(),
     );
   }
@@ -372,7 +376,8 @@ class _SaleModal extends StatelessWidget {
 
 class _OrderRow extends StatelessWidget {
   final RecordingOrder order;
-  const _OrderRow({required this.order});
+  final TranslationPack loc;
+  const _OrderRow({required this.order, required this.loc});
 
   @override
   Widget build(BuildContext context) {
@@ -405,7 +410,7 @@ class _OrderRow extends StatelessWidget {
                   style: TextStyle(color: AppColors.textPrimary(context))),
             ),
             Text(
-              '×${order.quantity}  ₺${order.unitPrice.toStringAsFixed(2)}',
+              '×${order.quantity}  ${rdPrice(order.unitPrice, loc.lang)}',
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
             ),
           ],

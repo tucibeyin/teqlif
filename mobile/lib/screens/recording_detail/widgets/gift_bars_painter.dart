@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 
 import '../../../models/recording.dart';
+import 'rd_formatters.dart';
 
 class GiftBarsChart extends StatelessWidget {
   final RecordingGifts gifts;
   final int topN;
+  final String lang;
 
   const GiftBarsChart({
     super.key,
     required this.gifts,
     this.topN = 5,
+    this.lang = 'tr',
   });
 
   @override
@@ -33,6 +36,7 @@ class GiftBarsChart extends StatelessWidget {
                 name: e.key,
                 value: e.value,
                 maxValue: maxVal,
+                lang: lang,
               ))
           .toList(),
     );
@@ -43,11 +47,13 @@ class _GiftBar extends StatelessWidget {
   final String name;
   final int value;
   final double maxValue;
+  final String lang;
 
   const _GiftBar({
     required this.name,
     required this.value,
     required this.maxValue,
+    required this.lang,
   });
 
   @override
@@ -96,7 +102,7 @@ class _GiftBar extends StatelessWidget {
           SizedBox(
             width: 48,
             child: Text(
-              '$value⚡',
+              rdTeqliq(value, lang),
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,

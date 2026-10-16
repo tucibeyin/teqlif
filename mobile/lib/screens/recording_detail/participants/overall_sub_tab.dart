@@ -35,6 +35,7 @@ class OverallSubTab extends StatelessWidget {
       itemBuilder: (context, i) => ParticipantCard(
         participant: participants[i],
         rank: i + 1,
+        lang: loc.lang,
         durationSecs: durationSecs,
       ),
     );

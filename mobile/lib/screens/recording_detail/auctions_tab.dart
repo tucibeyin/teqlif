@@ -9,6 +9,7 @@ import '../../services/localization_service.dart';
 import '../public_profile_screen.dart';
 import 'widgets/modal_sheet.dart';
 import 'widgets/price_curve_painter.dart';
+import 'widgets/rd_formatters.dart';
 
 enum _AuctionSort { newest, highPrice, lowPrice, mostBids }
 
@@ -134,7 +135,7 @@ class _AuctionCard extends StatelessWidget {
                       Row(
                         children: [
                           if (auction.sold && auction.finalPrice != null)
-                            _PriceLabel(auction: auction)
+                            _PriceLabel(auction: auction, lang: loc.lang)
                           else
                             Text(
                               loc.t('auctionNotSold'),
@@ -212,12 +213,13 @@ class _AuctionCard extends StatelessWidget {
 
 class _PriceLabel extends StatelessWidget {
   final RecordingAuction auction;
-  const _PriceLabel({required this.auction});
+  final String lang;
+  const _PriceLabel({required this.auction, required this.lang});
 
   @override
   Widget build(BuildContext context) {
     const green = Color(0xFF16A34A);
-    final finalStr = '₺${auction.finalPrice!.toStringAsFixed(2)}';
+    final finalStr = rdPrice(auction.finalPrice!, lang);
 
     if (auction.isBoughtItNow) {
       return Row(mainAxisSize: MainAxisSize.min, children: [
@@ -232,7 +234,7 @@ class _PriceLabel extends StatelessWidget {
     if (auction.startPrice != null && auction.startPrice! < auction.finalPrice!) {
       return Row(mainAxisSize: MainAxisSize.min, children: [
         Text(
-          '₺${auction.startPrice!.toStringAsFixed(0)}',
+          rdPrice(auction.startPrice!, lang),
           style: TextStyle(
             fontSize: 11,
             color: AppColors.textTertiary(context),
@@ -279,7 +281,7 @@ class _AuctionModal extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          ...auction.bids.map((b) => _BidRow(bid: b)),
+          ...auction.bids.map((b) => _BidRow(bid: b, lang: loc.lang)),
         ],
       ],
     );
@@ -332,7 +334,8 @@ class _WinnerRow extends StatelessWidget {
 
 class _BidRow extends StatelessWidget {
   final RecordingBid bid;
-  const _BidRow({required this.bid});
+  final String lang;
+  const _BidRow({required this.bid, required this.lang});
 
   @override
   Widget build(BuildContext context) {
@@ -367,7 +370,7 @@ class _BidRow extends StatelessWidget {
               ),
             ),
             Text(
-              '₺${bid.amount.toStringAsFixed(2)}',
+              rdPrice(bid.amount, lang),
               style:
                   const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
             ),

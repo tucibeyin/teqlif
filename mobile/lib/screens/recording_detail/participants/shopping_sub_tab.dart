@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../config/app_colors.dart';
 import '../../../models/recording.dart';
 import '../../../services/localization_service.dart';
+import '../widgets/rd_formatters.dart';
 
 class ShoppingSubTab extends StatelessWidget {
   final List<RecordingParticipantActivity> participants;
@@ -109,7 +110,7 @@ class _BuyerCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    '₺${p.orderTotal.toStringAsFixed(0)}',
+                    rdPrice(p.orderTotal, loc.lang),
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
@@ -150,7 +151,7 @@ class _BuyerCard extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      '×${o.quantity} · ₺${o.unitPrice.toStringAsFixed(0)}',
+                      '×${o.quantity} · ${rdPrice(o.unitPrice, loc.lang)}',
                       style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,

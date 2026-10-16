@@ -4,6 +4,7 @@ import '../../../config/app_colors.dart';
 import '../../../config/theme.dart';
 import '../../../models/recording.dart';
 import '../../../services/localization_service.dart';
+import '../widgets/rd_formatters.dart';
 
 class BidsSubTab extends StatelessWidget {
   final List<RecordingParticipantActivity> participants;
@@ -108,7 +109,7 @@ class _BidderCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    '₺${p.bidTotal.toStringAsFixed(0)}',
+                    rdPrice(p.bidTotal, loc.lang),
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
@@ -135,6 +136,7 @@ class _BidderCard extends StatelessWidget {
                   .map((b) => _BidChip(
                         auctionName: b.auctionName,
                         amount: b.amount,
+                        lang: loc.lang,
                       ))
                   .toList(),
             ),
@@ -148,8 +150,13 @@ class _BidderCard extends StatelessWidget {
 class _BidChip extends StatelessWidget {
   final String auctionName;
   final double amount;
+  final String lang;
 
-  const _BidChip({required this.auctionName, required this.amount});
+  const _BidChip({
+    required this.auctionName,
+    required this.amount,
+    required this.lang,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -161,7 +168,7 @@ class _BidChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
-        '${auctionName.length > 12 ? "${auctionName.substring(0, 12)}…" : auctionName} · ₺${amount.toStringAsFixed(0)}',
+        '${auctionName.length > 12 ? "${auctionName.substring(0, 12)}…" : auctionName} · ${rdPrice(amount, lang)}',
         style: TextStyle(
           fontSize: 11,
           color: cs.primary,
