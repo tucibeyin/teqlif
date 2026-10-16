@@ -17,6 +17,7 @@ class RecordingDetailState {
   final String? urlError;
   final List<ReplayEvent> timeline;
   final bool replayEnabled;
+  final List<RecordingParticipantActivity> participants;
 
   const RecordingDetailState({
     this.urlData,
@@ -26,6 +27,7 @@ class RecordingDetailState {
     this.urlError,
     this.timeline = const [],
     this.replayEnabled = false,
+    this.participants = const [],
   });
 
   RecordingDetailState copyWith({
@@ -37,15 +39,17 @@ class RecordingDetailState {
     bool clearUrlError = false,
     List<ReplayEvent>? timeline,
     bool? replayEnabled,
+    List<RecordingParticipantActivity>? participants,
   }) {
     return RecordingDetailState(
-      urlData: urlData ?? this.urlData,
-      summary: summary ?? this.summary,
+      urlData:       urlData       ?? this.urlData,
+      summary:       summary       ?? this.summary,
       summaryLoading: summaryLoading ?? this.summaryLoading,
       summaryFailed: summaryFailed ?? this.summaryFailed,
-      urlError: clearUrlError ? null : (urlError ?? this.urlError),
-      timeline: timeline ?? this.timeline,
+      urlError:      clearUrlError ? null : (urlError ?? this.urlError),
+      timeline:      timeline      ?? this.timeline,
       replayEnabled: replayEnabled ?? this.replayEnabled,
+      participants:  participants  ?? this.participants,
     );
   }
 }
@@ -124,6 +128,7 @@ class RecordingDetailNotifier
         final timeline = _buildTimeline(value, loc);
         final replayEnabled = value.stream.recordingStartedAt != null &&
             timeline.isNotEmpty;
+        final participants = _buildParticipants(value);
         state = AsyncValue.data(
           (state.valueOrNull ?? const RecordingDetailState()).copyWith(
             summary: value,
@@ -131,6 +136,7 @@ class RecordingDetailNotifier
             summaryFailed: false,
             timeline: timeline,
             replayEnabled: replayEnabled,
+            participants: participants,
           ),
         );
       case Err(:final error):
@@ -148,6 +154,85 @@ class RecordingDetailNotifier
     if (current.summary != null) return;
     state = AsyncValue.data(current.copyWith(summaryFailed: false));
     await fetchSummary();
+  }
+
+  List<RecordingParticipantActivity> _buildParticipants(RecordingDetail detail) {
+    final Map<int, ({String username, String? avatarUrl})> userMeta = {};
+    final Map<int, List<ParticipantBidAction>> bids = {};
+    final Map<int, List<ParticipantOrderAction>> orders = {};
+    final Map<int, List<ParticipantGiftAction>> gifts = {};
+    final Map<int, List<ParticipantChatAction>> chats = {};
+
+    void ensureUser(int id, String username, String? avatarUrl) {
+      userMeta.putIfAbsent(id, () => (username: username, avatarUrl: avatarUrl));
+    }
+
+    for (final a in detail.auctions) {
+      for (final b in a.bids) {
+        ensureUser(b.userId, b.username, b.avatarUrl);
+        bids.putIfAbsent(b.userId, () => []).add(ParticipantBidAction(
+          auctionName: a.itemName,
+          amount: b.amount,
+          offsetSecs: b.offsetSecs,
+        ));
+      }
+    }
+
+    for (final ds in detail.directSales) {
+      for (final o in ds.orders) {
+        ensureUser(o.userId, o.username, o.avatarUrl);
+        orders.putIfAbsent(o.userId, () => []).add(ParticipantOrderAction(
+          itemName: ds.title,
+          quantity: o.quantity,
+          unitPrice: o.unitPrice,
+          offsetSecs: o.offsetSecs,
+        ));
+      }
+    }
+
+    for (final ge in detail.gifts.events) {
+      ensureUser(ge.userId, ge.username, ge.avatarUrl);
+      gifts.putIfAbsent(ge.userId, () => []).add(ParticipantGiftAction(
+        giftName: ge.giftName,
+        costTeqlik: ge.costTeqlik,
+        offsetSecs: ge.offsetSecs,
+      ));
+    }
+
+    for (final cm in detail.chatMessages) {
+      if (cm.userId == null) continue;
+      final uid = cm.userId!;
+      ensureUser(uid, cm.username, cm.avatarUrl);
+      chats.putIfAbsent(uid, () => []).add(ParticipantChatAction(
+        content: cm.content,
+        isHost: cm.isHost,
+        isMod: cm.isMod,
+        offsetSecs: cm.offsetSecs,
+      ));
+    }
+
+    final allIds = {
+      ...bids.keys,
+      ...orders.keys,
+      ...gifts.keys,
+      ...chats.keys,
+    };
+
+    final result = allIds.map((uid) {
+      final meta = userMeta[uid]!;
+      return RecordingParticipantActivity(
+        userId: uid,
+        username: meta.username,
+        avatarUrl: meta.avatarUrl,
+        bids: bids[uid] ?? [],
+        orders: orders[uid] ?? [],
+        gifts: gifts[uid] ?? [],
+        chats: chats[uid] ?? [],
+      );
+    }).toList();
+
+    result.sort((a, b) => b.monetaryTotal.compareTo(a.monetaryTotal));
+    return result;
   }
 
   List<ReplayEvent> _buildTimeline(RecordingDetail detail, TranslationPack loc) => [

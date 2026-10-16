@@ -578,6 +578,133 @@ class RecordingGifts {
       };
 }
 
+// ── Participant activity aggregate ───────────────────────────────────────────
+
+class ParticipantBidAction {
+  final String auctionName;
+  final double amount;
+  final double? offsetSecs;
+  const ParticipantBidAction({
+    required this.auctionName,
+    required this.amount,
+    this.offsetSecs,
+  });
+}
+
+class ParticipantOrderAction {
+  final String itemName;
+  final int quantity;
+  final double unitPrice;
+  final double? offsetSecs;
+  const ParticipantOrderAction({
+    required this.itemName,
+    required this.quantity,
+    required this.unitPrice,
+    this.offsetSecs,
+  });
+}
+
+class ParticipantGiftAction {
+  final String giftName;
+  final int costTeqlik;
+  final double? offsetSecs;
+  const ParticipantGiftAction({
+    required this.giftName,
+    required this.costTeqlik,
+    this.offsetSecs,
+  });
+}
+
+class ParticipantChatAction {
+  final String content;
+  final bool isHost;
+  final bool isMod;
+  final double? offsetSecs;
+  const ParticipantChatAction({
+    required this.content,
+    required this.isHost,
+    required this.isMod,
+    this.offsetSecs,
+  });
+}
+
+enum ParticipantActionType { bid, order, gift, chat }
+
+class ParticipantAnyAction {
+  final ParticipantActionType type;
+  final double? offsetSecs;
+  final String label;
+  final String? valueText;
+  const ParticipantAnyAction({
+    required this.type,
+    this.offsetSecs,
+    required this.label,
+    this.valueText,
+  });
+}
+
+class RecordingParticipantActivity {
+  final int userId;
+  final String username;
+  final String? avatarUrl;
+  final List<ParticipantBidAction> bids;
+  final List<ParticipantOrderAction> orders;
+  final List<ParticipantGiftAction> gifts;
+  final List<ParticipantChatAction> chats;
+
+  RecordingParticipantActivity({
+    required this.userId,
+    required this.username,
+    this.avatarUrl,
+    required this.bids,
+    required this.orders,
+    required this.gifts,
+    required this.chats,
+  });
+
+  double get bidTotal   => bids.fold(0.0, (s, b) => s + b.amount);
+  double get orderTotal => orders.fold(0.0, (s, o) => s + o.quantity * o.unitPrice);
+  int    get giftTeqlik => gifts.fold(0, (s, g) => s + g.costTeqlik);
+  int    get chatCount  => chats.length;
+  double get monetaryTotal => bidTotal + orderTotal;
+
+  late final List<ParticipantAnyAction> timeline = _buildTimeline();
+
+  List<ParticipantAnyAction> _buildTimeline() {
+    final items = <ParticipantAnyAction>[
+      for (final b in bids)
+        ParticipantAnyAction(
+          type: ParticipantActionType.bid,
+          offsetSecs: b.offsetSecs,
+          label: b.auctionName,
+          valueText: '₺${b.amount.toStringAsFixed(0)}',
+        ),
+      for (final o in orders)
+        ParticipantAnyAction(
+          type: ParticipantActionType.order,
+          offsetSecs: o.offsetSecs,
+          label: o.itemName,
+          valueText: '×${o.quantity} ₺${o.unitPrice.toStringAsFixed(0)}',
+        ),
+      for (final g in gifts)
+        ParticipantAnyAction(
+          type: ParticipantActionType.gift,
+          offsetSecs: g.offsetSecs,
+          label: g.giftName,
+          valueText: '${g.costTeqlik}⚡',
+        ),
+      for (final c in chats)
+        ParticipantAnyAction(
+          type: ParticipantActionType.chat,
+          offsetSecs: c.offsetSecs,
+          label: c.content,
+        ),
+    ];
+    items.sort((a, b) => (a.offsetSecs ?? 0).compareTo(b.offsetSecs ?? 0));
+    return items;
+  }
+}
+
 // ── Filter state ─────────────────────────────────────────────────────────────
 
 enum RecordingFilterStatus { all, available, preparing, expired }
