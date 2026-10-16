@@ -1,3 +1,4 @@
+import json
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
@@ -15,6 +16,13 @@ router = APIRouter(prefix="/api/favorites", tags=["favorites"])
 
 
 def _listing_dict(l: Listing, u: User, likes_count: int = 0, is_liked: bool = False) -> dict:
+    raw = l.image_urls
+    if isinstance(raw, str):
+        try:
+            raw = json.loads(raw)
+        except Exception:
+            raw = []
+    image_urls = raw if isinstance(raw, list) else []
     return {
         "id": l.id,
         "title": l.title,
@@ -23,7 +31,7 @@ def _listing_dict(l: Listing, u: User, likes_count: int = 0, is_liked: bool = Fa
         "category": l.category,
         "location": l.location,
         "image_url": l.image_url,
-        "image_urls": l.image_urls or [],
+        "image_urls": image_urls,
         "created_at": l.created_at.isoformat() if l.created_at else None,
         "status": l.status.value,
         "user": {"id": u.id, "username": u.username, "full_name": u.full_name},

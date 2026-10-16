@@ -3498,7 +3498,19 @@ class _FavoritesScreenState extends ConsumerState<_FavoritesScreen> {
                         separatorBuilder: (_, _) => const SizedBox(height: 8),
                         itemBuilder: (ctx, i) {
                           final l = filtered[i];
-                          final imgs = l['image_urls'] as List? ?? [];
+                          final dynamic rawUrls = l['image_urls'];
+                          final List<dynamic> imgs;
+                          if (rawUrls is List) {
+                            imgs = rawUrls;
+                          } else if (rawUrls is String && rawUrls.isNotEmpty) {
+                            try {
+                              imgs = (jsonDecode(rawUrls) as List?) ?? [];
+                            } catch (_) {
+                              imgs = [];
+                            }
+                          } else {
+                            imgs = [];
+                          }
                           final rawImg = imgs.isNotEmpty
                               ? imgs[0] as String
                               : l['image_url'] as String?;
