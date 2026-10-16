@@ -4618,5 +4618,7 @@
   "recordingHighestBid": "أعلى عرض",
   "recordingNoBuyers": "لا مشاركين بعد",
   "recordingTabSalesGifts": "مبيعات وهدايا",
-  "recordingTabParticipants": "المشاركون"
+  "recordingTabParticipants": "المشاركون",
+  "recordingSearchAuctions": "بحث في المزادات...",
+  "recordingSearchParticipants": "بحث في المشاركين..."
 }

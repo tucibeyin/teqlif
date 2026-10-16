@@ -4,6 +4,7 @@ import '../../config/app_colors.dart';
 import '../../config/theme.dart';
 import '../../models/recording.dart';
 import '../../services/localization_service.dart';
+import '../../widgets/teq_search_field.dart';
 import 'participants/bids_sub_tab.dart';
 import 'participants/chat_sub_tab.dart';
 import 'participants/gifts_sub_tab.dart';
@@ -31,6 +32,8 @@ class _ParticipantsTabState extends State<ParticipantsTab>
   late final TabController _sub;
   late final AnimationController _hintPulse;
   late final Animation<double> _hintFade;
+  final TextEditingController _searchCtrl = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -48,17 +51,25 @@ class _ParticipantsTabState extends State<ParticipantsTab>
   void dispose() {
     _hintPulse.dispose();
     _sub.dispose();
+    _searchCtrl.dispose();
     super.dispose();
+  }
+
+  List<RecordingParticipantActivity> get _filtered {
+    if (_searchQuery.isEmpty) return widget.participants;
+    final q = _searchQuery.toLowerCase();
+    return widget.participants
+        .where((p) => p.username.toLowerCase().contains(q))
+        .toList();
   }
 
   bool get _hasMoreRight => _sub.index < 4;
 
   @override
   Widget build(BuildContext context) {
-    final p = widget.participants;
     final loc = widget.loc;
 
-    if (p.isEmpty) {
+    if (widget.participants.isEmpty) {
       return Center(
         child: Text(
           loc.t('recordingNoBuyers'),
@@ -66,6 +77,8 @@ class _ParticipantsTabState extends State<ParticipantsTab>
         ),
       );
     }
+
+    final p = _filtered;
 
     final labels = [
       loc.t('recordingParticipantTabOverall'),
@@ -93,6 +106,14 @@ class _ParticipantsTabState extends State<ParticipantsTab>
 
     return Column(
       children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+          child: TeqSearchField(
+            hintText: loc.t('recordingSearchParticipants'),
+            controller: _searchCtrl,
+            onChanged: (v) => setState(() => _searchQuery = v.trim()),
+          ),
+        ),
         Container(
           color: surfaceColor,
           height: 44,

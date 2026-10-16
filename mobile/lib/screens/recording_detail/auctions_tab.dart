@@ -6,6 +6,7 @@ import '../../config/theme.dart';
 import '../../models/recording.dart';
 import '../../services/image_cache_manager.dart';
 import '../../services/localization_service.dart';
+import '../../widgets/teq_search_field.dart';
 import '../public_profile_screen.dart';
 import 'widgets/modal_sheet.dart';
 import 'widgets/price_curve_painter.dart';
@@ -31,8 +32,16 @@ class AuctionsTab extends StatefulWidget {
 
 class _AuctionsTabState extends State<AuctionsTab> {
   _AuctionSort _sort = _AuctionSort.newest;
+  final TextEditingController _searchCtrl = TextEditingController();
+  String _searchQuery = '';
 
-  List<RecordingAuction> get _sorted {
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  List<RecordingAuction> get _filtered {
     final list = [...widget.auctions];
     switch (_sort) {
       case _AuctionSort.highPrice:
@@ -44,7 +53,9 @@ class _AuctionsTabState extends State<AuctionsTab> {
       case _AuctionSort.newest:
         break;
     }
-    return list;
+    if (_searchQuery.isEmpty) return list;
+    final q = _searchQuery.toLowerCase();
+    return list.where((a) => a.itemName.toLowerCase().contains(q)).toList();
   }
 
   @override
@@ -58,11 +69,19 @@ class _AuctionsTabState extends State<AuctionsTab> {
       );
     }
 
+    final items = _filtered;
+
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
       children: [
+        TeqSearchField(
+          hintText: widget.loc.t('recordingSearchAuctions'),
+          controller: _searchCtrl,
+          onChanged: (v) => setState(() => _searchQuery = v.trim()),
+        ),
+        const SizedBox(height: 10),
         _SortHeader<_AuctionSort>(
-          title: '${widget.loc.t("recordingDetailAuctions")} (${widget.auctions.length})',
+          title: '${widget.loc.t("recordingDetailAuctions")} (${items.length})',
           current: _sort,
           options: [
             (_AuctionSort.newest,    widget.loc.t('recordingSortNewest')),
@@ -72,12 +91,23 @@ class _AuctionsTabState extends State<AuctionsTab> {
           ],
           onChanged: (v) => setState(() => _sort = v),
         ),
-        const SizedBox(height: 12),
-        ..._sorted.map((a) => _AuctionCard(
-              auction: a,
-              loc: widget.loc,
-              durationSecs: widget.durationSecs,
-            )),
+        const SizedBox(height: 10),
+        if (items.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 32),
+            child: Center(
+              child: Text(
+                widget.loc.t('recordingNoBuyers'),
+                style: TextStyle(color: AppColors.textSecondary(context)),
+              ),
+            ),
+          )
+        else
+          ...items.map((a) => _AuctionCard(
+                auction: a,
+                loc: widget.loc,
+                durationSecs: widget.durationSecs,
+              )),
       ],
     );
   }

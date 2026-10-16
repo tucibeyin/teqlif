@@ -4654,5 +4654,7 @@
   "recordingHighestBid": "Highest Bid",
   "recordingNoBuyers": "No participants yet",
   "recordingTabSalesGifts": "Sales & Gifts",
-  "recordingTabParticipants": "Participants"
+  "recordingTabParticipants": "Participants",
+  "recordingSearchAuctions": "Search auctions...",
+  "recordingSearchParticipants": "Search participants..."
 }

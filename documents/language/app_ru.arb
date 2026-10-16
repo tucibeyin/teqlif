@@ -4618,5 +4618,7 @@
   "recordingHighestBid": "Максимальная ставка",
   "recordingNoBuyers": "Пока нет участников",
   "recordingTabSalesGifts": "Продажи и подарки",
-  "recordingTabParticipants": "Участники"
+  "recordingTabParticipants": "Участники",
+  "recordingSearchAuctions": "Поиск аукционов...",
+  "recordingSearchParticipants": "Поиск участников..."
 }
