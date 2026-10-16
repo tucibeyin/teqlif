@@ -100,12 +100,7 @@ async def mark_not_interested(
     await redis.expire(key, 14 * 86400)
 
 
-class RecentFeedResponse(BaseModel):
-    items: list[dict]
-    next_cursor: int | None = None
-
-
-@router.get("/recent", response_model=RecentFeedResponse)
+@router.get("/recent")
 async def get_recent_mixed_feed(
     response: Response,
     page: int = Query(default=0, ge=0, le=50),
@@ -133,7 +128,7 @@ async def get_recent_mixed_feed(
     items, next_cursor = await FeedQueries(uow).get_mixed_recent_feed(
         user_id, page, since_id, max_id, exclude_ids=parsed_exclude or None
     )
-    return RecentFeedResponse(items=items, next_cursor=next_cursor)
+    return {"items": items, "next_cursor": next_cursor}
 
 
 @router.get("/for-you")
