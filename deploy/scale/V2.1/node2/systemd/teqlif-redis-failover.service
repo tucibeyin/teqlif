@@ -1,0 +1,12 @@
+[Unit]
+Description=teqlif Redis Failover — node1 erişilemezse node2'yi master'a terfi et
+After=network.target wg-quick@wg0.service teqlif-redis-replica.service
+Requires=teqlif-redis-replica.service
+
+[Service]
+Type=oneshot
+User=tucibeyin
+EnvironmentFile=/project/teqlif/config/.env.backup
+ExecStart=/var/www/teqlif.com/deploy/scale/V2.1/node2/resources/scripts/redis_failover.sh
+StandardOutput=journal
+StandardError=journal

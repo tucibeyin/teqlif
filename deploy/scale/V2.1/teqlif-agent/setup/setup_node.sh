@@ -88,22 +88,36 @@ else
     echo "    env zaten mevcut, dokunulmadı."
 fi
 
-# ── 7. Sudo kuralı (systemd kontrol) ─────────────────────────────────────────
-SUDOERS_FILE="/etc/sudoers.d/teqlif-agent"
-if [ ! -f "$SUDOERS_FILE" ]; then
-    cat > "$SUDOERS_FILE" << 'SUDOERS'
-# teqlif-agent self-healer: sadece teqlif servislerini kontrol edebilir
-teqlif-agent ALL=(ALL) NOPASSWD: \
-    /bin/systemctl start teqlif-*, \
-    /bin/systemctl restart teqlif-*, \
-    /bin/systemctl reset-failed teqlif-*, \
-    /bin/systemctl start livekit, \
-    /bin/systemctl restart livekit, \
-    /bin/systemctl reset-failed livekit
-SUDOERS
-    chmod 440 "$SUDOERS_FILE"
-    echo "    Sudoers kuralı eklendi."
-fi
+# ── 7. Polkit kuralı (systemd kontrol) ───────────────────────────────────────
+# NoNewPrivileges=true sebebiyle sudo kullanılamaz.
+# Polkit D-Bus üzerinden çalışır ve bu kısıtlamadan etkilenmez.
+POLKIT_FILE="/etc/polkit-1/rules.d/50-teqlif-agent.rules"
+mkdir -p /etc/polkit-1/rules.d
+cat > "$POLKIT_FILE" << 'POLKIT'
+// teqlif-agent self-healer: belirli systemd servislerini yönetme yetkisi
+polkit.addRule(function(action, subject) {
+    var MANAGE = [
+        "org.freedesktop.systemd1.manage-units",
+        "org.freedesktop.systemd1.reload-or-restart-unit",
+    ];
+    var UNITS = [
+        /^teqlif([-.]|$)/,
+        /^postgresql@17-main\.service$/,
+        /^clickhouse-server\.service$/,
+        /^haproxy\.service$/,
+        /^stalwart-mail\.service$/,
+        /^livekit([-.]|$)/,
+    ];
+    if (MANAGE.indexOf(action.id) === -1) return;
+    if (subject.user !== "teqlif-agent")  return;
+    var unit = action.lookup("unit") || "";
+    for (var i = 0; i < UNITS.length; i++) {
+        if (UNITS[i].test(unit)) return polkit.Result.YES;
+    }
+});
+POLKIT
+chmod 644 "$POLKIT_FILE"
+echo "    Polkit kuralı eklendi: $POLKIT_FILE"
 
 # ── 8. Systemd servis ─────────────────────────────────────────────────────────
 install -m 644 "$REPO_AGENT_DIR/setup/teqlif-agent.service" \

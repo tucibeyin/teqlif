@@ -1,0 +1,10 @@
+[Unit]
+Description=teqlif Redis Failover — her 10 saniyede kontrol
+
+[Timer]
+OnActiveSec=30
+OnUnitActiveSec=10s
+AccuracySec=1s
+
+[Install]
+WantedBy=timers.target

@@ -1,6 +1,7 @@
 #!/bin/bash
-# bootstrap_node2.sh — teqlif V2.1 Backup+Monitoring+ClickHouse (OVH Saarbrücken DE, 10.10.0.2)
-# Bare metal HDD RAID-1 | ClickHouse + Prometheus + Grafana + Loki + Alertmanager + Backup
+# bootstrap_node2.sh — teqlif V2.1 Backup+ClickHouse+Redis-HA (OVH Saarbrücken DE, 10.10.0.2)
+# Bare metal HDD RAID-1 | ClickHouse + Backup + Redis Replica + Failover
+# NOT: Prometheus/Grafana/Loki/Alertmanager nodeMonitor'da (10.10.0.99) — burada kurulmaz.
 
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -42,22 +43,15 @@ main() {
     install_pg_client
     install_clickhouse
     setup_clickhouse   "${NODE_DIR}"
-    install_prometheus
-    setup_prometheus   "${NODE_DIR}"
-    install_grafana
-    install_loki
-    setup_loki         "${NODE_DIR}"
-    install_alertmanager
-    setup_alertmanager "${NODE_DIR}"
     setup_backup_services "${NODE_DIR}"
     install_promtail
     setup_promtail "${NODE_DIR}" "${NODE_ID}"
     install_node_exporter
+    setup_redis_failover "${NODE_DIR}"
 
     if [ -n "${SECRETS_FILE:-}" ]; then
         apply_secrets "${SECRETS_FILE}" \
-            /project/teqlif/config /etc/wireguard /etc/clickhouse-server \
-            /etc/prometheus
+            /project/teqlif/config /etc/wireguard /etc/clickhouse-server
     fi
 
     print_summary "${NODE_ID}" "${WG_IP}" \
@@ -66,8 +60,8 @@ main() {
         "node1'de replication user ve slot oluştur (plan §3.2)" \
         "systemctl start teqlif-pg-receivewal" \
         "systemctl start clickhouse-server" \
-        "systemctl start prometheus loki prometheus-alertmanager grafana-server" \
-        "Backup timer'larını etkinleştir: systemctl enable --now teqlif-*.timer"
+        "Backup timer'larını etkinleştir: systemctl enable --now teqlif-*.timer" \
+        "Redis failover aktif: systemctl status teqlif-redis-failover.timer"
 }
 
 setup_backup_directories() {
@@ -133,59 +127,16 @@ setup_clickhouse() {
     log_ok "ClickHouse config kopyalandı"
 }
 
-install_prometheus() {
-    log_step "Prometheus"
-    install_grafana_repo
-    apt-get install -y -qq prometheus
-    log_ok "Prometheus kuruldu"
-}
-
-setup_prometheus() {
+setup_redis_failover() {
     local node_dir="${1}"
-    log_step "Prometheus config"
-    cp "${node_dir}/resources/prometheus/prometheus.yml" /etc/prometheus/prometheus.yml
-    cp "${node_dir}/resources/prometheus/alert_rules.yml" /etc/prometheus/alert_rules.yml
-    systemctl enable --now prometheus
-    log_ok "Prometheus aktif"
-}
-
-install_grafana() {
-    log_step "Grafana"
-    install_grafana_repo
-    apt-get install -y -qq grafana
-    systemctl enable --now grafana-server
-    log_ok "Grafana aktif (http://10.10.0.2:3000)"
-}
-
-install_loki() {
-    log_step "Loki"
-    install_grafana_repo
-    apt-get install -y -qq loki
-    log_ok "Loki kuruldu"
-}
-
-setup_loki() {
-    local node_dir="${1}"
-    log_step "Loki config"
-    mkdir -p /var/lib/loki/{chunks,rules,compactor,index}
-    cp "${node_dir}/resources/loki/config.yml" /etc/loki/config.yml
-    systemctl enable --now loki
-    log_ok "Loki aktif"
-}
-
-install_alertmanager() {
-    log_step "Alertmanager"
-    install_grafana_repo
-    apt-get install -y -qq prometheus-alertmanager
-    log_ok "Alertmanager kuruldu"
-}
-
-setup_alertmanager() {
-    local node_dir="${1}"
-    log_step "Alertmanager config"
-    cp "${node_dir}/resources/alertmanager/alertmanager.yml" /etc/prometheus/alertmanager.yml
-    systemctl enable prometheus-alertmanager
-    log_ok "prometheus-alertmanager enable edildi"
+    log_step "Redis failover timer"
+    chmod +x "${node_dir}/resources/scripts/redis_failover.sh"
+    cp "${node_dir}/systemd/teqlif-redis-failover.service" /etc/systemd/system/
+    cp "${node_dir}/systemd/teqlif-redis-failover.timer"   /etc/systemd/system/
+    mkdir -p /var/lib/teqlif-redis-failover
+    systemctl daemon-reload
+    systemctl enable --now teqlif-redis-failover.timer
+    log_ok "Redis failover timer aktif (her 10s)"
 }
 
 setup_backup_services() {
