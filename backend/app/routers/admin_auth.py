@@ -60,7 +60,7 @@ async def verify_password(
     if not user:
         raise NotFoundException("Admin kullanıcısı veritabanında bulunamadı.")
 
-    access_token = create_access_token(user_id=user.id)
+    access_token = create_access_token(user_id=user.id, token_version=user.token_version)
     return {
         "access_token": access_token,
         "token_type": "bearer",
