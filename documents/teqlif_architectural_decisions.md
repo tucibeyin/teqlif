@@ -4,7 +4,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Ekim 2026 — Healer polkit + Redis failover + node2 monitoring temizliği (`62c29222`)
+**Son güncelleme:** Ekim 2026 — Stream Recording V1.6: dinamik encode parallelism + nice -n 19 (`14e8bd1b`)
 
 ---
 
@@ -30,6 +30,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 26. [Recording Detail V1.5 — Analitik Sekme Dashboard](#26-recording-detail-v15--analitik-sekme-dashboard-commit-c1e66024-d2b17e5e-65101e02)
 27. [teqlif-agent Bug Düzeltmeleri — Healer + Watchdog](#27-teqlif-agent-bug-düzeltmeleri--healer--watchdog-commit-afeaf889)
 28. [Healer Polkit + Redis Failover + node2 Monitoring Temizliği](#28-healer-polkit--redis-failover--node2-monitoring-temizliği-commit-62c29222)
+29. [Stream Recording V1.6 — Dinamik Encode Parallelism](#29-stream-recording-v16--dinamik-encode-parallelism-commit-14e8bd1b)
 
 ---
 
@@ -2072,4 +2073,39 @@ Canonical monitoring host: **nodeMonitor (10.10.0.99)**. node2'de sadece Promtai
 | `deploy/scale/V2.1/node2/systemd/teqlif-redis-failover.service` | Yeni |
 | `deploy/scale/V2.1/node2/systemd/teqlif-redis-failover.timer` | Yeni — 10s interval |
 | `deploy/scale/V2.1/scripts/bootstrap_node2.sh` | Monitoring stack kaldırıldı, redis_failover eklendi |
+
+---
+
+## 29. Stream Recording V1.6 — Dinamik Encode Parallelism (commit `14e8bd1b`)
+
+### Sorun
+
+`EncoderManager._MAX_PARALLEL = 1` sabitti. Bakım penceresinde sıra birikiyordu; aktif yayın olmadığında CPU boşta bekletiliyordu. Ayrıca aktif kayıt durumu her 60 saniyede PostgreSQL'e TCP sorgusu atılarak öğreniliyordu.
+
+### Karar
+
+**`_resolve_max_parallel(rec_cfg)`** metodu eklendi:
+
+| Durum | N |
+|-------|---|
+| Aktif kayıt var (`len(recording_procs) > 0`) | 1 |
+| Disk acil (`< disk_emergency_gb`) | 4 |
+| Bakım penceresi (`transfer_window_start_utc` – `transfer_window_end_utc`) | 4 |
+| Normal atıl | 2 |
+
+**PostgreSQL anti-pattern kaldırıldı:** `RecordingManager._procs` sözlüğünün referansı `agent.py`'de dependency injection ile `EncoderManager`'a geçirildi. Aktif kayıt sayısı `len(self._recording_procs)` ile sıfır ağ gecikmesiyle okunuyor.
+
+**`nice -n 19`:** FFmpeg komutu `["nice", "-n", "19", "ffmpeg", ...]` biçimine getirildi. N=1 senaryosunda Linux scheduler encoding'i LiveKit SFU'nun arkasına iterek CPU rekabetini engeller.
+
+### Disk Emergency Önceliği
+
+Aktif kayıt kontrolü disk emergency kontrolünden önce gelir. Aktif yayın varken disk acilse N=1 korunur — N=4 VP8 subscriber'ın CPU'sunu çalar ve kaydı bozar. Yayın bittikten sonra bir sonraki döngüde N=4 tetiklenir.
+
+### Etkilenen Dosyalar
+
+| Dosya | Değişiklik |
+|-------|-----------|
+| `deploy/scale/V2.1/teqlif-agent/modules/encoder.py` | `_MAX_PARALLEL` kaldırıldı, `_resolve_max_parallel` + `nice -n 19` eklendi |
+| `deploy/scale/V2.1/teqlif-agent/agent.py` | `recording_procs=rec_mgr._procs` dependency injection |
+| `documents/stream/V1.6/01_findings.md` | Mimari analiz belgesi oluşturuldu |
 
