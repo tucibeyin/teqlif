@@ -774,7 +774,7 @@
   "walletDetailGoGiftReceiver": "Alıcı Profili",
   "walletDetailGoGiftStream": "Yayın Analizine Git",
   "walletComingSoonLabel": "teqlik Satın Alma Yakında!",
-  "walletComingSoonDesc": "Ödeme altyapımız hazırlanıyor. Şu an tüm kullanıcılara 100 teqlik başlangıç bakiyesi tanımlandı.",
+  "walletComingSoonDesc": "Ödeme altyapımız hazırlanıyor. Şu an tüm kullanıcılara 500 teqlik başlangıç bakiyesi tanımlandı.",
   "walletBuyBtn": "teqlik Satın Alma Yakında",
   "reportLoading": "Yayın analizi hazırlanıyor…",
   "reportLoadFailed": "Rapor yüklenemedi.",

@@ -774,7 +774,7 @@
   "walletDetailGoGiftReceiver": "Recipient Profile",
   "walletDetailGoGiftStream": "Go to Stream Analytics",
   "walletComingSoonLabel": "teqlik Purchase Coming Soon!",
-  "walletComingSoonDesc": "Our payment infrastructure is being prepared. All users currently start with 100 teqlik balance.",
+  "walletComingSoonDesc": "Our payment infrastructure is being prepared. All users currently start with 500 teqlik balance.",
   "walletBuyBtn": "teqlik Purchase Coming Soon",
   "reportLoading": "Preparing stream analysis…",
   "reportLoadFailed": "Could not load report.",

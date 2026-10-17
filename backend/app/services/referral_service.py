@@ -4,7 +4,7 @@ Referral (Davet) Motoru — iş mantığı katmanı.
 Sorumluluklar:
   - Benzersiz referral_code üretimi
   - Davet kodu uygulaması (apply_referral)
-  - teqlik ödül transferi (referrer +50, referred +10)
+  - teqlik ödül transferi (referrer +50, referred +50)
 """
 import random
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,7 +23,7 @@ _SAFE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 _CODE_LEN = 7
 
 REFERRER_BONUS = 50   # davet eden
-REFERRED_BONUS = 10   # davet edilen
+REFERRED_BONUS = 50   # davet edilen
 
 
 from datetime import datetime, timedelta, timezone
