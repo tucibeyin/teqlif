@@ -88,8 +88,14 @@ class AgentDB:
 
     # ── Job Health ────────────────────────────────────────────────────────────
 
-    async def mark_ok(self, job_name: str, expected_every_m: int = 60) -> None:
+    async def mark_ok(
+        self,
+        job_name: str,
+        expected_every_m: int = 60,
+        last_ok_at: str | None = None,
+    ) -> None:
         now = _now()
+        ok_time = last_ok_at or now
         await self._db.execute("""
             INSERT INTO job_health (job_name, last_ok_at, fail_count, expected_every_m, updated_at)
             VALUES (?, ?, 0, ?, ?)
@@ -98,7 +104,7 @@ class AgentDB:
                 fail_count       = 0,
                 expected_every_m = excluded.expected_every_m,
                 updated_at       = excluded.updated_at
-        """, (job_name, now, expected_every_m, now))
+        """, (job_name, ok_time, expected_every_m, now))
         await self._db.commit()
 
     async def mark_fail(self, job_name: str, expected_every_m: int = 60) -> None:

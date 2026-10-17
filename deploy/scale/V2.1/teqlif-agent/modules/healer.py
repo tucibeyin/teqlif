@@ -20,19 +20,23 @@ logger = logging.getLogger("teqlif-agent.healer")
 
 _HEAL_COOLDOWN = 10 * 60   # saniye
 
-# teqlif ve bağımlı servislerin öncelik sırası
+# teqlif ve bağımlı servislerin öncelik sırası.
+# Her node yalnızca kendi üzerinde kurulu servisleri izler;
+# kurulu olmayan servisler _get_active_state → LoadState=not-found → None → atlanır.
 _SERVICES_TO_WATCH = [
-    "teqlif-app",
-    "teqlif-worker-default",
-    "teqlif-worker-critical",
-    "teqlif-ai-proxy",
-    "livekit",
-    "postgresql",
-    "redis-server",
-    "minio",
-    "clickhouse-server",
-    "haproxy",
-    "stalwart-mail",
+    "teqlif.service",
+    "teqlif-worker.service",
+    "teqlif-worker-critical.service",
+    "teqlif-ai-proxy.service",
+    "teqlif-livekit.service",
+    "teqlif-staging.service",
+    "teqlif-redis-core.service",
+    "teqlif-redis-replica.service",
+    "teqlif-minio.service",
+    "postgresql@17-main.service",
+    "clickhouse-server.service",
+    "haproxy.service",
+    "stalwart-mail.service",
 ]
 
 
@@ -83,17 +87,22 @@ class SelfHealer:
 
 
 async def _get_active_state(svc: str) -> str | None:
+    """None → bu node'da kurulu değil veya okunamadı."""
     try:
         proc = await asyncio.create_subprocess_exec(
-            "systemctl", "show", svc, "--property=ActiveState",
+            "systemctl", "show", svc, "--property=LoadState,ActiveState",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.DEVNULL,
         )
         out, _ = await proc.communicate()
-        line = out.decode().strip()
-        if not line or "not-found" in line:
+        props: dict[str, str] = {}
+        for line in out.decode().splitlines():
+            if "=" in line:
+                k, v = line.split("=", 1)
+                props[k.strip()] = v.strip()
+        if props.get("LoadState") == "not-found":
             return None
-        return line.split("=", 1)[-1].strip()
+        return props.get("ActiveState")
     except Exception:
         return None
 

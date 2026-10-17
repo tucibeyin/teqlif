@@ -94,8 +94,7 @@ class JobWatchdog:
 
         for job_name, ts in data.items():
             expected = _JOB_REGISTRY.get(job_name, 60)
-            await self._db.mark_ok(job_name, expected_every_m=expected)
-            # Eğer yeni job varsa registry'e ekle
+            await self._db.mark_ok(job_name, last_ok_at=ts, expected_every_m=expected)
             if job_name not in _JOB_REGISTRY:
                 logger.debug("Yeni job tespit edildi: %s", job_name)
 
