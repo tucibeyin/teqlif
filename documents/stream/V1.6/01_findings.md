@@ -200,11 +200,12 @@ Saat tabanlı kısıtlama atıl dönemleri yakalayamaz. Doğru ölçüt, **bu no
 
 ### Karar Matrisi
 
-| Durum | `_MAX_PARALLEL` | Gerekçe |
-|-------|----------------|---------|
-| Aktif kayıt var (`status='recording'` bu node'da) | **1** | SFU + subscriber VP8 encode zaten CPU kullanıyor; 1 post-encode ≈ 1 core, risk minimumdur |
+| Durum | N | Gerekçe |
+|-------|---|---------|
+| Aktif kayıt var | **1** | SFU + subscriber VP8 encode zaten CPU kullanıyor; 1 post-encode ≈ 1 core, risk minimumdur |
 | Aktif kayıt yok, normal saat | **2** | Atıl CPU değerlendirilir; birikme önlenir; SFU hiç çalışmıyor |
 | Aktif kayıt yok + bakım penceresi (02:00–05:00 UTC) | **4** | Node gerçekten boş; kalan kuyruk hızla temizlenir |
+| Disk acil (< `disk_emergency_gb`) | **4** | Disk baskısı pencere kısıtını aşar; raw MKV hızla küçültülür |
 
 ### Uygulama Mantığı
 
@@ -325,7 +326,7 @@ teqlif-agent (her 60s)
 
 | Kaynak | `nice 19` etkisi | Durum |
 |--------|-----------------|-------|
-| CPU cycles | Linux scheduler FFmpeg'i LiveKit SFU'nun arkasına iter | `encoder.py` ffmpeg komutuna `nice -n 19` ön eki eklenecek |
+| CPU cycles | Linux scheduler FFmpeg'i LiveKit SFU'nun arkasına iter | ✅ `encoder.py` ffmpeg komutuna `nice -n 19` eklendi (`14e8bd1b`) |
 | Disk I/O | ionice ile G/Ç önceliği düşer | node2 backup servislerine uygulandı; node3/4 encoding'e uygulanmadı |
 | Bellek bant genişliği | Etkilemez | H.264 encode bellek yoğun, risk devam eder |
 | L3 cache | Etkilemez | Cache thrashing riski devam eder |
