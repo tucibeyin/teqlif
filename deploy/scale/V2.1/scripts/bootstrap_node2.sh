@@ -134,6 +134,7 @@ setup_redis_failover() {
     cp "${node_dir}/systemd/teqlif-redis-failover.service" /etc/systemd/system/
     cp "${node_dir}/systemd/teqlif-redis-failover.timer"   /etc/systemd/system/
     mkdir -p /var/lib/teqlif-redis-failover
+    chown tucibeyin:tucibeyin /var/lib/teqlif-redis-failover
     systemctl daemon-reload
     systemctl enable --now teqlif-redis-failover.timer
     log_ok "Redis failover timer aktif (her 10s)"
