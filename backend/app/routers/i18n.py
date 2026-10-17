@@ -36,7 +36,7 @@ async def get_language_pack(
     if lang not in _SUPPORTED_LANGS:
         raise BadRequestException(code="UNSUPPORTED_LANGUAGE")
 
-    response.headers["Cache-Control"] = "public, max-age=3600, stale-while-revalidate=86400"
+    response.headers["Cache-Control"] = "public, max-age=300, stale-while-revalidate=60"
     redis = await get_redis()
     cached = await redis.get(_cache_key(lang))
     if cached:
