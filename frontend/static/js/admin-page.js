@@ -98,8 +98,8 @@ async function loadDashboard() {
     document.getElementById('kpiListings').textContent = d.active_listings.toLocaleString('tr-TR');
     document.getElementById('kpiStreams').textContent = d.active_streams.toLocaleString('tr-TR');
     document.getElementById('kpiReports').textContent = d.pending_reports.toLocaleString('tr-TR');
-    document.getElementById('kpiTuci').textContent = d.total_tuci_circulation.toLocaleString('tr-TR') + ' T';
-    document.getElementById('kpiTuciSpent').textContent = d.today_tuci_spent.toLocaleString('tr-TR') + ' T';
+    document.getElementById('kpiTuci').textContent = (d.total_teqlik_circulation ?? 0).toLocaleString('tr-TR') + ' T';
+    document.getElementById('kpiTuciSpent').textContent = (d.today_teqlik_spent ?? 0).toLocaleString('tr-TR') + ' T';
 
     // Growth bar chart
     const growth = d.user_growth_7d || [];
