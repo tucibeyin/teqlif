@@ -4,7 +4,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Ekim 2026 — Recording Detail V1.5 arama kutusu (`65101e02`)
+**Son güncelleme:** Ekim 2026 — teqlif-agent Bug A+B düzeltmeleri (`afeaf889`)
 
 ---
 
@@ -28,6 +28,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 24. [feed:recent ZSET Tutarlılık Kuralları](#24-feedrecent-zset-tutarlılık-kuralları)
 25. [Chat Dump Güvenilirliği — Kayıp Önleme](#25-chat-dump-güvenilirliği--kayıp-önleme)
 26. [Recording Detail V1.5 — Analitik Sekme Dashboard](#26-recording-detail-v15--analitik-sekme-dashboard-commit-c1e66024-d2b17e5e-65101e02)
+27. [teqlif-agent Bug Düzeltmeleri — Healer + Watchdog](#27-teqlif-agent-bug-düzeltmeleri--healer--watchdog-commit-afeaf889)
 
 ---
 
@@ -1983,4 +1984,41 @@ mobile/lib/screens/recording_detail/
 - Yeni tab ya da widget eklenirken `loc` (veya `loc.lang`) parametre olarak geçirilir; `context` üzerinden `InheritedWidget` ile çekilmez.
 - `GiftBarsChart`, `ParticipantCard` gibi widget'lar `lang` parametresi alır; daha üst seviyede `loc.lang` olarak beslenir.
 - Tam plan ve tüm implementasyon detayları: `documents/stream/V1.5/01_findings.md`
+
+---
+
+## 27. teqlif-agent Bug Düzeltmeleri — Healer + Watchdog (commit `afeaf889`)
+
+### Bug A — Healer: Hatalı Servis Adları + `systemctl show` Davranışı
+
+**Problem:**  
+`_SERVICES_TO_WATCH` listesinde 6 hatalı unit adı vardı (`teqlif-app`, `teqlif-livekit-sfu`, `redis`, `postgres` vb.).  
+`_get_active_state` yalnızca `ActiveState` property'sini okuyordu; ancak `systemctl show` kurulu olmayan servisler için `ActiveState=inactive` döndürür — "not-found" **asla** `ActiveState`'de görünmez.  
+Bu nedenle healer tüm bilinmeyen servisleri "bu node'da kurulu değil" sanarak sessizce atlıyordu.
+
+**Düzeltme (`healer.py`):**
+- `_SERVICES_TO_WATCH` gerçek systemd unit adlarıyla güncellendi.
+- `_get_active_state` artık `--property=LoadState,ActiveState` ile her iki property'yi okur; `LoadState=not-found` kontrolüyle kurulu olmayan servisler atlanır, `ActiveState=inactive` false-negative vermez.
+
+### Bug B — Watchdog: Redis Timestamp Göz Ardı Ediliyordu
+
+**Problem:**  
+`_sync_from_redis` Redis'ten `hgetall("teqlif:agent:job_ok")` ile `{job_name: iso_timestamp}` çekiyordu; ancak `mark_ok(job_name, expected_every_m=expected)` çağrısında `ts` iletilmiyordu. `AgentDB.mark_ok` içinde `_now()` kullanıldığından `last_ok_at` her zaman agent'ın okuma anına yazılıyordu; gerçek iş bitim zamanı kayboluyordu.
+
+**Düzeltme (`watchdog.py` + `db.py`):**
+- `mark_ok` çağrısına `last_ok_at=ts` eklendi.
+- `AgentDB.mark_ok` imzasına `last_ok_at: str | None = None` parametresi eklendi; `ok_time = last_ok_at or now` mantığıyla Redis'ten gelen gerçek zaman kullanılıyor.
+
+### Kural
+
+- `systemctl show` ile servis varlığı sorgularken mutlaka `--property=LoadState,ActiveState` çift çekilmeli; `LoadState=not-found` kontrolü yapılmalıdır.
+- ARQ worker'ların yazdığı `HSET teqlif:agent:job_ok <name> <ts>` değerindeki timestamp, agent'a iletilmeli; `_now()` fallback olarak kalır (Redis boş ise).
+
+### Etkilenen Dosyalar
+
+| Dosya | Değişiklik |
+|-------|-----------|
+| `deploy/scale/V2.1/teqlif-agent/modules/healer.py` | `_SERVICES_TO_WATCH` düzeltildi, `_get_active_state` LoadState kontrolü eklendi |
+| `deploy/scale/V2.1/teqlif-agent/modules/watchdog.py` | `mark_ok` çağrısına `last_ok_at=ts` eklendi |
+| `deploy/scale/V2.1/teqlif-agent/db.py` | `mark_ok` imzasına `last_ok_at: str | None = None` parametresi eklendi |
 
