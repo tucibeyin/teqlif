@@ -1,6 +1,17 @@
 import json
 from datetime import datetime, timezone
 
+
+def _parse_dt(val) -> datetime:
+    if isinstance(val, datetime):
+        return val
+    if val:
+        try:
+            return datetime.fromisoformat(val)
+        except (ValueError, TypeError):
+            pass
+    return datetime.now(timezone.utc)
+
 from sqlalchemy import update, delete as sa_delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -49,7 +60,7 @@ async def dump_chat_to_db(stream_id: int, db: AsyncSession) -> bool:
                 "is_host":    msg.get("is_host", False),
                 "is_mod":     msg.get("is_mod", False),
                 "is_hidden":  msg.get("is_hidden", False),
-                "created_at": msg.get("created_at"),
+                "created_at": _parse_dt(msg.get("created_at")),
             })
 
         if not rows:

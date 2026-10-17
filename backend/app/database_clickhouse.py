@@ -516,15 +516,15 @@ async def flush_all_buffers() -> None:
                     int(r[2]),                                        # stream_id
                     int(r[3]),                                        # host_id
                     int(r[4]),                                        # user_id
-                    int(r[5]) if r[5] is not None else None,          # order_id
-                    int(r[6]) if r[6] is not None else None,          # listing_id
+                    int(r[5]) if r[5] is not None else 0,             # order_id
+                    int(r[6]) if r[6] is not None else 0,             # listing_id
                     str(r[7]) if r[7] else None,                      # category
-                    int(r[8]) if r[8] is not None else None,          # quantity
-                    float(r[9]) if r[9] is not None else None,        # unit_price
-                    float(r[10]) if r[10] is not None else None,      # total_price
-                    int(r[11]) if r[11] is not None else None,        # remaining_stock_before
-                    int(r[12]) if r[12] is not None else None,        # remaining_stock_after
-                    int(r[13]) if r[13] is not None else None,        # viewer_count
+                    int(r[8]) if r[8] is not None else 0,             # quantity
+                    float(r[9]) if r[9] is not None else 0.0,         # unit_price
+                    float(r[10]) if r[10] is not None else 0.0,       # total_price
+                    int(r[11]) if r[11] is not None else 0,           # remaining_stock_before
+                    int(r[12]) if r[12] is not None else 0,           # remaining_stock_after
+                    int(r[13]) if r[13] is not None else 0,           # viewer_count
                     str(r[14]) if r[14] else None,                    # end_reason
                     bool(r[15]) if r[15] is not None else None,       # orders_voided
                     _parse_dt(r[16]),                                  # created_at

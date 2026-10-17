@@ -1323,7 +1323,7 @@ class FeedQueries:
                  base_ids.reverse() # Arayüze en yeniden eskiye dönsün diye
 
             if not base_ids:
-                return []
+                return [], None
                 
         # 3. İlan datalarını DB'den (veya data cache'den) al
         rows_result = await self.uow.session.execute(
