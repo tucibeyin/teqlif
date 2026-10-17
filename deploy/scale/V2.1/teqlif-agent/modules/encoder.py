@@ -29,17 +29,39 @@ logger = logging.getLogger("teqlif-agent.encoder")
 
 _ENCODE_CRF      = 23
 _ENCODE_PRESET   = "veryfast"
-_MAX_PARALLEL    = 1   # aynı anda en fazla 1 encode (CPU koruma)
 
 
 class EncoderManager:
-    def __init__(self, cfg: AgentConfig, db: AgentDB, service_name: str) -> None:
-        self._cfg         = cfg
-        self._db          = db
-        self._svc         = service_name
-        self._encoding:   set[int] = set()    # aktif encode job'ları
-        self._transferring: set[int] = set()  # aktif transfer job'ları
+    def __init__(
+        self,
+        cfg: AgentConfig,
+        db: AgentDB,
+        service_name: str,
+        recording_procs: dict,
+    ) -> None:
+        self._cfg               = cfg
+        self._db                = db
+        self._svc               = service_name
+        self._recording_procs   = recording_procs   # RecordingManager._procs referansı
+        self._encoding:   set[int] = set()
+        self._transferring: set[int] = set()
         self._mc_ready    = False
+
+    def _resolve_max_parallel(self, rec_cfg: dict) -> int:
+        if len(self._recording_procs) > 0:
+            return 1                        # canlı yayın var — CPU koru
+
+        enc_dir = Path(rec_cfg.get("encoded_dir", "/data/recordings/encoded"))
+        if _free_gb(enc_dir) < float(rec_cfg.get("disk_emergency_gb", 10)):
+            return 4                        # disk acil — hızla küçült
+
+        now_h = datetime.now(timezone.utc).hour
+        start = int(rec_cfg.get("transfer_window_start_utc", 2))
+        end   = int(rec_cfg.get("transfer_window_end_utc",   5))
+        if start <= now_h < end:
+            return 4                        # bakım penceresi — kuyruğu bitir
+
+        return 2                            # normal atıl
 
     async def run(self, is_leader: bool) -> None:
         svc_cfg = self._cfg.recording_config_for(self._svc)
@@ -59,13 +81,14 @@ class EncoderManager:
             await self._setup_mc_alias(svc_cfg)
             self._mc_ready = True
 
-        await self._run_encodes(dsn, svc_cfg)
+        await self._run_encodes(dsn, svc_cfg, rec_cfg)
         await self._run_transfers(dsn, svc_cfg, rec_cfg)
 
     # ── Encode ───────────────────────────────────────────────────────────────
 
-    async def _run_encodes(self, dsn: str, svc_cfg: dict) -> None:
-        if len(self._encoding) >= _MAX_PARALLEL:
+    async def _run_encodes(self, dsn: str, svc_cfg: dict, rec_cfg: dict) -> None:
+        max_p = self._resolve_max_parallel(rec_cfg)
+        if len(self._encoding) >= max_p:
             return
         try:
             import asyncpg
@@ -75,7 +98,7 @@ class EncoderManager:
                    WHERE status = 'encoding' AND recording_node = $1
                    ORDER BY encoding_started_at ASC
                    LIMIT $2""",
-                self._cfg.node_id, _MAX_PARALLEL - len(self._encoding),
+                self._cfg.node_id, max_p - len(self._encoding),
             )
             await conn.close()
         except Exception as exc:
@@ -99,6 +122,7 @@ class EncoderManager:
             enc_path = enc_dir / (raw.stem + ".mp4")
 
             cmd = [
+                "nice", "-n", "19",
                 "ffmpeg", "-hide_banner", "-loglevel", "warning",
                 "-i", str(raw),
                 "-vf", "scale=-2:720",

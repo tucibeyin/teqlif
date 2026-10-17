@@ -85,8 +85,10 @@ async def main() -> None:
         from modules.recorder import RecordingManager
         from modules.encoder import EncoderManager
         for svc in rec_services:
-            modules.append(RecordingManager(cfg, db, svc))
-            modules.append(EncoderManager(cfg, db, svc))
+            rec_mgr = RecordingManager(cfg, db, svc)
+            enc_mgr = EncoderManager(cfg, db, svc, recording_procs=rec_mgr._procs)
+            modules.append(rec_mgr)
+            modules.append(enc_mgr)
             logger.info("Recording modülleri yüklendi: %s", svc)
 
     # Temiz kapanış
