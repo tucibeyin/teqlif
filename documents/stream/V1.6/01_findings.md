@@ -236,13 +236,14 @@ def __init__(
 **_resolve_max_parallel** — DB'ye gitmeden in-memory okuma:
 
 ```python
-def _resolve_max_parallel(self, rec_cfg: dict) -> int:
+def _resolve_max_parallel(self, rec_cfg: dict, svc_cfg: dict | None = None) -> int:
     active = len(self._recording_procs)
     if active > 0:
         return 1                        # canlı yayın var → CPU koru
 
     # Disk acil: encode penceresi ve parallelism kısıtı kalkar
-    enc_dir = Path(rec_cfg.get("encoded_dir", "/data/recordings/encoded"))
+    enc_dir_str = (svc_cfg.get("encoded_dir") if svc_cfg else None) or rec_cfg.get("encoded_dir", "/var/recordings/encoded")
+    enc_dir = Path(enc_dir_str)
     if _free_gb(enc_dir) < float(rec_cfg.get("disk_emergency_gb", 10)):
         return 4
 
@@ -255,7 +256,7 @@ def _resolve_max_parallel(self, rec_cfg: dict) -> int:
     return 2                            # normal atıl → arka planda işle
 ```
 
-`_run_encodes()` başında `_MAX_PARALLEL` sabit değeri yerine `self._resolve_max_parallel(rec_cfg)` çağrılır. Sıfır ağ gecikmesi, DB bağlantısı yok.
+`_run_encodes()` başında `_MAX_PARALLEL` sabit değeri yerine `self._resolve_max_parallel(rec_cfg, svc_cfg)` çağrılır. Sıfır ağ gecikmesi, DB bağlantısı yok.
 
 Transfer penceresi için `_can_transfer_now()` ayrı çalışır — aynı `disk_emergency_gb` eşiğini kontrol eder ancak encode parallelism'den bağımsızdır.
 

@@ -47,11 +47,12 @@ class EncoderManager:
         self._transferring: set[int] = set()
         self._mc_ready    = False
 
-    def _resolve_max_parallel(self, rec_cfg: dict) -> int:
+    def _resolve_max_parallel(self, rec_cfg: dict, svc_cfg: dict | None = None) -> int:
         if len(self._recording_procs) > 0:
             return 1                        # canlı yayın var — CPU koru
 
-        enc_dir = Path(rec_cfg.get("encoded_dir", "/data/recordings/encoded"))
+        enc_dir_str = (svc_cfg.get("encoded_dir") if svc_cfg else None) or rec_cfg.get("encoded_dir", "/var/recordings/encoded")
+        enc_dir = Path(enc_dir_str)
         if _free_gb(enc_dir) < float(rec_cfg.get("disk_emergency_gb", 10)):
             return 4                        # disk acil — hızla küçült
 
@@ -87,7 +88,7 @@ class EncoderManager:
     # ── Encode ───────────────────────────────────────────────────────────────
 
     async def _run_encodes(self, dsn: str, svc_cfg: dict, rec_cfg: dict) -> None:
-        max_p = self._resolve_max_parallel(rec_cfg)
+        max_p = self._resolve_max_parallel(rec_cfg, svc_cfg)
         if len(self._encoding) >= max_p:
             return
         try:
