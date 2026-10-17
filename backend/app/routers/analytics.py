@@ -417,13 +417,13 @@ async def get_seller_report(
             avg_budget = float(row[1]) if row[1] else None
             hesitation_count = int(row[2] or 0)
 
-            # feed_analytics: swipe feed görüntülemeleri (listing_id String olarak saklanır)
+            # feed_analytics: swipe feed görüntülemeleri (listing_id UInt32)
             feed_result = await ch.query(f"""
                 SELECT
                     count()                AS total_impressions,
                     countDistinct(user_id) AS swipe_reach
                 FROM feed_analytics
-                WHERE toUInt64OrZero(listing_id) IN ({ids_str})
+                WHERE listing_id IN ({ids_str})
                   AND event_type = 'impression'
                   AND timestamp BETWEEN '{ts_start}' AND '{ts_end}'
             """)
@@ -440,7 +440,7 @@ async def get_seller_report(
                       AND user_id IS NOT NULL
                     UNION ALL
                     SELECT user_id AS uid FROM feed_analytics
-                    WHERE toUInt64OrZero(listing_id) IN ({ids_str})
+                    WHERE listing_id IN ({ids_str})
                       AND event_type = 'impression'
                       AND timestamp BETWEEN '{ts_start}' AND '{ts_end}'
                       AND user_id IS NOT NULL AND user_id != ''
