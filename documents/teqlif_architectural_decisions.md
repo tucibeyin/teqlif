@@ -4,7 +4,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Ekim 2026 — teqlif-agent Bug A+B düzeltmeleri (`afeaf889`)
+**Son güncelleme:** Ekim 2026 — Healer polkit + Redis failover + node2 monitoring temizliği (`62c29222`)
 
 ---
 
@@ -29,6 +29,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 25. [Chat Dump Güvenilirliği — Kayıp Önleme](#25-chat-dump-güvenilirliği--kayıp-önleme)
 26. [Recording Detail V1.5 — Analitik Sekme Dashboard](#26-recording-detail-v15--analitik-sekme-dashboard-commit-c1e66024-d2b17e5e-65101e02)
 27. [teqlif-agent Bug Düzeltmeleri — Healer + Watchdog](#27-teqlif-agent-bug-düzeltmeleri--healer--watchdog-commit-afeaf889)
+28. [Healer Polkit + Redis Failover + node2 Monitoring Temizliği](#28-healer-polkit--redis-failover--node2-monitoring-temizliği-commit-62c29222)
 
 ---
 
@@ -2021,4 +2022,54 @@ Bu nedenle healer tüm bilinmeyen servisleri "bu node'da kurulu değil" sanarak 
 | `deploy/scale/V2.1/teqlif-agent/modules/healer.py` | `_SERVICES_TO_WATCH` düzeltildi, `_get_active_state` LoadState kontrolü eklendi |
 | `deploy/scale/V2.1/teqlif-agent/modules/watchdog.py` | `mark_ok` çağrısına `last_ok_at=ts` eklendi |
 | `deploy/scale/V2.1/teqlif-agent/db.py` | `mark_ok` imzasına `last_ok_at: str | None = None` parametresi eklendi |
+
+---
+
+## 28. Healer Polkit + Redis Failover + node2 Monitoring Temizliği (commit `62c29222`)
+
+### Healer Yetki — Polkit Kuralı
+
+**Problem:**
+`healer.py` bare `systemctl start/reset-failed` çağırıyor ancak `teqlif-agent` kullanıcısı yetkisiz. Servis dosyasında `NoNewPrivileges=true` olduğundan `sudo` da çalışmıyor. Sudoers kuralı yazılmıştı ama kod hiç `sudo` çağırmıyordu — kural kullanılmıyordu. Ayrıca `postgresql@17-main`, `clickhouse-server`, `haproxy`, `stalwart-mail` sudoers kapsamı dışındaydı.
+
+**Karar:**
+`sudo` yerine Polkit kuralı. `systemctl` D-Bus üzerinden polkit'e başvurur; `NoNewPrivileges=true` bunu engellemez. Kod değişmeden (bare `systemctl`) çalışır.
+
+`setup_node.sh` artık `/etc/polkit-1/rules.d/50-teqlif-agent.rules` oluşturuyor:
+- Kapsam: `teqlif-*`, `postgresql@17-main.service`, `clickhouse-server.service`, `haproxy.service`, `stalwart-mail.service`, `livekit-*`
+- Eylemler: `manage-units`, `reload-or-restart-unit`
+
+### Redis Failover
+
+**Problem:** Dokümantasyonda "redis-failover.timer her 10s çalışır" yazıyordu ama dosya hiç yoktu.
+
+**Implementasyon (`node2/resources/scripts/redis_failover.sh`):**
+- Her 10s `10.10.0.1:6379`'a PING atar
+- 3 ardışık başarısızlık → `REPLICAOF NO ONE` (promote)
+- `promoted_flag` dosyası çift-promote'u önler
+- Telegram bildirimi gönderir
+- Failback: `REPLICAOF 10.10.0.1 6379` + flag sil
+
+**Timer:** `OnActiveSec=30`, `OnUnitActiveSec=10s`, `AccuracySec=1s`
+
+### node2 Monitoring Temizliği
+
+`bootstrap_node2.sh`'dan Prometheus/Grafana/Loki/Alertmanager kurulumu kaldırıldı.
+Canonical monitoring host: **nodeMonitor (10.10.0.99)**. node2'de sadece Promtail + node_exporter kalır (veri gönderici rol).
+
+### Kural
+
+- `teqlif-agent` kullanıcısına systemd yetkisi her zaman polkit ile verilir, sudoers ile değil.
+- `NoNewPrivileges=true` servislerde `sudo` çalışmaz; polkit ve D-Bus çalışır.
+- Her node'da monitoring stack çalıştırılmaz — sadece Promtail + node_exporter (veri toplama).
+
+### Etkilenen Dosyalar
+
+| Dosya | Değişiklik |
+|-------|-----------|
+| `deploy/scale/V2.1/teqlif-agent/setup/setup_node.sh` | Sudoers → polkit kuralı |
+| `deploy/scale/V2.1/node2/resources/scripts/redis_failover.sh` | Yeni — failover scripti |
+| `deploy/scale/V2.1/node2/systemd/teqlif-redis-failover.service` | Yeni |
+| `deploy/scale/V2.1/node2/systemd/teqlif-redis-failover.timer` | Yeni — 10s interval |
+| `deploy/scale/V2.1/scripts/bootstrap_node2.sh` | Monitoring stack kaldırıldı, redis_failover eklendi |
 
