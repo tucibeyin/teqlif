@@ -14,6 +14,6 @@ async def get_my_recordings(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Host'un son 30 günlük kayıtlarını döner. PRO kontrolü zorunlu değil —
-    kayıtlar herkese ait; sadece presigned URL için PRO gerekir."""
+    """Host'un aktif kayıtlarını döner (status: recording/encoding/encoded/available/expired).
+    PRO kontrolü zorunlu değil — kayıtlar herkese ait; sadece presigned URL için PRO gerekir."""
     return await GetMyRecordingsQuery(db).execute(host_id=current_user.id)

@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class GetMyRecordingsQuery:
-    """Host'un son 30 günlük kayıtlarını döner."""
+    """Host'un aktif kayıtlarını döner."""
 
     _ACTIVE_STATUSES = ("recording", "encoding", "encoded", "available", "expired")
 
@@ -29,7 +29,6 @@ class GetMyRecordingsQuery:
             JOIN live_streams ls ON ls.id = sr.stream_id
             WHERE sr.host_id = :host_id
               AND sr.status = ANY(:statuses)
-              AND sr.recording_started_at > NOW() - INTERVAL '30 days'
             ORDER BY sr.recording_started_at DESC
         """), {
             "host_id": host_id,
