@@ -165,6 +165,8 @@ MINIO_ROOT_PASSWORD=<minio_root_password>
 TEQLIF_DB_PASSWORD=<teqlif_db_password>
 CORE_REDIS_PASS=<core_redis_pass>
 REPL_PASSWORD=<teqlif_repl_password>
+TELEGRAM_BOT_TOKEN=<telegram_bot_token>
+TELEGRAM_CHAT_ID=<telegram_chat_id>
 ENVEOF
     chmod 600 /project/teqlif/config/.env.backup
     log_ok "Backup servisleri enable edildi"
