@@ -10,6 +10,7 @@ ExecStart=/usr/local/bin/alertmanager \
   --web.listen-address=127.0.0.1:9093
 Restart=always
 RestartSec=5
+MemoryMax=100M
 
 [Install]
 WantedBy=multi-user.target

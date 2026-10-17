@@ -13,6 +13,9 @@ ExecStart=/var/www/teqlif.com/.venv/bin/python -m arq app.worker.WorkerSettings
 Restart=always
 RestartSec=5
 LimitNOFILE=65535
+MemoryHigh=4G
+MemoryMax=5G
+OOMPolicy=kill
 StandardOutput=journal
 StandardError=journal
 

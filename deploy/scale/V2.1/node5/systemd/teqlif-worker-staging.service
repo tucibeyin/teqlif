@@ -12,6 +12,7 @@ ExecStart=/var/www/teqlif.com/.venv/bin/python -m arq app.worker.WorkerSettings
 Restart=always
 RestartSec=5
 LimitNOFILE=65535
+CPUQuota=100%
 StandardOutput=journal
 StandardError=journal
 

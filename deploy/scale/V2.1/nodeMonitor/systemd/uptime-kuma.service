@@ -9,6 +9,7 @@ EnvironmentFile=/project/shared/config/uptime-kuma.env
 ExecStart=/usr/bin/node server/server.js --port=3001 --host=10.10.0.99
 Restart=always
 RestartSec=5
+MemoryMax=250M
 Environment=NODE_ENV=production
 Environment=DATA_DIR=/opt/monitor/shared/uptime-kuma/data
 Environment=DATABASE=mariadb

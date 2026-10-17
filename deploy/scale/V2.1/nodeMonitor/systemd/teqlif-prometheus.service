@@ -12,6 +12,7 @@ ExecStart=/usr/local/bin/prometheus \
   --web.enable-lifecycle
 Restart=always
 RestartSec=5
+MemoryMax=600M
 
 [Install]
 WantedBy=multi-user.target
