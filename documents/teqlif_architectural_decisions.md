@@ -4,7 +4,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Ekim 2026 — Stream Recording V1.6: dinamik encode parallelism + nice -n 19 (`14e8bd1b`)
+**Son güncelleme:** Ekim 2026 — Stream Recording V1.6: dinamik encode parallelism + svc_cfg encoded_dir fix (`847d991a`)
 
 ---
 
@@ -30,7 +30,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 26. [Recording Detail V1.5 — Analitik Sekme Dashboard](#26-recording-detail-v15--analitik-sekme-dashboard-commit-c1e66024-d2b17e5e-65101e02)
 27. [teqlif-agent Bug Düzeltmeleri — Healer + Watchdog](#27-teqlif-agent-bug-düzeltmeleri--healer--watchdog-commit-afeaf889)
 28. [Healer Polkit + Redis Failover + node2 Monitoring Temizliği](#28-healer-polkit--redis-failover--node2-monitoring-temizliği-commit-62c29222)
-29. [Stream Recording V1.6 — Dinamik Encode Parallelism](#29-stream-recording-v16--dinamik-encode-parallelism-commit-14e8bd1b)
+29. [Stream Recording V1.6 — Dinamik Encode Parallelism](#29-stream-recording-v16--dinamik-encode-parallelism-commit-14e8bd1b-847d991a)
 
 ---
 
@@ -2076,7 +2076,7 @@ Canonical monitoring host: **nodeMonitor (10.10.0.99)**. node2'de sadece Promtai
 
 ---
 
-## 29. Stream Recording V1.6 — Dinamik Encode Parallelism (commit `14e8bd1b`)
+## 29. Stream Recording V1.6 — Dinamik Encode Parallelism (commit `14e8bd1b`, `847d991a`)
 
 ### Sorun
 
@@ -2084,7 +2084,7 @@ Canonical monitoring host: **nodeMonitor (10.10.0.99)**. node2'de sadece Promtai
 
 ### Karar
 
-**`_resolve_max_parallel(rec_cfg)`** metodu eklendi:
+**`_resolve_max_parallel(rec_cfg, svc_cfg)`** metodu eklendi (`847d991a`: `encoded_dir` `svc_cfg`'den alınır — cluster.yaml'de servis konfigürasyonu altında tanımlı):
 
 | Durum | N |
 |-------|---|
