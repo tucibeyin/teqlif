@@ -271,7 +271,7 @@ async function purgeUser(id, username) {
 
 // ── TUCi EKONOMİSİ ───────────────────────────────────────────────────────────
 async function loadTuci() {
-    const res = await adminFetch('/api/admin-data/tuci/summary?limit=100');
+    const res = await adminFetch('/api/admin-data/teqlik/summary?limit=100');
     if (!res) return;
     const d = await res.json();
 
@@ -319,7 +319,7 @@ async function submitAirdrop() {
     btn.disabled = true;
     btn.textContent = '⏳ Yükleniyor…';
     try {
-        const res = await fetch('/api/admin-data/tuci/airdrop', { method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({ username, amount }) });
+        const res = await fetch('/api/admin-data/teqlik/airdrop', { method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({ username, amount }) });
         const d = await res.json();
         if (res.ok) {
             alert(`✅ ${d.message}\nYeni bakiye: ${d.new_balance} TUCi`);
