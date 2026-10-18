@@ -308,6 +308,11 @@ async def send_blast(
         ))
     
     await db.commit()
+    if teqlik_cost > 0:
+        try:
+            await invalidate_user_session_cache(current_user.id)
+        except Exception:
+            pass
 
     if free_used > 0:
         await credit_service.increment("blast", current_user.id, current_user.premium_since, count=free_used)
