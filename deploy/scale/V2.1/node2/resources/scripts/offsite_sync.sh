@@ -69,12 +69,14 @@ sync_dir() {
     echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) offsite_sync: ${label} OK"
 }
 
-sync_dir "${LOCAL_BASE}/pg_dump"      "pg_dump"
-sync_dir "${LOCAL_BASE}/minio"        "minio"
-sync_dir "${LOCAL_BASE}/clickhouse"   "clickhouse"
-sync_dir "${LOCAL_BASE}/redis"        "redis"
-sync_dir "${LOCAL_BASE}/loki"         "loki"
-sync_dir "${LOCAL_BASE}/stalwart"     "stalwart"
+sync_dir "${LOCAL_BASE}/pg_dump"             "pg_dump"
+sync_dir "${LOCAL_BASE}/minio"               "minio"
+sync_dir "${LOCAL_BASE}/clickhouse"          "clickhouse"
+sync_dir "${LOCAL_BASE}/redis"               "redis"
+sync_dir "${LOCAL_BASE}/loki"                "loki"
+sync_dir "${LOCAL_BASE}/stalwart"            "stalwart"
+sync_dir "${LOCAL_BASE}/uptime_kuma"         "uptime_kuma"
+sync_dir "${LOCAL_BASE}/nodemonitor_config"  "nodemonitor_config"
 
 echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) offsite_sync: tamamlandı"
 logger "teqlif offsite_sync: tamamlandı"

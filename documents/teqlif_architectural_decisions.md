@@ -4,7 +4,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Ekim 2026 — §34 5 yapısal uyumsuzluk düzeltmesi (DM gizlilik, WAL/PITR, offsite zamanlama, Loki rsync, MinIO ILM)
+**Son güncelleme:** Ekim 2026 — §35 5 forensic bulgu düzeltmesi (DM medya orphan, Redis volatile-lru, CH backup temizliği, offsite eksik yedekler, pg_basebackup zamanlama)
 
 ---
 
@@ -2389,3 +2389,57 @@ Düzeltme: MINIO_ILM_NORMAL_DAYS=4 → 2.
 | `deploy/scale/V2.1/node2/systemd/teqlif-offsite-sync.timer` | `04:00` → `07:00 UTC` |
 | `deploy/scale/V2.1/node2/resources/scripts/loki_backup.sh` | `--delete-after` kaldırıldı |
 | `deploy/scale/V2.1/node2/resources/scripts/minio_backup.sh` | `MINIO_ILM_NORMAL_DAYS=4` → `2` |
+
+---
+
+## §35 — Forensic Bulgular: DM Medya Orphan, Redis Eviction, Backup Kapsamı
+
+**Tarih:** Ekim 2026
+
+### Problem
+
+§34 sonrası ikinci tur derin analizde tespit edilen 5 yeni yapısal hata.
+
+### Yapılan Değişiklikler
+
+**1. DM Medya Yetim Nesne Sızıntısı (KRİTİK)**
+`worker.py:751-753` cleanup_old_media_messages_task içinde `storage.delete_object()` (public bucket) çağrılıyordu.
+DM medyaları `teqlif-dm` private bucket'ta olduğu için hiç silinmiyordu; DB referansı kopuyor, MinIO'da orphan object birikiyordu.
+Düzeltme: `delete_object()` → `delete_object_dm()`.
+
+**2. Redis Bellek Tahliye Politikası (YÜKSEK)**
+`redis-core.conf` `allkeys-lru` kullanıyordu.
+Bu politika bellek dolunca ARQ kuyrukları ve canlı açık artırma state'ini sessizce silebilirdi.
+Düzeltme: `allkeys-lru` → `volatile-lru` — yalnızca TTL'i olan önbellek anahtarları evict edilir, TTL'siz kuyruklar/state'ler korunur.
+
+**3. ClickHouse Backup Retention Eksikliği (ORTA)**
+`clickhouse_backup.sh` temizlikte yalnızca `*.tar.gz` arıyordu.
+Yöntem 1 (dizin snapshot) ve Yöntem 2 (`.zip`) dosyaları birikerek node2 HDD'yi dolduracaktı.
+Düzeltme: `*.zip` ve `-type d` temizliği eklendi.
+
+**4. Off-site Sync Eksik Yedekler (ORTA)**
+`offsite_sync.sh` `uptime_kuma` ve `nodemonitor_config` dizinlerini buluta göndermiyordu.
+Düzeltme: İki yeni `sync_dir` satırı eklendi.
+
+**5. pg_basebackup Pazar Canlı Trafik Çakışması (ORTA)**
+Timer 08:30 UTC = 11:30 TR — pazar sabahı trafiğin tavan yaptığı saat.
+`--checkpoint=fast` + streaming sıkıştırma node1 NVMe ve ağını yükleyerek API p99 latency artışına yol açacaktı.
+Düzeltme: Timer 08:30 UTC → 02:00 UTC (ML eğitimleri bitmeden önce, trafik yokken).
+
+### Kural
+
+- DM ile ilgili her storage işlemi `_dm` sonekli fonksiyonla yapılır (`upload_bytes_dm`, `delete_object_dm`)
+- Redis konfigürasyonunda ARQ/açık artırma state paylaşan bir örnekte `allkeys-lru` yasak — `volatile-lru` zorunlu
+- Backup temizliğinde script tüm çıktı formatlarını (`.tar.gz`, `.zip`, dizin) kapsamalıdır
+- Off-site sync listesi tüm backup dizinlerini içermelidir; yeni backup scripti eklenince `offsite_sync.sh` güncellenir
+- pg_basebackup gece 02:00 UTC sabitlenidir — canlı trafik saatine yaklaştırılmaz
+
+### Etkilenen Dosyalar
+
+| Dosya | Değişiklik |
+|-------|-----------|
+| `backend/app/worker.py` | `delete_object()` → `delete_object_dm()` (DM medya cleanup) |
+| `deploy/scale/V2.1/node1/resources/redis/redis-core.conf` | `allkeys-lru` → `volatile-lru` |
+| `deploy/scale/V2.1/node2/resources/scripts/clickhouse_backup.sh` | `.zip` ve dizin temizliği eklendi |
+| `deploy/scale/V2.1/node2/resources/scripts/offsite_sync.sh` | `uptime_kuma`, `nodemonitor_config` eklendi |
+| `deploy/scale/V2.1/node2/systemd/teqlif-pg-basebackup.timer` | `08:30` → `02:00 UTC` |
