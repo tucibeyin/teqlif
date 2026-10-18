@@ -55,8 +55,8 @@ class Settings(BaseSettings):
     minio_dm_bucket: str = "teqlif-dm"   # private bucket for DM media (presigned access)
     minio_secure: bool = False
     minio_region: str = "us-east-1"      # S3 API uyumluluğu ve ağ keşfini atlamak için
-    minio_endpoint: str = "http://10.10.0.8:9000"
-    minio_endpoint_dm: str = "http://10.10.0.8:9000"
+    minio_endpoint: str = "http://10.10.0.1:9000"
+    minio_endpoint_dm: str = "http://10.10.0.1:9000"
     minio_public_base: str = ""   # Staging override: https://staging.uploads.teqlif.com
     media_host: str = ""
     uploads_host: str = ""

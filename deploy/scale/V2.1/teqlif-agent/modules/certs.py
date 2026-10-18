@@ -41,8 +41,8 @@ _STATIC_PORT_MAP = {
 _DOMAINS = [
     "api.teqlif.com",
     "uploads.teqlif.com",
-    "live1.teqlif.com",
-    "live2.teqlif.com",
+    "stream3.teqlif.com",
+    "stream4.teqlif.com",
     "mail.teqlif.com",
 ]
 

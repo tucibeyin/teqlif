@@ -6,7 +6,7 @@ source /project/teqlif/config/.env.backup
 BACKUP_DIR=/project/teqlif/backups/clickhouse
 RETENTION_DAYS=7
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-DEST="${BACKUP_DIR}/teqlif_analytics_${TIMESTAMP}"
+DEST="${BACKUP_DIR}/teqlif_prod_analytics_${TIMESTAMP}"
 BACKUP_METHOD="primary"
 
 CH_PASS="${CLICKHOUSE_DEFAULT_PASSWORD:-}"
@@ -16,12 +16,12 @@ CH_PASS_ARG=()
 install -d "${BACKUP_DIR}"
 
 # Yöntem 1: clickhouse-backup (tercih edilen, atomik snapshot)
-if clickhouse-backup create --tables 'teqlif_analytics.*' "${DEST}" 2>/dev/null; then
+if clickhouse-backup create --tables 'teqlif_prod_analytics.*' "${DEST}" 2>/dev/null; then
     :
 # Yöntem 2: SQL BACKUP komutu
 elif clickhouse-client \
         --host 127.0.0.1 --port 9000 --user default "${CH_PASS_ARG[@]}" \
-        --query "BACKUP DATABASE teqlif_analytics TO Disk('backups', 'teqlif_analytics_${TIMESTAMP}.zip')" \
+        --query "BACKUP DATABASE teqlif_prod_analytics TO Disk('backups', 'teqlif_prod_analytics_${TIMESTAMP}.zip')" \
         2>/dev/null; then
     BACKUP_METHOD="sql"
 # Yöntem 3: Native format export (son çare — birincil yöntemler başarısız)
@@ -30,7 +30,7 @@ else
     mkdir -p "${DEST}"
     for TABLE in user_events feed_analytics search_events swipe_live_events direct_sale_events; do
         clickhouse-client --host 127.0.0.1 --port 9000 --user default "${CH_PASS_ARG[@]}" \
-            --query "SELECT * FROM teqlif_analytics.${TABLE} FORMAT Native" \
+            --query "SELECT * FROM teqlif_prod_analytics.${TABLE} FORMAT Native" \
             > "${DEST}/${TABLE}.native"
     done
     tar -czf "${DEST}.tar.gz" -C "${BACKUP_DIR}" "$(basename "${DEST}")"

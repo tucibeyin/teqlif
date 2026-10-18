@@ -29,7 +29,7 @@ tar -czf "${DEST}" \
 sudo systemctl start stalwart-mail
 
 # Sentinel: health.py bu dosyanın mtime'ına bakar
-touch "${BACKUP_DIR}/../.last_mail_backup_ok"
+touch "${BACKUP_DIR}/.last_mail_backup_ok"
 
 find "${BACKUP_DIR}" -name "stalwart_*.tar.gz" -mtime "+${RETENTION_DAYS}" -delete
 

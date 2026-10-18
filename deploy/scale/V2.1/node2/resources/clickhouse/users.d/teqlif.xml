@@ -14,7 +14,7 @@
          CREATE USER teqlif IDENTIFIED WITH sha256_password BY '<teqlif_ch_password>'
            HOST IP '10.10.0.0/24', IP '127.0.0.1';
          GRANT SELECT,INSERT,CREATE TABLE,DROP TABLE,ALTER TABLE,
-               CREATE VIEW,DROP VIEW,TRUNCATE,SHOW ON teqlif_analytics.* TO teqlif;
+               CREATE VIEW,DROP VIEW,TRUNCATE,SHOW ON teqlif_prod_analytics.* TO teqlif;
     -->
 
     <profiles>
