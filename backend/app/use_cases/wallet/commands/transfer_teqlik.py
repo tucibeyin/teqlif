@@ -1,3 +1,4 @@
+from sqlalchemy import text
 from app.core.uow import AbstractUnitOfWork
 from app.core.logger import get_logger
 from app.core.exceptions import BadRequestException, ForbiddenException, InsufficientFundsException, NotFoundException
@@ -27,6 +28,28 @@ class TransferTeqlikCommand:
                 raise NotFoundException(code="SENDER_NOT_FOUND")
             if sender.teqlik_balance < amount:
                 raise InsufficientFundsException()
+
+            receiver = await self.uow.users.get(id=receiver_id)
+            if receiver is None:
+                raise NotFoundException(code="RECEIVER_NOT_FOUND")
+
+            # Atomik bakiye güncelleme — AND teqlik_balance >= :amt koşulu
+            # eş zamanlı transferlerde double-spend'i önler (RETURNING ile doğrula)
+            result = await self.uow.session.execute(
+                text(
+                    "UPDATE users SET teqlik_balance = teqlik_balance - :amt "
+                    "WHERE id = :uid AND teqlik_balance >= :amt "
+                    "RETURNING teqlik_balance"
+                ),
+                {"amt": amount, "uid": sender_id},
+            )
+            if result.fetchone() is None:
+                raise InsufficientFundsException()
+
+            await self.uow.session.execute(
+                text("UPDATE users SET teqlik_balance = teqlik_balance + :amt WHERE id = :uid"),
+                {"amt": amount, "uid": receiver_id},
+            )
 
             t1_data = {"user_id": sender_id, "amount": -amount, "transaction_type": "transfer_out", "reference_id": receiver_id}
             t2_data = {"user_id": receiver_id, "amount": amount, "transaction_type": "transfer_in", "reference_id": sender_id}

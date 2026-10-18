@@ -463,12 +463,17 @@ class AuctionCommands:
                     .order_by(Bid.created_at.desc()).limit(1)
                 )).scalar_one_or_none()
                 if last_bid:
-                    await self.redis_repo.update_bid_state(
-                        stream_id,
-                        current_bid=str(float(last_bid.amount)),
-                        bidder_id=str(last_bid.bidder_id),
-                        bidder_name=last_bid.bidder_username,
-                    )
+                    redis_state = await self.redis_repo.get_state(stream_id)
+                    redis_current = float(redis_state.get("current_bid") or 0)
+                    # Yalnızca DB'deki en son teklif Redis'tekinden yüksekse yaz —
+                    # aksi hâlde Redis zaten daha yüksek bir teklifi gösteriyor, ezme.
+                    if float(last_bid.amount) > redis_current:
+                        await self.redis_repo.update_bid_state(
+                            stream_id,
+                            current_bid=str(float(last_bid.amount)),
+                            bidder_id=str(last_bid.bidder_id),
+                            bidder_name=last_bid.bidder_username,
+                        )
             except Exception as sync_exc:
                 logger.error("[TEKLİF] Redis sync başarısız | stream=%s | %s", stream_id, sync_exc)
             raise BadRequestException(code="CONCURRENT_BID_OUTBID")
