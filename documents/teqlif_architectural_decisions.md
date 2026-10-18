@@ -4,7 +4,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Ekim 2026 — §33 ClickHouse DB yeniden adlandırma: teqlif_analytics → teqlif_prod_analytics
+**Son güncelleme:** Ekim 2026 — §33 ClickHouse DB yeniden adlandırma: teqlif_prod_analytics / teqlif_staging_analytics
 
 ---
 
@@ -2305,8 +2305,8 @@ RENAME TABLE teqlif_analytics.* TO teqlif_prod_analytics.*;  -- 5 tablo, atomik
 DROP DATABASE teqlif_analytics;
 
 -- Staging
-CREATE DATABASE IF NOT EXISTS teqlif_prod_analytics_staging;
-RENAME TABLE teqlif_analytics_staging.* TO teqlif_prod_analytics_staging.*;
+CREATE DATABASE IF NOT EXISTS teqlif_staging_analytics;
+RENAME TABLE teqlif_analytics_staging.* TO teqlif_staging_analytics.*;
 DROP DATABASE teqlif_analytics_staging;
 ```
 
@@ -2314,11 +2314,11 @@ Migration sırasında prod ve staging servisleri kısa süre durduruldu (aktif k
 
 Env dosyaları yerinde güncellendi:
 - node1: `CLICKHOUSE_DB=teqlif_prod_analytics`
-- node5: `CLICKHOUSE_DB=teqlif_prod_analytics_staging`
+- node5: `CLICKHOUSE_DB=teqlif_staging_analytics`
 
 ### Kural
 
-- ClickHouse DB adlandırma: `teqlif_prod_analytics` (prod) / `teqlif_prod_analytics_staging` (staging)
+- ClickHouse DB adlandırma: `teqlif_prod_analytics` (prod) / `teqlif_staging_analytics` (staging)
 - `RENAME TABLE` yöntemi tercih edilir (atomik, veri kopyası gerektirmez)
 - Yeni tablo migration'larında her iki DB'ye aynı anda uygulanmalı
 
@@ -2329,6 +2329,8 @@ Env dosyaları yerinde güncellendi:
 | `deploy/scale/V2.1/node2/resources/scripts/clickhouse_backup.sh` | `teqlif_prod_analytics` (§32'de yapılmıştı, şimdi doğru DB'ye karşılık geliyor) |
 | `deploy/scale/V2.1/node2/resources/clickhouse/users.d/teqlif.xml` | Grant şablonu `teqlif_prod_analytics.*` |
 | `backend/app/config.py` | `clickhouse_db` varsayılanı `teqlif_prod_analytics` |
+| `deploy/scale/V2.1/node1/resources/.env.production.template` | `CLICKHOUSE_DB=teqlif_prod_analytics` |
+| `deploy/scale/V2.1/node5/resources/.env.staging.template` | `CLICKHOUSE_DB=teqlif_staging_analytics` |
 | node1 `.env.production` (git dışı) | `CLICKHOUSE_DB=teqlif_prod_analytics` |
-| node5 `.env.staging` (git dışı) | `CLICKHOUSE_DB=teqlif_prod_analytics_staging` |
+| node5 `.env.staging` (git dışı) | `CLICKHOUSE_DB=teqlif_staging_analytics` |
 
