@@ -174,22 +174,30 @@ class CertWatcher:
                        EXTRACT(EPOCH FROM (now() - write_lag))::int AS lag_sec
                 FROM pg_stat_replication
             """)
-            await conn.close()
             key = "pg:replication"
             if not rows:
-                # Replikasyon yok — node2 disconnected olabilir
+                # pg_stat_replication bazı rollerde boş dönebilir; WAL sender
+                # sürecinin varlığını pg_stat_activity ile çapraz doğrula.
+                walsenders = await conn.fetchval(
+                    "SELECT count(*) FROM pg_stat_activity "
+                    "WHERE backend_type = 'walsender'"
+                )
+                await conn.close()
+                if walsenders and walsenders > 0:
+                    return  # Replica aktif; pg_stat_replication görünür değil
                 await self._alert(key, "⚠️ <b>PG Replikasyon</b> — aktif replica yok")
-            else:
-                for row in rows:
-                    lag = row["lag_sec"] or 0
-                    if lag > 120:
-                        await self._alert(
-                            key,
-                            f"⚠️ <b>PG Replikasyon</b> — {row['client_addr']} "
-                            f"lag {lag}s"
-                        )
-                    else:
-                        self._alerted.pop(key, None)
+                return
+            for row in rows:
+                lag = row["lag_sec"] or 0
+                if lag > 120:
+                    await self._alert(
+                        key,
+                        f"⚠️ <b>PG Replikasyon</b> — {row['client_addr']} "
+                        f"lag {lag}s"
+                    )
+                else:
+                    self._alerted.pop(key, None)
+            await conn.close()
         except Exception as exc:
             logger.debug("PG replication check başarısız: %s", exc)
 
