@@ -261,7 +261,7 @@ def _get_presign_client() -> Minio:
     raise ValueError("No MinIO endpoint configured for presigning")
 
 
-async def presign_get(url_or_key: str, expires: timedelta = timedelta(days=7)) -> str:
+async def presign_get(url_or_key: str, expires: timedelta = timedelta(minutes=30)) -> str:
     """Private DM bucket için presigned GET URL üretir.
 
     url_or_key: tam URL (https://…/bucket/key) veya ham key (messages/img/x.jpg).
