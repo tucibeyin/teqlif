@@ -70,13 +70,11 @@ agent_sync() {
       | grep -qE '^deploy/scale/V2\.1/(teqlif-agent/|cluster\.yaml)' \
       && changed=true
   fi
-  # Double-pull koruması: BEFORE==AFTER olsa bile deployed dosyalar farklıysa sync yap
+  # Double-pull koruması: BEFORE==AFTER olsa bile deploy hash farklıysa sync yap
   if ! $changed && [ -d "$agent_dst" ]; then
-    rsync -a --dry-run --checksum \
-          --exclude '__pycache__' --exclude '*.pyc' \
-          --exclude 'configs/' --exclude 'setup/' \
-          "$agent_src/" "$agent_dst/" 2>/dev/null | grep -q '^>' \
-      && changed=true
+    local deployed_hash=""
+    [ -f "$agent_dst/.git_hash" ] && deployed_hash=$(cat "$agent_dst/.git_hash")
+    [ "$deployed_hash" != "$AFTER" ] && changed=true
     # Restart script'in kendisi de farklıysa sync gerekir
     local self_src="$REPO/deploy/scale/V2.1/scripts/teqlif-restart.sh"
     if ! diff -q "$self_src" /usr/local/sbin/teqlif-restart >/dev/null 2>&1; then
@@ -90,6 +88,7 @@ agent_sync() {
           --exclude 'configs/' --exclude 'setup/' \
           "$agent_src/" "$agent_dst/"
     cp "$cluster_src" "$agent_dst/cluster.yaml"
+    echo "$AFTER" > "$agent_dst/.git_hash"
     chown -R teqlif-agent:teqlif-agent "$agent_dst"
     systemctl restart teqlif-agent.service
     log "teqlif-agent yeniden başlatıldı"
