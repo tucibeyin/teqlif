@@ -80,6 +80,13 @@ agent_sync() {
     chown -R teqlif-agent:teqlif-agent "$agent_dst"
     systemctl restart teqlif-agent.service
     log "teqlif-agent yeniden başlatıldı"
+    # Script kendini de günceller — sonraki çalışmada yeni versiyon kullanılır
+    local self_src="$REPO/deploy/scale/V2.1/scripts/teqlif-restart.sh"
+    if ! diff -q "$self_src" /usr/local/sbin/teqlif-restart >/dev/null 2>&1; then
+      cp "$self_src" /usr/local/sbin/teqlif-restart
+      chmod 755 /usr/local/sbin/teqlif-restart
+      log "teqlif-restart scripti güncellendi"
+    fi
   fi
 }
 
