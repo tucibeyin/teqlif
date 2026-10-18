@@ -4,7 +4,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Ekim 2026 — §31 MinIO ILM acil freni + off-site sync altyapısı (`c8689188`)
+**Son güncelleme:** Ekim 2026 — §32 Çapraz denetim düzeltmeleri: yedek/izleme/servis konfigürasyonu (`f3c82ca5`)
 
 ---
 
@@ -2215,4 +2215,72 @@ Mimari analizi 3 kritik risk ortaya çıkardı:
 - [ ] Off-site hedef seç (Hetzner/B2) ve `RCLONE_REMOTE`, `RCLONE_BUCKET` `.env.backup`'a ekle
 - [ ] `teqlif-offsite-sync.timer`'ı enable et
 - [ ] >50K kullanıcıda ML task süre izleme: `max_duration_m` + Redis key'ler
+
+---
+
+## §32 — Çapraz Denetim Düzeltmeleri: Yedekleme, İzleme ve Servis Konfigürasyonu
+
+**Commit:** `f3c82ca5` | **Tarih:** Ekim 2026
+
+### Problem
+
+Çapraz denetim taraması 9 kritik hata/tutarsızlık tespit etti; büyük çoğunluğu sessiz çöküş üretiyor ve sıfır alarm veriyor.
+
+### Yapılan Değişiklikler
+
+**`mail_backup.sh` — sentinel yol hatası:**
+`touch "${BACKUP_DIR}/../.last_mail_backup_ok"` → `touch "${BACKUP_DIR}/.last_mail_backup_ok"`.
+Fazladan `/../` bir üst dizine yazıyordu; health.py `stalwart/` altındaki dosyayı arıyordu → yalancı alarm.
+
+**`clickhouse_backup.sh` — veritabanı adı uyuşmazlığı:**
+Script `teqlif_analytics` adını kullanıyordu; gerçek DB `teqlif_prod_analytics`. Tüm üç yerde (`--tables`, `BACKUP DATABASE`, `FROM`) düzeltildi. Bu hata etkin olduğu süre boyunca ClickHouse yedekleri sıfır tablo ile sessizce başarısız sayılıyordu.
+
+**`uptime_kuma_backup.sh` — SQLite → MariaDB dump:**
+Uptime Kuma `kuma.db` (SQLite) değil, MariaDB kullanıyor (`DATABASE=mariadb`). Script `rsync kuma.db` yerine `MYSQL_PWD` env ile SSH üzerinden `mysqldump` çalıştıracak şekilde yeniden yazıldı. `UPTIME_KUMA_DB_PASS` `.env.backup`'a eklenmeli (bkz. `secrets.env.template`). Arşiv uzantısı `.db.gz` → `.sql.gz`.
+
+**`certs.py` — LiveKit domain tutarsızlığı:**
+İzleme `live1/live2.teqlif.com` kontrol ediyordu; gerçek prod domainler `stream3/stream4.teqlif.com`. stream3/stream4 sertifikası expire olsa alarm gelmiyordu.
+
+**`livekit-staging.yaml` — yanlış Redis şifresi:**
+`<core_redis_pass>` → `<staging_redis_pass>`. Node5 staging Redis kendi `staging_redis_pass` ile korumalı; core pass ile WRONGPASS hatası alırdı.
+
+**`teqlif-staging.service` — WireGuard boot race condition:**
+`After=network.target` → `After=network.target wg-quick@wg0.service`. Uvicorn `10.10.0.5` (WireGuard IP) dinliyor; tünel hazır olmadan uvicorn "Cannot assign requested address" ile çökebilir.
+
+**`clickhouse/users.d/teqlif.xml` — grant DB adı:**
+Bootstrap kılavuzundaki SQL şablonu `teqlif_analytics.*` grant içeriyordu; `teqlif_prod_analytics.*` olarak güncellendi. Eski şablon ile kurulumda Access Denied alınırdı.
+
+**`nodemonitor_config_backup.sh` — Prometheus/Loki data hariç tutma:**
+`/opt/monitor/teqlif/` tüm ağacı rsync ediliyordu. Prometheus TSDB (`prometheus/data/`, 30 günlük) ve Loki chunk/compactor dizinleri (`loki/data/`) `--exclude` ile kapsam dışına alındı. Config dosyaları (`.yml`, `.ini`) zaten git repo'sunda sürüm kontrolünde.
+
+**`backend/app/config.py` — MinIO endpoint varsayılanı:**
+`http://10.10.0.8:9000` (V2.0 mirası) → `http://10.10.0.1:9000` (V2.1 node1). `.env.production` override ederdi ama varsayılan doğru değil, yeni kurulumda hata kaynağı olabilirdi.
+
+### Kural
+
+- Backup script'lerinde `touch sentinel` her zaman backup dosyasının yazıldığı dizinde yapılır; `/../` veya başka göreli sıçramalar kullanılmaz.
+- ClickHouse DB adı `teqlif_prod_analytics` — backup script, grant şablonu ve backend config senkron tutulmalıdır.
+- MariaDB/MySQL backup'ı şifreyi komut satırına değil `MYSQL_PWD` ortam değişkenine koyar (ps gizleme).
+- Systemd servis `--host <WireGuard-IP>` dinliyorsa mutlaka `After=wg-quick@wg0.service` içermelidir.
+- `nodemonitor_config_backup.sh` kapsam kuralı: runtime secrets ve Grafana state → evet; Prometheus TSDB / Loki chunks → hayır (loki_backup ile yönetilmeli).
+
+### Etkilenen Dosyalar
+
+| Dosya | Değişiklik |
+|-------|-----------|
+| `deploy/scale/V2.1/node2/resources/scripts/mail_backup.sh` | Sentinel yol: `/../` kaldırıldı |
+| `deploy/scale/V2.1/node2/resources/scripts/clickhouse_backup.sh` | DB adı `teqlif_analytics` → `teqlif_prod_analytics` (3 yerde) |
+| `deploy/scale/V2.1/node2/resources/scripts/uptime_kuma_backup.sh` | SQLite rsync → mysqldump (MariaDB) |
+| `deploy/scale/V2.1/node2/resources/scripts/nodemonitor_config_backup.sh` | `--exclude prometheus/data/ loki/data/` eklendi |
+| `deploy/scale/V2.1/node2/resources/clickhouse/users.d/teqlif.xml` | Grant DB adı düzeltildi |
+| `deploy/scale/V2.1/teqlif-agent/modules/certs.py` | LiveKit domain: live1/live2 → stream3/stream4 |
+| `deploy/scale/V2.1/node5/resources/livekit/livekit-staging.yaml` | Redis password: core → staging |
+| `deploy/scale/V2.1/node5/systemd/teqlif-staging.service` | `After=wg-quick@wg0.service` eklendi |
+| `deploy/scale/V2.1/secrets.env.template` | `uptime_kuma_db_pass` değişkeni eklendi |
+| `backend/app/config.py` | MinIO default endpoint 10.10.0.8 → 10.10.0.1 |
+
+### Açık Görevler
+
+- [ ] nodeMonitor'da `UPTIME_KUMA_DB_PASS` değerini al ve node2 `.env.backup`'a ekle: `UPTIME_KUMA_DB_PASS=<değer>`
+- [ ] node5'te `teqlif-staging-livekit.service` varsa `apply_secrets` ile `livekit-staging.yaml` yeniden uygula
 
