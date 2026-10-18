@@ -4,7 +4,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Ekim 2026 — §35 5 forensic bulgu düzeltmesi (DM medya orphan, Redis volatile-lru, CH backup temizliği, offsite eksik yedekler, pg_basebackup zamanlama)
+**Son güncelleme:** Ekim 2026 — §36 fail2ban → CrowdSec bootstrap migrasyon belgesi eklendi
 
 ---
 
@@ -2443,3 +2443,53 @@ Düzeltme: Timer 08:30 UTC → 02:00 UTC (ML eğitimleri bitmeden önce, trafik 
 | `deploy/scale/V2.1/node2/resources/scripts/clickhouse_backup.sh` | `.zip` ve dizin temizliği eklendi |
 | `deploy/scale/V2.1/node2/resources/scripts/offsite_sync.sh` | `uptime_kuma`, `nodemonitor_config` eklendi |
 | `deploy/scale/V2.1/node2/systemd/teqlif-pg-basebackup.timer` | `08:30` → `02:00 UTC` |
+
+---
+
+## §36 — Bootstrap Güvenlik: fail2ban → CrowdSec Migrasyonu
+
+**Tarih:** Ekim 2026
+
+### Problem
+
+Bootstrap scriptleri (`_common.sh`, `bootstrap_node{1-6}.sh`, `bootstrap_streaming_generic.sh`) `fail2ban` kuruyordu; ancak tüm canlı node'larda fail2ban değil CrowdSec çalışıyor. Belgeli mimari ile gerçek kurulum arasında uyumsuzluk vardı.
+
+Ek sorun: `deploy/scale/V2.1/node2/resources/stalwart/setup.sh` fail2ban'a özgü jail.d ve filter.d konfigürasyon bloğu içeriyordu — fail2ban kurulu olmayan node'larda bu blok başarısız olur veya sessizce boşa gider.
+
+### Karar
+
+Tüm bootstrap scriptlerinde fail2ban tamamen kaldırıldı, CrowdSec ile değiştirildi.
+
+**Tercih sebebi:** fail2ban kural bazlı bir pattern eşleştiricidir; CrowdSec merkezi crowdsourced threat intel + consensus engine kullanır ve yeni exploit türlerine otomatik adapte olur. Birlikte çalıştırmak duplikasyon ve potansiyel iptables kural çakışması yaratır — tek araç yeterlidir.
+
+### Yapılan Değişiklikler
+
+**`_common.sh`:**
+- `apt-get install` satırından `fail2ban` kaldırıldı
+- `setup_fail2ban()` → `setup_crowdsec()` ile değiştirildi
+  - CrowdSec packagecloud APT deposu eklendi
+  - `crowdsec` + `crowdsec-firewall-bouncer` kuruldu (nftables/iptables backend)
+  - Collections: `crowdsecurity/linux`, `crowdsecurity/sshd`, `crowdsecurity/nginx`, `crowdsecurity/base-http-scenarios`, `crowdsecurity/http-cve`
+  - `systemctl enable --now crowdsec crowdsec-firewall-bouncer`
+
+**`bootstrap_node{1-6}.sh` + `bootstrap_streaming_generic.sh` (7 dosya):**
+- `setup_fail2ban` → `setup_crowdsec` çağrısına geçildi
+
+**`stalwart/setup.sh`:**
+- fail2ban Stalwart jail.d/filter.d bloğu (≈36 satır) kaldırıldı
+- Brute-force koruması: CrowdSec `crowdsecurity/sshd + linux` collection'ları + Stalwart yerleşik rate-limiter (`rate-limiter.toml`)
+
+### Kural
+
+- Bootstrap scriptlerine fail2ban eklenmez; IPS olarak yalnızca CrowdSec kullanılır
+- Uygulama seviyesi brute-force koruması uygulamanın kendi rate-limiter'ı ile sağlanır (Stalwart, nginx limit_req)
+- CrowdSec collection güncellemesi: `cscli collections upgrade --all` (cron/manuel)
+
+### Etkilenen Dosyalar
+
+| Dosya | Değişiklik |
+|-------|-----------|
+| `deploy/scale/V2.1/scripts/_common.sh` | `fail2ban` kaldırıldı, `setup_crowdsec()` eklendi |
+| `deploy/scale/V2.1/scripts/bootstrap_node{1-6}.sh` | `setup_crowdsec` çağrısına geçildi |
+| `deploy/scale/V2.1/scripts/bootstrap_streaming_generic.sh` | `setup_crowdsec` çağrısına geçildi |
+| `deploy/scale/V2.1/node2/resources/stalwart/setup.sh` | fail2ban bloğu kaldırıldı |
