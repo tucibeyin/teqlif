@@ -4,7 +4,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Ekim 2026 — §36 fail2ban → CrowdSec bootstrap migrasyon belgesi eklendi
+**Son güncelleme:** Ekim 2026 — §37 cüzdan atomik transfer, açık artırma downgrade koruması, LiveKit WG bağlantısı, PgBouncer IaC borcu
 
 ---
 
@@ -2493,3 +2493,53 @@ Tüm bootstrap scriptlerinde fail2ban tamamen kaldırıldı, CrowdSec ile deği�
 | `deploy/scale/V2.1/scripts/bootstrap_node{1-6}.sh` | `setup_crowdsec` çağrısına geçildi |
 | `deploy/scale/V2.1/scripts/bootstrap_streaming_generic.sh` | `setup_crowdsec` çağrısına geçildi |
 | `deploy/scale/V2.1/node2/resources/stalwart/setup.sh` | fail2ban bloğu kaldırıldı |
+
+---
+
+## §37 — Forensic Bulgular: Cüzdan Atomik Transfer, Açık Artırma Downgrade, LiveKit HAProxy, PgBouncer IaC
+
+**Tarih:** Ekim 2026
+
+### Problem
+
+Kapsamlı mimari inceleme sonrası tespit edilen 4 yeni bulgu.
+
+### Yapılan Değişiklikler
+
+**1. Cüzdan Transferi Bakiye Güncellemesi Eksikliği (KRİTİK)**
+`transfer_teqlik.py` kullanıcılar arası transferde yalnızca `TeqlikTransaction` log kaydı yazıyor, `users.teqlik_balance` kolonunu hiç güncellemiyordu.
+Gönderenin bakiyesi düşmüyor, alıcının bakiyesi artmıyordu — gizli bir double-spend açığıydı.
+Düzeltme: `AND teqlik_balance >= :amt RETURNING` koşullu atomik UPDATE + alıcı UPDATE eklendi (`toggle_listing.py` ve `wallet.py:gift` ile aynı pattern).
+
+**2. Açık Artırma Race Condition Sync Downgrade (YÜKSEK)**
+`auction_commands.py` race condition handler'ında Redis `execute_bid` başarısız olunca DB'deki `last_bid` Redis'e yazılıyordu.
+Eğer DB'ye daha geç commit olan düşük teklif `created_at` sıralamasında önce gelirse, Redis'teki yüksek teklif ezilerek downgrade olabiliyordu.
+Düzeltme: `update_bid_state` çağrısı öncesinde `get_state()` ile Redis'teki mevcut değer okunur; yalnızca `last_bid > redis_current` ise yazılır.
+
+**3. LiveKit HAProxy Olmayan 127.0.0.1:6379 (YÜKSEK)**
+`node3/4 livekit.yaml` `127.0.0.1:6379` ile "HAProxy local proxy" aracılığıyla Redis'e bağlanacağını varsayıyordu.
+Bootstrap scriptlerinde HAProxy kurulumu yoktu; sıfırdan kurulan node3/4'te LiveKit başlar başlamaz crash loop'a girerdi.
+Düzeltme: `127.0.0.1:6379` → `10.10.0.1:6379` (WireGuard üzerinden doğrudan); Redis `bind 127.0.0.1 10.10.0.1` zaten WG IP'de dinliyor, node1 UFW wg0 mesh trafiğine izin veriyor.
+Operasyonel not: Node1 tamamen çöker ve `redis_failover.sh` Node2'yi master yaparsa, operatör livekit.yaml'ı `10.10.0.2:6379` yapıp LiveKit'i yeniden başlatmalıdır.
+
+**4. PgBouncer IaC Borcu (DÜŞÜK)**
+Canlı Node1'de `pgbouncer.service` aktif çalışıyor (`/etc/pgbouncer/pgbouncer.ini` mevcut) ama konfigürasyon şablonu repoda yoktu.
+Düzeltme: Canlı dosyadan `deploy/scale/V2.1/node1/resources/pgbouncer/pgbouncer.ini` oluşturuldu.
+Yapılandırma: `transaction` pool modu, `max_client_conn=200`, `default_pool_size=20`, `scram-sha-256` auth, port 6432.
+
+### Kural
+
+- Teqlik bakiye değişimi (transfer, hediye, ödeme) her zaman `AND balance >= :cost RETURNING` atomik SQL pattern'ı ile yapılır
+- Race condition sync handler'larında mevcut state kontrol edilmeden üzerine yazılmaz
+- Yeni node bootstrap'ta bağımlılıklar (HAProxy, PgBouncer vb.) açıkça kurulur veya direkt adres kullanılır
+- Canlıda çalışan her servis konfigürasyonu repoda şablon olarak bulunur
+
+### Etkilenen Dosyalar
+
+| Dosya | Değişiklik |
+|-------|-----------|
+| `backend/app/use_cases/wallet/commands/transfer_teqlik.py` | Atomik bakiye UPDATE eklendi |
+| `backend/app/use_cases/auctions/commands/auction_commands.py` | Sync handler'a `redis_current` karşılaştırması eklendi |
+| `deploy/scale/V2.1/node3/resources/livekit/livekit.yaml` | `127.0.0.1:6379` → `10.10.0.1:6379` |
+| `deploy/scale/V2.1/node4/resources/livekit/livekit.yaml` | `127.0.0.1:6379` → `10.10.0.1:6379` |
+| `deploy/scale/V2.1/node1/resources/pgbouncer/pgbouncer.ini` | Canlıdan alınan şablon repoya eklendi |
