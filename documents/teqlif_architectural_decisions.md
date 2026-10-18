@@ -4,7 +4,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Ekim 2026 — §32 Çapraz denetim düzeltmeleri: yedek/izleme/servis konfigürasyonu (`f3c82ca5`)
+**Son güncelleme:** Ekim 2026 — §33 ClickHouse DB yeniden adlandırma: teqlif_analytics → teqlif_prod_analytics
 
 ---
 
@@ -2281,6 +2281,54 @@ Bootstrap kılavuzundaki SQL şablonu `teqlif_analytics.*` grant içeriyordu; `t
 
 ### Açık Görevler
 
-- [ ] nodeMonitor'da `UPTIME_KUMA_DB_PASS` değerini al ve node2 `.env.backup`'a ekle: `UPTIME_KUMA_DB_PASS=<değer>`
+- [x] nodeMonitor'da `UPTIME_KUMA_DB_PASS` değerini al ve node2 `.env.backup`'a ekle ✅
 - [ ] node5'te `teqlif-staging-livekit.service` varsa `apply_secrets` ile `livekit-staging.yaml` yeniden uygula
+
+---
+
+## §33 — ClickHouse Veritabanı Yeniden Adlandırma
+
+**Tarih:** Ekim 2026
+
+### Problem
+
+`teqlif_analytics` adı prod/staging ayrımını yansıtmıyordu; `teqlif_analytics_staging` ile simetri eksikti. `config.py` varsayılanı `teqlif_prod_analytics` yazıyordu ama gerçek DB `teqlif_analytics`'ti — isim tutarsızlığı.
+
+### Yapılan Değişiklikler
+
+ClickHouse'da `RENAME DATABASE` komutu olmadığından tablo bazlı atomik migration uygulandı:
+
+```sql
+-- Prod
+CREATE DATABASE IF NOT EXISTS teqlif_prod_analytics;
+RENAME TABLE teqlif_analytics.* TO teqlif_prod_analytics.*;  -- 5 tablo, atomik
+DROP DATABASE teqlif_analytics;
+
+-- Staging
+CREATE DATABASE IF NOT EXISTS teqlif_prod_analytics_staging;
+RENAME TABLE teqlif_analytics_staging.* TO teqlif_prod_analytics_staging.*;
+DROP DATABASE teqlif_analytics_staging;
+```
+
+Migration sırasında prod ve staging servisleri kısa süre durduruldu (aktif kullanıcı yok).
+
+Env dosyaları yerinde güncellendi:
+- node1: `CLICKHOUSE_DB=teqlif_prod_analytics`
+- node5: `CLICKHOUSE_DB=teqlif_prod_analytics_staging`
+
+### Kural
+
+- ClickHouse DB adlandırma: `teqlif_prod_analytics` (prod) / `teqlif_prod_analytics_staging` (staging)
+- `RENAME TABLE` yöntemi tercih edilir (atomik, veri kopyası gerektirmez)
+- Yeni tablo migration'larında her iki DB'ye aynı anda uygulanmalı
+
+### Etkilenen Dosyalar
+
+| Dosya | Değişiklik |
+|-------|-----------|
+| `deploy/scale/V2.1/node2/resources/scripts/clickhouse_backup.sh` | `teqlif_prod_analytics` (§32'de yapılmıştı, şimdi doğru DB'ye karşılık geliyor) |
+| `deploy/scale/V2.1/node2/resources/clickhouse/users.d/teqlif.xml` | Grant şablonu `teqlif_prod_analytics.*` |
+| `backend/app/config.py` | `clickhouse_db` varsayılanı `teqlif_prod_analytics` |
+| node1 `.env.production` (git dışı) | `CLICKHOUSE_DB=teqlif_prod_analytics` |
+| node5 `.env.staging` (git dışı) | `CLICKHOUSE_DB=teqlif_prod_analytics_staging` |
 
