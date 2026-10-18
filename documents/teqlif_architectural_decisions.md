@@ -4,7 +4,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Ekim 2026 — Stream Recording V1.6: dinamik encode parallelism + svc_cfg encoded_dir fix (`847d991a`)
+**Son güncelleme:** Ekim 2026 — §30 teqlif-agent izleme düzeltmeleri: Redis servis adları, Cleaner SELECT grant, pg:replication WAL cross-check, backup sentinel dosyaları, agent sync git hash (`ef2dcadc`)
 
 ---
 
@@ -31,6 +31,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 27. [teqlif-agent Bug Düzeltmeleri — Healer + Watchdog](#27-teqlif-agent-bug-düzeltmeleri--healer--watchdog-commit-afeaf889)
 28. [Healer Polkit + Redis Failover + node2 Monitoring Temizliği](#28-healer-polkit--redis-failover--node2-monitoring-temizliği-commit-62c29222)
 29. [Stream Recording V1.6 — Dinamik Encode Parallelism](#29-stream-recording-v16--dinamik-encode-parallelism-commit-14e8bd1b-847d991a)
+30. [teqlif-agent İzleme Düzeltmeleri — Redis/Backup/Cleaner/PG Replikasyon](#30-teqlif-agent-i̇zleme-düzeltmeleri--redisbackupcleaner-pg-replikasyon-commit-daa72d2b-dd206266-28836f45-9c6ecf18-ef2dcadc)
 
 ---
 
@@ -2108,4 +2109,67 @@ Aktif kayıt kontrolü disk emergency kontrolünden önce gelir. Aktif yayın va
 | `deploy/scale/V2.1/teqlif-agent/modules/encoder.py` | `_MAX_PARALLEL` kaldırıldı, `_resolve_max_parallel` + `nice -n 19` eklendi |
 | `deploy/scale/V2.1/teqlif-agent/agent.py` | `recording_procs=rec_mgr._procs` dependency injection |
 | `documents/stream/V1.6/01_findings.md` | Mimari analiz belgesi oluşturuldu |
+
+---
+
+## 30. teqlif-agent İzleme Düzeltmeleri — Redis/Backup/Cleaner/PG Replikasyon (commit `daa72d2b`, `dd206266`, `28836f45`, `9c6ecf18`, `ef2dcadc`)
+
+### 1. Redis Servis Adı Yanlışlığı — `health.py` (`daa72d2b`)
+
+**Problem:** `_ALL_SERVICES` listesinde `"redis-server"` ve `"livekit"` vardı. Ubuntu paketi `/lib/systemd/system/redis-server.service` dosyası tüm node'larda mevcut (inactive/disabled) olduğundan health check her node'da "Redis çöktü" false alarmı üretiyordu.
+
+**Karar:** Doğru servis adları rol bazında ayrıştırıldı:
+- `"teqlif-redis-core"` → node1
+- `"teqlif-redis-replica"` → node2
+- `"teqlif-redis-staging"` → node5
+- `"teqlif-livekit"` → node3/node4
+
+**Kural:** Systemd servis adı her zaman `/etc/systemd/system/<ad>.service` dosyasının base adıdır; Ubuntu paket kurulumunun `/lib/systemd/system/` altında bıraktığı dosya adı değil.
+
+### 2. ScheduledCleaner "permission denied" — `zzzzzt_agent_select_grant` (`dd206266`)
+
+**Problem:** `DELETE FROM table WHERE col = val` sorgusu `SELECT` yetkisi olmadan çalışmaz. PostgreSQL, `WHERE` koşulundaki kolon değerlerine erişmek için `SELECT` ister (docs: "SELECT privilege is also needed to reference existing column values in UPDATE, DELETE, or MERGE"). 10 tablo için `DELETE` grant'ı vardı, `SELECT` yoktu.
+
+**Karar:** `zzzzzt_agent_select_grant` migration: `GRANT SELECT ON {10 tablo} TO teqlif_agent`.
+
+**Kural:** `teqlif_agent`'a `DELETE` grant verirken aynı tablo için `SELECT` da verilmelidir.
+
+### 3. `pg:replication` False Alarm — `certs.py` (`28836f45`)
+
+**Problem:** `pg_stat_replication` view'ı `teqlif_agent` kullanıcısı için (pg_monitor üyesi olsa da) doğrudan bağlantıda boş dönüyor. Replication çalışmasına rağmen "aktif replica yok" alarmı 6 saatte bir tetikleniyordu.
+
+**Karar:** `pg_stat_replication` boş dönünce çapraz doğrulama: `pg_stat_activity WHERE backend_type = 'walsender'` > 0 ise alarm verilmez.
+
+**Kural:** PostgreSQL 17'de `pg_stat_replication` bazı bağlantı rollerinde boş dönebilir; WAL sender varlığını `pg_stat_activity` ile doğrula.
+
+### 4. Backup Yaşı False Alarmları — Sentinel Dosyaları (`9c6ecf18`)
+
+**Problem:** `rsync -a` kaynak dosya mtime'ını korur. Boş MinIO bucket'ta `mc mirror` hiç dosya yazmaz. Health check dizindeki en yeni dosyanın mtime'ını ölçüyordu — her ikisinde de gerçek backup zamanını yansıtmıyordu.
+
+**Karar:** Her backup script başarı sonrası `touch "${BACKUP_DIR}/.last_backup_ok"` çalıştırır. Health check bu sentinel dosyanın mtime'ını okur — dizin taraması yerine.
+
+**Etkilenen scriptler:** `minio_backup.sh`, `uptime_kuma_backup.sh`, `nodemonitor_config_backup.sh`  
+**health.py:** `minio_backup` `backup_dirs`'tan `sentinel_dirs`'e taşındı; `elif p.is_dir()` bloğu kaldırıldı.
+
+**Kural:** Backup sağlığı her zaman sentinel dosya mtime'ı ile ölçülür; rsync/mirror çalıştıktan sonra `touch .last_backup_ok` zorunludur.
+
+### 5. `teqlif-restart` Agent Sync — Git Hash Bazlı (`ef2dcadc`)
+
+**Problem:** `rsync --checksum` (rsync 3.5.0) double-pull korumasında (`BEFORE==AFTER` senaryosu) farklı dosyaları tespit edemiyordu — agent kodu değişse bile sync atlandı.
+
+**Karar:** Deploy sonrası `echo "$AFTER" > "$agent_dst/.git_hash"` yazılır. Double-pull protection `rsync --checksum` yerine bu hash'i HEAD ile karşılaştırır.
+
+**Kural:** rsync version'a bağımlı checksum yerine git hash dosyası güvenilir deploy marker'dır.
+
+### Etkilenen Dosyalar
+
+| Dosya | Değişiklik |
+|-------|-----------|
+| `deploy/scale/V2.1/teqlif-agent/modules/health.py` | Redis servis adları düzeltildi; minio_backup sentinel'e taşındı; `elif p.is_dir()` bloğu kaldırıldı |
+| `deploy/scale/V2.1/teqlif-agent/modules/certs.py` | pg:replication WAL sender çapraz doğrulama |
+| `deploy/scale/V2.1/node2/resources/scripts/minio_backup.sh` | `touch .last_backup_ok` eklendi |
+| `deploy/scale/V2.1/node2/resources/scripts/uptime_kuma_backup.sh` | `touch .last_backup_ok` eklendi |
+| `deploy/scale/V2.1/node2/resources/scripts/nodemonitor_config_backup.sh` | `touch .last_backup_ok` eklendi |
+| `deploy/scale/V2.1/scripts/teqlif-restart.sh` | Double-pull protection git hash bazlı; self-update bloğu eklendi |
+| `backend/alembic/versions/zzzzzt_agent_select_grant.py` | GRANT SELECT ON 10 tablo TO teqlif_agent |
 
