@@ -1,3 +1,4 @@
+import secrets
 from fastapi import APIRouter, Depends, Body, Request
 from google.oauth2 import id_token
 from google.auth.transport import requests
@@ -8,12 +9,15 @@ from app.config import settings
 from app.database import get_db
 from app.models.user import User
 from app.utils.auth import create_access_token
+from app.utils.redis_client import get_redis
 from app.core.exceptions import NotFoundException, ForbiddenException, UnauthorizedException
 from app.core.logger import get_logger
 from app.core.rate_limit import limiter
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/admin-auth", tags=["admin-auth"])
+
+_STEP1_TTL = 120  # Google onay bileti 2 dakika geçerli
 
 
 @router.post("/verify-google")
@@ -36,7 +40,15 @@ async def verify_google(request: Request, token: str = Body(..., embed=True), db
     if not admin or not admin.is_admin:
         raise ForbiddenException("Bu alan sadece sistem yöneticisine özeldir.")
 
-    return {"status": "google_ok", "email": idinfo["email"]}
+    ticket = secrets.token_urlsafe(32)
+    try:
+        redis = await get_redis()
+        await redis.set(f"admin_step1:{ticket}", "1", ex=_STEP1_TTL)
+    except Exception as exc:
+        logger.error("[ADMIN AUTH] Redis step1 ticket yazılamadı: %s", exc)
+        raise UnauthorizedException("Geçici sistem hatası.")
+
+    return {"status": "google_ok", "email": idinfo["email"], "ticket": ticket}
 
 
 from app.security.auth import AdminSecurity
@@ -47,8 +59,22 @@ from app.security.auth import AdminSecurity
 async def verify_password(
     request: Request,
     password: str = Body(..., embed=True),
+    ticket: str = Body(..., embed=True),
     db: AsyncSession = Depends(get_db),
 ):
+    try:
+        redis = await get_redis()
+        ticket_key = f"admin_step1:{ticket}"
+        valid = await redis.get(ticket_key)
+        if not valid:
+            raise UnauthorizedException("Google doğrulaması gerekli.")
+        await redis.delete(ticket_key)
+    except UnauthorizedException:
+        raise
+    except Exception as exc:
+        logger.error("[ADMIN AUTH] Redis ticket doğrulaması başarısız: %s", exc)
+        raise UnauthorizedException("Geçici sistem hatası.")
+
     admin_security = AdminSecurity()
     is_valid = admin_security.verify_admin_password(password)
 

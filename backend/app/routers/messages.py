@@ -15,7 +15,7 @@ from app.core.log_context import user_id_var
 from app.models.user import User
 from app.schemas.message import MessageOut, ConversationOut, MessageRequestOut, SendMessageIn, MediaContentType
 from app.schemas.notification import UnreadCountOut
-from app.utils.auth import get_current_user, decode_token
+from app.utils.auth import get_current_user, decode_token, _decode_token_version
 from app.core.exceptions import NotFoundException, ForbiddenException  # BadRequestException imported above
 from app.constants.media_limits import IMAGE_MAX_BYTES, VIDEO_MAX_BYTES, VOICE_MAX_BYTES, FILE_MAX_BYTES
 from app.models.message_thread import MessageThread
@@ -367,6 +367,13 @@ async def messages_ws(websocket: WebSocket):
             result = await db.execute(select(User).where(User.id == user_id))
             user = result.scalar_one_or_none()
             if not user or user.status != UserStatus.ACTIVE:
+                try:
+                    await websocket.close(code=4001)
+                except Exception:
+                    pass
+                return
+            if _decode_token_version(token) != user.token_version:
+                logger.warning("[DM WS] Geçersiz token_version | user_id=%s", user_id)
                 try:
                     await websocket.close(code=4001)
                 except Exception:

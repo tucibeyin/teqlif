@@ -177,7 +177,7 @@ _INTERNAL_NETS = ("127.0.0.1", "::1", "10.", "172.16.", "172.17.", "172.18.",
 async def metrics(request: Request):
     from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
     from fastapi.responses import Response
-    client_ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "").split(",")[0].strip()
+    client_ip = request.client.host if request.client else ""
     if not any(client_ip.startswith(prefix) for prefix in _INTERNAL_NETS):
         from fastapi.responses import JSONResponse
         return JSONResponse(status_code=403, content={"detail": "Forbidden"})

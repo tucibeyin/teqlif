@@ -119,6 +119,9 @@ async def get_call_status(
     if not call:
         raise NotFoundException()
 
+    if current_user.id not in (call.caller_id, call.callee_id):
+        raise ForbiddenException()
+
     return {
         "status": call.status,
         "accepted_at": call.accepted_at.isoformat() if call.accepted_at else None,

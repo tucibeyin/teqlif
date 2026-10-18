@@ -14,7 +14,7 @@ from app.models.report import Report
 from app.models.teqlik_transaction import TeqlikTransaction
 from app.models.ad_campaign import AdCampaign
 from app.schemas.user import UserOut
-from app.utils.auth import get_current_user, hash_password
+from app.utils.auth import get_current_user, hash_password, invalidate_user_session_cache
 from app.config import settings
 from app.utils.redis_client import get_redis
 from app.routers.chat import _publish_chat
@@ -184,8 +184,16 @@ async def update_user_info(user_id: int, data: AdminUserUpdate, db: AsyncSession
         raise NotFoundException(code="USER_NOT_FOUND")
     if data.full_name is not None: user.full_name = data.full_name
     if data.email is not None: user.email = data.email
-    if data.status is not None: user.status = UserStatus(data.status)
+    if data.status is not None:
+        new_status = UserStatus(data.status)
+        user.status = new_status
+        if new_status == UserStatus.PASSIVE:
+            user.token_version = (user.token_version or 0) + 1
     await db.commit()
+    try:
+        await invalidate_user_session_cache(user_id)
+    except Exception:
+        pass
     return {"message": "Updated successfully."}
 
 class ToggleProRequest(BaseModel):
@@ -410,6 +418,7 @@ async def delete_user(
 
     # Soft delete: hesabı kapat, token geçersiz kıl
     user.status = UserStatus.DELETED
+    user.token_version = (user.token_version or 0) + 1
     user.fcm_token  = None   # push bildirimlerini durdur
 
     # Kullanıcının tüm aktif ilanlarını pasife çek
@@ -429,6 +438,10 @@ async def delete_user(
             f"feed:{user_id}:0",
             f"shadowban:{user_id}",
         )
+    except Exception:
+        pass
+    try:
+        await invalidate_user_session_cache(user_id)
     except Exception:
         pass
 

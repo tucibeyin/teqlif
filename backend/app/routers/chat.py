@@ -34,7 +34,7 @@ from app.use_cases.chat.chat_utils import (
 from app.use_cases.chat.commands.chat_commands import ChatCommands
 from app.models.block import UserBlock
 from app.services.moderation_service import kick_key, mute_key
-from app.utils.auth import decode_token
+from app.utils.auth import decode_token, _decode_token_version
 from app.utils.redis_client import get_redis
 
 # ── WebSocket sabitleri ───────────────────────────────────────────────────────
@@ -312,6 +312,10 @@ async def chat_ws(stream_id: int, websocket: WebSocket):
             result = await db.execute(select(User).where(User.id == user_id))
             user = result.scalar_one_or_none()
             if not user or user.status != UserStatus.ACTIVE:
+                await websocket.close(code=_WS_CODE_UNAUTHORIZED)
+                return
+            if _decode_token_version(token) != user.token_version:
+                logger.warning("[CHAT WS] Geçersiz token_version | user_id=%s stream_id=%s", user_id, stream_id)
                 await websocket.close(code=_WS_CODE_UNAUTHORIZED)
                 return
             username = user.username

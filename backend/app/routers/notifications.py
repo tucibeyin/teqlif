@@ -10,7 +10,7 @@ from app.database import get_db
 from app.models.user import User
 from app.models.notification import Notification
 from app.schemas.notification import NotificationOut, UnreadCountOut
-from app.utils.auth import get_current_user, decode_token
+from app.utils.auth import get_current_user, decode_token, _decode_token_version
 # push_notification servis katmanında — mevcut caller'lar için re-export
 from app.services.notification_service import push_notification  # noqa: F401
 from app.core.exceptions import NotFoundException
@@ -122,6 +122,10 @@ async def notifications_ws(websocket: WebSocket):
             result = await db.execute(select(User).where(User.id == user_id))
             user = result.scalar_one_or_none()
             if not user or user.status != UserStatus.ACTIVE:
+                await websocket.close(code=4001)
+                return
+            if _decode_token_version(token) != user.token_version:
+                logger.warning("[NOTIF WS] Geçersiz token_version | user_id=%s", user_id)
                 await websocket.close(code=4001)
                 return
     except Exception as exc:

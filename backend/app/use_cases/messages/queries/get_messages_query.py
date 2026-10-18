@@ -11,8 +11,8 @@ from app.constants.media_limits import MSG_PAGE_SIZE
 from app.services import storage_service as storage
 from app.utils.redis_client import get_redis
 
-_PRESIGN_TTL = timedelta(days=7)
-_CACHE_TTL_SECS = 6 * 24 * 3600  # 6 gün — 1 gün buffer
+_PRESIGN_TTL = timedelta(minutes=30)
+_CACHE_TTL_SECS = 25 * 60  # 25 dakika — 5 dakika buffer
 
 
 class GetMessagesQuery:

@@ -12,7 +12,9 @@ class LogContextMiddleware(BaseHTTPMiddleware):
             try:
                 # Fast parse without verification just to extract user_id for logs
                 payload = jwt.decode(token, options={"verify_signature": False})
-                user_id = str(payload.get("sub"))
+                raw_sub = payload.get("sub")
+                if raw_sub is not None and str(raw_sub).isdigit():
+                    user_id = str(raw_sub)
             except Exception:
                 pass
         

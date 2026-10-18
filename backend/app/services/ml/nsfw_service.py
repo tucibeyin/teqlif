@@ -42,6 +42,42 @@ def _load_detector():
     return _detector
 
 
+def _is_safe_url(url: str) -> bool:
+    """RFC 1918 / loopback / link-local adreslere SSRF'yi engelle."""
+    import ipaddress
+    from urllib.parse import urlparse
+    from app.config import settings
+
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        return False
+
+    allowed_hosts = set()
+    for attr in ("uploads_host", "minio_public_base"):
+        val = getattr(settings, attr, "") or ""
+        if val:
+            try:
+                allowed_hosts.add(urlparse(val).hostname or val.lower())
+            except Exception:
+                pass
+
+    host = (parsed.hostname or "").lower()
+    if allowed_hosts and host not in allowed_hosts:
+        return False
+
+    try:
+        addr = ipaddress.ip_address(host)
+        if addr.is_private or addr.is_loopback or addr.is_link_local or addr.is_reserved:
+            return False
+    except ValueError:
+        # hostname değil IP — DNS çözümlemesini kontrol etmiyoruz (proxy yok)
+        blocked = ("localhost", "metadata.google", "169.254.")
+        if any(host == b or host.startswith(b) for b in blocked):
+            return False
+
+    return True
+
+
 async def _score_url(image_url: str) -> float:
     """Tek URL → NSFW skoru (0.0–1.0)."""
     import httpx
@@ -51,8 +87,12 @@ async def _score_url(image_url: str) -> float:
         base = getattr(settings, "base_url", "https://teqlif.com")
         image_url = base.rstrip("/") + image_url
 
+    if not _is_safe_url(image_url):
+        logger.warning("[NSFW] URL reddedildi (SSRF koruması): %s", image_url)
+        return 0.0
+
     try:
-        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
+        async with httpx.AsyncClient(timeout=15.0, follow_redirects=False) as client:
             resp = await client.get(image_url)
             resp.raise_for_status()
             img_bytes = resp.content
