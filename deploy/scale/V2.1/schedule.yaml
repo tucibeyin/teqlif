@@ -218,6 +218,12 @@ batch:
 
   # ── ML Eğitim — 05:15+ ──────────────────────────────────────────────────────
   # Bu blok 06:30 UTC = 09:30 TR'de biter — sabah commute başlamadan önce.
+  #
+  # ⚠️  ÖLÇEK RİSKİ (>50K kullanıcı): Pazar ML bloku uzarsa pg_basebackup (08:30)
+  # ile çakışabilir; canlı Pazar trafiği (en yoğun gün) CPU/RAM rekabetine girer.
+  # Eylem: task_start / task_end Redis key'leri eklenerek süre izlenmeli;
+  # max_duration_m alanı ile agent alarm verebilmeli. Şimdilik watchdog_m yalnızca
+  # "hiç çalışmadı mı?" sorusunu yanıtlar, süre aşımını yakalamaz.
 
   - name: train_bpr_task
     weekday: [0, 2, 4]        # Pazartesi, Çarşamba, Cuma

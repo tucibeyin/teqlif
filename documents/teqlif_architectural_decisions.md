@@ -4,7 +4,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Ekim 2026 — §30 teqlif-agent izleme düzeltmeleri: Redis servis adları, Cleaner SELECT grant, pg:replication WAL cross-check, backup sentinel dosyaları, agent sync git hash (`ef2dcadc`)
+**Son güncelleme:** Ekim 2026 — §31 MinIO ILM acil freni + off-site sync altyapısı (`TODO: commit`)
 
 ---
 
@@ -32,6 +32,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 28. [Healer Polkit + Redis Failover + node2 Monitoring Temizliği](#28-healer-polkit--redis-failover--node2-monitoring-temizliği-commit-62c29222)
 29. [Stream Recording V1.6 — Dinamik Encode Parallelism](#29-stream-recording-v16--dinamik-encode-parallelism-commit-14e8bd1b-847d991a)
 30. [teqlif-agent İzleme Düzeltmeleri — Redis/Backup/Cleaner/PG Replikasyon](#30-teqlif-agent-i̇zleme-düzeltmeleri--redisbackupcleaner-pg-replikasyon-commit-daa72d2b-dd206266-28836f45-9c6ecf18-ef2dcadc)
+31. [MinIO ILM Acil Freni + Off-site Sync Altyapısı](#31-minio-ilm-acil-freni--off-site-sync-altyapısı)
 
 ---
 
@@ -2172,4 +2173,46 @@ Aktif kayıt kontrolü disk emergency kontrolünden önce gelir. Aktif yayın va
 | `deploy/scale/V2.1/node2/resources/scripts/nodemonitor_config_backup.sh` | `touch .last_backup_ok` eklendi |
 | `deploy/scale/V2.1/scripts/teqlif-restart.sh` | Double-pull protection git hash bazlı; self-update bloğu eklendi |
 | `backend/alembic/versions/zzzzzt_agent_select_grant.py` | GRANT SELECT ON 10 tablo TO teqlif_agent |
+
+---
+
+## 31. MinIO ILM Acil Freni + Off-site Sync Altyapısı
+
+### Sorun
+
+Mimari analizi 3 kritik risk ortaya çıkardı:
+1. MinIO ILM (2 gün) ile minio_backup 3×retry arasındaki race condition: 2 ardışık başarısız backup → veri kalıcı kayıp
+2. Off-site backup yok: tüm veriler tek fiziksel lokasyon (node2, Saarbrücken)
+3. Pazar ML bloku + pg_basebackup çakışma riski (>50K kullanıcı eşiğinde)
+
+### Karar
+
+**MinIO ILM retention 2→4 gün:** `mc ilm edit --id db3tiuskndq8as06c0e0 --expiry-days 4 node1minio/teqlif`. 4 günlük buffer; 3×retry günlük → ardışık 3 başarısız gün bile ILM'in önünde kalır.
+
+**ILM acil freni (`minio_backup.sh`):** Bucket mirror başarısız → `mc ilm edit --expiry-days 7` (acil, 7 gün). Başarılı → `mc ilm edit --expiry-days 4` (normal). `set -euo pipefail` yerine bucket başarıları ayrı izleniyor (`teqlif_ok`, `teqlif_dm_ok`).
+
+**Off-site sync altyapısı hazırlandı:** `offsite_sync.sh` artık gerçek bir rclone template içeriyor. Aktif etmek için `.env.backup`'a `RCLONE_REMOTE` ve `RCLONE_BUCKET` eklemek ve timer'ı enable etmek yeterli. Timer hâlâ disabled — hedef belirlenince enable edilmeli. Önerilen: Hetzner Storage Box veya Backblaze B2, rclone crypt remote ile şifreli.
+
+**Pazar ML süre riski belgelendi:** `schedule.yaml`'a uyarı eklendi. Şu anki `watchdog_m` yalnızca "hiç çalışmadı mı?" sorusunu yanıtlar; süre aşımını yakalamaz. >50K kullanıcıda `max_duration_m` alanı + Redis task_start/end key'leri ile agent alarm verebilmeli.
+
+### Kural
+
+- MinIO ILM ID değişirse `minio_backup.sh`'daki `MINIO_ILM_ID` ve node1'deki ILM kuralı senkron tutulmalıdır.
+- Off-site sync için her zaman rclone crypt remote kullanılır — şifresiz bulut transferi yapılmaz.
+- `teqlif-offsite-sync.timer` enable edilmeden önce `rclone lsd <REMOTE>:<BUCKET>` ile erişim doğrulanmalıdır.
+
+### Etkilenen Dosyalar
+
+| Dosya | Değişiklik |
+|-------|-----------|
+| `deploy/scale/V2.1/node2/resources/scripts/minio_backup.sh` | ILM acil freni: başarısızlıkta 7g, başarıda 4g; bucket başarı ayrı izleniyor |
+| `deploy/scale/V2.1/node2/resources/scripts/offsite_sync.sh` | Boş stub → rclone template; RCLONE_REMOTE/BUCKET env desteği |
+| `deploy/scale/V2.1/schedule.yaml` | Pazar ML ölçek riski notu eklendi |
+| MinIO node1 (canlı) | `teqlif/recordings/` ILM retention 2→4 gün (`db3tiuskndq8as06c0e0`) |
+
+### Açık Görevler
+
+- [ ] Off-site hedef seç (Hetzner/B2) ve `RCLONE_REMOTE`, `RCLONE_BUCKET` `.env.backup`'a ekle
+- [ ] `teqlif-offsite-sync.timer`'ı enable et
+- [ ] >50K kullanıcıda ML task süre izleme: `max_duration_m` + Redis key'ler
 
