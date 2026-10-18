@@ -70,6 +70,19 @@ agent_sync() {
       | grep -qE '^deploy/scale/V2\.1/(teqlif-agent/|cluster\.yaml)' \
       && changed=true
   fi
+  # Double-pull koruması: BEFORE==AFTER olsa bile deployed dosyalar farklıysa sync yap
+  if ! $changed && [ -d "$agent_dst" ]; then
+    rsync -a --dry-run --checksum \
+          --exclude '__pycache__' --exclude '*.pyc' \
+          --exclude 'configs/' --exclude 'setup/' \
+          "$agent_src/" "$agent_dst/" 2>/dev/null | grep -q '^>' \
+      && changed=true
+    # Restart script'in kendisi de farklıysa sync gerekir
+    local self_src="$REPO/deploy/scale/V2.1/scripts/teqlif-restart.sh"
+    if ! diff -q "$self_src" /usr/local/sbin/teqlif-restart >/dev/null 2>&1; then
+      changed=true
+    fi
+  fi
 
   if $changed; then
     log "teqlif-agent kodu güncellendi — /opt/teqlif-agent sync ediliyor..."
