@@ -88,7 +88,7 @@ async def archive_old_dm_task(ctx: dict) -> None:
             merged.sort(key=lambda m: m["created_at"])
 
             payload = gzip.compress(json.dumps(merged, ensure_ascii=False).encode())
-            await storage.upload_bytes(object_key, payload, content_type="application/gzip")
+            await storage.upload_bytes_dm(object_key, payload, content_type="application/gzip")
 
             deleted_ids.extend(m["id"] for m in new_msgs)
             archived_pairs.add((user_a, user_b))

@@ -4,7 +4,7 @@
 set -euo pipefail
 
 WAL_DIR=/project/teqlif/backups/pg_wal
-RETENTION_DAYS=7
+RETENTION_DAYS=14
 LOGFILE=/project/teqlif/logs/pg_wal_cleanup.log
 
 exec >> "${LOGFILE}" 2>&1

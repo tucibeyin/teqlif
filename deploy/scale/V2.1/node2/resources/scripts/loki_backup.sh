@@ -19,11 +19,10 @@ install -d "${BACKUP_DIR}"
 exec >> "${LOGFILE}" 2>&1
 echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) loki_backup: start"
 
-# --ignore-existing: nodeMonitor'ın sildiği chunk'ları backup'ta koru.
-# Yeni chunk'lar mevcut zaman damgasıyla kopyalanır.
+# --ignore-existing: nodeMonitor'ın sildiği chunk'lar backup'ta korunur.
+# --delete-after YOK: silme işi alttaki find -mtime +90 -delete'e bırakılmıştır.
 rsync -az \
     --ignore-existing \
-    --delete-after \
     -e "ssh -i /home/tucibeyin/.ssh/id_ed25519 -o StrictHostKeyChecking=no" \
     tucibeyin@10.10.0.99:"${NODEMONITOR_CHUNKS}" \
     "${BACKUP_DIR}/"

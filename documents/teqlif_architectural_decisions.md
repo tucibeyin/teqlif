@@ -4,7 +4,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Ekim 2026 — §33 ClickHouse DB yeniden adlandırma: teqlif_prod_analytics / teqlif_staging_analytics
+**Son güncelleme:** Ekim 2026 — §34 5 yapısal uyumsuzluk düzeltmesi (DM gizlilik, WAL/PITR, offsite zamanlama, Loki rsync, MinIO ILM)
 
 ---
 
@@ -2334,3 +2334,58 @@ Env dosyaları yerinde güncellendi:
 | node1 `.env.production` (git dışı) | `CLICKHOUSE_DB=teqlif_prod_analytics` |
 | node5 `.env.staging` (git dışı) | `CLICKHOUSE_DB=teqlif_staging_analytics` |
 
+
+---
+
+## §34 — Veri Yaşam Döngüsü ve Yedekleme Yapısal Düzeltmeleri
+
+**Tarih:** Ekim 2026
+
+### Problem
+
+Derin mimari analizde tespit edilen 5 yapısal uyumsuzluk: gizlilik sızıntısı, PITR çöküşü, yedek zamanlama hatası, rsync mantık paradoksu ve MinIO ILM gün uyuşmazlığı.
+
+### Yapılan Değişiklikler
+
+**1. DM Arşivi — Gizlilik Sızıntısı (KRİTİK)**
+`dm_archive_tasks.py:91` `storage.upload_bytes()` kullanıyordu → public `teqlif` bucket'a yazıyordu.
+`uploads.teqlif.com/dm-archive/...` üzerinden anonim erişim riski vardı.
+Düzeltme: `storage.upload_bytes_dm()` → private `teqlif-dm` bucket.
+
+**2. WAL / pg_basebackup PITR Uyumsuzluğu (YÜKSEK)**
+`pg_basebackup.sh` 2 haftalık yedek (RETENTION_COUNT=2) tutarken `pg_wal_cleanup.sh` 7 günlük WAL siliyordu.
+2. basebackup'tan PITR matematiksel olarak imkansızdı.
+Düzeltme: `pg_wal_cleanup.sh` RETENTION_DAYS=7 → 14.
+
+**3. Offsite Sync Zamanlama Hatası (YÜKSEK)**
+`teqlif-offsite-sync.timer` 04:00 UTC'de çalışıyor, MinIO yedek 05:30, mail yedek 06:15.
+Offsite'a her zaman bir önceki günün yedekleri gidiyordu.
+Düzeltme: Timer 04:00 → 07:00 UTC.
+
+**4. Loki Rsync Paradoksu (ORTA)**
+`loki_backup.sh` `--ignore-existing` + `--delete-after` birlikte kullanılıyordu.
+nodeMonitor'da 30 günde silinen chunk'lar node2 backup'ından da siliniyordu → 90 gün değil 30 gün saklama.
+Düzeltme: `--delete-after` kaldırıldı; silme `find -mtime +90 -delete`'e bırakıldı.
+
+**5. MinIO ILM Normal Gün Uyuşmazlığı (DÜŞÜK)**
+`minio_backup.sh` başarılı backup sonrası ILM'yi 4 güne basıyordu.
+`archive_recordings_task` 2 günlük tetikleyicisiyle 2 günlük fazla video node1 NVMe'de birikiyordu.
+Düzeltme: MINIO_ILM_NORMAL_DAYS=4 → 2.
+
+### Kural
+
+- DM arşiv yüklemelerinde her zaman `upload_bytes_dm()` kullanılır (private bucket)
+- WAL retention ≥ basebackup age — her zaman eşleştirilmeli
+- Offsite sync yedeklerin tamamlanma saatinden sonra zamanlanmalı
+- rsync'te `--delete-after` ve `--ignore-existing` birlikte kullanılmaz; silme her zaman `find -mtime` ile yapılır
+- MinIO ILM süreleri: normal=2 gün, emergency=7 gün
+
+### Etkilenen Dosyalar
+
+| Dosya | Değişiklik |
+|-------|-----------|
+| `backend/app/tasks/dm_archive_tasks.py` | `upload_bytes()` → `upload_bytes_dm()` |
+| `deploy/scale/V2.1/node2/resources/scripts/pg_wal_cleanup.sh` | `RETENTION_DAYS=7` → `14` |
+| `deploy/scale/V2.1/node2/systemd/teqlif-offsite-sync.timer` | `04:00` → `07:00 UTC` |
+| `deploy/scale/V2.1/node2/resources/scripts/loki_backup.sh` | `--delete-after` kaldırıldı |
+| `deploy/scale/V2.1/node2/resources/scripts/minio_backup.sh` | `MINIO_ILM_NORMAL_DAYS=4` → `2` |

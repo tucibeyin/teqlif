@@ -1,8 +1,8 @@
 [Unit]
-Description=teqlif Offsite Sync — günlük 04:00 UTC
+Description=teqlif Offsite Sync — günlük 07:00 UTC
 
 [Timer]
-OnCalendar=*-*-* 04:00:00
+OnCalendar=*-*-* 07:00:00
 AccuracySec=5m
 Persistent=true
 

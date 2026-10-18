@@ -37,7 +37,7 @@ mirror_bucket_with_retry() {
 }
 
 MINIO_ILM_ID="db3tiuskndq8as06c0e0"
-MINIO_ILM_NORMAL_DAYS=4
+MINIO_ILM_NORMAL_DAYS=2
 MINIO_ILM_EMERGENCY_DAYS=7
 
 ilm_set_days() {
