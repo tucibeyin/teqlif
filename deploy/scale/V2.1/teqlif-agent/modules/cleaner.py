@@ -112,6 +112,8 @@ class ScheduledCleaner:
         try:
             import asyncpg
             conn   = await asyncpg.connect(dsn=dsn)
+            who    = await conn.fetchval("SELECT current_user || '@' || inet_server_addr() || ':' || inet_server_port()")
+            logger.info("Cleaner bağlantı: %s → %s", label, who)
             result = await conn.execute(f"DELETE FROM {table} WHERE {where}")
             await conn.close()
 

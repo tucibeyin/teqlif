@@ -61,9 +61,11 @@ _ALL_SERVICES = [
     "teqlif-worker-critical",
     "teqlif-ai-proxy",
     "teqlif-agent",
-    "livekit",
+    "teqlif-livekit",         # node3/node4 — paket adı "livekit" değil
     "postgresql",
-    "redis-server",
+    "teqlif-redis-core",      # node1  — Ubuntu paketi "redis-server" değil
+    "teqlif-redis-replica",   # node2
+    "teqlif-redis-staging",   # node5
     "minio",
     "clickhouse-server",
     "haproxy",
@@ -171,9 +173,11 @@ class HealthMonitor:
             "teqlif-worker-critical": "ARQ Worker (critical)",
             "teqlif-ai-proxy":        "AI Proxy",
             "teqlif-agent":           "teqlif Agent",
-            "livekit":                "LiveKit",
+            "teqlif-livekit":         "LiveKit",
             "postgresql":             "PostgreSQL",
-            "redis-server":           "Redis",
+            "teqlif-redis-core":      "Redis Core",
+            "teqlif-redis-replica":   "Redis Replica",
+            "teqlif-redis-staging":   "Redis Staging",
             "minio":                  "MinIO",
             "clickhouse-server":      "ClickHouse",
             "haproxy":                "HAProxy",
