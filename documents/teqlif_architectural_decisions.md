@@ -4,7 +4,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Ekim 2026 — §37 cüzdan atomik transfer, açık artırma downgrade koruması, LiveKit WG bağlantısı, PgBouncer IaC borcu
+**Son güncelleme:** Ekim 2026 — §38 9 güvenlik açığı kapatıldı (SSRF, 2FA bypass, IDOR, WS token_version, ban cache, log injection, metrics, DM presign TTL, nginx hidden file)
 
 ---
 
@@ -2543,3 +2543,96 @@ Yapılandırma: `transaction` pool modu, `max_client_conn=200`, `default_pool_si
 | `deploy/scale/V2.1/node3/resources/livekit/livekit.yaml` | `127.0.0.1:6379` → `10.10.0.1:6379` |
 | `deploy/scale/V2.1/node4/resources/livekit/livekit.yaml` | `127.0.0.1:6379` → `10.10.0.1:6379` |
 | `deploy/scale/V2.1/node1/resources/pgbouncer/pgbouncer.ini` | Canlıdan alınan şablon repoya eklendi |
+
+---
+
+## §38 — Güvenlik Hardening: 9 Kod Düzeyinde Açık Kapatıldı
+
+**Tarih:** Ekim 2026  
+**Tetikleyici:** Bağımsız güvenlik analizi — 10 bulgu, 9'u kod düzeyinde düzeltilebilir, 1'i altyapı (belgelenip ertelenmiştir)
+
+### Sorun
+
+Kapsamlı bir güvenlik incelemesi sonucunda aşağıdaki bulgular tespit edildi:
+
+| # | Açık | Etki |
+|---|------|------|
+| S1 | **SSRF** — `nsfw_service.py` kullanıcı sağlanan URL'yi doğrulamadan httpx ile fetch ediyordu | RFC1918 iç ağ erişimi, metadata servisleri |
+| S2 | **2FA Bypass** — `verify_password` çağrısı Google adımı tamamlanmadan yapılabiliyordu | Admin paneline tek adımda erişim |
+| S3 | **IDOR** — `/calls/{id}/status` sahiplik kontrolü yoktu | Herhangi bir kullanıcının arama durumu okunabilir |
+| S4 | **WS token_version eksikliği** — 3 WS endpoint (messages, notifications, chat) token_version kontrol etmiyordu | Revoke edilmiş token geçerliydi |
+| S5 | **Ban cache gecikmesi** — Ban/delete sonrası Redis session cache temizlenmiyordu | Banlı kullanıcı API'ye erişmeye devam edebilirdi |
+| S6 | **Log injection** — JWT `sub` alanı doğrulanmadan loglara yazılıyordu | Log sahteciliği |
+| S7 | **Metrics spoofing** — `/metrics` IP kontrolü `x-forwarded-for` header'ından alınıyordu | Header manipülasyonuyla bypass |
+| S8 | **DM presign TTL fazla uzun** — 7 günlük presigned URL cache'leniyordu | URL sızması halinde uzun geçerlilik penceresi |
+| S9 | **Nginx hidden file** — `.git`, `.env` gibi gizli dosyalara erişim engellenmiyor | Kaynak kodu / konfigürasyon ifşası |
+
+### Çözüm
+
+**S1 — SSRF Koruması** (`nsfw_service.py`):
+- `_is_safe_url(url)` fonksiyonu eklendi
+- Yalnızca `http`/`https` şeması kabul edilir
+- `settings.uploads_host` ve `settings.minio_public_base` whitelist'i
+- `ipaddress` modülü ile RFC1918, loopback, link-local, reserved IP bloklandı
+- `localhost`, `metadata.google`, `169.254.x.x` hostname'leri bloklandı
+- `follow_redirects=False` — yönlendirme ile bypass engellendi
+
+**S2 — 2FA Step Ticket** (`admin_auth.py`):
+- `verify_google` başarısında Redis'e `admin_step1:{ticket}` key'i yazılır (120s TTL)
+- `verify_password` bu ticket'ı `Body(...)` olarak alır, Redis'te doğrular ve siler
+- Ticket olmadan `verify_password` çağrısı `401` döner
+
+**S3 — IDOR Düzeltmesi** (`calls.py`):
+- `/calls/{id}/status` endpoint'ine sahiplik kontrolü eklendi:
+  `if current_user.id not in (call.caller_id, call.callee_id): raise ForbiddenException()`
+
+**S4 — WS token_version** (`messages.py`, `notifications.py`, `chat.py`):
+- 3 WS handler'a da DB'den alınan `user.token_version` ile `_decode_token_version(token)` karşılaştırması eklendi
+- Uyuşmazlıkta `4001` ile bağlantı kesilir
+
+**S5 — Ban Cache Temizleme** (`admin_data.py`):
+- `update_user_info`: status → PASSIVE olduğunda `token_version++` + `invalidate_user_session_cache()`
+- `delete_user`: `token_version++` + `invalidate_user_session_cache()`
+- Her iki fonksiyon da cache temizleme hatasını sessizce yutar (Redis down toleransı)
+
+**S6 — Log Injection** (`middleware_context.py`):
+- `raw_sub = payload.get("sub")` alındıktan sonra `str(raw_sub).isdigit()` kontrolü
+- Sayı olmayan `sub` değerleri log context'ine yazılmaz
+
+**S7 — Metrics IP Kontrolü** (`main.py`):
+- `x-forwarded-for` header'ı yerine `request.client.host` kullanılıyor
+- Cloudflare arkasında çalışan serviste `client.host` her zaman Cloudflare IP'sidir — ek nginx `real_ip_from` konfigürasyonu gerektirir (bkz. infra notu)
+
+**S8 — DM Presign TTL** (`get_messages_query.py`):
+- `_PRESIGN_TTL`: `timedelta(days=7)` → `timedelta(minutes=30)`
+- `_CACHE_TTL_SECS`: `6 * 24 * 3600` → `25 * 60`
+
+**S9 — Nginx Hidden File** (`teqlif.com.conf`):
+```nginx
+location ~ /\. {
+    deny all;
+}
+```
+
+### Ertelenen Altyapı Değişiklikleri (Kod Dışı)
+
+| Açık | Durum | Not |
+|------|-------|-----|
+| Webmail HTTP-only + CF Flexible | Ertelenmiş | Port 443 Stalwart'ta, refactor gerektirir |
+| CF Origin bypass (UFW) | Ertelenmiş | UFW'ye Cloudflare IP range kuralları eklenmeli |
+
+### Etkilenen Dosyalar
+
+| Dosya | Değişiklik |
+|-------|-----------|
+| `backend/app/services/ml/nsfw_service.py` | `_is_safe_url()` eklendi, `follow_redirects=False` |
+| `backend/app/routers/admin_auth.py` | Redis step-ticket 2FA flow |
+| `backend/app/routers/calls.py` | IDOR ownership check |
+| `backend/app/routers/messages.py` | token_version WS check |
+| `backend/app/routers/notifications.py` | token_version WS check |
+| `backend/app/routers/chat.py` | token_version WS check |
+| `backend/app/routers/admin_data.py` | ban/delete token_version++ + cache invalidation |
+| `backend/app/security/middleware_context.py` | sub isdigit() validation |
+| `backend/main.py` | metrics client.host |
+| `backend/app/use_cases/messages/queries/get_messages_query.py` | presign TTL 30 dakika |
+| `deploy/scale/V2.1/node1/resources/nginx/teqlif.com.conf` | hidden file deny |
