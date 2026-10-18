@@ -4,7 +4,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Ekim 2026 — §31 MinIO ILM acil freni + off-site sync altyapısı (`TODO: commit`)
+**Son güncelleme:** Ekim 2026 — §31 MinIO ILM acil freni + off-site sync altyapısı (`c8689188`)
 
 ---
 
