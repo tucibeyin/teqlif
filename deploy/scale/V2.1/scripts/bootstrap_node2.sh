@@ -68,6 +68,7 @@ setup_backup_directories() {
     log_step "Backup dizinleri"
     mkdir -p /project/teqlif/backups/{pg_dump,pg_wal,redis,minio}
     chown -R tucibeyin:tucibeyin /project/teqlif/backups
+    chmod -R 700 /project/teqlif/backups
     log_ok "Backup dizinleri: /project/teqlif/backups/"
 }
 
