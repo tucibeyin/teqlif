@@ -24,10 +24,12 @@ warn() { echo -e "${YELLOW}⚠ [teqlif-restart]${NC} $*"; }
 err()  { echo -e "${RED}✖ [teqlif-restart]${NC} $*" >&2; exit 1; }
 
 RESTART_LIVEKIT=false
+FORCE_AGENT_SYNC=false
 for arg in "$@"; do
   case $arg in
-    --livekit) RESTART_LIVEKIT=true ;;
-    *) err "Bilinmeyen flag: $arg  (kullanım: teqlif-restart [--livekit])" ;;
+    --livekit)           RESTART_LIVEKIT=true ;;
+    --force-agent-sync)  FORCE_AGENT_SYNC=true ;;
+    *) err "Bilinmeyen flag: $arg  (kullanım: teqlif-restart [--livekit] [--force-agent-sync])" ;;
   esac
 done
 
@@ -61,7 +63,9 @@ agent_sync() {
   local agent_dst="/opt/teqlif-agent"
 
   local changed=false
-  if [ "$BEFORE" != "$AFTER" ]; then
+  if $FORCE_AGENT_SYNC; then
+    changed=true
+  elif [ "$BEFORE" != "$AFTER" ]; then
     git diff --name-only "$BEFORE" "$AFTER" 2>/dev/null \
       | grep -qE '^deploy/scale/V2\.1/(teqlif-agent/|cluster\.yaml)' \
       && changed=true
@@ -132,6 +136,11 @@ case "$NODE" in
     systemctl restart teqlif-ai-proxy.service
     log "teqlif-ai-proxy.service hazır"
     journalctl -u teqlif-ai-proxy.service -n 20 --no-pager
+    ;;
+
+  nodeMonitor)
+    agent_sync
+    log "nodeMonitor — izleme node'u, uygulama servisi yok. git pull tamamlandı."
     ;;
 
   *)
