@@ -36,7 +36,7 @@ main() {
     setup_logrotate
     setup_auditd
     setup_thp_disable
-    setup_fail2ban
+    setup_crowdsec
     setup_node_conf_generic
     setup_wg_keygen
     setup_wg_config_generic

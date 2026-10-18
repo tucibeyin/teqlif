@@ -28,7 +28,7 @@ main() {
     setup_logrotate
     setup_auditd
     setup_thp_disable
-    setup_fail2ban
+    setup_crowdsec
     setup_node_conf    "${NODE_DIR}"
     setup_wg_keygen
     setup_wg_config    "${NODE_DIR}"

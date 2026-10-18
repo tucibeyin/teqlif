@@ -105,43 +105,10 @@ done
 # NOT: 587 (STARTTLS) açılmıyor — iOS STARTTLS portuna SSL bağlantısı deneyince scan-ban tetikler
 echo "[OK] UFW kuralları eklendi: 25, 443, 465, 993"
 
-# ── 9. Fail2ban ───────────────────────────────────────────────────────────────
-mkdir -p /etc/fail2ban/jail.d /etc/fail2ban/filter.d
-
-cat > /etc/fail2ban/jail.d/stalwart.conf <<'EOF'
-[stalwart-smtp]
-enabled  = true
-filter   = stalwart-smtp
-port     = smtp,submissions,submission
-logpath  = /var/log/syslog
-maxretry = 5
-bantime  = 3600
-findtime = 600
-
-[stalwart-imap]
-enabled  = true
-filter   = stalwart-imap
-port     = imaps
-logpath  = /var/log/syslog
-maxretry = 5
-bantime  = 3600
-findtime = 600
-EOF
-
-cat > /etc/fail2ban/filter.d/stalwart-smtp.conf <<'EOF'
-[Definition]
-failregex = Authentication failed.*from=<HOST>
-            Rejecting.*from=<HOST>.*Too many
-EOF
-
-cat > /etc/fail2ban/filter.d/stalwart-imap.conf <<'EOF'
-[Definition]
-failregex = IMAP.*Authentication failed.*ip=<HOST>
-            Too many authentication.*<HOST>
-EOF
-
-systemctl reload fail2ban 2>/dev/null || systemctl restart fail2ban 2>/dev/null || true
-echo "[OK] Fail2ban kuralları eklendi"
+# ── 9. CrowdSec (fail2ban kaldırıldı — _common.sh setup_crowdsec kurulumu yeterli) ──
+# Stalwart brute-force koruması CrowdSec crowdsecurity/sshd + linux collection'ları ile sağlanır.
+# SMTP/IMAP için Stalwart'ın kendi rate-limit ve ban mekanizması (rate-limiter.toml) kullanılır.
+echo "[OK] Brute-force koruması: CrowdSec (bootstrap sırasında kuruldu)"
 
 # ── 10. Mail backup timer ─────────────────────────────────────────────────────
 install -m 644 "${REPO_DIR}/systemd/teqlif-mail-backup.service" \

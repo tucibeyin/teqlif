@@ -42,7 +42,7 @@ install_base_packages() {
     apt-get upgrade -y -qq
     apt-get install -y -qq \
         curl wget git btop \
-        ufw fail2ban \
+        ufw \
         wireguard wireguard-tools \
         chrony \
         htop iotop nethogs \
@@ -196,46 +196,31 @@ EOF
     log_ok "THP devre dışı"
 }
 
-# ── Fail2ban ──────────────────────────────────────────────────────────────────
-setup_fail2ban() {
-    log_step "Fail2ban"
-    cat > /etc/fail2ban/jail.local <<'EOF'
-[DEFAULT]
-bantime  = 3600
-findtime = 600
-maxretry = 3
-
-[sshd]
-enabled = true
-
-[nginx-http-auth]
-enabled  = true
-port     = http,https
-logpath  = /var/log/nginx/error.log
-
-[nginx-botsearch]
-enabled  = true
-port     = http,https
-logpath  = /var/log/nginx/access.log
-maxretry = 5
-findtime = 60
-bantime  = 86400
-
-[nginx-req-limit]
-enabled  = true
-filter   = nginx-req-limit
-port     = http,https
-logpath  = /var/log/nginx/error.log
-maxretry = 10
-bantime  = 7200
-EOF
-    cat > /etc/fail2ban/filter.d/nginx-req-limit.conf <<'EOF'
-[Definition]
-failregex = limiting requests, excess:.* by zone.*client: <HOST>
-ignoreregex =
-EOF
-    systemctl enable --now fail2ban
-    log_ok "Fail2ban aktif"
+# ── CrowdSec ──────────────────────────────────────────────────────────────────
+setup_crowdsec() {
+    log_step "CrowdSec"
+    if ! command -v cscli &>/dev/null; then
+        install -d /etc/apt/keyrings
+        curl -fsSL https://packagecloud.io/crowdsec/crowdsec/gpgkey \
+            | gpg --dearmor -o /etc/apt/keyrings/crowdsec.gpg
+        echo "deb [signed-by=/etc/apt/keyrings/crowdsec.gpg] \
+https://packagecloud.io/crowdsec/crowdsec/debian/ \
+$(. /etc/os-release; echo "$VERSION_CODENAME") main" \
+            > /etc/apt/sources.list.d/crowdsec.list
+        apt-get update -qq
+        apt-get install -y -qq crowdsec crowdsec-firewall-bouncer
+    else
+        log_info "CrowdSec zaten kurulu"
+    fi
+    cscli collections install \
+        crowdsecurity/linux \
+        crowdsecurity/sshd \
+        crowdsecurity/nginx \
+        crowdsecurity/base-http-scenarios \
+        crowdsecurity/http-cve \
+        2>/dev/null || true
+    systemctl enable --now crowdsec crowdsec-firewall-bouncer
+    log_ok "CrowdSec + firewall-bouncer aktif"
 }
 
 # ── Repo klonlama veya doğrulama ──────────────────────────────────────────────
