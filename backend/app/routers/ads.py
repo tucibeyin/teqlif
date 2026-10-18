@@ -25,7 +25,7 @@ from app.models.ad_campaign import AdCampaign
 from app.models.listing import Listing
 from app.models.teqlik_transaction import TeqlikTransaction
 from app.models.user import User
-from app.utils.auth import bearer_scheme, decode_token, get_current_user
+from app.utils.auth import bearer_scheme, decode_token, get_current_user, invalidate_user_session_cache
 from app.utils.redis_client import get_redis
 
 logger = logging.getLogger(__name__)
@@ -107,10 +107,15 @@ async def create_campaign(
     teqlik_cost = 0
     if not is_free:
         teqlik_cost = credit_service.cost_teqlik("boost")
-        await db.execute(
-            sql_text("UPDATE users SET teqlik_balance = GREATEST(0, teqlik_balance - :cost) WHERE id = :uid"),
+        deduct = await db.execute(
+            sql_text(
+                "UPDATE users SET teqlik_balance = teqlik_balance - :cost "
+                "WHERE id = :uid AND teqlik_balance >= :cost RETURNING teqlik_balance"
+            ),
             {"cost": teqlik_cost, "uid": current_user.id},
         )
+        if deduct.fetchone() is None:
+            raise InsufficientFundsException(code="INSUFFICIENT_FUNDS_BOOST")
         db.add(TeqlikTransaction(
             user_id=current_user.id,
             amount=-teqlik_cost,
@@ -129,6 +134,11 @@ async def create_campaign(
         ))
 
     await db.commit()
+    if teqlik_cost > 0:
+        try:
+            await invalidate_user_session_cache(current_user.id)
+        except Exception:
+            pass
     await db.refresh(campaign)
 
     # Boost kredi sayacını artır (ücretsiz hak kullanıldıysa)

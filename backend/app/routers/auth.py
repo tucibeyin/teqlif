@@ -283,9 +283,17 @@ async def forgot_password(request: Request, data: ForgotPassword, db: AsyncSessi
 async def reset_password(request: Request, data: ResetPassword, db: AsyncSession = Depends(get_db)):
     redis = await get_redis()
     key = f"reset_pwd:{data.email}"
+    fail_key = f"reset_fail:{data.email}"
     stored_code = await redis.get(key)
-    
-    if not stored_code or stored_code != data.code:
+
+    if not stored_code:
+        raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrCodeInvalidOrExpired", "Geçersiz veya süresi dolmuş kod"))
+
+    if stored_code != data.code:
+        attempts = await redis.incr(fail_key)
+        await redis.expire(fail_key, VERIFY_CODE_TTL)
+        if attempts >= 5:
+            await redis.delete(key, fail_key)
         raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrCodeInvalidOrExpired", "Geçersiz veya süresi dolmuş kod"))
         
     result = await db.execute(select(User).where(User.email == data.email))
@@ -300,7 +308,7 @@ async def reset_password(request: Request, data: ResetPassword, db: AsyncSession
     )
     await db.commit()
     await invalidate_user_session_cache(user.id)
-    await redis.delete(key)
+    await redis.delete(key, fail_key)
 
     return {"message": _msg(request if "request" in locals() else None, locals().get("data"), "apiMsgPasswordReset", "Şifreniz başarıyla sıfırlandı")}
 
@@ -1018,21 +1026,27 @@ async def logout(
     payload: dict = {},
     cookie_refresh: Optional[str] = Cookie(default=None, alias=REFRESH_COOKIE),
     db: AsyncSession = Depends(get_db),
+    current_user: User | None = Depends(get_current_user_optional),
 ):
     """Refresh token'ı iptal eder, token_version'ı artırır, cookie'leri temizler.
     Web: refresh_token cookie'den okunur. Mobile: body'de {'refresh_token': '...'} gönderilir.
+    Refresh token yoksa access token'ın sahibi (current_user) üzerinden de geçersiz kılar.
     """
     refresh = cookie_refresh or (payload or {}).get("refresh_token", "")
+    user_id: int | None = None
     if refresh:
         redis = await get_redis()
         user_id_str = await redis.getdel(f"refresh:{refresh}")
         if user_id_str:
             user_id = int(user_id_str)
-            await db.execute(
-                sa_update(User).where(User.id == user_id).values(token_version=User.token_version + 1)
-            )
-            await db.commit()
-            await invalidate_user_session_cache(user_id)
+    if user_id is None and current_user is not None:
+        user_id = current_user.id
+    if user_id is not None:
+        await db.execute(
+            sa_update(User).where(User.id == user_id).values(token_version=User.token_version + 1)
+        )
+        await db.commit()
+        await invalidate_user_session_cache(user_id)
     clear_auth_cookies(response)
     return {"message": "Çıkış yapıldı"}
 

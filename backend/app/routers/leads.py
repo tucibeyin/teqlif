@@ -22,7 +22,7 @@ from app.database import get_db, AsyncSessionLocal
 from app.models.listing import Listing
 from app.models.user import User
 from app.models.teqlik_transaction import TeqlikTransaction
-from app.utils.auth import get_current_user
+from app.utils.auth import get_current_user, invalidate_user_session_cache
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/leads", tags=["leads"])
@@ -290,10 +290,15 @@ async def send_blast(
 
     # ── TEQlik düş ──────────────────────────────────────────────────────────────
     if teqlik_cost > 0:
-        await db.execute(
-            sql_text("UPDATE users SET teqlik_balance = GREATEST(0, teqlik_balance - :cost) WHERE id = :uid"),
+        deduct = await db.execute(
+            sql_text(
+                "UPDATE users SET teqlik_balance = teqlik_balance - :cost "
+                "WHERE id = :uid AND teqlik_balance >= :cost RETURNING teqlik_balance"
+            ),
             {"cost": teqlik_cost, "uid": current_user.id},
         )
+        if deduct.fetchone() is None:
+            raise InsufficientFundsException(code="INSUFFICIENT_FUNDS_BLAST")
         db.add(TeqlikTransaction(
             user_id=current_user.id,
             amount=-teqlik_cost,
@@ -583,10 +588,15 @@ async def send_retargeting(
 
     # TEQlik düş + kredi say
     if teqlik_cost > 0:
-        await db.execute(
-            sql_text("UPDATE users SET teqlik_balance = GREATEST(0, teqlik_balance - :cost) WHERE id = :uid"),
+        deduct = await db.execute(
+            sql_text(
+                "UPDATE users SET teqlik_balance = teqlik_balance - :cost "
+                "WHERE id = :uid AND teqlik_balance >= :cost RETURNING teqlik_balance"
+            ),
             {"cost": teqlik_cost, "uid": current_user.id},
         )
+        if deduct.fetchone() is None:
+            raise InsufficientFundsException(code="INSUFFICIENT_FUNDS_RETARGET")
         db.add(TeqlikTransaction(
             user_id=current_user.id,
             amount=-teqlik_cost,
@@ -595,6 +605,10 @@ async def send_retargeting(
             reference_type="listing",
         ))
         await db.commit()
+        try:
+            await invalidate_user_session_cache(current_user.id)
+        except Exception:
+            pass
 
     if free_used > 0:
         await credit_service.increment("blast", current_user.id, current_user.premium_since, count=free_used)

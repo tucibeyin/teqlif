@@ -39,6 +39,7 @@ from app.models.block import UserBlock
 from app.schemas.story import StoryAuthorOut, StoryItemOut, UserStoryGroupResponse, StoryViewerOut, StoryViewersResponse, MyStoriesResponse
 from app.services.like_service import LikeService
 from app.core.exceptions import DatabaseException, BadRequestException, NotFoundException, ForbiddenException
+from app.utils.media_processor import detect_image_type, detect_video_type
 from app.core.logger import get_logger, capture_exception
 
 logger = get_logger(__name__)
@@ -289,26 +290,31 @@ class StoryService:
         """
         _MAX_BYTES = 20 * 1024 * 1024  # 20 MB
 
-        content_type = (file.content_type or "").lower()
-        is_image = content_type.startswith("image/")
-        is_video = content_type.startswith("video/") or content_type == "application/octet-stream"
-        if not (is_image or is_video):
-            raise BadRequestException(code="INVALID_MEDIA_FORMAT")
-
-        media_type = "image" if is_image else "video"
-
         raw = await file.read()
         if len(raw) > _MAX_BYTES:
             raise BadRequestException(code="STORY_FILE_TOO_LARGE")
 
+        # Magic-byte doğrulaması — client header/uzantısına güvenilmez (SVG/HTML XSS)
+        _img_ext = detect_image_type(raw)
+        _vid_ext = detect_video_type(raw)
+        if _img_ext:
+            is_image = True
+            ext = f".{_img_ext}"
+            content_type = "image/jpeg"
+            media_type = "image"
+        elif _vid_ext:
+            is_image = False
+            ext = f".{_vid_ext}"
+            content_type = "video/mp4"
+            media_type = "video"
+        else:
+            raise BadRequestException(code="INVALID_MEDIA_FORMAT")
+
         import tempfile
         from app.services import storage_service as storage
 
-        fallback = "photo.jpg" if is_image else "video.mp4"
-        ext = os.path.splitext(file.filename or fallback)[1] or (".jpg" if is_image else ".mp4")
         filename = f"{uuid.uuid4().hex}{ext}"
         minio_key = f"stories/{filename}"
-        content_type = "image/jpeg" if is_image else "video/mp4"
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_path = os.path.join(tmp_dir, filename)
@@ -316,7 +322,7 @@ class StoryService:
                 f.write(raw)
 
             upload_path = tmp_path
-            if is_video:
+            if not is_image:
                 compressed_path, _ = await _compress_video(tmp_path, tmp_dir, ext)
                 if compressed_path:
                     upload_path = compressed_path

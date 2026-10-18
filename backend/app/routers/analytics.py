@@ -18,7 +18,7 @@ from app.models.stream import LiveStream
 from app.models.teqlik_transaction import TeqlikTransaction
 from app.models.user import User
 from app.schemas.analytics import AnalyticsEventCreate, FeedEventBatch, SearchEventCreate
-from app.utils.auth import decode_token, get_current_user
+from app.utils.auth import decode_token, get_current_user, invalidate_user_session_cache
 from app.utils.redis_client import get_redis
 from app.core.exceptions import AppException, InsufficientFundsException, ServiceException, ForbiddenException, NotFoundException
 from app.services import credit_service
@@ -886,10 +886,15 @@ async def price_estimate(
     if current_user.is_premium:
         ai_used_new = await credit_service.increment("ai_price", current_user.id, current_user.premium_since)
         if ai_used_new > _ai_price_limit:
-            await db.execute(
-                sql_text("UPDATE users SET teqlik_balance = GREATEST(0, teqlik_balance - :cost) WHERE id = :uid"),
+            deduct = await db.execute(
+                sql_text(
+                    "UPDATE users SET teqlik_balance = teqlik_balance - :cost "
+                    "WHERE id = :uid AND teqlik_balance >= :cost RETURNING teqlik_balance"
+                ),
                 {"cost": _ai_price_cost, "uid": current_user.id},
             )
+            if deduct.fetchone() is None:
+                raise InsufficientFundsException(code="MONTHLY_LIMIT_INSUFFICIENT_FUNDS")
             db.add(TeqlikTransaction(
                 user_id=current_user.id,
                 amount=-_ai_price_cost,
@@ -898,12 +903,21 @@ async def price_estimate(
                 reference_type=ref_type,
             ))
             await db.commit()
+            try:
+                await invalidate_user_session_cache(current_user.id)
+            except Exception:
+                pass
             teqlik_spent = _ai_price_cost
     else:
-        await db.execute(
-            sql_text("UPDATE users SET teqlik_balance = GREATEST(0, teqlik_balance - :cost) WHERE id = :uid"),
+        deduct = await db.execute(
+            sql_text(
+                "UPDATE users SET teqlik_balance = teqlik_balance - :cost "
+                "WHERE id = :uid AND teqlik_balance >= :cost RETURNING teqlik_balance"
+            ),
             {"cost": _ai_price_cost, "uid": current_user.id},
         )
+        if deduct.fetchone() is None:
+            raise InsufficientFundsException()
         db.add(TeqlikTransaction(
             user_id=current_user.id,
             amount=-_ai_price_cost,
@@ -912,6 +926,10 @@ async def price_estimate(
             reference_type=ref_type,
         ))
         await db.commit()
+        try:
+            await invalidate_user_session_cache(current_user.id)
+        except Exception:
+            pass
         teqlik_spent = _ai_price_cost
 
     return {

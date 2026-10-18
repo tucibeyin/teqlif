@@ -7,6 +7,7 @@ from sqlalchemy.sql import text
 from app.core.uow import AbstractUnitOfWork
 from app.core.logger import get_logger, capture_exception
 from app.core.exceptions import NotFoundException, DatabaseException, InsufficientFundsException
+from app.utils.auth import invalidate_user_session_cache
 from app.models.listing import Listing
 from app.models.enums import ListingStatus
 from app.models.listing_impression import ListingImpression
@@ -70,10 +71,16 @@ class ToggleListingCommand:
                 listing.status = ListingStatus.PASSIVE
 
             if reactivating and not is_free:
-                await self.uow.session.execute(
-                    text("UPDATE users SET teqlik_balance = GREATEST(0, teqlik_balance - :cost) WHERE id = :uid"),
+                deduct = await self.uow.session.execute(
+                    text(
+                        "UPDATE users SET teqlik_balance = teqlik_balance - :cost "
+                        "WHERE id = :uid AND teqlik_balance >= :cost RETURNING teqlik_balance"
+                    ),
                     {"cost": reactivation_cost, "uid": current_user.id},
                 )
+                if deduct.fetchone() is None:
+                    raise InsufficientFundsException(code="insufficient_balance")
+                asyncio.create_task(invalidate_user_session_cache(current_user.id))
                 self.uow.session.add(TeqlikTransaction(
                     user_id=current_user.id,
                     amount=-reactivation_cost,
