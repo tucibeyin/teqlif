@@ -32,4 +32,5 @@ rsync_from_nodemonitor "/opt/monitor/teqlif/" "${BACKUP_DIR}/monitor-config"
 
 USED=$(du -sh "${BACKUP_DIR}" 2>/dev/null | cut -f1 || echo "?")
 echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) nodemonitor_config_backup: tamamlandı (${USED})"
+touch "${BACKUP_DIR}/.last_backup_ok"
 logger "teqlif nodemonitor_config_backup: tamamlandı (${USED})"

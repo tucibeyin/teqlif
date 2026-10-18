@@ -24,4 +24,5 @@ find "${BACKUP_DIR}" -name "uptime_kuma_*.db.gz" -mtime "+${RETENTION_DAYS}" -de
 
 SIZE=$(du -sh "${DEST}" | cut -f1)
 echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) uptime_kuma_backup: OK (${SIZE})"
+touch "${BACKUP_DIR}/.last_backup_ok"
 logger "teqlif uptime_kuma_backup: tamamlandı (${SIZE})"

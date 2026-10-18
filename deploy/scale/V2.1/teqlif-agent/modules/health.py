@@ -375,16 +375,17 @@ async def _backup_ages() -> dict:
     """node2'deki yedek dizinlerinin yaşını dakika cinsinden döner."""
     backup_dirs = {
         "pg_backup":         "/project/teqlif/backups/pg_dump",
-        "minio_backup":      "/project/teqlif/backups/minio",
         "redis_backup":      "/project/teqlif/backups/redis",
         "clickhouse_backup": "/project/teqlif/backups/clickhouse",
         "pg_basebackup":     "/project/teqlif/backups/pg_basebackup",
     }
-    # rsync tabanlı backup'lar .last_backup_ok sentinel dosyasına bakılır
+    # Sentinel dosyası (.last_backup_ok) mtime'ı → backup gerçek tamamlanma zamanı.
+    # rsync mtime'ı kaynak dosyadan kopyaladığı için dizin taraması yanlış ölçer.
     sentinel_dirs = {
         "loki_backup":               "/project/teqlif/backups/loki/.last_backup_ok",
-        "uptime_kuma_backup":        "/project/teqlif/backups/uptime_kuma",
-        "nodemonitor_config_backup": "/project/teqlif/backups/nodemonitor_config",
+        "minio_backup":              "/project/teqlif/backups/minio/.last_backup_ok",
+        "uptime_kuma_backup":        "/project/teqlif/backups/uptime_kuma/.last_backup_ok",
+        "nodemonitor_config_backup": "/project/teqlif/backups/nodemonitor_config/.last_backup_ok",
         "mail_backup":               "/project/teqlif/backups/stalwart/.last_mail_backup_ok",
     }
     result = {}
@@ -401,19 +402,10 @@ async def _backup_ages() -> dict:
             pass
     for key, path in sentinel_dirs.items():
         p = Path(path)
-        # loki: sentinel dosyası; diğerleri: en yeni dosya
         if p.is_file():
             try:
                 age_sec = time.time() - p.stat().st_mtime
                 result[key] = {"age_min": int(age_sec / 60)}
-            except Exception:
-                pass
-        elif p.is_dir():
-            try:
-                files = sorted(p.iterdir(), key=lambda f: f.stat().st_mtime, reverse=True)
-                if files:
-                    age_sec = time.time() - files[0].stat().st_mtime
-                    result[key] = {"age_min": int(age_sec / 60)}
             except Exception:
                 pass
     return result
