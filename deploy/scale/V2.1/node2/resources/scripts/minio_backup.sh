@@ -36,8 +36,28 @@ mirror_bucket_with_retry() {
     return 1
 }
 
-mirror_bucket_with_retry teqlif
-mirror_bucket_with_retry teqlif-dm
+MINIO_ILM_ID="db3tiuskndq8as06c0e0"
+MINIO_ILM_NORMAL_DAYS=4
+MINIO_ILM_EMERGENCY_DAYS=7
+
+ilm_set_days() {
+    local days="$1"
+    mc ilm edit --id "${MINIO_ILM_ID}" --expiry-days "${days}" node1minio/teqlif \
+        >/dev/null 2>&1 \
+        && echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) minio_backup: ILM retention=${days}d" \
+        || echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) minio_backup: WARNING ILM güncellenemedi"
+}
+
+teqlif_ok=false
+teqlif_dm_ok=false
+mirror_bucket_with_retry teqlif    && teqlif_ok=true  || true
+mirror_bucket_with_retry teqlif-dm && teqlif_dm_ok=true || true
+
+if ! $teqlif_ok || ! $teqlif_dm_ok; then
+    ilm_set_days "${MINIO_ILM_EMERGENCY_DAYS}"
+    exit 1
+fi
+ilm_set_days "${MINIO_ILM_NORMAL_DAYS}"
 
 # teqlif bucket mirror başarılı → node1 MinIO'daki tüm nesneler node2'de mevcut.
 # Henüz onaylanmamış stream_recordings kayıtlarını damgala.
