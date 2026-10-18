@@ -111,6 +111,7 @@ def load_config(path: str | None = None) -> AgentConfig:
         peers        = peers,
         db_path      = Path(raw.get("db_path", "/var/lib/teqlif-agent/state.db")),
         log_level    = raw.get("log_level", "INFO"),
+        # YAML boşsa EnvironmentFile'daki env değişkenine fallback
         telegram_bot_token = raw.get("telegram_bot_token", "") or os.getenv("TELEGRAM_BOT_TOKEN", ""),
         telegram_chat_id   = raw.get("telegram_chat_id", "") or os.getenv("TELEGRAM_CHAT_ID", ""),
         redis_url    = raw.get("redis_url", "redis://127.0.0.1:6379/0"),
