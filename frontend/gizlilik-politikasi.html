@@ -177,9 +177,9 @@
         <div class="policy-section">
             <h2>6. Çerezler ve Yerel Depolama</h2>
             <p>
-                teqlif, oturum yönetimi için tarayıcı <strong>localStorage</strong>'ında JWT token saklar.
-                Bu token yalnızca hesabınıza güvenli erişim sağlamak amacıyla kullanılır ve
-                üçüncü taraflarla paylaşılmaz.
+                teqlif web istemcisinde access token yalnızca sayfa belleğinde (in-memory) tutulur; localStorage'a yazılmaz.
+                Oturum yenilemek için kullanılan refresh token, JavaScript'in erişemediği <strong>HttpOnly cookie</strong>
+                olarak saklanır. Bu yaklaşım, XSS saldırılarına karşı ek bir güvenlik katmanı sağlar.
             </p>
             <p>
                 Mobil uygulamamız, oturum bilgilerini cihazın güvenli depolama alanında saklar.
