@@ -32,6 +32,15 @@ for arg in "$@"; do
   esac
 done
 
+# ── 0. teqlif-restart betiğini güncelle (setup/ değişmişse) ─────────────────
+_self_src="$REPO/deploy/scale/V2.1/teqlif-agent/setup/teqlif-restart"
+_self_dst="/usr/local/sbin/teqlif-restart"
+if [ -f "$_self_src" ] && ! diff -q "$_self_src" "$_self_dst" > /dev/null 2>&1; then
+  cp "$_self_src" "$_self_dst"
+  chmod +x "$_self_dst"
+  log "teqlif-restart betiği güncellendi (sonraki çalıştırmada aktif)"
+fi
+
 # ── 1. git pull ───────────────────────────────────────────────────────────────
 log "git pull — $REPO"
 cd "$REPO"
@@ -61,20 +70,34 @@ agent_sync() {
   local cluster_src="$REPO/deploy/scale/V2.1/cluster.yaml"
   local agent_dst="/opt/teqlif-agent"
 
-  local changed=false
+  local code_changed=false
   if [ "$BEFORE" != "$AFTER" ]; then
     git diff --name-only "$BEFORE" "$AFTER" 2>/dev/null \
       | grep -qE '^deploy/scale/V2\.1/(teqlif-agent/|cluster\.yaml)' \
-      && changed=true
+      && code_changed=true
   fi
 
-  if $changed; then
+  # Node-specific config: git'teki configs/$NODE.yaml → /etc/teqlif-agent/config.yaml
+  local config_src="$agent_src/configs/$NODE.yaml"
+  local config_dst="/etc/teqlif-agent/config.yaml"
+  local config_changed=false
+  if [ -f "$config_src" ] && ! diff -q "$config_src" "$config_dst" > /dev/null 2>&1; then
+    config_changed=true
+    log "teqlif-agent config güncellendi — $config_dst sync ediliyor..."
+    cp "$config_src" "$config_dst"
+    chown teqlif-agent:teqlif-agent "$config_dst"
+  fi
+
+  if $code_changed; then
     log "teqlif-agent kodu güncellendi — /opt/teqlif-agent sync ediliyor..."
     rsync -a --exclude '__pycache__' --exclude '*.pyc' \
           --exclude 'configs/' --exclude 'setup/' \
           "$agent_src/" "$agent_dst/"
     cp "$cluster_src" "$agent_dst/cluster.yaml"
     chown -R teqlif-agent:teqlif-agent "$agent_dst"
+  fi
+
+  if $code_changed || $config_changed; then
     systemctl restart teqlif-agent.service
     log "teqlif-agent yeniden başlatıldı"
   fi
