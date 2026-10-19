@@ -73,7 +73,7 @@ agent_sync() {
   local code_changed=false
   if [ "$BEFORE" != "$AFTER" ]; then
     git diff --name-only "$BEFORE" "$AFTER" 2>/dev/null \
-      | grep -qE '^deploy/scale/V2\.1/(teqlif-agent/|cluster\.yaml)' \
+      | grep -qE '^deploy/scale/V2\.1/(teqlif-agent/|cluster\.yaml|schedule\.yaml)' \
       && code_changed=true
   fi
 

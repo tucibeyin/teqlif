@@ -143,11 +143,6 @@ batch:
     minute: 0
     watchdog_m: 1440
 
-  - name: backfill_phash_task
-    hour: 5
-    minute: 0
-    watchdog_m: 1440
-
   - name: backfill_listing_embeddings_task
     hour: 5
     minute: 0

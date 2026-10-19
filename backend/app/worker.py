@@ -1012,7 +1012,7 @@ async def sync_swipelive_interests_task(ctx: dict) -> None:
 
 async def compute_user_interests_task(ctx: dict) -> None:
     """
-    Her 15 dakikada çalışır; son 30 günün analytics_events + like/favorite/message
+    Her gece 03:40'da çalışır; son 30 günün analytics_events + like/favorite/message
     sinyallerinden kullanıcı başına kategori ilgi skorlarını hesaplar ve
     user_interests tablosunu günceller. Redis interests:{uid} cache'ini invalidate eder.
 
@@ -1230,6 +1230,7 @@ async def compute_user_interests_task(ctx: dict) -> None:
             rows = result.all()
             if not rows:
                 logger.info("[Worker] compute_user_interests: sinyal yok, atlanıyor")
+                await _agent_ok(ctx, "compute_user_interests_task")
                 return
 
             # Toplu upsert — executemany tek round-trip
@@ -1411,6 +1412,7 @@ async def compute_user_condition_preferences_task(ctx: dict) -> None:
 
         if not rows:
             logger.info("[Worker] compute_user_condition_preferences: sinyal yok, atlanıyor")
+            await _agent_ok(ctx, "compute_user_condition_preferences_task")
             return
 
         # Kullanıcı bazlı dict oluştur
@@ -1433,6 +1435,7 @@ async def compute_user_condition_preferences_task(ctx: dict) -> None:
             "[Worker] compute_user_condition_preferences tamamlandı | kullanıcı=%d",
             len(user_map),
         )
+        await _agent_ok(ctx, "compute_user_condition_preferences_task")
 
     except Exception as exc:
         logger.error(
@@ -2026,6 +2029,7 @@ async def backfill_listing_embeddings_task(ctx: dict) -> None:
             )).all()
 
             if not rows:
+                await _agent_ok(ctx, "backfill_listing_embeddings_task")
                 return
 
             count = 0
@@ -2045,6 +2049,7 @@ async def backfill_listing_embeddings_task(ctx: dict) -> None:
             await db.commit()
             if count:
                 logger.info("[Worker] backfill_listing_embeddings: %d ilan embedding üretildi", count)
+        await _agent_ok(ctx, "backfill_listing_embeddings_task")
 
     except Exception as exc:
         logger.error("[Worker] backfill_listing_embeddings başarısız | %s", str(exc), exc_info=True)
@@ -2911,6 +2916,7 @@ async def compute_trending_categories_task(ctx: dict) -> None:
 
         await pipe.execute()
         logger.info("[Worker] compute_trending_categories_task | cats=%s listings=%d", trending, len(trending_listing_ids))
+        await _agent_ok(ctx, "compute_trending_categories_task")
     except Exception as exc:
         logger.error("[Worker] compute_trending_categories_task başarısız | %s", exc, exc_info=True)
         capture_exception(exc)
@@ -3106,6 +3112,7 @@ async def optimize_notification_timing_task(ctx: dict) -> None:
         rows = result.result_rows
         if not rows:
             logger.info("[NotifTiming] Yeterli veri yok, atlanıyor")
+            await _agent_ok(ctx, "optimize_notification_timing_task")
             return
 
         from collections import defaultdict
@@ -3129,6 +3136,7 @@ async def optimize_notification_timing_task(ctx: dict) -> None:
 
         await pipe.execute()
         logger.info("[NotifTiming] Tamamlandı | kullanıcı=%d", written)
+        await _agent_ok(ctx, "optimize_notification_timing_task")
 
     except Exception as exc:
         logger.error("[NotifTiming] optimize_notification_timing_task başarısız | %s", exc, exc_info=True)
@@ -3153,6 +3161,7 @@ async def nsfw_backfill_task(ctx: dict) -> None:
         from app.services.ml.nsfw_service import nsfw_backfill
         count = await nsfw_backfill(batch_size=20)
         logger.info("[Worker] nsfw_backfill_task tamamlandı | işlenen=%d", count)
+        await _agent_ok(ctx, "nsfw_backfill_task")
     except Exception as exc:
         logger.error("[Worker] nsfw_backfill_task başarısız | %s", exc, exc_info=True)
         capture_exception(exc)
