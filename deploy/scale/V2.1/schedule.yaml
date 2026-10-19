@@ -126,6 +126,11 @@ batch:
     minute: 30
     watchdog_m: 1440
 
+  - name: cleanup_old_stream_chat_messages_task
+    hour: 4
+    minute: 30
+    watchdog_m: 1440
+
   - name: rebuild_faiss_index_task
     hour: 4
     minute: 30
