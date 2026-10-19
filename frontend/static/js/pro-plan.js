@@ -37,26 +37,26 @@
             document.querySelector('tr[data-key="blast"] .val-desc').innerHTML = '+36 ekstra kredi + 2× alıcı kapasitesi · max ₺3.600/yıl tasarruf';
 
             /* tablo: reactivation */
-            document.querySelector('tr[data-key="reactivation"] .td-pro span').textContent = '⚡ 60 adet / yıl';
-            document.querySelector('tr[data-key="reactivation"] .val-amount').textContent = '₺600/yıl';
-            document.querySelector('tr[data-key="reactivation"] .val-desc').innerHTML = '60 reaktivasyon × 10 TL<br>= 600 TL tasarruf';
+            document.querySelector('tr[data-key="reactivation"] .td-pro span').textContent = '⚡ 36 adet / yıl';
+            document.querySelector('tr[data-key="reactivation"] .val-amount').textContent = '₺360/yıl';
+            document.querySelector('tr[data-key="reactivation"] .val-desc').innerHTML = '36 reaktivasyon × 10 TL<br>= 360 TL tasarruf';
 
             /* tablo: aidesc */
-            document.querySelector('tr[data-key="aidesc"] .td-pro span').textContent = '⚡ 240 adet / yıl';
-            document.querySelector('tr[data-key="aidesc"] .val-amount').textContent = '~₺720/yıl';
-            document.querySelector('tr[data-key="aidesc"] .val-desc').innerHTML = '240 kullanım × 3 TL<br>= 720 TL tasarruf';
+            document.querySelector('tr[data-key="aidesc"] .td-pro span').textContent = '⚡ 72 adet / yıl';
+            document.querySelector('tr[data-key="aidesc"] .val-amount').textContent = '~₺360/yıl';
+            document.querySelector('tr[data-key="aidesc"] .val-desc').innerHTML = '72 kullanım × 5 TL<br>= 360 TL tasarruf';
 
             /* tfoot değer metni */
             var tfootValueText = document.getElementById('tfootValueText');
             if (tfootValueText) {
-                tfootValueText.innerHTML = '₺1.990 yatır,<br><span style="color:var(--green);font-weight:700;">₺4.320+ değer</span>';
+                tfootValueText.innerHTML = '₺1.990 yatır,<br><span style="color:var(--green);font-weight:700;">₺3.720+ değer</span>';
             }
 
             /* banner */
             var bannerText = document.getElementById('totalBannerText');
-            if (bannerText) bannerText.innerHTML = '<strong>₺1.990 ödeyip ₺4.320+ değer elde et</strong><br><span style="color:var(--text-dim);font-size:.74rem;">Boost (₺1.800) + Toplu Duyuru (~₺1.200) + Reaktivasyon (₺600) + Yapay Zeka açıklama (₺720) haklarını yıllık kullandığında maliyet kendini fazlasıyla karşılar.</span>';
+            if (bannerText) bannerText.innerHTML = '<strong>₺1.990 ödeyip ₺3.720+ değer elde et</strong><br><span style="color:var(--text-dim);font-size:.74rem;">Boost (₺1.800) + Toplu Duyuru (~₺1.200) + Reaktivasyon (₺360) + Yapay Zeka açıklama (₺360) haklarını yıllık kullandığında maliyet kendini fazlasıyla karşılar.</span>';
             var totalVal = document.getElementById('totalVal');
-            if (totalVal) totalVal.textContent = '₺4.320+';
+            if (totalVal) totalVal.textContent = '₺3.720+';
             var totalSub = document.getElementById('totalSub');
             if (totalSub) totalSub.textContent = 'yıllık avantaj değeri';
             var roiPill = document.getElementById('roiPill');
@@ -80,26 +80,26 @@
             document.querySelector('tr[data-key="blast"] .val-desc').innerHTML = '+3 ekstra kredi + 2× alıcı kapasitesi · max ₺300/ay tasarruf';
 
             /* tablo: reactivation */
-            document.querySelector('tr[data-key="reactivation"] .td-pro span').textContent = '⚡ 5 adet / ay';
-            document.querySelector('tr[data-key="reactivation"] .val-amount').textContent = '₺50/ay';
-            document.querySelector('tr[data-key="reactivation"] .val-desc').innerHTML = '5 reaktivasyon × 10 TL<br>= 50 TL tasarruf';
+            document.querySelector('tr[data-key="reactivation"] .td-pro span').textContent = '⚡ 3 adet / ay';
+            document.querySelector('tr[data-key="reactivation"] .val-amount').textContent = '₺30/ay';
+            document.querySelector('tr[data-key="reactivation"] .val-desc').innerHTML = '3 reaktivasyon × 10 TL<br>= 30 TL tasarruf';
 
             /* tablo: aidesc */
-            document.querySelector('tr[data-key="aidesc"] .td-pro span').textContent = '⚡ 20 adet / ay';
-            document.querySelector('tr[data-key="aidesc"] .val-amount').textContent = '~₺60/ay';
-            document.querySelector('tr[data-key="aidesc"] .val-desc').innerHTML = '20 kullanım × 3 TL<br>= 60 TL tasarruf';
+            document.querySelector('tr[data-key="aidesc"] .td-pro span').textContent = '⚡ 6 adet / ay';
+            document.querySelector('tr[data-key="aidesc"] .val-amount').textContent = '~₺30/ay';
+            document.querySelector('tr[data-key="aidesc"] .val-desc').innerHTML = '6 kullanım × 5 TL<br>= 30 TL tasarruf';
 
             /* tfoot değer metni */
             var tfootValueText = document.getElementById('tfootValueText');
             if (tfootValueText) {
-                tfootValueText.innerHTML = '₺199 yatır,<br><span style="color:var(--green);font-weight:700;">₺360+ değer</span>';
+                tfootValueText.innerHTML = '₺199 yatır,<br><span style="color:var(--green);font-weight:700;">₺310+ değer</span>';
             }
 
             /* banner */
             var bannerText = document.getElementById('totalBannerText');
-            if (bannerText) bannerText.innerHTML = '<strong>₺199 ödeyip ₺360+ değer elde et</strong><br><span style="color:var(--text-dim);font-size:.74rem;">Boost (₺150) + Toplu Duyuru (~₺100) + Reaktivasyon (₺50) + Yapay Zeka açıklama (₺60) haklarını kullandığında her ay kazancın maliyeti karşılar.</span>';
+            if (bannerText) bannerText.innerHTML = '<strong>₺199 ödeyip ₺310+ değer elde et</strong><br><span style="color:var(--text-dim);font-size:.74rem;">Boost (₺150) + Toplu Duyuru (~₺100) + Reaktivasyon (₺30) + Yapay Zeka açıklama (₺30) haklarını kullandığında her ay kazancın maliyeti karşılar.</span>';
             var totalVal = document.getElementById('totalVal');
-            if (totalVal) totalVal.textContent = '₺360+';
+            if (totalVal) totalVal.textContent = '₺310+';
             var totalSub = document.getElementById('totalSub');
             if (totalSub) totalSub.textContent = 'aylık avantaj değeri';
             var roiPill = document.getElementById('roiPill');
