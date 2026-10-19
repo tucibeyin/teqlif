@@ -1,0 +1,10 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.teqlif.teqlif_mobile",
+    "sha256_cert_fingerprints": [
+      "ED:0A:D6:F5:1C:E4:8B:C2:6A:2E:85:E2:20:B8:A1:24:5C:90:1A:5E:5E:69:FB:41:83:A2:39:0F:3E:DC:B0:3A"
+    ]
+  }
+}]
