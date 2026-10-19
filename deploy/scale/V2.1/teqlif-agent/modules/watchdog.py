@@ -26,8 +26,8 @@ import telegram as tg
 logger = logging.getLogger("teqlif-agent.watchdog")
 
 # deploy/scale/V2.1/teqlif-agent/modules/watchdog.py
-# parents[2] = deploy/scale/V2.1/
-_SCHEDULE_PATH = Path(__file__).parents[2] / "schedule.yaml"
+# parents[1] = /opt/teqlif-agent/ (prod) veya deploy/scale/V2.1/teqlif-agent/ (dev)
+_SCHEDULE_PATH = Path(__file__).parents[1] / "schedule.yaml"
 
 
 def _load_batch_registry() -> dict[str, int]:

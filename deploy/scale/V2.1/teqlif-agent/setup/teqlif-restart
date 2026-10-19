@@ -94,6 +94,7 @@ agent_sync() {
           --exclude 'configs/' --exclude 'setup/' \
           "$agent_src/" "$agent_dst/"
     cp "$cluster_src" "$agent_dst/cluster.yaml"
+    cp "$REPO/deploy/scale/V2.1/schedule.yaml" "$agent_dst/schedule.yaml"
     chown -R teqlif-agent:teqlif-agent "$agent_dst"
   fi
 
