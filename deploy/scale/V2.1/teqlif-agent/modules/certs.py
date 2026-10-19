@@ -171,7 +171,7 @@ class CertWatcher:
             conn = await asyncpg.connect(dsn=dsn)
             rows = await conn.fetch("""
                 SELECT client_addr, state,
-                       EXTRACT(EPOCH FROM (now() - write_lag))::int AS lag_sec
+                       EXTRACT(EPOCH FROM write_lag)::int AS lag_sec
                 FROM pg_stat_replication
             """)
             key = "pg:replication"
