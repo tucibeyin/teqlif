@@ -10,7 +10,7 @@ log_level: INFO
 telegram_bot_token: ""
 telegram_chat_id:   ""
 
-redis_url:      redis://10.10.0.1:6379/0
+redis_url:      ""   # REDIS_URL env değişkeninden gelir (/etc/teqlif-agent/env)
 cycle_interval: 60
 gossip_timeout: 5
 

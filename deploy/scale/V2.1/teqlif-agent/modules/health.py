@@ -390,10 +390,10 @@ async def _backup_ages() -> dict:
     }
     result = {}
     for key, path in backup_dirs.items():
-        p = Path(path)
-        if not p.exists():
-            continue
         try:
+            p = Path(path)
+            if not p.exists():
+                continue
             files = sorted(p.iterdir(), key=lambda f: f.stat().st_mtime, reverse=True)
             if files:
                 age_sec = time.time() - files[0].stat().st_mtime
@@ -401,13 +401,13 @@ async def _backup_ages() -> dict:
         except Exception:
             pass
     for key, path in sentinel_dirs.items():
-        p = Path(path)
-        if p.is_file():
-            try:
+        try:
+            p = Path(path)
+            if p.is_file():
                 age_sec = time.time() - p.stat().st_mtime
                 result[key] = {"age_min": int(age_sec / 60)}
-            except Exception:
-                pass
+        except Exception:
+            pass
     return result
 
 

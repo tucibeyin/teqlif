@@ -114,7 +114,7 @@ def load_config(path: str | None = None) -> AgentConfig:
         # YAML boşsa EnvironmentFile'daki env değişkenine fallback
         telegram_bot_token = raw.get("telegram_bot_token", "") or os.getenv("TELEGRAM_BOT_TOKEN", ""),
         telegram_chat_id   = raw.get("telegram_chat_id", "") or os.getenv("TELEGRAM_CHAT_ID", ""),
-        redis_url    = raw.get("redis_url", "redis://127.0.0.1:6379/0"),
+        redis_url    = raw.get("redis_url", "") or os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0"),
         cycle_interval  = raw.get("cycle_interval", 60),
         gossip_timeout  = raw.get("gossip_timeout", 5),
         monitor_services = raw.get("monitor_services", []),
