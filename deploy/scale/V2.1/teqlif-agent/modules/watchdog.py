@@ -84,7 +84,7 @@ class JobWatchdog:
 
     async def _sync_from_redis(self) -> None:
         try:
-            import aioredis
+            import redis.asyncio as aioredis
             redis = await aioredis.from_url(self._cfg.redis_url, decode_responses=True)
             data  = await redis.hgetall("teqlif:agent:job_ok")
             await redis.aclose()

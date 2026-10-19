@@ -186,7 +186,7 @@ class TTLJanitor:
         encoder.py modülü (streaming node'da) bu sinyali dinler.
         Janitor fallback olarak çalışır — encoder.py zaten Redis'ten tetiklenir."""
         try:
-            import aioredis
+            import redis.asyncio as aioredis
             r = await aioredis.from_url(self._cfg.redis_url, decode_responses=True)
             await r.publish("teqlif:agent:encode_trigger", "1")
             await r.aclose()
@@ -210,7 +210,7 @@ class TTLJanitor:
             await conn.close()
             if not count:
                 return
-            import aioredis
+            import redis.asyncio as aioredis
             r = await aioredis.from_url(self._cfg.redis_url, decode_responses=True)
             await r.publish("teqlif:agent:transfer_trigger", str(count))
             await r.aclose()

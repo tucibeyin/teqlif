@@ -121,7 +121,7 @@ class CertWatcher:
 
     async def _check_i18n(self) -> None:
         try:
-            import aioredis
+            import redis.asyncio as aioredis
             r = await aioredis.from_url(self._cfg.redis_url, decode_responses=True)
             for lang in _I18N_LANGS:
                 pack    = await r.get(f"pack:{lang}")
@@ -143,7 +143,7 @@ class CertWatcher:
 
     async def _check_redis_mem(self) -> None:
         try:
-            import aioredis
+            import redis.asyncio as aioredis
             r    = await aioredis.from_url(self._cfg.redis_url)
             info = await r.info("memory")
             await r.aclose()
