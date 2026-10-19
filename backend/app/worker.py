@@ -4379,6 +4379,12 @@ class WorkerSettings:
         set_pool(ctx["redis"])
         await preload_i18n_cache()
 
+    @staticmethod
+    async def on_shutdown(_ctx: dict) -> None:
+        from app.database_clickhouse import close_clickhouse
+        from app.database import engine
+        await close_clickhouse()
+        await engine.dispose()
 
 
 class WorkerSettingsCritical:
@@ -4423,3 +4429,8 @@ class WorkerSettingsCritical:
         init_di()
         set_pool(ctx["redis"])
         await preload_i18n_cache()
+
+    @staticmethod
+    async def on_shutdown(_ctx: dict) -> None:
+        from app.database import engine
+        await engine.dispose()
