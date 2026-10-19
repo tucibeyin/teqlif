@@ -48,7 +48,7 @@ find "${BACKUP_DIR}" -name '*.zip'    -mtime +${RETENTION_DAYS} -delete
 find "${BACKUP_DIR}" -mindepth 1 -maxdepth 1 -type d -mtime +${RETENTION_DAYS} -exec rm -rf {} +
 
 TIMESTAMP_NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-redis-cli -h 10.10.0.1 -p 6379 -a "${CORE_REDIS_PASS}" --no-auth-warning \
+redis-cli -h 127.0.0.1 -p 6379 -a "${CORE_REDIS_PASS}" --no-auth-warning \
     HSET teqlif:agent:job_ok clickhouse_backup "${TIMESTAMP_NOW}" >/dev/null 2>&1 || true
 
 if [[ "${BACKUP_METHOD}" == "fallback" ]]; then

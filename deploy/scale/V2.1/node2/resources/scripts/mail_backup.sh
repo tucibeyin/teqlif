@@ -36,4 +36,4 @@ find "${BACKUP_DIR}" -name "stalwart_*.tar.gz" -mtime "+${RETENTION_DAYS}" -dele
 SIZE=$(du -sh "${DEST}" | cut -f1)
 echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) mail_backup: OK (${SIZE})"
 logger "teqlif mail_backup: tamamlandı (${SIZE})"
-redis-cli -h 10.10.0.1 -p 6379 -a "${CORE_REDIS_PASS}" --no-auth-warning HSET teqlif:agent:job_ok mail_backup "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >/dev/null 2>&1 || true
+redis-cli -h 127.0.0.1 -p 6379 -a "${CORE_REDIS_PASS}" --no-auth-warning HSET teqlif:agent:job_ok mail_backup "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >/dev/null 2>&1 || true

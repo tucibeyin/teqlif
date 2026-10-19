@@ -82,7 +82,8 @@ except Exception as e:
 PYEOF
 
 # ── job_ok heartbeat ──────────────────────────────────────────────────────────
-redis-cli -h 10.10.0.1 -p 6379 \
+# Failover sırasında node1 (10.10.0.1) DOWN olduğundan heartbeat yerel master'a yazılır
+redis-cli -h 127.0.0.1 -p 6379 \
     -a "${CORE_REDIS_PASS}" --no-auth-warning \
     HSET teqlif:agent:job_ok redis_failover "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
     >/dev/null 2>&1 || true
