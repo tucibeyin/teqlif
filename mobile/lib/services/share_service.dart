@@ -139,7 +139,7 @@ class ShareService {
 
 // ── Bottom Sheet Widget ──────────────────────────────────────────────────────
 
-class _ShareSheet extends ConsumerWidget {
+class _ShareSheet extends ConsumerStatefulWidget {
   final String url;
   final String text;
   final String? imageUrl;
@@ -153,7 +153,14 @@ class _ShareSheet extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_ShareSheet> createState() => _ShareSheetState();
+}
+
+class _ShareSheetState extends ConsumerState<_ShareSheet> {
+  bool _instagramLoading = false;
+
+  @override
+  Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
     return Container(
       margin: const EdgeInsets.all(12),
@@ -181,18 +188,30 @@ class _ShareSheet extends ConsumerWidget {
           const Divider(height: 1),
           // Seçenekler
           _ShareOption(
-            icon: _instagramIcon(),
+            icon: _instagramLoading
+                ? const SizedBox(
+                    width: 28, height: 28,
+                    child: CircularProgressIndicator(strokeWidth: 2.5),
+                  )
+                : _instagramIcon(),
             label: loc.t("shareInstagramLabel"),
             subtitle: loc.t("shareInstagramSubtitle"),
+            enabled: !_instagramLoading,
             onTap: () async {
-              Navigator.of(context).pop();
-              await ShareService.shareToInstagramStory(
-                context,
-                url: url,
-                text: text,
-                imageUrl: imageUrl,
-                origin: origin,
-              );
+              if (_instagramLoading) return;
+              setState(() => _instagramLoading = true);
+              try {
+                await ShareService.shareToInstagramStory(
+                  context,
+                  url: widget.url,
+                  text: widget.text,
+                  imageUrl: widget.imageUrl,
+                  origin: widget.origin,
+                );
+              } finally {
+                if (mounted) setState(() => _instagramLoading = false);
+              }
+              if (mounted) Navigator.of(context).pop();
             },
           ),
           _ShareOption(
@@ -201,17 +220,17 @@ class _ShareSheet extends ConsumerWidget {
             subtitle: loc.t("shareWhatsAppSubtitle"),
             onTap: () async {
               Navigator.of(context).pop();
-              await ShareService.shareToWhatsApp(context, url: url, text: text, origin: origin);
+              await ShareService.shareToWhatsApp(context, url: widget.url, text: widget.text, origin: widget.origin);
             },
           ),
-          if (url.isNotEmpty)
+          if (widget.url.isNotEmpty)
             _ShareOption(
               icon: const Icon(Icons.copy_rounded, size: 28, color: Color(0xFF6B7280)),
               label: loc.t("shareCopyLabel"),
-              subtitle: url,
+              subtitle: widget.url,
               onTap: () async {
                 Navigator.of(context).pop();
-                await ShareService.copyLink(context, url, copiedLabel: loc.t("shareLinkCopied"));
+                await ShareService.copyLink(context, widget.url, copiedLabel: loc.t("shareLinkCopied"));
               },
             ),
           _ShareOption(
@@ -220,7 +239,7 @@ class _ShareSheet extends ConsumerWidget {
             subtitle: loc.t("shareOtherSubtitle"),
             onTap: () async {
               Navigator.of(context).pop();
-              await ShareService.shareOther(context, url: url, text: text, origin: origin);
+              await ShareService.shareOther(context, url: widget.url, text: widget.text, origin: widget.origin);
             },
           ),
           SizedBox(height: MediaQuery.of(context).padding.bottom + 12),
@@ -251,18 +270,20 @@ class _ShareOption extends StatelessWidget {
   final String label;
   final String subtitle;
   final VoidCallback onTap;
+  final bool enabled;
 
   const _ShareOption({
     required this.icon,
     required this.label,
     required this.subtitle,
     required this.onTap,
+    this.enabled = true,
   });
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: onTap,
+      onTap: enabled ? onTap : null,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         child: Row(
