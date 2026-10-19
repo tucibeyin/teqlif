@@ -69,7 +69,7 @@ def _get_t(lang: str) -> dict:
                 try:
                     import redis as sync_redis
                     r = sync_redis.Redis.from_url(settings.redis_url, decode_responses=True, socket_timeout=2.0)
-                    r.set(f"i18n:{lang}", json.dumps(data, ensure_ascii=False), ex=3600)
+                    r.set(f"i18n:{lang}", json.dumps(data, ensure_ascii=False), ex=90000)
                 except Exception:
                     pass
                 return data
@@ -119,7 +119,7 @@ async def preload_i18n_cache() -> None:
                     if data:
                         _MEMORY_CACHE[lang] = data
                         _CACHE_TIME[lang] = now
-                        await redis.set(f"i18n:{lang}", json.dumps(data, ensure_ascii=False), ex=3600)
+                        await redis.set(f"i18n:{lang}", json.dumps(data, ensure_ascii=False), ex=90000)
                         logger.debug("[i18n] %s dili DB'den belleğe ve Redis'e yüklendi (%d key)", lang, len(data))
                 except Exception as e_lang:
                     logger.warning("[i18n] %s dili pre-load edilemedi: %s", lang, e_lang)

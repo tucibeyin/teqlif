@@ -4357,10 +4357,12 @@ class WorkerSettings:
         from app.logging_config import setup_logging
         from app.core.task_queue import set_pool
         from app.core.di import init_di
+        from app.utils.i18n import preload_i18n_cache
         import asyncio
         setup_logging()
         init_di()
         set_pool(ctx["redis"])
+        await preload_i18n_cache()
 
 
 
@@ -4401,6 +4403,8 @@ class WorkerSettingsCritical:
         from app.logging_config import setup_logging
         from app.core.task_queue import set_pool
         from app.core.di import init_di
+        from app.utils.i18n import preload_i18n_cache
         setup_logging()
         init_di()
         set_pool(ctx["redis"])
+        await preload_i18n_cache()
