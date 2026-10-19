@@ -47,6 +47,8 @@ async def archive_old_dm_task(ctx: dict) -> None:
 
         if not messages:
             logger.info("archive_old_dm_task: arşivlenecek mesaj yok")
+            from app.worker import _agent_ok
+            await _agent_ok(ctx, "archive_old_dm_task")
             return
 
         # Konuşma + yıl bazında grupla
@@ -94,6 +96,8 @@ async def archive_old_dm_task(ctx: dict) -> None:
             archived_pairs.add((user_a, user_b))
 
         if not deleted_ids:
+            from app.worker import _agent_ok
+            await _agent_ok(ctx, "archive_old_dm_task")
             return
 
         # PG'den sil (batch)
@@ -116,6 +120,8 @@ async def archive_old_dm_task(ctx: dict) -> None:
             "archive_old_dm_task: %d mesaj arşivlendi, %d konuşma işaretlendi",
             len(deleted_ids), len(archived_pairs),
         )
+        from app.worker import _agent_ok
+        await _agent_ok(ctx, "archive_old_dm_task")
 
         if len(deleted_ids) >= _NOTIFY_THRESHOLD:
             logger.info(

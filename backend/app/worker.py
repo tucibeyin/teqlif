@@ -463,6 +463,7 @@ async def cleanup_old_listing_offers_task(ctx: dict) -> None:
             ))
             await db.commit()
             logger.info("[GC3] listing_offers cleanup tamamlandı | silinen=%d", result.rowcount)
+        await _agent_ok(ctx, "cleanup_old_listing_offers_task")
     except Exception as exc:
         logger.error("[GC3] listing_offers cleanup başarısız | %s", str(exc), exc_info=True)
         capture_exception(exc)
@@ -482,6 +483,7 @@ async def cleanup_old_exchange_rates_task(ctx: dict) -> None:
             ))
             await db.commit()
             logger.info("[GC4] exchange_rates cleanup tamamlandı | silinen=%d", result.rowcount)
+        await _agent_ok(ctx, "cleanup_old_exchange_rates_task")
     except Exception as exc:
         logger.error("[GC4] exchange_rates cleanup başarısız | %s", str(exc), exc_info=True)
         capture_exception(exc)
@@ -602,6 +604,7 @@ async def cleanup_old_streams_task(ctx: dict) -> None:
             ))
             await db.commit()
             logger.info("[GC5] live_streams cleanup tamamlandı | silinen=%d", result.rowcount)
+        await _agent_ok(ctx, "cleanup_old_streams_task")
     except Exception as exc:
         logger.error("[GC5] live_streams cleanup başarısız | %s", str(exc), exc_info=True)
         capture_exception(exc)
@@ -622,6 +625,7 @@ async def cleanup_old_calls_task(ctx: dict) -> None:
             ))
             await db.commit()
             logger.info("[GC2] calls cleanup tamamlandı | silinen=%d", result.rowcount)
+        await _agent_ok(ctx, "cleanup_old_calls_task")
     except Exception as exc:
         logger.error("[GC2] calls cleanup başarısız | %s", str(exc), exc_info=True)
         capture_exception(exc)
@@ -647,6 +651,7 @@ async def cleanup_empty_message_threads_task(ctx: dict) -> None:
             ))
             await db.commit()
             logger.info("[GC6] message_threads cleanup tamamlandı | silinen=%d", result.rowcount)
+        await _agent_ok(ctx, "cleanup_empty_message_threads_task")
     except Exception as exc:
         logger.error("[GC6] message_threads cleanup başarısız | %s", str(exc), exc_info=True)
         capture_exception(exc)
@@ -666,6 +671,7 @@ async def cleanup_inactive_search_alerts_task(ctx: dict) -> None:
             ))
             await db.commit()
             logger.info("[GC7] search_alerts cleanup tamamlandı | silinen=%d", result.rowcount)
+        await _agent_ok(ctx, "cleanup_inactive_search_alerts_task")
     except Exception as exc:
         logger.error("[GC7] search_alerts cleanup başarısız | %s", str(exc), exc_info=True)
         capture_exception(exc)
