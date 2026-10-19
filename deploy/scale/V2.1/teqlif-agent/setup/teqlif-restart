@@ -76,6 +76,10 @@ agent_sync() {
       | grep -qE '^deploy/scale/V2\.1/(teqlif-agent/|cluster\.yaml|schedule\.yaml)' \
       && code_changed=true
   fi
+  # git diff bağımsız dosya kontrolü: schedule.yaml diskte farklıysa her zaman sync et
+  if ! diff -q "$REPO/deploy/scale/V2.1/schedule.yaml" "$agent_dst/schedule.yaml" > /dev/null 2>&1; then
+    code_changed=true
+  fi
 
   # Node-specific config: git'teki configs/$NODE.yaml → /etc/teqlif-agent/config.yaml
   local config_src="$agent_src/configs/$NODE.yaml"
