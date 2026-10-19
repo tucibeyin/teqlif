@@ -60,10 +60,12 @@ _CONTINUOUS_REGISTRY: dict[str, int] = {
     "retry_failed_chat_dumps_task":    30,
 }
 
-# Birleşik registry: sürekli (sabit) + batch (schedule.yaml'dan)
-_JOB_REGISTRY: dict[str, int] = {**_CONTINUOUS_REGISTRY, **_load_batch_registry()}
-
 _COOLDOWN_SEC = 2 * 60 * 60   # aynı job için 2 saatte bir uyarı
+
+
+def _job_registry() -> dict[str, int]:
+    """Her cycle'da schedule.yaml'ı yeniden okur — restart gerektirmez."""
+    return {**_CONTINUOUS_REGISTRY, **_load_batch_registry()}
 
 
 class JobWatchdog:
@@ -73,16 +75,17 @@ class JobWatchdog:
         self._alerted: dict[str, float] = {}  # job_name → last_alert monotonic
 
     async def run(self, is_leader: bool) -> None:
+        registry = _job_registry()
         # Her node Redis'ten job_ok sinyallerini çeker ve DB'ye yazar
-        await self._sync_from_redis()
+        await self._sync_from_redis(registry)
 
         # Sadece lider değerlendirir ve Telegram gönderir
         if is_leader:
             stale = await self._db.get_stale_jobs()
             for row in stale:
-                await self._alert(row)
+                await self._alert(row, registry)
 
-    async def _sync_from_redis(self) -> None:
+    async def _sync_from_redis(self, registry: dict[str, int]) -> None:
         try:
             import redis.asyncio as aioredis
             redis = await aioredis.from_url(self._cfg.redis_url, decode_responses=True)
@@ -93,14 +96,14 @@ class JobWatchdog:
             return
 
         for job_name, ts in data.items():
-            expected = _JOB_REGISTRY.get(job_name, 60)
+            expected = registry.get(job_name, 60)
             await self._db.mark_ok(job_name, last_ok_at=ts, expected_every_m=expected)
-            if job_name not in _JOB_REGISTRY:
+            if job_name not in registry:
                 logger.debug("Yeni job tespit edildi: %s", job_name)
 
-    async def _alert(self, row: dict) -> None:
+    async def _alert(self, row: dict, registry: dict[str, int]) -> None:
         job   = row["job_name"]
-        mins  = _JOB_REGISTRY.get(job, 60)
+        mins  = registry.get(job, 60)
         last  = row.get("last_ok_at", "bilinmiyor")
         now   = time.monotonic()
         if now - self._alerted.get(job, 0) < _COOLDOWN_SEC:
