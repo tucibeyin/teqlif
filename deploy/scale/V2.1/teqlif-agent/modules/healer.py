@@ -30,6 +30,8 @@ _SERVICES_TO_WATCH = [
     "teqlif-ai-proxy.service",
     "teqlif-livekit.service",
     "teqlif-staging.service",
+    "teqlif-worker-staging.service",
+    "teqlif-worker-critical-staging.service",
     "teqlif-redis-core.service",
     "teqlif-redis-replica.service",
     "teqlif-minio.service",

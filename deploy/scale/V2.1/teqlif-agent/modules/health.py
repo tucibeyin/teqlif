@@ -61,11 +61,14 @@ _ALL_SERVICES = [
     "teqlif-worker-critical",
     "teqlif-ai-proxy",
     "teqlif-agent",
-    "teqlif-livekit",         # node3/node4 — paket adı "livekit" değil
+    "teqlif-livekit",                  # node3/node4 — paket adı "livekit" değil
     "postgresql",
-    "teqlif-redis-core",      # node1  — Ubuntu paketi "redis-server" değil
-    "teqlif-redis-replica",   # node2
-    "teqlif-redis-staging",   # node5
+    "teqlif-redis-core",               # node1  — Ubuntu paketi "redis-server" değil
+    "teqlif-redis-replica",            # node2
+    "teqlif-redis-staging",            # node5
+    "teqlif-staging",                  # node5
+    "teqlif-worker-staging",           # node5
+    "teqlif-worker-critical-staging",  # node5
     "minio",
     "clickhouse-server",
     "haproxy",
@@ -177,8 +180,11 @@ class HealthMonitor:
             "postgresql":             "PostgreSQL",
             "teqlif-redis-core":      "Redis Core",
             "teqlif-redis-replica":   "Redis Replica",
-            "teqlif-redis-staging":   "Redis Staging",
-            "minio":                  "MinIO",
+            "teqlif-redis-staging":          "Redis Staging",
+            "teqlif-staging":                "teqlif Staging API",
+            "teqlif-worker-staging":         "ARQ Worker Staging (default)",
+            "teqlif-worker-critical-staging":"ARQ Worker Staging (critical)",
+            "minio":                         "MinIO",
             "clickhouse-server":      "ClickHouse",
             "haproxy":                "HAProxy",
             "stalwart-mail":          "Stalwart Mail",

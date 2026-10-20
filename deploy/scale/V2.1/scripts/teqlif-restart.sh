@@ -141,8 +141,8 @@ case "$NODE" in
     agent_sync
     log "teqlif-staging.service yeniden başlatılıyor (alembic ExecStartPre'de çalışır)..."
     systemctl restart teqlif-staging.service
-    log "teqlif-staging.service aktif — worker başlatılıyor..."
-    systemctl restart teqlif-worker-staging.service
+    log "teqlif-staging.service aktif — worker'lar başlatılıyor..."
+    systemctl restart teqlif-worker-staging.service teqlif-worker-critical-staging.service
     log "Tüm servisler hazır"
     echo ""
     log "Son loglar:"
