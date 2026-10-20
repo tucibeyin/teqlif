@@ -194,7 +194,8 @@ SELECT
     countIfState(event_type = 'detail_dwell')                  AS dwells_state,
     uniqIfState(user_id, event_type = 'bid_hesitation')        AS hesitations_state,
     countIfState(event_type = 'listing_sold')                  AS sales_state,
-    uniqState(user_id)                                         AS unique_users_state
+    uniqState(user_id)                                         AS unique_users_state,
+    maxState(timestamp)                                        AS last_event_ts_state
 FROM user_events
 WHERE item_type = 'listing'
 GROUP BY day, item_id

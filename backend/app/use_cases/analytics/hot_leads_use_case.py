@@ -53,13 +53,13 @@ class HotLeadsUseCase:
                 ch = await get_clickhouse_client()
                 ch_r = await ch.query(f"""
                     SELECT item_id,
-                           countIf(event_type = 'view') AS views,
-                           countIf(event_type = 'detail_dwell') AS dwells,
-                           countDistinctIf(user_id, event_type = 'bid_hesitation') AS hes,
-                           toUnixTimestamp(max(timestamp)) AS last_event_ts
-                    FROM user_events
-                    WHERE item_type = 'listing' AND item_id IN ({ids_str})
-                      AND timestamp >= now() - INTERVAL 30 DAY
+                           countIfMerge(views_state)                            AS views,
+                           countIfMerge(dwells_state)                           AS dwells,
+                           uniqIfMerge(hesitations_state)                       AS hes,
+                           toUnixTimestamp(maxMerge(last_event_ts_state))       AS last_event_ts
+                    FROM mv_listing_events_daily
+                    WHERE item_id IN ({ids_str})
+                      AND day >= today() - 30
                     GROUP BY item_id
                 """)
                 view_map  = {int(r[0]): int(r[1]) for r in ch_r.result_rows}
