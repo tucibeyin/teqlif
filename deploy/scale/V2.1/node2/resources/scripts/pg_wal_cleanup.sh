@@ -1,7 +1,7 @@
 #!/bin/bash
 # pg_wal_cleanup — pg_archivecleanup ile PITR zincirini koruyarak WAL temizler.
 # En eski basebackup'ın başlangıç WAL segment'ini referans alır; ondan öncekini siler.
-# Günlük 05:30 UTC'de çalışır.
+# Günlük 06:30 UTC'de çalışır.
 set -euo pipefail
 
 WAL_DIR=/project/teqlif/backups/pg_wal
@@ -16,7 +16,7 @@ if [ ! -d "${WAL_DIR}" ]; then
 fi
 
 # En eski basebackup'tan START WAL segment adını çıkar
-oldest_backup=$(ls -1dt "${BASEBACKUP_DIR}"/[0-9]* 2>/dev/null | sort | tail -1)
+oldest_backup=$(ls -1d "${BASEBACKUP_DIR}"/[0-9]* 2>/dev/null | sort | head -1)
 if [ -z "${oldest_backup}" ] || [ ! -f "${oldest_backup}/base.tar.gz" ]; then
     echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) pg_wal_cleanup: basebackup bulunamadı, atlanıyor"
     exit 0
