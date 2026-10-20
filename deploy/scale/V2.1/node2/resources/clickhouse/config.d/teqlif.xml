@@ -11,8 +11,12 @@
     <max_connections>128</max_connections>
 
     <!-- Arka plan merge/TTL thread'lerini HDD'ye göre kısıtla -->
+    <!-- pool_size=4, ratio=2 → effective_pool=8; mutation threshold 3 < 8 ✓ -->
     <background_pool_size>4</background_pool_size>
-    <background_merges_mutations_concurrency_ratio>1</background_merges_mutations_concurrency_ratio>
+    <background_merges_mutations_concurrency_ratio>2</background_merges_mutations_concurrency_ratio>
+    <merge_tree>
+        <number_of_free_entries_in_pool_to_execute_mutation>3</number_of_free_entries_in_pool_to_execute_mutation>
+    </merge_tree>
 
     <!-- BACKUP DATABASE ... TO Disk('backups', ...) için -->
     <storage_configuration>
