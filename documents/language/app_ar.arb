@@ -2067,7 +2067,7 @@
   "emailWelcomePhoneNoBody": "لإجراء مزايدات عالية القيمة بأمان، نوصيك بالتحقق من رقم هاتفك. يمكنك إضافته من <strong style=\"color:#e2e8f0\">الملف الشخصي ← معلوماتي</strong> في التطبيق.",
   "emailWelcomePhoneYesBody": "أضفت رقم هاتفك أثناء التسجيل. أكمل التحقق من <strong style=\"color:#e2e8f0\">الملف الشخصي ← معلوماتي</strong> لتتمكن من المزايدة بأمان.",
   "emailWelcomeFooter": "نحن هنا دائماً إذا احتجت إلى مساعدة.<br>تواصل معنا: <a href=\"mailto:destek@teqlif.com\" style=\"color:#06b6d4;text-decoration:none\">destek@teqlif.com</a><br><strong style=\"color:#64748b\">فريق teqlif</strong>",
-  "emailWelcomeCopyright": "© 2025 teqlif · يمكنك تحديث تفضيلات الإشعارات من إعدادات الحساب.",
+  "emailWelcomeCopyright": "© 2026 teqlif · يمكنك تحديث تفضيلات الإشعارات من إعدادات الحساب.",
   "emailResetGreeting": "مرحباً <strong>{full_name}</strong>،",
   "emailResetFooter": "للاستفسارات: <a href='mailto:destek@teqlif.com' style='color:#0d9488;text-decoration:none'>destek@teqlif.com</a>",
   "@emailWelcomeHeroTitle": {

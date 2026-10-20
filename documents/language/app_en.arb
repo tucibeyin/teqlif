@@ -2084,7 +2084,7 @@
   "emailWelcomePhoneNoBody": "To place high-value bids securely, we recommend verifying your phone number. You can add it anytime from <strong style=\"color:#e2e8f0\">Profile → My Information</strong> in the app.",
   "emailWelcomePhoneYesBody": "You added a phone number during sign-up. Complete verification from <strong style=\"color:#e2e8f0\">Profile → My Information</strong> to bid safely.",
   "emailWelcomeFooter": "We're always here if you need us.<br>Contact us: <a href=\"mailto:destek@teqlif.com\" style=\"color:#06b6d4;text-decoration:none\">destek@teqlif.com</a><br><strong style=\"color:#64748b\">The teqlif team</strong>",
-  "emailWelcomeCopyright": "© 2025 teqlif · You can update your notification preferences in account settings.",
+  "emailWelcomeCopyright": "© 2026 teqlif · You can update your notification preferences in account settings.",
   "emailResetGreeting": "Hello <strong>{full_name}</strong>,",
   "emailResetFooter": "Questions? Contact us: <a href='mailto:destek@teqlif.com' style='color:#0d9488;text-decoration:none'>destek@teqlif.com</a>",
   "@emailWelcomeHeroTitle": {
