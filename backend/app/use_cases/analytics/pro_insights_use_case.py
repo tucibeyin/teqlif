@@ -116,13 +116,12 @@ class ProInsightsUseCase:
                     ch = await get_clickhouse_client()
                     ch_r = await ch.query(f"""
                         SELECT
-                            countIf(event_type = 'view')              AS views,
-                            countIf(event_type = 'detail_dwell')      AS dwells,
-                            countDistinctIf(user_id, event_type = 'bid_hesitation') AS hesitations
-                        FROM user_events
-                        WHERE item_type = 'listing'
-                          AND item_id IN ({ids_str})
-                          AND timestamp >= now() - INTERVAL 30 DAY
+                            countIfMerge(views_state)       AS views,
+                            countIfMerge(dwells_state)      AS dwells,
+                            uniqIfMerge(hesitations_state)  AS hesitations
+                        FROM mv_listing_events_daily
+                        WHERE item_id IN ({ids_str})
+                          AND day >= today() - 30
                     """)
                     r = ch_r.result_rows[0] if ch_r.result_rows else (0, 0, 0)
                     views_total = int(r[0] or 0)

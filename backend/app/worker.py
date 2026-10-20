@@ -2723,30 +2723,6 @@ async def compute_seller_badges_task(ctx: dict) -> None:
 
         ch = await get_clickhouse_client()
 
-        # Dinamik eşikler: veri dağılımından p75 conv_rate ve p50 total
-        pct_r = await ch.query("""
-            SELECT
-                quantileExact(0.75)(toFloat64(won) / toFloat64(total)) AS p75_conv,
-                toUInt32(quantileExact(0.5)(total))                    AS p50_total
-            FROM (
-                SELECT
-                    user_id,
-                    countIf(event_type IN ('auction_won', 'listing_sold', 'order_completed', 'offer_accepted')) AS won,
-                    countIf(event_type IN ('auction_won', 'auction_ended', 'listing_sold', 'order_completed', 'offer_accepted', 'listing_offer_submit')) AS total
-                FROM user_events
-                WHERE timestamp >= now() - INTERVAL 30 DAY
-                  AND event_type IN ('auction_won', 'auction_ended', 'listing_sold', 'order_completed', 'offer_accepted', 'listing_offer_submit')
-                  AND user_id IS NOT NULL
-                GROUP BY user_id
-                HAVING total >= 2
-            )
-        """)
-        if pct_r.result_rows and pct_r.result_rows[0][0] is not None:
-            trusted_threshold = max(float(pct_r.result_rows[0][0]), 0.50)
-            active_threshold  = max(int(pct_r.result_rows[0][1]), 3)
-        else:
-            trusted_threshold, active_threshold = 0.65, 5
-
         result = await ch.query("""
             SELECT
                 user_id,
@@ -2755,10 +2731,20 @@ async def compute_seller_badges_task(ctx: dict) -> None:
             FROM user_events
             WHERE timestamp >= now() - INTERVAL 30 DAY
               AND event_type IN ('auction_won', 'auction_ended', 'listing_sold', 'order_completed', 'offer_accepted', 'listing_offer_submit')
-              AND user_id IS NOT NULL
+              AND user_id != 0
             GROUP BY user_id
             HAVING total >= 2
         """)
+
+        # Dinamik eşikler: p75 conv_rate + p50 total — Python'da hesapla (tek CH sorgusu)
+        rows = result.result_rows
+        if rows:
+            convs  = sorted(r[1] / r[2] for r in rows if r[2] > 0)
+            totals = sorted(int(r[2]) for r in rows)
+            trusted_threshold = max(convs[int(len(convs) * 0.75)], 0.50)
+            active_threshold  = max(totals[len(totals) // 2], 3)
+        else:
+            trusted_threshold, active_threshold = 0.65, 5
 
         redis = await get_redis()
         pipe = redis.pipeline()

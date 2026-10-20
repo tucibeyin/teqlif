@@ -178,6 +178,28 @@ _ALTER_SWIPE_LIVE_EVENTS = [
     "ALTER TABLE swipe_live_events ADD COLUMN IF NOT EXISTS listing_subcategory LowCardinality(String) DEFAULT ''",
 ]
 
+# AggregatingMergeTree MV — listing event özeti (günlük, ilan bazlı)
+# new rows populate automatically; historical backfill via INSERT ... SELECT
+_CREATE_MV_LISTING_EVENTS_DAILY = """
+CREATE MATERIALIZED VIEW IF NOT EXISTS mv_listing_events_daily
+ENGINE = AggregatingMergeTree()
+PARTITION BY toYYYYMM(day)
+ORDER BY (day, item_id)
+TTL day + INTERVAL 365 DAY
+AS
+SELECT
+    toDate(timestamp)                                           AS day,
+    item_id,
+    countIfState(event_type = 'view')                          AS views_state,
+    countIfState(event_type = 'detail_dwell')                  AS dwells_state,
+    uniqIfState(user_id, event_type = 'bid_hesitation')        AS hesitations_state,
+    countIfState(event_type = 'listing_sold')                  AS sales_state,
+    uniqState(user_id)                                         AS unique_users_state
+FROM user_events
+WHERE item_type = 'listing'
+GROUP BY day, item_id
+"""
+
 # ── Bağlantı ──────────────────────────────────────────────────────────────────
 
 async def get_clickhouse_client() -> AsyncClient | None:
@@ -251,6 +273,7 @@ async def init_clickhouse() -> None:
         for stmt in _ALTER_SWIPE_LIVE_EVENTS:
             await _client.command(stmt)
         await _client.command(_CREATE_DIRECT_SALE_EVENTS_TABLE)
+        await _client.command(_CREATE_MV_LISTING_EVENTS_DAILY)
         logger.info("[ClickHouse] Bağlantı kuruldu, tablolar hazır.")
     except Exception as exc:
         logger.warning(
@@ -621,11 +644,11 @@ async def get_direct_sale_suggestions(
         WITH sales AS (
             SELECT
                 sale_id,
-                argMaxIf(toFloat64OrNull(toString(viewer_count)), created_at,
+                argMaxIf(toFloat64(viewer_count), created_at,
                          event_type = 'sale_started')                       AS start_viewers,
-                sumIf(toFloat64OrNull(toString(quantity)), event_type = 'purchase_completed')
+                sumIf(toFloat64(quantity), event_type = 'purchase_completed')
                                                                             AS total_sold,
-                avgIf(toFloat64OrNull(toString(unit_price)), event_type = 'purchase_completed')
+                avgIf(toFloat64OrNull(unit_price), event_type = 'purchase_completed')
                                                                             AS avg_price
             FROM direct_sale_events
             WHERE host_id  = {int(host_id)}

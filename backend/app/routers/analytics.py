@@ -433,22 +433,22 @@ async def get_seller_report(
 
             # unique_viewers = listing events + feed impressions + stream swipe viewers
             union_result = await ch.query(f"""
-                SELECT countDistinct(uid) FROM (
-                    SELECT toString(user_id) AS uid FROM user_events
+                SELECT uniq(uid) FROM (
+                    SELECT user_id AS uid FROM user_events
                     WHERE item_id IN ({ids_str}) AND item_type = 'listing'
                       AND timestamp BETWEEN '{ts_start}' AND '{ts_end}'
-                      AND user_id IS NOT NULL
+                      AND user_id != 0
                     UNION ALL
                     SELECT user_id AS uid FROM feed_analytics
                     WHERE listing_id IN ({ids_str})
                       AND event_type = 'impression'
                       AND timestamp BETWEEN '{ts_start}' AND '{ts_end}'
-                      AND user_id IS NOT NULL AND user_id != ''
+                      AND user_id != 0
                     UNION ALL
-                    SELECT toString(user_id) AS uid FROM user_events
+                    SELECT user_id AS uid FROM user_events
                     WHERE item_type = 'stream' AND item_id = {stream_id}
                       AND timestamp BETWEEN '{ts_start}' AND '{ts_end}'
-                      AND user_id IS NOT NULL
+                      AND user_id != 0
                 )
             """)
             union_row = union_result.result_rows[0] if union_result.result_rows else (0,)
