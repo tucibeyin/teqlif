@@ -16,9 +16,9 @@ turn:
   cert_file: /project/teqlif/config/ssl/stream3.teqlif.com-fullchain.pem
   key_file:  /project/teqlif/config/ssl/stream3.teqlif.com-privkey.pem
 
-# Node1 Redis — WireGuard üzerinden doğrudan bağlantı (redis_failover.sh HA yönetir)
+# HAProxy local proxy üzerinden Redis HA
 redis:
-  address: 10.10.0.1:6379
+  address: 127.0.0.1:6379
   db: 1
   password: <core_redis_pass>
 
