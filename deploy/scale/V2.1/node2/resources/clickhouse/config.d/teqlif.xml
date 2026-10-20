@@ -19,16 +19,6 @@
         <number_of_free_entries_in_pool_to_execute_optimize_entire_partition>7</number_of_free_entries_in_pool_to_execute_optimize_entire_partition>
     </merge_tree>
 
-    <!-- BACKUP DATABASE ... TO Disk('backups', ...) için -->
-    <storage_configuration>
-        <disks>
-            <backups>
-                <type>local</type>
-                <path>/project/teqlif/backups/clickhouse/</path>
-            </backups>
-        </disks>
-    </storage_configuration>
-
     <logger>
         <level>warning</level>
         <log>/var/log/clickhouse-server/clickhouse-server.log</log>
