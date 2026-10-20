@@ -2841,7 +2841,7 @@ async def compute_trending_categories_task(ctx: dict) -> None:
                         item_id,
                         countIf(event_type = 'view')                                   AS views,
                         countIf(event_type = 'bid_hesitation')                         AS hesitations,
-                        countDistinctIf(user_id, event_type = 'bid_placed')            AS bids,
+                        uniqIf(user_id, event_type = 'bid_placed')                     AS bids,
                         date_diff('hour', max(timestamp), now())                        AS hours_since_last
                     FROM user_events
                     WHERE item_type = 'listing'
@@ -3270,7 +3270,7 @@ async def hesitation_retarget_task(ctx: dict) -> None:
             WHERE event_type  = 'bid_hesitation'
               AND item_type   = 'listing'
               AND timestamp  >= now() - INTERVAL 14 DAY
-              AND user_id IS NOT NULL
+              AND user_id != 0
               AND price_point IS NOT NULL
             GROUP BY user_id, item_id
             HAVING avg_hesitation_price > 0
@@ -3382,7 +3382,7 @@ async def compute_trust_scores_task(ctx: dict) -> None:
                         SELECT user_id,
                                countIf(event_type IN ('auction_won', 'auction_ended')) AS total_auctions
                         FROM user_events
-                        WHERE timestamp >= now() - INTERVAL 90 DAY AND user_id IS NOT NULL
+                        WHERE timestamp >= now() - INTERVAL 90 DAY AND user_id != 0
                         GROUP BY user_id HAVING total_auctions >= 1
                     )
                 """)
@@ -3405,7 +3405,7 @@ async def compute_trust_scores_task(ctx: dict) -> None:
                     countIf(event_type = 'bid_fraud_warn')                    AS fraud_warns
                 FROM user_events
                 WHERE timestamp >= now() - INTERVAL 90 DAY
-                  AND user_id IS NOT NULL
+                  AND user_id != 0
                 GROUP BY user_id
             """)
             ch_result, hes_result = await asyncio.gather(ch_task, asyncio.sleep(0))

@@ -43,7 +43,7 @@ WITH
         FROM feed_analytics
         WHERE timestamp >= now() - INTERVAL {inactive_days} DAY
           AND event_type IN ('impression', 'click')
-          AND match(user_id, '^[1-9][0-9]*$')
+          AND user_id != 0
     ),
     active_before AS (
         SELECT DISTINCT user_id
@@ -51,9 +51,9 @@ WITH
         WHERE timestamp >= now() - INTERVAL {lookback_days} DAY
           AND timestamp  < now() - INTERVAL {inactive_days} DAY
           AND event_type IN ('impression', 'click')
-          AND match(user_id, '^[1-9][0-9]*$')
+          AND user_id != 0
     )
-SELECT toUInt32(b.user_id) AS uid
+SELECT b.user_id AS uid
 FROM active_before b
 WHERE b.user_id NOT IN (SELECT user_id FROM active_recent)
 """.format(inactive_days=_INACTIVE_DAYS, lookback_days=_LOOKBACK_DAYS)
@@ -65,7 +65,7 @@ WITH
         SELECT user_id, sum(dwell_time_ms) AS dwell
         FROM feed_analytics
         WHERE timestamp >= now() - INTERVAL {window} DAY
-          AND match(user_id, '^[1-9][0-9]*$')
+          AND user_id != 0
         GROUP BY user_id
     ),
     prev AS (
@@ -73,10 +73,10 @@ WITH
         FROM feed_analytics
         WHERE timestamp >= now() - INTERVAL {window2} DAY
           AND timestamp  < now() - INTERVAL {window} DAY
-          AND match(user_id, '^[1-9][0-9]*$')
+          AND user_id != 0
         GROUP BY user_id
     )
-SELECT toUInt32(r.user_id) AS uid
+SELECT r.user_id AS uid
 FROM recent r
 INNER JOIN prev p ON r.user_id = p.user_id
 WHERE p.dwell > 0
@@ -92,7 +92,7 @@ WITH
         FROM user_events
         WHERE event_type = 'listing_created'
           AND timestamp >= now() - INTERVAL {gap} DAY
-          AND user_id IS NOT NULL
+          AND user_id != 0
     ),
     was_active AS (
         SELECT DISTINCT user_id
@@ -100,9 +100,9 @@ WITH
         WHERE event_type = 'listing_created'
           AND timestamp >= now() - INTERVAL {lookback} DAY
           AND timestamp  < now() - INTERVAL {gap} DAY
-          AND user_id IS NOT NULL
+          AND user_id != 0
     )
-SELECT toUInt32(w.user_id) AS uid
+SELECT w.user_id AS uid
 FROM was_active w
 WHERE w.user_id NOT IN (SELECT user_id FROM active_sellers)
 """.format(gap=_SELLER_GAP_DAYS, lookback=_SELLER_LOOKBACK_DAYS)

@@ -404,13 +404,14 @@ async def get_seller_report(
             # user_events: detay ekranı etkileşimleri
             result = await ch.query(f"""
                 SELECT
-                    countDistinct(user_id)                                   AS unique_viewers,
+                    uniq(user_id)                                            AS unique_viewers,
                     avgIf(price_point, price_point > 0)                      AS avg_budget,
-                    countDistinctIf(user_id, event_type = 'bid_hesitation')  AS hesitation_count
+                    uniqIf(user_id, event_type = 'bid_hesitation')           AS hesitation_count
                 FROM user_events
                 WHERE item_id IN ({ids_str})
                   AND item_type = 'listing'
                   AND timestamp BETWEEN '{ts_start}' AND '{ts_end}'
+                  AND user_id != 0
             """)
             row = result.result_rows[0] if result.result_rows else (0, None, 0)
             ue_unique = int(row[0] or 0)
@@ -420,12 +421,13 @@ async def get_seller_report(
             # feed_analytics: swipe feed görüntülemeleri (listing_id UInt32)
             feed_result = await ch.query(f"""
                 SELECT
-                    count()                AS total_impressions,
-                    countDistinct(user_id) AS swipe_reach
+                    count()           AS total_impressions,
+                    uniq(user_id)     AS swipe_reach
                 FROM feed_analytics
                 WHERE listing_id IN ({ids_str})
                   AND event_type = 'impression'
                   AND timestamp BETWEEN '{ts_start}' AND '{ts_end}'
+                  AND user_id != 0
             """)
             feed_row = feed_result.result_rows[0] if feed_result.result_rows else (0, 0)
             swipe_impressions = int(feed_row[0] or 0)
