@@ -113,7 +113,8 @@ case "$NODE" in
 
   nodeMonitor)
     agent_sync
-    log "nodeMonitor — izleme node'u, uygulama servisi yok. git pull tamamlandı."
+    systemctl restart teqlif-agent.service
+    log "nodeMonitor — teqlif-agent yeniden başlatıldı"
     ;;
 
   node1)

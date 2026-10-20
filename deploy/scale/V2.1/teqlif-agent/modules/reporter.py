@@ -38,7 +38,6 @@ _DAILY_BATCH_JOBS: list[str] = [
     "cleanup_old_impressions_task",
     "rebuild_faiss_index_task",
     "nsfw_backfill_task",
-    "backfill_phash_task",
     "backfill_listing_embeddings_task",
     "hesitation_retarget_task",
     "cleanup_old_media_messages_task",
