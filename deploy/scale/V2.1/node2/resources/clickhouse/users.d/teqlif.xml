@@ -21,6 +21,7 @@
         <default>
             <max_memory_usage>4294967296</max_memory_usage>
             <max_threads>2</max_threads>
+            <max_execution_time>30</max_execution_time>
             <log_queries>1</log_queries>
         </default>
         <teqlif>

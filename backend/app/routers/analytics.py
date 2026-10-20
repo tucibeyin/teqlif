@@ -456,11 +456,12 @@ async def get_seller_report(
         else:
             # Açık artırma ilanı yoksa stream-level swipe impression'ları say
             result = await ch.query(f"""
-                SELECT countDistinct(user_id), avgIf(price_point, price_point > 0), 0
+                SELECT uniq(user_id), avgIf(price_point, price_point > 0), 0
                 FROM user_events
                 WHERE item_type = 'stream'
                   AND item_id = {stream_id}
                   AND timestamp BETWEEN '{ts_start}' AND '{ts_end}'
+                  AND user_id != 0
             """)
             row = result.result_rows[0] if result.result_rows else (0, None, 0)
             unique_viewers = int(row[0] or 0)
