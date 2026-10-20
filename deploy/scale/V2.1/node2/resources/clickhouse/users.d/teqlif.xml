@@ -1,7 +1,7 @@
 <clickhouse>
     <users>
         <default replace="true">
-            <password_sha256_hex><default_password_sha256></password_sha256_hex>
+            <password></password>
             <networks>
                 <ip>127.0.0.1</ip>
             </networks>
