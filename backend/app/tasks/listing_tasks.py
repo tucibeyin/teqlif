@@ -55,6 +55,8 @@ async def deactivate_expired_listings_task(ctx: dict) -> None:
 
             if not listings:
                 logger.info("[ListingTasks] Pasife alınacak ilan bulunamadı.")
+                from app.worker import _agent_ok
+                await _agent_ok(ctx, "deactivate_expired_listings_task")
                 return
 
             listing_ids = [l.id for l in listings]
@@ -111,6 +113,8 @@ async def delete_expired_inactive_listings_task(ctx: dict) -> None:
 
             if not listings:
                 logger.info("[ListingTasks] Silinecek pasif ilan bulunamadı.")
+                from app.worker import _agent_ok
+                await _agent_ok(ctx, "delete_expired_inactive_listings_task")
                 return
 
             listing_ids = [l.id for l in listings]

@@ -310,11 +310,15 @@ async def process_churn_and_airdrop(ctx: dict) -> None:
 
         if not all_risky:
             logger.info("[ChurnAirdrop] Riskli kullanıcı bulunamadı, görev tamamlandı.")
+            from app.worker import _agent_ok
+            await _agent_ok(ctx, "process_churn_and_airdrop")
             return
 
         eligible_ids = await _filter_already_received(all_risky)
         if not eligible_ids:
             logger.info("[ChurnAirdrop] Tüm riskli kullanıcılar zaten airdrop aldı, atlanıyor.")
+            from app.worker import _agent_ok
+            await _agent_ok(ctx, "process_churn_and_airdrop")
             return
 
         eligible_buyers = eligible_ids & buyer_ids

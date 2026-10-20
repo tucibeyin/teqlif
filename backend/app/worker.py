@@ -814,7 +814,6 @@ async def flush_interactions_to_db(ctx: dict) -> None:
                     "item_type": str(data["item_type"])[:20],
                     "interaction_type": str(data["interaction_type"])[:30],
                     "duration_seconds": float(data["duration_seconds"]) if data.get("duration_seconds") is not None else None,
-                    "price_point": float(data["price_point"]) if data.get("price_point") is not None else None,
                     "metadata": json.dumps(data["metadata"]) if data.get("metadata") else "",
                     "subcategory": str(data.get("subcategory", "") or "")[:50],
                     "created_at": created_dt,
@@ -3108,7 +3107,7 @@ async def optimize_notification_timing_task(ctx: dict) -> None:
                 count()               AS event_cnt
             FROM feed_analytics
             WHERE timestamp >= now() - INTERVAL 14 DAY
-              AND user_id != ''
+              AND user_id != 0
               AND event_type IN ('click', 'impression')
             GROUP BY user_id, hour_of_day
             HAVING event_cnt >= 2
@@ -3272,6 +3271,7 @@ async def hesitation_retarget_task(ctx: dict) -> None:
         ch = await get_clickhouse_client()
         if ch is None:
             logger.warning("[HesitationRetarget] ClickHouse yok, atlanıyor")
+            await _agent_ok(ctx, "hesitation_retarget_task")
             return
 
         result = await ch.query("""
@@ -3292,6 +3292,7 @@ async def hesitation_retarget_task(ctx: dict) -> None:
 
         if not result.result_rows:
             logger.info("[HesitationRetarget] Hesitation verisi yok, atlanıyor")
+            await _agent_ok(ctx, "hesitation_retarget_task")
             return
 
         # listing_id → (user_id, hesitation_price) haritası
@@ -3303,6 +3304,7 @@ async def hesitation_retarget_task(ctx: dict) -> None:
 
         listing_ids = list(listing_user_map.keys())
         if not listing_ids:
+            await _agent_ok(ctx, "hesitation_retarget_task")
             return
 
         redis = await get_redis()
@@ -3770,7 +3772,7 @@ async def sync_pg_to_clickhouse_task(ctx: dict) -> None:
         async with AsyncSessionLocal() as db:
             ui_result = await db.execute(_sql_text("""
                 SELECT user_id, item_id, item_type, interaction_type,
-                       price_point, duration_seconds, subcategory, created_at
+                       duration_seconds, subcategory, created_at
                 FROM user_interactions
                 WHERE created_at > :last_sync AND created_at <= :now
                 ORDER BY created_at
@@ -3785,7 +3787,7 @@ async def sync_pg_to_clickhouse_task(ctx: dict) -> None:
                     r.item_id,
                     r.item_type,
                     r.interaction_type,
-                    r.price_point,
+                    None,  # price_point — PG kolonundan kaldırıldı, CH default kullanılır
                     r.duration_seconds,
                     "",  # metadata — interaction_queue'daki metadata PG'ye yazılmıyor
                     r.subcategory or "",
