@@ -4,7 +4,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Ekim 2026 — §39 ClickHouse V1.1 optimizasyonları (commit 0e1d1c32)
+**Son güncelleme:** Ekim 2026 — §39 ClickHouse V1.1 optimizasyonları (commit 6ae7d490)
 
 ---
 
@@ -2725,3 +2725,4 @@ WHERE item_id IN ({ids}) AND day >= today() - 30
 | `backend/app/routers/analytics.py` | UNION UInt32 + uniq() |
 | `backend/app/worker.py` | compute_seller_badges 2 sorgu → 1 + Python quantile |
 | `backend/app/use_cases/analytics/pro_insights_use_case.py` | funnel → MV |
+| `backend/app/use_cases/analytics/hot_leads_use_case.py` | heat score sorgusu → MV (maxState eklendi) |
