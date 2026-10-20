@@ -7,7 +7,7 @@
 #   node2       — git pull (backup node, uygulama yok)
 #   node3       — git pull; --livekit ile LiveKit restart (aktif yayınları keser)
 #   node4       — git pull; --livekit ile LiveKit restart (aktif yayınları keser)
-#   node5       — git pull → pip sync → teqlif-staging + worker-staging restart
+#   node5       — git pull → pip sync → teqlif-staging + worker-staging + worker-critical-staging restart
 #   node6       — git pull → teqlif-ai-proxy restart
 #
 # Kullanım:
@@ -153,8 +153,8 @@ case "$NODE" in
     agent_sync
     log "teqlif-staging.service yeniden başlatılıyor (alembic ExecStartPre'de çalışır)..."
     systemctl restart teqlif-staging.service
-    log "teqlif-staging.service aktif — worker başlatılıyor..."
-    systemctl restart teqlif-worker-staging.service
+    log "teqlif-staging.service aktif — worker'lar başlatılıyor..."
+    systemctl restart teqlif-worker-staging.service teqlif-worker-critical-staging.service
     log "Tüm servisler hazır"
     echo ""
     log "Son loglar:"
