@@ -28,7 +28,7 @@ elif clickhouse-client \
 else
     BACKUP_METHOD="fallback"
     mkdir -p "${DEST}"
-    for TABLE in user_events feed_analytics search_events swipe_live_events direct_sale_events; do
+    for TABLE in user_events feed_analytics search_events swipe_live_events direct_sale_events mv_listing_events_daily; do
         clickhouse-client --host 127.0.0.1 --port 9000 --user default "${CH_PASS_ARG[@]}" \
             --query "SELECT * FROM teqlif_prod_analytics.${TABLE} FORMAT Native" \
             > "${DEST}/${TABLE}.native"

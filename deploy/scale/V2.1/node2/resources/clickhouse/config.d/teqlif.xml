@@ -10,6 +10,20 @@
     <user_files_path>/var/lib/clickhouse/user_files/</user_files_path>
     <max_connections>128</max_connections>
 
+    <!-- Arka plan merge/TTL thread'lerini HDD'ye göre kısıtla -->
+    <background_pool_size>4</background_pool_size>
+    <background_merges_mutations_concurrency_ratio>1</background_merges_mutations_concurrency_ratio>
+
+    <!-- BACKUP DATABASE ... TO Disk('backups', ...) için -->
+    <storage_configuration>
+        <disks>
+            <backups>
+                <type>local</type>
+                <path>/project/teqlif/backups/clickhouse/</path>
+            </backups>
+        </disks>
+    </storage_configuration>
+
     <logger>
         <level>warning</level>
         <log>/var/log/clickhouse-server/clickhouse-server.log</log>
