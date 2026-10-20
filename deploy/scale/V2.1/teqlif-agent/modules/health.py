@@ -56,8 +56,8 @@ _BACKUP_MAX_MIN = {
 # Servisler her node'un rolüne göre farklıdır; her node sadece kendi
 # /etc/systemd/system/ içinde bulunanları denetler.
 _ALL_SERVICES = [
-    "teqlif-app",
-    "teqlif-worker-default",
+    "teqlif",
+    "teqlif-worker",
     "teqlif-worker-critical",
     "teqlif-ai-proxy",
     "teqlif-agent",
@@ -171,8 +171,8 @@ class HealthMonitor:
 
     async def _eval_services(self, node_id: str, services: dict) -> None:
         svc_labels = {
-            "teqlif-app":             "teqlif API",
-            "teqlif-worker-default":  "ARQ Worker (default)",
+            "teqlif":                 "teqlif API",
+            "teqlif-worker":          "ARQ Worker (default)",
             "teqlif-worker-critical": "ARQ Worker (critical)",
             "teqlif-ai-proxy":        "AI Proxy",
             "teqlif-agent":           "teqlif Agent",
