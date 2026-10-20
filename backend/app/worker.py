@@ -3758,7 +3758,7 @@ async def sync_pg_to_clickhouse_task(ctx: dict) -> None:
         async with AsyncSessionLocal() as db:
             ui_result = await db.execute(_sql_text("""
                 SELECT user_id, item_id, item_type, interaction_type,
-                       duration_seconds, subcategory, created_at
+                       duration_seconds, created_at
                 FROM user_interactions
                 WHERE created_at > :last_sync AND created_at <= :now
                 ORDER BY created_at
@@ -3775,8 +3775,8 @@ async def sync_pg_to_clickhouse_task(ctx: dict) -> None:
                     r.interaction_type,
                     None,  # price_point — PG kolonundan kaldırıldı, CH default kullanılır
                     r.duration_seconds,
-                    "",  # metadata — interaction_queue'daki metadata PG'ye yazılmıyor
-                    r.subcategory or "",
+                    "",  # metadata
+                    "",  # subcategory — user_interactions PG tablosunda yok
                     r.created_at.replace(tzinfo=None),
                 ]
                 for r in ui_rows
@@ -3810,7 +3810,7 @@ async def sync_pg_to_clickhouse_task(ctx: dict) -> None:
                 feed_rows.append([
                     row.created_at.replace(tzinfo=None),
                     row.user_id or 0,
-                    str(m.get("listing_id", "")),
+                    int(m.get("listing_id") or 0),
                     row.event_type.replace("feed_", ""),  # 'impression', 'click', 'skip'
                     int(m.get("dwell_time_ms") or 0),
                     str(m.get("content_type") or ""),
@@ -3834,6 +3834,7 @@ async def sync_pg_to_clickhouse_task(ctx: dict) -> None:
                     str(m.get("session_id") or ""),
                     str(m.get("stream_subcategory") or ""),
                     str(m.get("listing_subcategory") or ""),
+                    row.created_at.replace(tzinfo=None),
                 ])
 
         if feed_rows:
@@ -3854,7 +3855,7 @@ async def sync_pg_to_clickhouse_task(ctx: dict) -> None:
                 column_names=["user_id", "stream_id", "listing_id", "event_type", "dwell_ms",
                                "stream_category", "listing_category", "listing_condition",
                                "listings_seen", "slot_index", "session_id",
-                               "stream_subcategory", "listing_subcategory"],
+                               "stream_subcategory", "listing_subcategory", "timestamp"],
             )
             total_inserted += len(swipe_rows)
             logger.info("[SyncCH] swipe_live_events: %d kayıt CH'a yazıldı", len(swipe_rows))
@@ -3991,10 +3992,10 @@ async def compute_analytics_cache_task(ctx: dict) -> None:
             for days in _DEMAND_PERIODS:
                 try:
                     tq_result = await ch.query(f"""
-                        SELECT query_text, COUNT(*) AS cnt
+                        SELECT query, COUNT(*) AS cnt
                         FROM search_events
-                        WHERE timestamp >= now() - INTERVAL {days} DAY AND query_text != ''
-                        GROUP BY query_text ORDER BY cnt DESC LIMIT 20
+                        WHERE timestamp >= now() - INTERVAL {days} DAY AND query != ''
+                        GROUP BY query ORDER BY cnt DESC LIMIT 20
                     """)
                     top_queries = [{"query": row[0], "count": int(row[1])} for row in tq_result.result_rows]
                     demand_data = {"top_queries": top_queries, "by_category": [], "daily_volume": []}
@@ -4230,6 +4231,7 @@ _SCHEDULE_FUNCTIONS = {
     "compute_influence_scores_task":         compute_influence_scores_task,
     "cleanup_old_exchange_rates_task":       cleanup_old_exchange_rates_task,
     "cleanup_old_streams_task":             cleanup_old_streams_task,
+    "archive_old_dm_task":                  archive_old_dm_task,
 }
 
 

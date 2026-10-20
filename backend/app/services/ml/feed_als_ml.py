@@ -130,8 +130,8 @@ async def train_feed_als(db_session=None) -> None:
             countIf(event_type = 'skip')                                             AS skips
         FROM feed_analytics
         WHERE timestamp >= now() - INTERVAL 30 DAY
-          AND user_id   != ''
-          AND listing_id != ''
+          AND user_id   != 0
+          AND listing_id != 0
         GROUP BY user_id, listing_id
         HAVING (clicks + long_dwells + short_dwells + skips) > 0
     """)
@@ -150,7 +150,7 @@ async def train_feed_als(db_session=None) -> None:
             WHERE event_type = 'bid_hesitation'
               AND item_type  = 'listing'
               AND timestamp >= now() - INTERVAL 30 DAY
-              AND user_id IS NOT NULL
+              AND user_id != 0
             GROUP BY user_id, item_id
         """)
         for uid_s, lid_s, cnt in hes_result.result_rows:

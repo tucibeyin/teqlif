@@ -44,22 +44,22 @@ async def calculate_user_budgets() -> int:
             WHERE timestamp >= now() - INTERVAL 7 DAY
               AND event_type IN ('view', 'bid_hesitation', 'dwell')
               AND price_point > 0
-              AND user_id IS NOT NULL
+              AND user_id != 0
             UNION ALL
             SELECT user_id, price_point FROM user_events
             WHERE timestamp >= now() - INTERVAL 90 DAY
               AND event_type = 'auction_won'
-              AND price_point > 0 AND user_id IS NOT NULL
+              AND price_point > 0 AND user_id != 0
             UNION ALL
             SELECT user_id, price_point FROM user_events
             WHERE timestamp >= now() - INTERVAL 90 DAY
               AND event_type = 'auction_won'
-              AND price_point > 0 AND user_id IS NOT NULL
+              AND price_point > 0 AND user_id != 0
             UNION ALL
             SELECT user_id, price_point FROM user_events
             WHERE timestamp >= now() - INTERVAL 90 DAY
               AND event_type = 'auction_won'
-              AND price_point > 0 AND user_id IS NOT NULL
+              AND price_point > 0 AND user_id != 0
         )
         GROUP BY user_id
         HAVING count() >= 3

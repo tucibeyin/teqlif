@@ -80,7 +80,7 @@ async def _fetch_features() -> tuple[list[list[float]], list[int]]:
                     uniqIf(toDate(timestamp),
                            timestamp >= now() - INTERVAL 7 DAY)                AS active_days_7d
                 FROM user_events
-                WHERE user_id IS NOT NULL
+                WHERE user_id != 0
                   AND timestamp >= now() - INTERVAL 44 DAY
                 GROUP BY user_id
                 HAVING imps_30d >= 3
@@ -88,7 +88,7 @@ async def _fetch_features() -> tuple[list[list[float]], list[int]]:
             label_data AS (
                 SELECT user_id, count() AS events_future
                 FROM user_events
-                WHERE user_id IS NOT NULL
+                WHERE user_id != 0
                   AND timestamp >= now() - INTERVAL 14 DAY
                 GROUP BY user_id
             )
@@ -199,7 +199,7 @@ async def fetch_candidate_features() -> tuple[list[int], list[list[float]]]:
             countIf(event_type='bid_hesitation' AND timestamp >= now() - INTERVAL 30 DAY) /
                 (countIf(event_type='bid_placed' AND timestamp >= now() - INTERVAL 30 DAY) + 1) AS hes_ratio
         FROM user_events
-        WHERE user_id IS NOT NULL
+        WHERE user_id != 0
           AND timestamp >= now() - INTERVAL 44 DAY
         GROUP BY user_id
         HAVING countIf(event_type='impression' AND timestamp >= now() - INTERVAL 30 DAY) >= 3

@@ -221,6 +221,20 @@ async def create_listing(
     pool = get_pool()
     if pool:
         await pool.enqueue_job("generate_listing_embedding_task", result["id"])
+
+    try:
+        from app.database_clickhouse import buffer_user_event
+        asyncio.create_task(buffer_user_event(
+            event_type="listing_created",
+            item_id=result["id"],
+            item_type="listing",
+            user_id=current_user.id,
+            price_point=float(payload.get("price") or 0) or None,
+            subcategory=str(payload.get("subcategory") or ""),
+        ))
+    except Exception:
+        pass
+
     return result
 
 
