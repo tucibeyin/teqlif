@@ -4,7 +4,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Ekim 2026 — §38 9 güvenlik açığı kapatıldı (SSRF, 2FA bypass, IDOR, WS token_version, ban cache, log injection, metrics, DM presign TTL, nginx hidden file)
+**Son güncelleme:** Ekim 2026 — §39 ClickHouse V1.1 optimizasyonları (commit 0e1d1c32)
 
 ---
 
@@ -2636,3 +2636,92 @@ location ~ /\. {
 | `backend/main.py` | metrics client.host |
 | `backend/app/use_cases/messages/queries/get_messages_query.py` | presign TTL 30 dakika |
 | `deploy/scale/V2.1/node1/resources/nginx/teqlif.com.conf` | hidden file deny |
+
+---
+
+## §39 — ClickHouse V1.1 Optimizasyonları (commit 0e1d1c32 + a635adec)
+
+### Bağlam
+
+node2 (D-2123IT, 8C HDD 442 IOPS) ClickHouse için kritik bir darboğaz. Her CH query thread yüksek RAM kullanıyordu ve OLAP sorgularında query-level sınır yoktu.
+
+### Uygulanan Değişiklikler
+
+**1. CH Config — `max_threads` + `max_execution_time`**
+
+`deploy/scale/V2.1/node2/resources/clickhouse/users.d/teqlif.xml`:
+- `default` profili: `max_threads=2`, `max_memory_usage=4GB`
+- `teqlif` profili: `max_threads=2`, `max_memory_usage=6GB`, `max_memory_usage_for_all_queries=8GB`, `max_execution_time=30`
+
+8 core'lu sunucuda 2 thread ile arka plan merge thread'lerinin CPU'ya erişimi korunur. 30 sn timeout runaway sorguları öldürür.
+
+**2. toString() Gereksiz Cast'ler Kaldırıldı**
+
+`database_clickhouse.py` `get_direct_sale_suggestions()`:
+```python
+# Önce (gereksiz string cast):
+toFloat64OrNull(toString(viewer_count))   # UInt32
+toFloat64OrNull(toString(quantity))       # UInt8
+toFloat64OrNull(toString(unit_price))     # Nullable(Decimal)
+
+# Sonra (doğrudan):
+toFloat64(viewer_count)
+toFloat64(quantity)
+toFloat64OrNull(unit_price)
+```
+
+**3. UNION Sorgusunda UInt32 Tutarlılığı**
+
+`analytics.py` `get_stream_report()` benzersiz izleyici sorgusu:
+- `toString(user_id)` → `user_id` (UInt32, cast yok)
+- `countDistinct(uid)` → `uniq(uid)` (UInt32 için daha hızlı HyperLogLog)
+- `IS NOT NULL / != ''` → `!= 0` (UInt32 için doğru karşılaştırma)
+
+**4. compute_seller_badges_task — Tek CH Sorgusu**
+
+İki ayrı 30-günlük `user_events` taraması → bir sorgu + Python'da p75/p50 hesaplama:
+```python
+convs = sorted(r[1]/r[2] for r in rows if r[2] > 0)
+totals = sorted(int(r[2]) for r in rows)
+trusted_threshold = max(convs[int(len(convs) * 0.75)], 0.50)
+active_threshold  = max(totals[len(totals) // 2], 3)
+```
+
+**5. mv_listing_events_daily — AggregatingMergeTree MV**
+
+`database_clickhouse.py`'e MV tanımı eklendi; `init_clickhouse()`'da oluşturulur:
+```sql
+CREATE MATERIALIZED VIEW IF NOT EXISTS mv_listing_events_daily
+ENGINE = AggregatingMergeTree()
+ORDER BY (day, item_id)
+AS
+SELECT toDate(timestamp) AS day, item_id,
+    countIfState(event_type = 'view')                       AS views_state,
+    countIfState(event_type = 'detail_dwell')               AS dwells_state,
+    uniqIfState(user_id, event_type = 'bid_hesitation')     AS hesitations_state,
+    countIfState(event_type = 'listing_sold')               AS sales_state,
+    uniqState(user_id)                                      AS unique_users_state
+FROM user_events WHERE item_type = 'listing'
+GROUP BY day, item_id
+```
+
+`pro_insights_use_case.py` funnel sorgusu raw `user_events` taraması yerine MV'yi okur:
+```sql
+SELECT countIfMerge(views_state), countIfMerge(dwells_state), uniqIfMerge(hesitations_state)
+FROM mv_listing_events_daily
+WHERE item_id IN ({ids}) AND day >= today() - 30
+```
+
+**6. XML Placeholder Fix**
+
+`users.d/teqlif.xml`'deki `<password_sha256_hex><default_password_sha256></password_sha256_hex>` placeholder'ı geçersiz XML'di — ClickHouse restart'ta SAXParseException veriyordu. `<password></password>` olarak düzeltildi. Default user `127.0.0.1` ile kısıtlandığından boş şifre güvenlidir.
+
+### Etkilenen Dosyalar
+
+| Dosya | Değişiklik |
+|-------|-----------|
+| `deploy/scale/V2.1/node2/resources/clickhouse/users.d/teqlif.xml` | max_threads=2, max_execution_time=30, XML fix |
+| `backend/app/database_clickhouse.py` | toString() cast fix + mv_listing_events_daily MV |
+| `backend/app/routers/analytics.py` | UNION UInt32 + uniq() |
+| `backend/app/worker.py` | compute_seller_badges 2 sorgu → 1 + Python quantile |
+| `backend/app/use_cases/analytics/pro_insights_use_case.py` | funnel → MV |
