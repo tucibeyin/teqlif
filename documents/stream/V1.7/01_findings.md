@@ -764,9 +764,25 @@ node3 çöktüğünde bu Redis kaydı **TTL dolana kadar yerinde kalır**. TTL ~
 
 `stream.room_name` **failover sırasında değiştirilir**; yeni oda adı `{base_room_name}_p{part_number}` formatında türetilir (relay odasında kullanılan `_relay_` prefix deseniyle aynı mantık). Bu bağımsız yeni bir oda olduğu için Redis'te çakışma yoktur. Flutter token ile birlikte dönen `room_name`'i kullandığı için istemci tarafında sıfır sürtünmeyle yeni odaya bağlanır.
 
-#### Viewer Downtime — Hızlı Failover Yolu
+#### Viewer & Host Reconnect — Hızlı Failover Yolu
 
-`join_stream.py` host token talebinde `is_node_healthy(source_node_id)` kontrolü ekler. Node ölüyse `NODE_UNAVAILABLE` hata kodu döner. `HostStreamViewModel` bu kodu ilk denemede aldığında 7 denemenin bitmesini beklemeden doğrudan `_tryFailover()` çağırır:
+Hem host (`HostStreamViewModel._reconnect()`) hem de izleyiciler (`StreamConnectionManager._reconnectRoom()`) bağlantı koptuğunda token tazelemek için **`GET /streams/{id}/token` (`refresh_stream_token`)** endpoint'ini çağırır. İlk kez katılan yeni izleyiciler ise `join_stream.py`'yi çağırır.
+
+Bu nedenle `is_node_healthy(source_node_id)` denetimi her iki noktada da uygulanır:
+- **Host talebi** (`stream.host_id == current_user.id`): Node ölü ise HTTP 503 `NODE_UNAVAILABLE` döner.
+- **İzleyici talebi** (`stream.host_id != current_user.id`): Node ölü ise HTTP 503 `STREAM_FAILOVER_IN_PROGRESS` döner. Node sağlıklı ise `resolve_stream_endpoint(stream)` ile aktif relay varsa ona yönlendirilir.
+
+```python
+# backend/app/routers/streams.py — refresh_stream_token():
+if not await orchestrator.is_node_healthy(stream.source_node_id):
+    if stream.host_id == current_user.id:
+        raise ServiceUnavailableException(code="NODE_UNAVAILABLE")
+    raise ServiceUnavailableException(code="STREAM_FAILOVER_IN_PROGRESS")
+```
+
+#### Flutter Host — `_reconnect()` & `_tryFailover()` (host_stream_view_model.dart)
+
+`HostStreamViewModel`, `NODE_UNAVAILABLE` kodunu ilk denemede aldığında 7 denemelik backoff'u beklemeden anında failover başlatır. Yeni odaya bağlandıktan sonra kamera ve mikrofonu tekrar publish eder:
 
 ```dart
 // host_stream_view_model.dart — _reconnect() içinde:
@@ -778,36 +794,72 @@ node3 çöktüğünde bu Redis kaydı **TTL dolana kadar yerinde kalır**. TTL ~
   }
   scheduleReconnect();
 }
-```
 
-Failover süresi: node3 crash → ilk reconnect denemesi (~2s) → `NODE_UNAVAILABLE` → failover API (~1s) → node4 bağlantı (~2s): **~5s**.
-
-#### İzleyici Yarış Durumu (Viewer Race Condition)
-
-Host failover isteği yoldayken (3–5 saniyelik pencere) yeni bir izleyici `join_stream` çağırırsa veya mevcut izleyiciler koptuğu için yeniden bağlanmaya çalışırsa, `live_streams.source_node_id` henüz node4 olarak güncellenmemiştir — izleyici ölü node3'e yönlendirilir.
-
-`join_stream.py` **izleyici token talebi** için de `is_node_healthy(source_node_id)` kontrolü yapar. Node ölüyse izleyiciye `STREAM_FAILOVER_IN_PROGRESS` (HTTP 503) döner — izleyici failover başlatamaz, yalnızca bekler:
-
-```python
-# join_stream.py — izleyici token talebi:
-if not await orchestrator.is_node_healthy(stream.source_node_id):
-    raise ServiceUnavailableException(code="STREAM_FAILOVER_IN_PROGRESS")
-```
-
-Flutter izleyici ekranı bu kodu aldığında bağlantı UI yerine "Yayın aktarılıyor, lütfen bekleyin…" gösterir ve 2s sonra otomatik tekrar dener:
-
-```dart
-// viewer_stream_view_model.dart — join stream hata yönetimi:
-} on AppException catch (e) {
-  if (e.code == 'STREAM_FAILOVER_IN_PROGRESS') {
-    _setStatus(ViewerStatus.failoverWaiting);
-    Future.delayed(const Duration(seconds: 2), _joinStream);
-    return;
+Future<void> _tryFailover() async {
+  try {
+    final newToken = await _stream.failoverStream(_token!.streamId);
+    _token = newToken;
+    _reconnectAttempts = 0;
+    // Çöken odanın bağlantısını temizle, yeni odaya bağlan ve track'leri tekrar aç
+    await room?.disconnect();
+    await room?.connect(newToken.livekitUrl, newToken.token);
+    await room?.localParticipant?.setCameraEnabled(
+      cameraEnabled,
+      cameraCaptureOptions: const CameraCaptureOptions(params: VideoParametersPresets.h720_169),
+    );
+    await room?.localParticipant?.setMicrophoneEnabled(
+      micEnabled,
+      audioCaptureOptions: const AudioCaptureOptions(
+        noiseSuppression: true, echoCancellation: true, autoGainControl: true,
+      ),
+    );
+  } on AppException catch (e) {
+    if (e.code == 'NODE_STILL_HEALTHY') {
+      _reconnectAttempts = 0;
+      scheduleReconnect();
+      return;
+    }
+    onNavigateHome?.call();
+  } catch (_) {
+    onNavigateHome?.call();
   }
 }
 ```
 
-Failover tamamlanınca (DB'de `source_node_id = node4`) izleyicinin retry isteği artık node4 URL'ini alır.
+Failover süresi: node3 crash → ilk reconnect denemesi (~2s) → `NODE_UNAVAILABLE` → failover API (~1s) → node4 bağlantı ve track publish (~2s): **~5s**.
+
+#### İzleyici Yarış Durumu (Viewer Race Condition) & StreamConnectionManager
+
+Host failover isteği yoldayken (3–5 saniyelik pencere) yeni bir izleyici katılırsa veya mevcut izleyiciler koptuğu için `_reconnectRoom()` çağırırsa, `live_streams.source_node_id` henüz node4 olarak güncellenmemiştir — izleyici ölü node3'e bağlanmaya çalışmamalıdır.
+
+İzleyiciye dönen `STREAM_FAILOVER_IN_PROGRESS` (HTTP 503) hatası, `StreamConnectionManager`'ın 4 denemelik üstel hakkını tüketmemelidir; aksi takdirde failover tamamlanmadan izleyici pes eder.
+
+`mobile/lib/services/stream_connection_manager.dart` içinde `_reconnectRoom()`:
+
+```dart
+// stream_connection_manager.dart — _reconnectRoom() içinde:
+} on AppException catch (e) {
+  if (e.code == 'STREAM_ENDED') {
+    session.streamEnded = true;
+    session.update();
+    return;
+  }
+  if (e.code == 'STREAM_FAILOVER_IN_PROGRESS') {
+    // Failover geçişi sırasında attempt hakkını tüketme; 2s sonra tekrar dene
+    _reconnectTimers[session.streamId]?.cancel();
+    _reconnectTimers[session.streamId] = Timer(
+      const Duration(seconds: 2),
+      () => _reconnectRoom(session),
+    );
+    return;
+  }
+  _scheduleViewerReconnect(session);
+} catch (_) {
+  _scheduleViewerReconnect(session);
+}
+```
+
+Failover tamamlanınca (DB'de `source_node_id = node4`) izleyicinin retry isteği node4 URL'ini alır ve yayını izlemeye kesintisiz devam eder.
 
 #### Relay ile Etkileşim
 
@@ -882,9 +934,18 @@ Part'ların `available` durumu → concat tetiklemesi: `encoder.py`'de Redis ba�
 # stream_concat_task.py — cron trigger mantığı + ARQ distributed lock:
 async def stream_concat_task(ctx: dict) -> None:
     rows = await db.fetch(
-        "SELECT stream_id, COUNT(*) as part_count FROM stream_recordings "
-        "WHERE status='available' AND is_concat_result=false "
-        "GROUP BY stream_id HAVING COUNT(*) >= 2"
+        "SELECT sr.stream_id, COUNT(*) as part_count "
+        "FROM stream_recordings sr "
+        "JOIN live_streams ls ON ls.id = sr.stream_id "
+        "WHERE ls.status = 'ended' "
+        "  AND sr.status = 'available' "
+        "  AND sr.is_concat_result = false "
+        "  AND NOT EXISTS ("
+        "    SELECT 1 FROM stream_recordings active "
+        "    WHERE active.stream_id = sr.stream_id "
+        "      AND active.status IN ('recording', 'encoding', 'transferring')"
+        "  ) "
+        "GROUP BY sr.stream_id HAVING COUNT(*) >= 2"
     )
     for row in rows:
         await _do_concat(ctx, row["stream_id"])
@@ -1041,14 +1102,14 @@ Böylece relay süreçleri gossip ve izleme panolarında görünür olur.
 | `backend/app/use_cases/streams/commands/start_stream.py` | Orchestrator'dan dönen `node["node_id"]` stream'e `source_node_id` olarak yazılır |
 | `backend/app/models/stream.py` | `source_node_id: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)` eklenir |
 | `backend/alembic/versions/zzzzzu_add_source_node_id_to_live_streams.py` | `source_node_id VARCHAR(50) nullable` migration; `stream_recordings` tablosuna `is_concat_result BOOLEAN DEFAULT false` ve `part_number SMALLINT nullable` sütunları eklenir; `status` CHECK kısıtına `merged_and_purged` değeri eklenir |
-| `backend/app/routers/streams.py` | **Kural 3**: `POST /api/streams/{id}/failover` endpoint — `FailoverStreamCommand` çağırır |
+| `backend/app/routers/streams.py` | **Kural 3**: `POST /api/streams/{id}/failover` endpoint — `FailoverStreamCommand` çağırır; **`GET /{stream_id}/token` (`refresh_stream_token`)**: Host reconnect'inde ölü node → `NODE_UNAVAILABLE` (503); İzleyici reconnect'inde ölü node → `STREAM_FAILOVER_IN_PROGRESS` (503); İzleyici için node sağlıklıysa `resolve_stream_endpoint(stream)` ile relay yönlendirmesi |
 | `deploy/scale/V2.1/teqlif-agent/modules/recorder.py` | `source_node_id != self._cfg.node_id` ise kayıt pas geçilir; fallback poll `OR source_node_id IS NULL`. **H1** savunma: `source_node_id in (None, "fallback")` → URL eşleştirme. **Kural 1**: `_recover_orphaned()` MKV varsa `encoding`'e alır (Salvage). **Kural 2**: `_purge_ghost_streams()` LiveKit ListRooms kontrolü — init sırası: recover → purge → sync. **part_number**: INSERT sorgusunda `COALESCE(MAX(part_number),0)+1` ile atanır |
 | `deploy/scale/V2.1/teqlif-agent/modules/encoder.py` | `relay_procs` farkındalığı — relay aktifken `_MAX_PARALLEL = 1`. **H4**: FFmpeg subprocess `ionice -c 3` ile başlatılır. Concat tetikleme encoder.py'den yapılmaz — `encoder.py`'de Redis yoktur; `stream_concat_task` ARQ cron görevi DB'yi periyodik tarayarak concat adaylarını tespit eder |
 | `deploy/scale/V2.1/teqlif-agent/livekit_subscriber.py` | **H2**: `on_participant_disconnected` → host ayrılınca `recording_grace_seconds` timer başlatılır; `on_participant_connected` host dönünce timer iptal eder; timer dolarsa `stop_evt.set()`; relay/izleyici ayrılması kaydı etkilemez |
 | `backend/app/routers/webhooks.py` | **H5**: `room_finished` handler'a `if "_relay_" in room_name: return` filtresi |
-| `mobile/lib/screens/live/viewmodels/host_stream_view_model.dart` | **Kural 3**: `_tryFailover()` metodu — `_kMaxReconnectAttempts` aşılınca `onNavigateHome` yerine çağrılır; `NODE_STILL_HEALTHY` durumunda retry sıfırlanır. `NODE_UNAVAILABLE` kodu gelince `_kMaxReconnectAttempts` beklemeden doğrudan `_tryFailover()` çağrılır (~5s failover yolu) |
+| `mobile/lib/screens/live/viewmodels/host_stream_view_model.dart` | **Kural 3**: `_tryFailover()` metodu — `_kMaxReconnectAttempts` aşılınca veya `NODE_UNAVAILABLE` kodu gelince anında çağrılır (~5s failover yolu); eski oda bağlantısını keser, yeni odaya bağlanır ve `setCameraEnabled(true)` + `setMicrophoneEnabled(true)` ile track'leri tekrar açar; `NODE_STILL_HEALTHY` durumunda retry sıfırlanır |
 | `mobile/lib/services/stream_service.dart` | **Kural 3**: `failoverStream(int streamId)` metodu — `POST /api/streams/{id}/failover` |
-| `mobile/lib/screens/live/viewmodels/viewer_stream_view_model.dart` | **İzleyici Yarış Durumu**: `_joinStream()` içinde `STREAM_FAILOVER_IN_PROGRESS` (503) alınca `ViewerStatus.failoverWaiting` durumuna geçilir, 2s sonra otomatik tekrar dener; kullanıcı "Yayın aktarılıyor, lütfen bekleyin…" mesajını görür |
+| `mobile/lib/services/stream_connection_manager.dart` | **İzleyici Yarış Durumu**: `_reconnectRoom()` içinde `STREAM_FAILOVER_IN_PROGRESS` (503) alınca `_reconnectAttempts` tüketilmeyip 2s sonra tekrar denenir; failover tamamlanınca izleyici node4'e kesintisiz bağlanır |
 | `backend/app/config.py` | **H1**: `edge_livekit_node_map: dict[str, str] = {}` alanı eklenir (key=livekit_url, value=node_id); ortam değişkeni `EDGE_LIVEKIT_NODE_MAP` ile doldurulur |
 | `backend/app/worker.py` | `stream_concat_task` ARQ cron görevi `worker.py` cron listesine eklenir (`stream_recording_tasks` import'u genişletilir); **WorkerSettings** (default queue) sınıfına `func(stream_concat_task, timeout=1800)` olarak kaydedilir — `job_timeout=300` varsayılanı re-encode için yetersizdir; lock TTL (1800s) ile eşleşmelidir |
 | `deploy/scale/V2.1/teqlif-agent/modules/cleaner.py` | `merged_and_purged` DB temizliği eklenir: `archived_at < NOW() - INTERVAL '15 days' AND (status = 'archived' OR status = 'merged_and_purged')` — concat sonrası part satırları birikip çöp oluşturmaz |
