@@ -1048,8 +1048,18 @@ Böylece relay süreçleri gossip ve izleme panolarında görünür olur.
 | `mobile/lib/services/stream_service.dart` | **Kural 3**: `failoverStream(int streamId)` metodu — `POST /api/streams/{id}/failover` |
 | `mobile/lib/screens/live/viewmodels/viewer_stream_view_model.dart` | **İzleyici Yarış Durumu**: `_joinStream()` içinde `STREAM_FAILOVER_IN_PROGRESS` (503) alınca `ViewerStatus.failoverWaiting` durumuna geçilir, 2s sonra otomatik tekrar dener; kullanıcı "Yayın aktarılıyor, lütfen bekleyin…" mesajını görür |
 | `backend/app/config.py` | **H1**: `edge_livekit_node_map: dict[str, str] = {}` alanı eklenir (key=livekit_url, value=node_id); ortam değişkeni `EDGE_LIVEKIT_NODE_MAP` ile doldurulur |
-| `backend/app/worker.py` | `stream_concat_task` ARQ cron görevi `worker.py` cron listesine eklenir (`stream_recording_tasks` import'u genişletilir) |
+| `backend/app/worker.py` | `stream_concat_task` ARQ cron görevi `worker.py` cron listesine eklenir (`stream_recording_tasks` import'u genişletilir); **WorkerSettings** (default queue) sınıfına `func(stream_concat_task, timeout=1800)` olarak kaydedilir — `job_timeout=300` varsayılanı re-encode için yetersizdir; lock TTL (1800s) ile eşleşmelidir |
 | `deploy/scale/V2.1/teqlif-agent/modules/cleaner.py` | `merged_and_purged` DB temizliği eklenir: `archived_at < NOW() - INTERVAL '15 days' AND (status = 'archived' OR status = 'merged_and_purged')` — concat sonrası part satırları birikip çöp oluşturmaz |
+
+### Dağıtım Önkoşulları
+
+Kod değişiklikleri deploy edilmeden önce altyapıda aşağıdaki hazırlıkların yapılmış olması gerekir:
+
+| Node | Önkoşul | Komut |
+|------|---------|-------|
+| **node1** | `stream_concat_task` hem `ffprobe` hem `ffmpeg` çalıştırır; `backend/main.py` zaten `ffprobe` varlığını startup'ta kontrol eder. node1'de FFmpeg kurulu değilse `stream_concat_task` tüm çağrılarda hata verir. | `sudo apt-get install -y ffmpeg` |
+| **node3, node4** | `livekit_relay.py` resmi LiveKit Python SDK'yı (`from livekit import rtc`) kullanır. `livekit_subscriber.py` ile aynı paket; edge venv'de zaten kurulu olması gerekir. Kurulu değilse relay subprocess başlayamaz. | `/opt/teqlif-agent/venv/bin/pip install livekit livekit-api` |
+| **node1** | `stream_concat_task` ARQ default queue'a `timeout=1800` ile kayıtlıdır (`WorkerSettings`). Re-encode 6+ dakika sürebilir; varsayılan `job_timeout=300` yetmez ve ARQ görevi mid-flight keser. | `worker.py` kodu değişikliğiyle sağlanır — ayrı sistem adımı yok |
 
 ### livekit_relay.py Çalışma Prensibi
 
