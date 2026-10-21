@@ -229,7 +229,6 @@ Telegram alarm kuralları:
 
 ### Değişmeyen Şeyler
 
-- Flutter mobil uygulaması — sıfır değişiklik
 - Chat ve bid WebSocket — LiveKit'ten bağımsız, etkilenmez
 - `live_streams.livekit_url` kolonu — değişmez, source node URL'sini tutar
 - `live_streams` tablosuna `source_node_id VARCHAR(50) nullable` eklenir
@@ -701,11 +700,23 @@ Future<StreamTokenOut> failoverStream(int streamId) async {
 
 `stream.room_name` değişmez. LiveKit her node'da aynı adlı oda için ayrı, bağımsız oda yaratır — çakışma yok. Failover tamamlanınca viewer'lar `join_stream` çağırdığında artık node4 URL'sini alır; aynı `room_name` ile node4'e bağlanırlar. Transparent geçiş.
 
-#### Viewer Downtime
+#### Viewer Downtime — Hızlı Failover Yolu
 
-Host ~120s retry + failover API + node4 bağlantı: **~122s**. Bu süre zarfında viewer'lar da retry döngüsündedir; failover tamamlanınca bir sonraki retry node4 URL'ini alır.
+`join_stream.py` host token talebinde `is_node_healthy(source_node_id)` kontrolü ekler. Node ölüyse `NODE_UNAVAILABLE` hata kodu döner. `HostStreamViewModel` bu kodu ilk denemede aldığında 7 denemenin bitmesini beklemeden doğrudan `_tryFailover()` çağırır:
 
-**Optimizasyon (bu döneme dahil edilmedi)**: `refreshStreamToken()` sırasında `is_node_healthy` kontrolü → `NODE_UNAVAILABLE` kodu → ViewModel ilk denemede failover çağırır → **~5s downtime**. V1.7 tamamlandıktan sonra implemente edilebilir.
+```dart
+// host_stream_view_model.dart — _reconnect() içinde:
+} on AppException catch (e) {
+  if (e.code == 'STREAM_ENDED') { onNavigateHome?.call(); return; }
+  if (e.code == 'NODE_UNAVAILABLE') {
+    _tryFailover();   // 7 deneme beklemeden anında failover
+    return;
+  }
+  scheduleReconnect();
+}
+```
+
+Failover süresi: node3 crash → ilk reconnect denemesi (~2s) → `NODE_UNAVAILABLE` → failover API (~1s) → node4 bağlantı (~2s): **~5s**. Viewer'lar da `join_stream` çağırınca `NODE_UNAVAILABLE` alır; failover tamamlanınca bir sonraki retry node4 URL'ini alır.
 
 #### Relay ile Etkileşim
 
@@ -717,7 +728,7 @@ Relay node3'e bağlıydı → crash → relay subprocess ölür → `_reap_finis
 |-|-------|------|
 | Part 1 | node3 crash öncesi MKV | Salvage → encoding → MinIO |
 | Part 2 | node4 failover pub/sub tetikledi | Normal kayıt → MinIO |
-| Concat | V2.0 scope | `ffmpeg -f concat` ile tek sorunsuz MP4 |
+| Birleştirme | Her iki part yüklendikten sonra | `ffmpeg -f concat -safe 0 -i parts.txt -c copy output.mp4` → MinIO; UI tek dosya gösterir |
 
 ---
 
@@ -781,17 +792,17 @@ Böylece relay süreçleri gossip ve izleme panolarında görünür olur.
 | `deploy/scale/V2.1/cluster.yaml` | `relay:` bloğu eklenir (`tx_threshold_mbps`, `min_viewers_teardown`, `heartbeat_interval_sec`, `ready_ttl_sec`) |
 | `teqlif-agent` ana döngüsü | `relay.py` modülü entegre edilir; `net_tx_mbps` Redis'ten okunur (yeni okuyucu yazılmaz — zaten `edge:metrics:{node_id}`'de mevcut) |
 | `backend/app/services/edge_orchestrator.py` | `StreamEndpoint` dataclass + `resolve_stream_endpoint(stream)` metodu eklenir; `live:relay:ready:{room}` kontrolü ve yük dengesi bu metotta yapılır. **H1**: `_fallback()` URL→node_id eşleştirmesi ile gerçek node_id döner. **Kural 3**: `is_node_healthy(node_id)` metodu + `allocate_node(exclude_node_id)` parametresi |
-| `backend/app/use_cases/streams/commands/join_stream.py` | `orchestrator.resolve_stream_endpoint(stream)` çağrısı — Redis/routing kodu Command içine yazılmaz (CQRS/SRP) |
+| `backend/app/use_cases/streams/commands/join_stream.py` | `orchestrator.resolve_stream_endpoint(stream)` çağrısı — Redis/routing kodu Command içine yazılmaz (CQRS/SRP). Host token talebinde `is_node_healthy(source_node_id)` kontrolü: ölü node → `NODE_UNAVAILABLE` hata kodu döner |
 | `backend/app/use_cases/streams/commands/lifecycle_commands.py` | Recording event payload'una `source_node_id` eklenir |
 | `backend/app/use_cases/streams/commands/start_stream.py` | Orchestrator'dan dönen `node["node_id"]` stream'e `source_node_id` olarak yazılır |
 | `backend/app/models/stream.py` | `source_node_id: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)` eklenir |
-| `backend/alembic/versions/zzzzzu_add_source_node_id_to_live_streams.py` | `source_node_id VARCHAR(50) nullable` migration |
+| `backend/alembic/versions/zzzzzu_add_source_node_id_to_live_streams.py` | `source_node_id VARCHAR(50) nullable` migration; `stream_recordings` tablosuna `is_concat_result BOOLEAN DEFAULT false` eklenir |
 | `backend/app/routers/streams.py` | **Kural 3**: `POST /api/streams/{id}/failover` endpoint — `FailoverStreamCommand` çağırır |
 | `deploy/scale/V2.1/teqlif-agent/modules/recorder.py` | `source_node_id != self._cfg.node_id` ise kayıt pas geçilir; fallback poll `OR source_node_id IS NULL`. **H1** savunma: `source_node_id in (None, "fallback")` → URL eşleştirme. **Kural 1**: `_recover_orphaned()` MKV varsa `encoding`'e alır (Salvage). **Kural 2**: `_purge_ghost_streams()` LiveKit ListRooms kontrolü — init sırası: recover → purge → sync |
-| `deploy/scale/V2.1/teqlif-agent/modules/encoder.py` | `relay_procs` farkındalığı — relay aktifken `_MAX_PARALLEL = 1`. **H4**: FFmpeg subprocess `ionice -c 3` ile başlatılır |
+| `deploy/scale/V2.1/teqlif-agent/modules/encoder.py` | `relay_procs` farkındalığı — relay aktifken `_MAX_PARALLEL = 1`. **H4**: FFmpeg subprocess `ionice -c 3` ile başlatılır. **Failover concat**: bir stream'in tüm part'ları `available` olduğunda `_maybe_concat_parts()` çalışır: `ffmpeg -f concat -safe 0 -c copy` → birleşik MP4 → MinIO; `stream_recordings` tablosuna `is_concat_result=true` satırı eklenir |
 | `deploy/scale/V2.1/teqlif-agent/livekit_subscriber.py` | **H2**: `on_participant_disconnected` → `participant.identity == cfg.host_identity` kontrolü; relay izleyici ayrılması kaydı durdurmaz |
 | `backend/app/routers/webhooks.py` | **H5**: `room_finished` handler'a `if "_relay_" in room_name: return` filtresi |
-| `mobile/lib/screens/live/viewmodels/host_stream_view_model.dart` | **Kural 3**: `_tryFailover()` metodu — `_kMaxReconnectAttempts` aşılınca `onNavigateHome` yerine çağrılır; `NODE_STILL_HEALTHY` durumunda retry sıfırlanır |
+| `mobile/lib/screens/live/viewmodels/host_stream_view_model.dart` | **Kural 3**: `_tryFailover()` metodu — `_kMaxReconnectAttempts` aşılınca `onNavigateHome` yerine çağrılır; `NODE_STILL_HEALTHY` durumunda retry sıfırlanır. `NODE_UNAVAILABLE` kodu gelince `_kMaxReconnectAttempts` beklemeden doğrudan `_tryFailover()` çağrılır (~5s failover yolu) |
 | `mobile/lib/services/stream_service.dart` | **Kural 3**: `failoverStream(int streamId)` metodu — `POST /api/streams/{id}/failover` |
 
 ### livekit_relay.py Çalışma Prensibi
