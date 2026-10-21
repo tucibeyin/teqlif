@@ -401,7 +401,7 @@ recording:
   recording_grace_seconds: 120   # webhooks.py:_HOST_GRACE_SECONDS ile eşleşmeli
 ```
 
-**Grace timer değeri seçim kuralı**: `recording_grace_seconds` her zaman `_HOST_GRACE_SECONDS` (120s) değerine **eşit veya büyük** olmalıdır. Aksi takdirde host 90s'de dönerse backend yayını açık tutar ama kayıt çoktan ölmüştür. Grace timer'ın birincil kapanma sinyali değil, son güvence olduğu unutulmamalı — LiveKit `room_deleted` eventi (`roomDeleted disconnect reason`) geldiğinde `stop_evt` zaten tetiklenir.
+`recording_grace_seconds` her zaman `_HOST_GRACE_SECONDS` (120s) değerine **eşit veya büyük** olmalıdır; grace timer backend'in yayını açık tuttuğu süreyi aşmadan sona ererse kayıt ölür, yayının ikinci yarısı kaydedilmez. Grace timer birincil kapanma sinyali değil son güvencedir: LiveKit `roomDeleted` disconnect reason geldiğinde `stop_evt` zaten tetiklenir, timer o ana kadar aktifse iptal edilir.
 
 ---
 
