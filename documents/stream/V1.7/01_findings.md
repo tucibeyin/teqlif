@@ -650,7 +650,8 @@ class FailoverStreamCommand:
             "source_node_id": new_node["node_id"],
         }))
 
-        token = make_livekit_token(stream.room_name, caller_id, can_publish=True)
+        user = await self.uow.users.get(id=caller_id)
+        token = make_livekit_token(stream.room_name, user, can_publish=True)
         return StreamTokenOut(
             livekit_url=new_node["livekit_url"],
             token=token,
