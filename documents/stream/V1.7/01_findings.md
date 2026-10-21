@@ -449,7 +449,279 @@ if event_type == "room_finished" and room_name:
 
 ---
 
+### Node Crash Kurtarma — Kural 1: Salvage to Encoding
 
+**Temel prensip**: MKV container cluster tabanlıdır (ADR §19). Elektrik fişi çekilse bile son saniyeye kadar yazılmış kareler FFmpeg tarafından sorunsuzca okunabilir. Bu avantajı kullanmak gerekir.
+
+**Mevcut problem** ([recorder.py:196-201](deploy/scale/V2.1/teqlif-agent/modules/recorder.py#L196)): Tüm `status='recording'` kayıtlar blanket `failed` yapılıyor — diskteki MKV çöpe gidiyor.
+
+**Yeni `_recover_orphaned()` mantığı**:
+
+```python
+async def _recover_orphaned(self, dsn: str) -> None:
+    """Agent yeniden başladığında yarım kalan MKV'leri kurtarır (Salvage)."""
+    conn = await asyncpg.connect(dsn=dsn)
+    rows = await conn.fetch(
+        "SELECT id, raw_path FROM stream_recordings "
+        "WHERE status = 'recording' AND recording_node = $1",
+        self._cfg.node_id,
+    )
+    for row in rows:
+        raw_file = Path(row["raw_path"]) if row["raw_path"] else None
+        if raw_file and raw_file.exists() and raw_file.stat().st_size > 100_000:
+            await conn.execute(
+                """UPDATE stream_recordings
+                   SET status = 'encoding',
+                       error_message = 'node crash: kısmi kurtarıldı (salvaged)',
+                       updated_at = NOW()
+                   WHERE id = $1""",
+                row["id"],
+            )
+            logger.info("Orphan kayıt kurtarıldı → encoding: rec_id=%d size=%.1fMB",
+                        row["id"], raw_file.stat().st_size / 1_000_000)
+        else:
+            await conn.execute(
+                "UPDATE stream_recordings SET status='failed', "
+                "error_message=$1, updated_at=NOW() WHERE id=$2",
+                "node crash: dosya yok/boş", row["id"],
+            )
+    await conn.close()
+```
+
+Eşik `100_000 bytes` (100KB): 2 saniyelik 720p kayıt bile kurtarmaya değer; altındakiler gerçekten bozuk/boş dosyayı işaret eder. `EncoderManager`, `status='encoding'` olan kaydı normal akışta alır, MP4'e çevirir, MinIO'ya yükler.
+
+---
+
+### Node Crash Sonrası — Kural 2: Ghost Stream Prevention
+
+**Problem**: Node3 boot eder. `_sync_recordings()` DB'de `status='live'` olan yayınları tarar. DB hâlâ `live` ama LiveKit odası yok. `_sync_recordings()` boş odaya yeni subscriber başlatır (ghost recorder).
+
+Kural 1 bu senaryonun büyük bölümünü kapatır: mevcut recording satırı `encoding`'e çekilir; `_sync_recordings()` NOT EXISTS koşulunda bunu görür. Kalan kenar durum: crash, recording satırı oluşturulmadan önce gerçekleştiyse. LiveKit ListRooms kontrolü ek güvence sağlar.
+
+`_purge_ghost_streams()` — `_recover_orphaned()` ile `_sync_recordings()` arasına eklenir:
+
+```python
+async def _purge_ghost_streams(self, dsn: str, svc_cfg: dict) -> None:
+    """Reboot sonrası LiveKit'te fiziksel olarak bulunmayan 'live' yayınları kapatır."""
+    ws_url     = svc_cfg.get("livekit_ws_url") or "ws://127.0.0.1:7880"
+    http_url   = ws_url.replace("ws://", "http://").replace("wss://", "https://")
+    api_key    = os.environ.get("LIVEKIT_API_KEY", "")
+    api_secret = os.environ.get("LIVEKIT_API_SECRET", "")
+    try:
+        from livekit.api import LiveKitAPI, ListRoomsRequest
+        async with LiveKitAPI(url=http_url, api_key=api_key, api_secret=api_secret) as api:
+            resp = await api.room.list_rooms(ListRoomsRequest())
+        active_rooms = {r.name for r in resp.rooms}
+    except Exception as exc:
+        logger.warning("LiveKit ListRooms başarısız, ghost purge atlandı: %s", exc)
+        return   # güvenli fallback — yayınlara dokunma
+
+    conn = await asyncpg.connect(dsn=dsn)
+    stale = await conn.fetch(
+        "SELECT id, room_name FROM live_streams "
+        "WHERE status = 'live' AND source_node_id = $1",
+        self._cfg.node_id,
+    )
+    for row in stale:
+        if row["room_name"] not in active_rooms:
+            await conn.execute(
+                "UPDATE live_streams "
+                "SET status='ended', is_live=false, ended_at=NOW() "
+                "WHERE id=$1",
+                row["id"],
+            )
+            logger.warning("Ghost stream kapatıldı: stream_id=%d room=%s",
+                           row["id"], row["room_name"])
+    await conn.close()
+```
+
+Çağrı sırası (`recorder.py` init bloğu):
+
+```
+_recover_orphaned()     # 1. MKV varsa encoding'e al
+_purge_ghost_streams()  # 2. LiveKit boş → stale streams → ended
+_initialized = True
+_sync_recordings()      # 3. Artık ghost recorder oluşmaz
+```
+
+`livekit.api` paketi zaten kurulu. Metot yalnızca `self._cfg.node_id`'e ait stream'lere dokunur.
+
+---
+
+### Multi-Node Failover — Kural 3
+
+Node3 çöktüğünde yayıncı yayını kaybetmeden node4'ten devam eder. `stream_recordings` tablosunda `stream_id` UNIQUE değil (sadece index), iki parça kaydı zaten destekleniyor.
+
+#### Komple Akış
+
+```
+node3 çöker
+   │
+   ▼  HostStreamViewModel
+RoomDisconnectedEvent → scheduleReconnect()
+   │  7 deneme × backoff  (2+4+8+16+30+30+30 = ~120s)
+   │  Her denemede: connect(node3_url) → başarısız
+   │
+   ▼  _reconnectAttempts >= _kMaxReconnectAttempts
+_tryFailover()
+   │
+   ├─→ POST /api/streams/{id}/failover
+   │     ├─ stream.status == 'live'?          ✓
+   │     ├─ caller == stream.host_id?         ✓
+   │     ├─ is_node_healthy(node3) == False?  ✓  (edge:metrics stale)
+   │     ├─ failover rate limit (5dk/stream)  ✓
+   │     ├─ allocate_node(exclude=node3)  →  node4
+   │     ├─ UPDATE live_streams: source_node_id=node4, livekit_url=node4_url
+   │     └─ PUBLISH teqlif:recording:stream_started {source_node_id:"node4"}
+   │
+   ▼  200: {livekit_url, token, room_name}
+Host: connect(node4_url, token)  ← aynı room_name, node4'te taze oda
+_reconnectAttempts = 0, yayın devam eder
+
+(~2dk sonra) node3 boot eder:
+   _recover_orphaned() → Part 1 MKV → encoding → MinIO
+node4 recorder (pub/sub'dan başladı):
+   Normal kayıt → Part 2 MKV → MinIO
+```
+
+#### Backend — `is_node_healthy()` + `allocate_node(exclude_node_id)`
+
+```python
+# edge_orchestrator.py — iki ekleme:
+
+async def is_node_healthy(self, node_id: str) -> bool:
+    all_m = await self.get_all_metrics()
+    node = next((m for m in all_m if m.get("node_id") == node_id), None)
+    return (
+        node is not None
+        and node.get("services", {}).get("livekit", {}).get("healthy", False)
+    )
+
+# allocate_node() imzasına opsiyonel parametre:
+async def allocate_node(
+    self, service_type: ServiceType, exclude_node_id: str | None = None
+) -> Dict[str, Any]: ...
+
+# _pick_media() içinde tek satır ekleme:
+candidates = [
+    m for m in metrics
+    if "media" in m.get("node_type", [])
+    and m.get("services", {}).get("livekit", {}).get("healthy", False)
+    and m.get("livekit_url")
+    and m.get("node_id") != exclude_node_id   # ← yeni
+]
+```
+
+#### Backend — `FailoverStreamCommand`
+
+```python
+# backend/app/use_cases/streams/commands/failover_stream.py
+class FailoverStreamCommand:
+    def __init__(self, uow: AbstractUnitOfWork, redis): ...
+
+    async def execute(self, stream_id: int, caller_id: int) -> StreamTokenOut:
+        async with self.uow:
+            stream = await self.uow.streams.get(id=stream_id)
+            if not stream or stream.status != "live":
+                raise NotFoundException(code="STREAM_NOT_FOUND")
+            if stream.host_id != caller_id:
+                raise ForbiddenException(code="NOT_STREAM_HOST")
+
+            if await orchestrator.is_node_healthy(stream.source_node_id):
+                raise BadRequestException(code="NODE_STILL_HEALTHY")
+
+            rl_key = f"teqlif:stream:failover_rl:{stream_id}"
+            if not await self.redis.set(rl_key, "1", ex=300, nx=True):
+                raise BadRequestException(code="FAILOVER_RATE_LIMITED")
+
+            new_node = await orchestrator.allocate_node(
+                ServiceType.MEDIA, exclude_node_id=stream.source_node_id
+            )
+            if new_node["node_id"].startswith("fallback"):
+                raise ServiceUnavailableException(code="NO_NODES_AVAILABLE")
+
+            stream.source_node_id = new_node["node_id"]
+            stream.livekit_url    = new_node["livekit_url"]
+            await self.uow.session.flush()
+
+        await self.redis.publish("teqlif:recording:stream_started", json.dumps({
+            "stream_id":      stream.id,
+            "room_name":      stream.room_name,
+            "host_id":        stream.host_id,
+            "source_node_id": new_node["node_id"],
+        }))
+
+        token = make_livekit_token(stream.room_name, caller_id, can_publish=True)
+        return StreamTokenOut(
+            livekit_url=new_node["livekit_url"],
+            token=token,
+            room_name=stream.room_name,
+        )
+```
+
+#### Flutter — `_tryFailover()` (host_stream_view_model.dart)
+
+```dart
+// scheduleReconnect() içinde — onNavigateHome?.call() yerine:
+if (_reconnectAttempts >= _kMaxReconnectAttempts) {
+  _tryFailover();
+  return;
+}
+
+Future<void> _tryFailover() async {
+  try {
+    final newToken = await _stream.failoverStream(_token!.streamId);
+    _token = newToken;
+    _reconnectAttempts = 0;
+    _reconnectTimer = Timer(Duration.zero, _reconnect);
+  } on AppException catch (e) {
+    if (e.code == 'NODE_STILL_HEALTHY') {
+      // Node anlık glitch — normal reconnect'e sıfırla
+      _reconnectAttempts = 0;
+      scheduleReconnect();
+      return;
+    }
+    onNavigateHome?.call();
+  } catch (_) {
+    onNavigateHome?.call();
+  }
+}
+```
+
+`stream_service.dart`'a:
+
+```dart
+Future<StreamTokenOut> failoverStream(int streamId) async {
+  final resp = await _client.post('/api/streams/$streamId/failover');
+  return StreamTokenOut.fromJson(resp.data);
+}
+```
+
+#### Room Name Kararı
+
+`stream.room_name` değişmez. LiveKit her node'da aynı adlı oda için ayrı, bağımsız oda yaratır — çakışma yok. Failover tamamlanınca viewer'lar `join_stream` çağırdığında artık node4 URL'sini alır; aynı `room_name` ile node4'e bağlanırlar. Transparent geçiş.
+
+#### Viewer Downtime
+
+Host ~120s retry + failover API + node4 bağlantı: **~122s**. Bu süre zarfında viewer'lar da retry döngüsündedir; failover tamamlanınca bir sonraki retry node4 URL'ini alır.
+
+**Optimizasyon (bu döneme dahil edilmedi)**: `refreshStreamToken()` sırasında `is_node_healthy` kontrolü → `NODE_UNAVAILABLE` kodu → ViewModel ilk denemede failover çağırır → **~5s downtime**. V1.7 tamamlandıktan sonra implemente edilebilir.
+
+#### Relay ile Etkileşim
+
+Relay node3'e bağlıydı → crash → relay subprocess ölür → `_reap_finished()` → DEL `live:relay:ready + needed`. Failover sonrası node4 source olur; izleyici kapasitesi gereksinirse relay yeniden başlatılabilir.
+
+#### Recording Sürekliliği
+
+| | Kayıt | Akış |
+|-|-------|------|
+| Part 1 | node3 crash öncesi MKV | Salvage → encoding → MinIO |
+| Part 2 | node4 failover pub/sub tetikledi | Normal kayıt → MinIO |
+| Concat | V2.0 scope | `ffmpeg -f concat` ile tek sorunsuz MP4 |
+
+---
+
+## 6. CPU Koruma (ADR §29)
 
 ADR §29 (`_resolve_max_parallel`) encode paralelliğini zaten dinamik belirliyor:
 
@@ -498,8 +770,9 @@ Böylece relay süreçleri gossip ve izleme panolarında görünür olur.
 
 | Dosya | Açıklama |
 |-------|----------|
-| `teqlif-agent/livekit_relay.py` | Subprocess: source_node'a hidden participant olarak bağlanır, aldığı track'leri relay_node'da `relay_room` odasında yayınlar. `livekit_subscriber.py` baz alınır; MKVWriter yerine `rtc.LocalVideoTrack` + `rtc.LocalAudioTrack`. İlk keyframe basıldıktan sonra `live:relay:ready:{room}` anahtarını TTL=30s ile yazar ve heartbeat döngüsüyle tazeler. `nice -n -5` ile başlatılır (real-time medya — FFmpeg encode'un `nice -n 19`'unun önünde). Parametreler: `--source-url`, `--target-url`, `--room`, `--relay-room`, `--api-key`, `--api-secret` |
-| `teqlif-agent/modules/relay.py` | Agent modülü: 15s sustained window kontrolü, relay_node sağlık ön kontrolü, `livekit_relay.py` subprocess'ini başlatır/durdurur/izler; `_reap_finished` anında cleanup; circuit breaker (10dk/2 yeniden başlatma); `_recover_orphaned()` başlangıç temizliği; `mark_ok`/`mark_fail` sağlık raporlama; `teqlif:relay:emergency_disabled` kill switch kontrolü |
+| `teqlif-agent/livekit_relay.py` | Subprocess: source_node'a hidden participant olarak bağlanır, aldığı track'leri relay_node'da `relay_room` odasında yayınlar. `livekit_subscriber.py` baz alınır; MKVWriter yerine `rtc.LocalVideoTrack` + `rtc.LocalAudioTrack`. **H3**: `on_track_subscribed`'da `set_video_quality(HIGH)` zorunlu. İlk keyframe basıldıktan sonra `live:relay:ready:{room}` anahtarını TTL=30s ile yazar ve heartbeat döngüsüyle tazeler. `nice -n -5` ile başlatılır. Parametreler: `--source-url`, `--target-url`, `--room`, `--relay-room`, `--api-key`, `--api-secret` |
+| `teqlif-agent/modules/relay.py` | Agent modülü: 15s sustained window kontrolü, relay_node sağlık ön kontrolü, `livekit_relay.py` subprocess'ini başlatır/durdurur/izler; `_reap_finished` anında cleanup; circuit breaker (10dk/2 yeniden başlatma); `_recover_orphaned()` başlangıç temizliği; `mark_ok`/`mark_fail` sağlık raporlama; kill switch kontrolü. **H6**: WARMING_UP→ACTIVE warmup süresi ölçülür; `teqlif_stream_relay_warmup_seconds` metriği; > 5s Telegram uyarısı |
+| `backend/app/use_cases/streams/commands/failover_stream.py` | **Kural 3**: `FailoverStreamCommand` — guard kontrolleri (stream live, caller==host, node unhealthy, rate limit), `allocate_node(exclude_node_id)`, DB güncelleme, `teqlif:recording:stream_started` pub/sub ile Part 2 kaydı tetikleme, yeni host token dönme |
 
 ### Değişecek Dosyalar
 
@@ -507,18 +780,19 @@ Böylece relay süreçleri gossip ve izleme panolarında görünür olur.
 |-------|------------|
 | `deploy/scale/V2.1/cluster.yaml` | `relay:` bloğu eklenir (`tx_threshold_mbps`, `min_viewers_teardown`, `heartbeat_interval_sec`, `ready_ttl_sec`) |
 | `teqlif-agent` ana döngüsü | `relay.py` modülü entegre edilir; `net_tx_mbps` Redis'ten okunur (yeni okuyucu yazılmaz — zaten `edge:metrics:{node_id}`'de mevcut) |
-| `backend/app/services/edge_orchestrator.py` | `StreamEndpoint` dataclass + `resolve_stream_endpoint(stream)` metodu eklenir; `live:relay:ready:{room}` kontrolü ve yük dengesi bu metotta yapılır. **H1**: `_fallback()` URL→node_id eşleştirmesi ile gerçek node_id döner (`"fallback"` string kaldırılır) |
+| `backend/app/services/edge_orchestrator.py` | `StreamEndpoint` dataclass + `resolve_stream_endpoint(stream)` metodu eklenir; `live:relay:ready:{room}` kontrolü ve yük dengesi bu metotta yapılır. **H1**: `_fallback()` URL→node_id eşleştirmesi ile gerçek node_id döner. **Kural 3**: `is_node_healthy(node_id)` metodu + `allocate_node(exclude_node_id)` parametresi |
 | `backend/app/use_cases/streams/commands/join_stream.py` | `orchestrator.resolve_stream_endpoint(stream)` çağrısı — Redis/routing kodu Command içine yazılmaz (CQRS/SRP) |
 | `backend/app/use_cases/streams/commands/lifecycle_commands.py` | Recording event payload'una `source_node_id` eklenir |
 | `backend/app/use_cases/streams/commands/start_stream.py` | Orchestrator'dan dönen `node["node_id"]` stream'e `source_node_id` olarak yazılır |
 | `backend/app/models/stream.py` | `source_node_id: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)` eklenir |
-| `backend/alembic/versions/zzzzzu_add_source_node_id_to_live_streams.py` | `source_node_id VARCHAR(50) nullable` migration (son migration `zzzzzt_` — yeni `zzzzzu_`) |
-| `deploy/scale/V2.1/teqlif-agent/modules/recorder.py` | `source_node_id != self._cfg.node_id` ise kayıt pas geçilir; fallback poll'a `OR source_node_id IS NULL` backward compatibility eklenir. **H1** savunma katmanı: `source_node_id in (None, "fallback")` → URL eşleştirme |
-| `deploy/scale/V2.1/teqlif-agent/modules/encoder.py` | `relay_procs` farkındalığı eklenir — relay aktifken `_MAX_PARALLEL = 1` korunur. **H4**: FFmpeg subprocess `ionice -c 3` ile başlatılır |
-| `deploy/scale/V2.1/teqlif-agent/livekit_subscriber.py` | **H2**: `on_participant_disconnected` → katılımcı sayısı değil `participant.identity == cfg.host_identity` kontrolü; relay izleyici ayrılması kaydı durdurmaz |
-| `deploy/scale/V2.1/teqlif-agent/livekit_relay.py` | **H3** (yeni dosya): `on_track_subscribed`'da `set_video_quality(HIGH)` zorunlu; relay Dynacast düşük katmana düşmez |
-| `backend/app/routers/webhooks.py` | **H5**: `room_finished` handler'a `if "_relay_" in room_name: return` filtresi eklenir; relay odası webhook kirliliği önlenir |
-| `deploy/scale/V2.1/teqlif-agent/modules/relay.py` | **H6**: WARMING_UP başlangıç zamanı kaydedilir; ACTIVE geçişinde `teqlif_stream_relay_warmup_seconds` Prometheus metriği yazılır; > 5s ise Telegram uyarısı |
+| `backend/alembic/versions/zzzzzu_add_source_node_id_to_live_streams.py` | `source_node_id VARCHAR(50) nullable` migration |
+| `backend/app/routers/streams.py` | **Kural 3**: `POST /api/streams/{id}/failover` endpoint — `FailoverStreamCommand` çağırır |
+| `deploy/scale/V2.1/teqlif-agent/modules/recorder.py` | `source_node_id != self._cfg.node_id` ise kayıt pas geçilir; fallback poll `OR source_node_id IS NULL`. **H1** savunma: `source_node_id in (None, "fallback")` → URL eşleştirme. **Kural 1**: `_recover_orphaned()` MKV varsa `encoding`'e alır (Salvage). **Kural 2**: `_purge_ghost_streams()` LiveKit ListRooms kontrolü — init sırası: recover → purge → sync |
+| `deploy/scale/V2.1/teqlif-agent/modules/encoder.py` | `relay_procs` farkındalığı — relay aktifken `_MAX_PARALLEL = 1`. **H4**: FFmpeg subprocess `ionice -c 3` ile başlatılır |
+| `deploy/scale/V2.1/teqlif-agent/livekit_subscriber.py` | **H2**: `on_participant_disconnected` → `participant.identity == cfg.host_identity` kontrolü; relay izleyici ayrılması kaydı durdurmaz |
+| `backend/app/routers/webhooks.py` | **H5**: `room_finished` handler'a `if "_relay_" in room_name: return` filtresi |
+| `mobile/lib/screens/live/viewmodels/host_stream_view_model.dart` | **Kural 3**: `_tryFailover()` metodu — `_kMaxReconnectAttempts` aşılınca `onNavigateHome` yerine çağrılır; `NODE_STILL_HEALTHY` durumunda retry sıfırlanır |
+| `mobile/lib/services/stream_service.dart` | **Kural 3**: `failoverStream(int streamId)` metodu — `POST /api/streams/{id}/failover` |
 
 ### livekit_relay.py Çalışma Prensibi
 
