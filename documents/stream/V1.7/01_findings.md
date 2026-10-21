@@ -704,9 +704,11 @@ class FailoverStreamCommand:
         user = await self.uow.users.get(id=caller_id)
         token = make_livekit_token(new_room_name, user, can_publish=True)
         return StreamTokenOut(
+            stream_id=stream.id,
             livekit_url=new_node["livekit_url"],
             token=token,
             room_name=new_room_name,
+            category=stream.category,
         )
 ```
 
