@@ -453,6 +453,19 @@ async def purchase_sale(sale_id: int, data: DirectSalePurchaseIn,
 
     await uow.session.commit()
 
+    # Telegram: satın alma bildirimi
+    try:
+        from app.utils.telegram import send_telegram_message as _tg
+        total = unit_price * data.quantity
+        _tg_msg = (
+            f"💰 Satın alma\n"
+            f"@{user.username} × {data.quantity} adet | {sale.title or '—'}\n"
+            f"Toplam: {total:,.0f} | Sipariş #{order.id}"
+        )
+        fire_and_forget(_tg(_tg_msg))
+    except Exception:
+        pass
+
     # ClickHouse: purchase_completed (Faz 5.1) + user_events ML sinyali (Faz 5.2)
     remaining_before = remaining + data.quantity
     fire_and_forget(buffer_direct_sale_event(

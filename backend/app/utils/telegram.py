@@ -1,8 +1,23 @@
+import time
 import httpx
 from app.config import settings
 from app.core.logger import get_logger
 
 logger = get_logger(__name__)
+
+_alert_times: dict[str, float] = {}
+_ALERT_COOLDOWN_SEC = 300  # aynı key için 5 dakikada bir maksimum 1 alarm
+
+
+async def send_telegram_alert(text: str, rate_key: str = "") -> bool:
+    """Rate-limited Telegram mesajı — kritik hatalar için spam koruması."""
+    if rate_key:
+        now = time.monotonic()
+        if now - _alert_times.get(rate_key, 0) < _ALERT_COOLDOWN_SEC:
+            return False
+        _alert_times[rate_key] = now
+    return await send_telegram_message(text)
+
 
 async def send_telegram_message(text: str) -> bool:
     """

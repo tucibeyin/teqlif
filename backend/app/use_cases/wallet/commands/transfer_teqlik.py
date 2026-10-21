@@ -1,6 +1,6 @@
 from sqlalchemy import text
 from app.core.uow import AbstractUnitOfWork
-from app.core.logger import get_logger
+from app.core.logger import get_logger, fire_and_forget
 from app.core.exceptions import BadRequestException, ForbiddenException, InsufficientFundsException, NotFoundException
 from app.models.teqlik_transaction import TeqlikTransaction  # noqa: F401
 
@@ -58,4 +58,13 @@ class TransferTeqlikCommand:
             await self.uow.transactions.create(obj_in=t2_data)
 
         logger.info("[TransferTeqlikCommand] Başarılı | sender=%s receiver=%s amount=%s", sender_id, receiver_id, amount)
+
+        try:
+            from app.utils.telegram import send_telegram_message as _tg
+            fire_and_forget(_tg(
+                f"💸 Transfer\n#{sender_id} → #{receiver_id} | {amount} teqlik"
+            ))
+        except Exception:
+            pass
+
         return {"status": "success", "amount": amount}

@@ -152,6 +152,18 @@ def setup_exception_handlers(app: FastAPI):
         )
         capture_exception(exc)
 
+        try:
+            import asyncio
+            from app.utils.telegram import send_telegram_alert
+            tg_msg = (
+                f"🔴 Kritik Hata — <code>{request.method} {request.url.path}</code>\n"
+                f"<code>{type(exc).__name__}: {str(exc)[:300]}</code>\n"
+                f"user={user_label} req_id={req_id}"
+            )
+            asyncio.create_task(send_telegram_alert(tg_msg, rate_key=request.url.path))
+        except Exception:
+            pass
+
         lang = I18nService.parse_accept_language(
             request.headers.get("Accept-Language")
         )
