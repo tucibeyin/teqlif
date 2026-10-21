@@ -131,6 +131,11 @@ batch:
     minute: 30
     watchdog_m: 1440          # günlük (önceki 12× saatteydi)
 
+  - name: cleanup_old_stream_chat_messages_task
+    hour: 4
+    minute: 30
+    watchdog_m: 1440
+
   # ── 05:00 — CPU yoğun başlar, node2 backup biter ────────────────────────────
 
   - name: nsfw_backfill_task
