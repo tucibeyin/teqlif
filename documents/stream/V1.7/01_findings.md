@@ -324,16 +324,30 @@ if data.get("source_node_id") and data["source_node_id"] != self._cfg.node_id:
 
 `source_node_id = "fallback"` olduğunda ne node3 ne node4 bu koşulu geçer; **hiçbir recorder kayıt başlatmaz**. Yayıncı yayını bitirir, kayıt yok.
 
-**Düzeltme**: `_fallback()` seçtiği URL'den gerçek node_id'yi türetir:
+**Düzeltme**: `_fallback()` imzası korunur (`service_type: ServiceType` parametresi kaldırılmaz); MEDIA için gerçek node_id URL→node eşleştirmesiyle türetilir. `config.py`'a `edge_livekit_node_map: dict[str, str] = {}` eklenir (key=livekit_url, value=node_id):
 
 ```python
-def _fallback(self) -> dict:
-    url = settings.edge_livekit_urls[0]
-    node_id = next(
-        (nid for nid, u in settings.edge_livekit_node_map.items() if u == url),
-        "node3",  # bilinen ilk node — hiçbir eşleşme yoksa
-    )
-    return {"node_id": node_id, "livekit_url": url}
+# config.py — yeni alan:
+edge_livekit_node_map: dict[str, str] = {}
+# Ortam değişkeni: EDGE_LIVEKIT_NODE_MAP={"wss://live.node3.teqlif.com":"node3",...}
+
+# edge_orchestrator.py — _fallback() düzeltmesi:
+def _fallback(self, service_type: ServiceType) -> Dict[str, Any]:
+    node: Dict[str, Any] = {
+        "node_id":     "fallback",
+        "livekit_url":  "",
+        "minio_url":    "",
+        "ai_proxy_url": "",
+    }
+    if service_type == ServiceType.MEDIA:
+        url = settings.edge_livekit_urls[0] if settings.edge_livekit_urls else ""
+        node["livekit_url"] = url
+        node["node_id"]     = settings.edge_livekit_node_map.get(url, "fallback")
+    elif service_type == ServiceType.STORAGE:
+        node["minio_url"] = settings.edge_minio_urls[0] if settings.edge_minio_urls else ""
+    elif service_type == ServiceType.AI:
+        node["ai_proxy_url"] = settings.ai_proxy_url
+    return node
 ```
 
 Alternatif savunma katmanı olarak `recorder.py`'de:
@@ -716,9 +730,15 @@ Future<void> _tryFailover() async {
 `stream_service.dart`'a:
 
 ```dart
+// stream_service.dart — package:http/http.dart kullanır (Dio değil):
 Future<StreamTokenOut> failoverStream(int streamId) async {
-  final resp = await _client.post('/api/streams/$streamId/failover');
-  return StreamTokenOut.fromJson(resp.data);
+  final headers = await _headers();
+  final resp = await http.post(
+    Uri.parse('${_api.config.baseUrl}/streams/$streamId/failover'),
+    headers: headers,
+  );
+  if (resp.statusCode >= 400) _throwHttpError(resp.statusCode, resp.body);
+  return StreamTokenOut.fromJson(jsonDecode(resp.body));
 }
 ```
 
@@ -813,7 +833,19 @@ async def stream_concat_task(ctx, stream_id: int):
         shutil.rmtree(work_dir, ignore_errors=True)
 ```
 
-Part'ların `available` durumu → concat tetiklemesi: `encoder.py` Part encoding tamamlanınca `teqlif:recording:part_available:{stream_id}` pub/sub mesajı yayınlar; node1 ARQ worker bu mesajı dinler, ikinci `available` gelince `stream_concat_task` kuyruğa girer.
+Part'ların `available` durumu → concat tetiklemesi: `encoder.py`'de Redis bağlantısı yoktur — pub/sub yayını yapamaz. `stream_concat_task`, `archive_recordings_task` ve `notify_new_recordings_task` ile aynı ARQ **cron** task deseniyle çalışır: her N dakikada bir (`worker.py`'de `cron(stream_concat_task, minute={...})`) DB'yi tarar ve birden fazla `available` part'a sahip stream'leri bulur:
+
+```python
+# stream_concat_task.py — cron trigger mantığı:
+async def stream_concat_task(ctx: dict) -> None:
+    rows = await db.fetch(
+        "SELECT stream_id, COUNT(*) as part_count FROM stream_recordings "
+        "WHERE status='available' AND is_concat_result=false "
+        "GROUP BY stream_id HAVING COUNT(*) >= 2"
+    )
+    for row in rows:
+        await _do_concat(ctx, row["stream_id"])
+```
 
 #### FFmpeg Resolution Mismatch Koruması
 
@@ -952,7 +984,7 @@ Böylece relay süreçleri gossip ve izleme panolarında görünür olur.
 | `teqlif-agent/livekit_relay.py` | Subprocess: source_node'a hidden participant olarak bağlanır, aldığı track'leri relay_node'da `relay_room` odasında yayınlar. `livekit_subscriber.py` baz alınır; MKVWriter yerine `rtc.LocalVideoTrack` + `rtc.LocalAudioTrack`. **H3**: `on_track_subscribed`'da `set_video_quality(HIGH)` zorunlu. İlk keyframe basıldıktan sonra `live:relay:ready:{room}` anahtarını TTL=30s ile yazar ve heartbeat döngüsüyle tazeler. `nice -n -5` ile başlatılır. Parametreler: `--source-url`, `--target-url`, `--room`, `--relay-room`, `--api-key`, `--api-secret` |
 | `teqlif-agent/modules/relay.py` | Agent modülü: 15s sustained window kontrolü, relay_node sağlık ön kontrolü, `livekit_relay.py` subprocess'ini başlatır/durdurur/izler; `_reap_finished` anında cleanup; circuit breaker (10dk/2 yeniden başlatma); `_recover_orphaned()` başlangıç temizliği; `mark_ok`/`mark_fail` sağlık raporlama; kill switch kontrolü. **H6**: WARMING_UP→ACTIVE warmup süresi ölçülür; `teqlif_stream_relay_warmup_seconds` metriği; > 5s Telegram uyarısı |
 | `backend/app/use_cases/streams/commands/failover_stream.py` | **Kural 3**: `FailoverStreamCommand` — guard kontrolleri (stream live, caller==host, node unhealthy, rate limit), `allocate_node(exclude_node_id)`, DB güncelleme, `teqlif:recording:stream_started` pub/sub ile Part 2 kaydı tetikleme, yeni host token dönme |
-| `backend/app/tasks/stream_concat_task.py` | ARQ worker (node1): her iki part `available` olunca `teqlif:recording:part_available:{stream_id}` pub/sub tetikler; MinIO'dan her iki parçayı indirir; `ffprobe` ile çözünürlük/codec kontrolü yapar; uyumluysa `-c copy`, değilse `filter_complex` re-encode; birleşik MP4'ü MinIO'ya yükler (`is_concat_result=true`); part dosyalarını MinIO'dan siler; DB'de part satırlarını `merged_and_purged` yapar |
+| `backend/app/tasks/stream_concat_task.py` | ARQ **cron** task (node1, `worker.py`'e eklenir): periyodik DB taraması — 2+ `available` part'ı olan stream'ler bulunur; MinIO'dan her iki parça indirilir; `ffprobe` çözünürlük/codec kontrolü; uyumluysa `-c copy`, değilse re-encode; birleşik MP4 MinIO'ya yüklenir (`is_concat_result=true`); part dosyaları MinIO'dan silinir; DB'de part satırları `merged_and_purged` yapılır |
 
 ### Değişecek Dosyalar
 
@@ -968,12 +1000,15 @@ Böylece relay süreçleri gossip ve izleme panolarında görünür olur.
 | `backend/alembic/versions/zzzzzu_add_source_node_id_to_live_streams.py` | `source_node_id VARCHAR(50) nullable` migration; `stream_recordings` tablosuna `is_concat_result BOOLEAN DEFAULT false` ve `part_number SMALLINT nullable` sütunları eklenir; `status` CHECK kısıtına `merged_and_purged` değeri eklenir |
 | `backend/app/routers/streams.py` | **Kural 3**: `POST /api/streams/{id}/failover` endpoint — `FailoverStreamCommand` çağırır |
 | `deploy/scale/V2.1/teqlif-agent/modules/recorder.py` | `source_node_id != self._cfg.node_id` ise kayıt pas geçilir; fallback poll `OR source_node_id IS NULL`. **H1** savunma: `source_node_id in (None, "fallback")` → URL eşleştirme. **Kural 1**: `_recover_orphaned()` MKV varsa `encoding`'e alır (Salvage). **Kural 2**: `_purge_ghost_streams()` LiveKit ListRooms kontrolü — init sırası: recover → purge → sync |
-| `deploy/scale/V2.1/teqlif-agent/modules/encoder.py` | `relay_procs` farkındalığı — relay aktifken `_MAX_PARALLEL = 1`. **H4**: FFmpeg subprocess `ionice -c 3` ile başlatılır. **Failover concat tetikleme**: Part encoding tamamlanınca `teqlif:recording:part_available:{stream_id}` pub/sub yayınlar — concat işinin kendisi edge node'da değil `stream_concat_task` ARQ worker'ında yapılır (dağıtık dosya konumu kısıtı nedeniyle) |
+| `deploy/scale/V2.1/teqlif-agent/modules/encoder.py` | `relay_procs` farkındalığı — relay aktifken `_MAX_PARALLEL = 1`. **H4**: FFmpeg subprocess `ionice -c 3` ile başlatılır. Concat tetikleme encoder.py'den yapılmaz — `encoder.py`'de Redis yoktur; `stream_concat_task` ARQ cron görevi DB'yi periyodik tarayarak concat adaylarını tespit eder |
 | `deploy/scale/V2.1/teqlif-agent/livekit_subscriber.py` | **H2**: `on_participant_disconnected` → host ayrılınca `recording_grace_seconds` timer başlatılır; `on_participant_connected` host dönünce timer iptal eder; timer dolarsa `stop_evt.set()`; relay/izleyici ayrılması kaydı etkilemez |
 | `backend/app/routers/webhooks.py` | **H5**: `room_finished` handler'a `if "_relay_" in room_name: return` filtresi |
 | `mobile/lib/screens/live/viewmodels/host_stream_view_model.dart` | **Kural 3**: `_tryFailover()` metodu — `_kMaxReconnectAttempts` aşılınca `onNavigateHome` yerine çağrılır; `NODE_STILL_HEALTHY` durumunda retry sıfırlanır. `NODE_UNAVAILABLE` kodu gelince `_kMaxReconnectAttempts` beklemeden doğrudan `_tryFailover()` çağrılır (~5s failover yolu) |
 | `mobile/lib/services/stream_service.dart` | **Kural 3**: `failoverStream(int streamId)` metodu — `POST /api/streams/{id}/failover` |
 | `mobile/lib/screens/live/viewmodels/viewer_stream_view_model.dart` | **İzleyici Yarış Durumu**: `_joinStream()` içinde `STREAM_FAILOVER_IN_PROGRESS` (503) alınca `ViewerStatus.failoverWaiting` durumuna geçilir, 2s sonra otomatik tekrar dener; kullanıcı "Yayın aktarılıyor, lütfen bekleyin…" mesajını görür |
+| `backend/app/config.py` | **H1**: `edge_livekit_node_map: dict[str, str] = {}` alanı eklenir (key=livekit_url, value=node_id); ortam değişkeni `EDGE_LIVEKIT_NODE_MAP` ile doldurulur |
+| `backend/app/worker.py` | `stream_concat_task` ARQ cron görevi `worker.py` cron listesine eklenir (`stream_recording_tasks` import'u genişletilir) |
+| `deploy/scale/V2.1/teqlif-agent/modules/cleaner.py` | `merged_and_purged` DB temizliği eklenir: `archived_at < NOW() - INTERVAL '15 days' AND (status = 'archived' OR status = 'merged_and_purged')` — concat sonrası part satırları birikip çöp oluşturmaz |
 
 ### livekit_relay.py Çalışma Prensibi
 
