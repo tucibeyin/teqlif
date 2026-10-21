@@ -613,7 +613,7 @@ _tryFailover()
    │     └─ PUBLISH teqlif:recording:stream_started {source_node_id:"node4"}
    │
    ▼  200: {livekit_url, token, room_name}
-Host: connect(node4_url, token)  ← aynı room_name, node4'te taze oda
+Host: connect(node4_url, token)  ← room_name={base}_p2, node4'te taze oda
 _reconnectAttempts = 0, yayın devam eder
 
 (~2dk sonra) node3 boot eder:
@@ -678,23 +678,35 @@ class FailoverStreamCommand:
             if new_node["node_id"].startswith("fallback"):
                 raise ServiceUnavailableException(code="NO_NODES_AVAILABLE")
 
+            # LiveKit Redis DB:1 room-node pinning tuzağından kaçın:
+            # Aynı room_name node4'te açılamaz — Redis hâlâ node3'e kilitli.
+            # Yeni bağımsız oda adı türet: {base}_p{part_number}
+            part_count = await self.uow.session.scalar(
+                text("SELECT COUNT(*) FROM stream_recordings WHERE stream_id=:sid"),
+                {"sid": stream_id},
+            )
+            part_number  = (part_count or 0) + 1
+            base_room    = stream.room_name.split("_p")[0]   # önceki part suffix'i temizle
+            new_room_name = f"{base_room}_p{part_number}"
+
             stream.source_node_id = new_node["node_id"]
             stream.livekit_url    = new_node["livekit_url"]
+            stream.room_name      = new_room_name
             await self.uow.session.flush()
 
         await self.redis.publish("teqlif:recording:stream_started", json.dumps({
             "stream_id":      stream.id,
-            "room_name":      stream.room_name,
+            "room_name":      new_room_name,
             "host_id":        stream.host_id,
             "source_node_id": new_node["node_id"],
         }))
 
         user = await self.uow.users.get(id=caller_id)
-        token = make_livekit_token(stream.room_name, user, can_publish=True)
+        token = make_livekit_token(new_room_name, user, can_publish=True)
         return StreamTokenOut(
             livekit_url=new_node["livekit_url"],
             token=token,
-            room_name=stream.room_name,
+            room_name=new_room_name,
         )
 ```
 
@@ -742,9 +754,13 @@ Future<StreamTokenOut> failoverStream(int streamId) async {
 }
 ```
 
-#### Room Name Kararı
+#### Room Name Kararı — LiveKit Redis DB:1 Room-Node Pinning
 
-`stream.room_name` değişmez. LiveKit her node'da aynı adlı oda için ayrı, bağımsız oda yaratır — çakışma yok. Failover tamamlanınca viewer'lar `join_stream` çağırdığında artık node4 URL'sini alır; aynı `room_name` ile node4'e bağlanırlar. Transparent geçiş.
+node3 ve node4 LiveKit instance'ları aynı Redis DB:1'i paylaşır (`livekit.yaml: redis.address: 127.0.0.1:6379, db: 1` — her node'da HAProxy aynı master'a yönlenir). LiveKit distributed modda bir oda oluşturulduğunda `room:{room_name} → node3` kaydını Redis'e yazar. Başka bir node aynı oda adıyla bağlantı istediğinde Redis'e bakar, node3'e proxy yapar.
+
+node3 çöktüğünde bu Redis kaydı **TTL dolana kadar yerinde kalır**. TTL ~30–60s; failover hedefimiz ~5s. node4 `abc123` odasına bağlanmak istediğinde Redis "Bu oda node3'te" der → proxy kurulamaz → failover bloklanır.
+
+`stream.room_name` **failover sırasında değiştirilir**; yeni oda adı `{base_room_name}_p{part_number}` formatında türetilir (relay odasında kullanılan `_relay_` prefix deseniyle aynı mantık). Bu bağımsız yeni bir oda olduğu için Redis'te çakışma yoktur. Flutter token ile birlikte dönen `room_name`'i kullandığı için istemci tarafında sıfır sürtünmeyle yeni odaya bağlanır.
 
 #### Viewer Downtime — Hızlı Failover Yolu
 
@@ -822,6 +838,12 @@ async def stream_concat_task(ctx, stream_id: int):
     if len(recs) < 2:
         return  # henüz her iki part hazır değil
 
+    # ARQ cron üst üste binme koruması: re-encode 6+ dakika sürebilir,
+    # bir sonraki cron tetiklemesi (2dk) aynı stream'i tekrar yakalar.
+    lock_key = f"teqlif:lock:concat:{stream_id}"
+    if not await ctx["redis"].set(lock_key, "1", ex=1800, nx=True):
+        return  # başka bir worker bu stream'i zaten işliyor
+
     work_dir = Path(f"/tmp/concat_{stream_id}")
     work_dir.mkdir(exist_ok=True)
     try:
@@ -831,12 +853,31 @@ async def stream_concat_task(ctx, stream_id: int):
         await _concat_or_reencode(work_dir, recs, stream_id)
     finally:
         shutil.rmtree(work_dir, ignore_errors=True)
+        await ctx["redis"].delete(lock_key)
 ```
+
+#### part_number Ataması (recorder.py INSERT)
+
+`stream_recordings` tablosundaki `part_number SMALLINT nullable` sütunu `recorder.py` INSERT sorgusunda doldurulmalıdır; aksi hâlde `partNone.mp4` üretilir ve `ORDER BY part_number` bozulur. `recorder.py` kayıt açarken mevcut kayıt sayısından bir sonrakini hesaplar:
+
+```python
+# recorder.py — yeni kayıt açarken part_number atanır:
+part_number = await conn.fetchval(
+    "SELECT COALESCE(MAX(part_number), 0) + 1 FROM stream_recordings WHERE stream_id=$1",
+    stream_id,
+)
+# INSERT ... part_number=$N ...
+```
+
+İlk kayıt (Part 1, normal yayın): `MAX` NULL → `COALESCE(NULL, 0)` = 0 → part_number = **1**.  
+İkinci kayıt (Part 2, failover sonrası): `MAX` = 1 → part_number = **2**.
+
+---
 
 Part'ların `available` durumu → concat tetiklemesi: `encoder.py`'de Redis bağlantısı yoktur — pub/sub yayını yapamaz. `stream_concat_task`, `archive_recordings_task` ve `notify_new_recordings_task` ile aynı ARQ **cron** task deseniyle çalışır: her N dakikada bir (`worker.py`'de `cron(stream_concat_task, minute={...})`) DB'yi tarar ve birden fazla `available` part'a sahip stream'leri bulur:
 
 ```python
-# stream_concat_task.py — cron trigger mantığı:
+# stream_concat_task.py — cron trigger mantığı + ARQ distributed lock:
 async def stream_concat_task(ctx: dict) -> None:
     rows = await db.fetch(
         "SELECT stream_id, COUNT(*) as part_count FROM stream_recordings "
@@ -922,7 +963,7 @@ for rec in recs:
     await minio.remove_object("teqlif", rec["encoded_path"])
     await db.execute(
         "UPDATE stream_recordings "
-        "SET status='merged_and_purged', updated_at=NOW() WHERE id=$1",
+        "SET status='merged_and_purged', archived_at=NOW(), updated_at=NOW() WHERE id=$1",
         rec["id"],
     )
 logger.info("Part'lar temizlendi: stream_id=%d", stream_id)
@@ -983,7 +1024,7 @@ Böylece relay süreçleri gossip ve izleme panolarında görünür olur.
 |-------|----------|
 | `teqlif-agent/livekit_relay.py` | Subprocess: source_node'a hidden participant olarak bağlanır, aldığı track'leri relay_node'da `relay_room` odasında yayınlar. `livekit_subscriber.py` baz alınır; MKVWriter yerine `rtc.LocalVideoTrack` + `rtc.LocalAudioTrack`. **H3**: `on_track_subscribed`'da `set_video_quality(HIGH)` zorunlu. İlk keyframe basıldıktan sonra `live:relay:ready:{room}` anahtarını TTL=30s ile yazar ve heartbeat döngüsüyle tazeler. `nice -n -5` ile başlatılır. Parametreler: `--source-url`, `--target-url`, `--room`, `--relay-room`, `--api-key`, `--api-secret` |
 | `teqlif-agent/modules/relay.py` | Agent modülü: 15s sustained window kontrolü, relay_node sağlık ön kontrolü, `livekit_relay.py` subprocess'ini başlatır/durdurur/izler; `_reap_finished` anında cleanup; circuit breaker (10dk/2 yeniden başlatma); `_recover_orphaned()` başlangıç temizliği; `mark_ok`/`mark_fail` sağlık raporlama; kill switch kontrolü. **H6**: WARMING_UP→ACTIVE warmup süresi ölçülür; `teqlif_stream_relay_warmup_seconds` metriği; > 5s Telegram uyarısı |
-| `backend/app/use_cases/streams/commands/failover_stream.py` | **Kural 3**: `FailoverStreamCommand` — guard kontrolleri (stream live, caller==host, node unhealthy, rate limit), `allocate_node(exclude_node_id)`, DB güncelleme, `teqlif:recording:stream_started` pub/sub ile Part 2 kaydı tetikleme, yeni host token dönme |
+| `backend/app/use_cases/streams/commands/failover_stream.py` | **Kural 3**: `FailoverStreamCommand` — guard kontrolleri (stream live, caller==host, node unhealthy, rate limit), `allocate_node(exclude_node_id)`, **room_name = `{base}_p{part_number}`** (Redis DB:1 room-node pinning tuzağından kaçınmak için), DB güncelleme (`source_node_id`, `livekit_url`, `room_name`), `teqlif:recording:stream_started` pub/sub ile Part 2 kaydı tetikleme, yeni host token dönme |
 | `backend/app/tasks/stream_concat_task.py` | ARQ **cron** task (node1, `worker.py`'e eklenir): periyodik DB taraması — 2+ `available` part'ı olan stream'ler bulunur; MinIO'dan her iki parça indirilir; `ffprobe` çözünürlük/codec kontrolü; uyumluysa `-c copy`, değilse re-encode; birleşik MP4 MinIO'ya yüklenir (`is_concat_result=true`); part dosyaları MinIO'dan silinir; DB'de part satırları `merged_and_purged` yapılır |
 
 ### Değişecek Dosyalar
@@ -999,7 +1040,7 @@ Böylece relay süreçleri gossip ve izleme panolarında görünür olur.
 | `backend/app/models/stream.py` | `source_node_id: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)` eklenir |
 | `backend/alembic/versions/zzzzzu_add_source_node_id_to_live_streams.py` | `source_node_id VARCHAR(50) nullable` migration; `stream_recordings` tablosuna `is_concat_result BOOLEAN DEFAULT false` ve `part_number SMALLINT nullable` sütunları eklenir; `status` CHECK kısıtına `merged_and_purged` değeri eklenir |
 | `backend/app/routers/streams.py` | **Kural 3**: `POST /api/streams/{id}/failover` endpoint — `FailoverStreamCommand` çağırır |
-| `deploy/scale/V2.1/teqlif-agent/modules/recorder.py` | `source_node_id != self._cfg.node_id` ise kayıt pas geçilir; fallback poll `OR source_node_id IS NULL`. **H1** savunma: `source_node_id in (None, "fallback")` → URL eşleştirme. **Kural 1**: `_recover_orphaned()` MKV varsa `encoding`'e alır (Salvage). **Kural 2**: `_purge_ghost_streams()` LiveKit ListRooms kontrolü — init sırası: recover → purge → sync |
+| `deploy/scale/V2.1/teqlif-agent/modules/recorder.py` | `source_node_id != self._cfg.node_id` ise kayıt pas geçilir; fallback poll `OR source_node_id IS NULL`. **H1** savunma: `source_node_id in (None, "fallback")` → URL eşleştirme. **Kural 1**: `_recover_orphaned()` MKV varsa `encoding`'e alır (Salvage). **Kural 2**: `_purge_ghost_streams()` LiveKit ListRooms kontrolü — init sırası: recover → purge → sync. **part_number**: INSERT sorgusunda `COALESCE(MAX(part_number),0)+1` ile atanır |
 | `deploy/scale/V2.1/teqlif-agent/modules/encoder.py` | `relay_procs` farkındalığı — relay aktifken `_MAX_PARALLEL = 1`. **H4**: FFmpeg subprocess `ionice -c 3` ile başlatılır. Concat tetikleme encoder.py'den yapılmaz — `encoder.py`'de Redis yoktur; `stream_concat_task` ARQ cron görevi DB'yi periyodik tarayarak concat adaylarını tespit eder |
 | `deploy/scale/V2.1/teqlif-agent/livekit_subscriber.py` | **H2**: `on_participant_disconnected` → host ayrılınca `recording_grace_seconds` timer başlatılır; `on_participant_connected` host dönünce timer iptal eder; timer dolarsa `stop_evt.set()`; relay/izleyici ayrılması kaydı etkilemez |
 | `backend/app/routers/webhooks.py` | **H5**: `room_finished` handler'a `if "_relay_" in room_name: return` filtresi |
