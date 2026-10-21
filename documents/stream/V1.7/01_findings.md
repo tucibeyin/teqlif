@@ -359,24 +359,49 @@ def on_participant_disconnected(participant):
         stop_evt.set()                 # bu sayaç 0 olur; kayıt duruyor
 ```
 
-Relay devredeyken izleyicilerin büyük çoğunluğu `relay_room`'dadır; `source_room`'da yalnızca yayıncı ve belki birkaç doğrudan izleyici bulunur. Yayıncı ADR §20 ICE retry penceresi içinde anlık bağlantı kopukluğu yaşadığında:
+**İki ayrı hata, biri gizli:**
 
-1. `remote_participants` → boş (izleyiciler relay_node'da)
-2. `on_participant_disconnected` → `stop_evt.set()`
-3. MKV kapanır, encoder kuyruğuna gider — kayıt, yayın bitmeden sonlanır
+1. `remote_participants` boşluk kontrolü relay senaryosunda bozuluyor: izleyiciler `relay_room`'dadır; `source_room` boş görünür → kayıt durur.
+2. Host identity kontrolüne geçilse bile aynı sorun devam eder — **daha ince fakat daha tehlikeli**: Backend `webhooks.py:69`'da `_HOST_GRACE_SECONDS = 120` (2 dakika) grace period uygular; host 120 saniyeye kadar dönerse yayın kapatılmaz. Ancak `livekit_subscriber.py` host ayrıldığı an `stop_evt.set()` yaparsa kayıt ölür, backend yayını açık tutar, **yayının ikinci yarısı hiç kaydedilmez**.
 
-**Düzeltme**: Katılımcı sayısı yerine **host identity** kontrolü:
+**Düzeltme**: `livekit_subscriber.py`'a backend grace period'ıyla eşleşen **recording grace timer**:
 
 ```python
+_host_grace_task: asyncio.Task | None = None
+
 @room.on("participant_disconnected")
 def on_participant_disconnected(participant):
-    # Yalnızca yayıncının (host) bağlantısı kesilirse durdur;
-    # izleyici ayrılması (relay dahil) kaydı etkilemez
-    if participant.identity == cfg.host_identity:
-        stop_evt.set()
+    nonlocal _host_grace_task
+    # Sadece host koptuğunda grace timer başlat — izleyici/relay ayrılması kaydı etkilemez
+    if participant.identity != cfg.host_identity:
+        return
+    logger.warning("Host ayrıldı, %ds recording grace başlatılıyor | room=%s",
+                   cfg.recording_grace_seconds, cfg.room_name)
+    _host_grace_task = asyncio.create_task(_host_grace_timer())
+
+@room.on("participant_connected")
+def on_participant_connected(participant):
+    nonlocal _host_grace_task
+    if participant.identity == cfg.host_identity and _host_grace_task:
+        _host_grace_task.cancel()
+        _host_grace_task = None
+        logger.info("Host grace içinde döndü — kayıt devam ediyor | room=%s", cfg.room_name)
+
+async def _host_grace_timer():
+    await asyncio.sleep(cfg.recording_grace_seconds)
+    logger.warning("Host grace süresi doldu — kayıt sonlandırılıyor | room=%s", cfg.room_name)
+    stop_evt.set()
 ```
 
-`cfg.host_identity`, `start_recording` event payload'ından `host_id` olarak gelir — zaten mevcut.
+`cfg.recording_grace_seconds` değeri `cluster.yaml`'dan okunur:
+
+```yaml
+# cluster.yaml — recording: bloğuna eklenir
+recording:
+  recording_grace_seconds: 120   # webhooks.py:_HOST_GRACE_SECONDS ile eşleşmeli
+```
+
+**Grace timer değeri seçim kuralı**: `recording_grace_seconds` her zaman `_HOST_GRACE_SECONDS` (120s) değerine **eşit veya büyük** olmalıdır. Aksi takdirde host 90s'de dönerse backend yayını açık tutar ama kayıt çoktan ölmüştür. Grace timer'ın birincil kapanma sinyali değil, son güvence olduğu unutulmamalı — LiveKit `room_deleted` eventi (`roomDeleted disconnect reason`) geldiğinde `stop_evt` zaten tetiklenir.
 
 ---
 
@@ -790,7 +815,7 @@ Böylece relay süreçleri gossip ve izleme panolarında görünür olur.
 
 | Dosya | Değişiklik |
 |-------|------------|
-| `deploy/scale/V2.1/cluster.yaml` | `relay:` bloğu eklenir (`tx_threshold_mbps`, `min_viewers_teardown`, `heartbeat_interval_sec`, `ready_ttl_sec`) |
+| `deploy/scale/V2.1/cluster.yaml` | `relay:` bloğu eklenir (`tx_threshold_mbps`, `min_viewers_teardown`, `heartbeat_interval_sec`, `ready_ttl_sec`). **H2**: `recording.recording_grace_seconds: 120` eklenir — `webhooks.py:_HOST_GRACE_SECONDS` ile eşleşmeli |
 | `teqlif-agent` ana döngüsü | `relay.py` modülü entegre edilir; `net_tx_mbps` Redis'ten okunur (yeni okuyucu yazılmaz — zaten `edge:metrics:{node_id}`'de mevcut) |
 | `backend/app/services/edge_orchestrator.py` | `StreamEndpoint` dataclass + `resolve_stream_endpoint(stream)` metodu eklenir; `live:relay:ready:{room}` kontrolü ve yük dengesi bu metotta yapılır. **H1**: `_fallback()` URL→node_id eşleştirmesi ile gerçek node_id döner. **Kural 3**: `is_node_healthy(node_id)` metodu + `allocate_node(exclude_node_id)` parametresi |
 | `backend/app/use_cases/streams/commands/join_stream.py` | `orchestrator.resolve_stream_endpoint(stream)` çağrısı — Redis/routing kodu Command içine yazılmaz (CQRS/SRP). Host token talebinde `is_node_healthy(source_node_id)` kontrolü: ölü node → `NODE_UNAVAILABLE` hata kodu döner |
@@ -801,7 +826,7 @@ Böylece relay süreçleri gossip ve izleme panolarında görünür olur.
 | `backend/app/routers/streams.py` | **Kural 3**: `POST /api/streams/{id}/failover` endpoint — `FailoverStreamCommand` çağırır |
 | `deploy/scale/V2.1/teqlif-agent/modules/recorder.py` | `source_node_id != self._cfg.node_id` ise kayıt pas geçilir; fallback poll `OR source_node_id IS NULL`. **H1** savunma: `source_node_id in (None, "fallback")` → URL eşleştirme. **Kural 1**: `_recover_orphaned()` MKV varsa `encoding`'e alır (Salvage). **Kural 2**: `_purge_ghost_streams()` LiveKit ListRooms kontrolü — init sırası: recover → purge → sync |
 | `deploy/scale/V2.1/teqlif-agent/modules/encoder.py` | `relay_procs` farkındalığı — relay aktifken `_MAX_PARALLEL = 1`. **H4**: FFmpeg subprocess `ionice -c 3` ile başlatılır. **Failover concat**: bir stream'in tüm part'ları `available` olduğunda `_maybe_concat_parts()` çalışır: `ffmpeg -f concat -safe 0 -c copy` → birleşik MP4 → MinIO; `stream_recordings` tablosuna `is_concat_result=true` satırı eklenir |
-| `deploy/scale/V2.1/teqlif-agent/livekit_subscriber.py` | **H2**: `on_participant_disconnected` → `participant.identity == cfg.host_identity` kontrolü; relay izleyici ayrılması kaydı durdurmaz |
+| `deploy/scale/V2.1/teqlif-agent/livekit_subscriber.py` | **H2**: `on_participant_disconnected` → host ayrılınca `recording_grace_seconds` timer başlatılır; `on_participant_connected` host dönünce timer iptal eder; timer dolarsa `stop_evt.set()`; relay/izleyici ayrılması kaydı etkilemez |
 | `backend/app/routers/webhooks.py` | **H5**: `room_finished` handler'a `if "_relay_" in room_name: return` filtresi |
 | `mobile/lib/screens/live/viewmodels/host_stream_view_model.dart` | **Kural 3**: `_tryFailover()` metodu — `_kMaxReconnectAttempts` aşılınca `onNavigateHome` yerine çağrılır; `NODE_STILL_HEALTHY` durumunda retry sıfırlanır. `NODE_UNAVAILABLE` kodu gelince `_kMaxReconnectAttempts` beklemeden doğrudan `_tryFailover()` çağrılır (~5s failover yolu) |
 | `mobile/lib/services/stream_service.dart` | **Kural 3**: `failoverStream(int streamId)` metodu — `POST /api/streams/{id}/failover` |
