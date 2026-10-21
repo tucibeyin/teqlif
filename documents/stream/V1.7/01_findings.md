@@ -742,7 +742,34 @@ Future<StreamTokenOut> failoverStream(int streamId) async {
 }
 ```
 
-Failover süresi: node3 crash → ilk reconnect denemesi (~2s) → `NODE_UNAVAILABLE` → failover API (~1s) → node4 bağlantı (~2s): **~5s**. Viewer'lar da `join_stream` çağırınca `NODE_UNAVAILABLE` alır; failover tamamlanınca bir sonraki retry node4 URL'ini alır.
+Failover süresi: node3 crash → ilk reconnect denemesi (~2s) → `NODE_UNAVAILABLE` → failover API (~1s) → node4 bağlantı (~2s): **~5s**.
+
+#### İzleyici Yarış Durumu (Viewer Race Condition)
+
+Host failover isteği yoldayken (3–5 saniyelik pencere) yeni bir izleyici `join_stream` çağırırsa veya mevcut izleyiciler koptuğu için yeniden bağlanmaya çalışırsa, `live_streams.source_node_id` henüz node4 olarak güncellenmemiştir — izleyici ölü node3'e yönlendirilir.
+
+`join_stream.py` **izleyici token talebi** için de `is_node_healthy(source_node_id)` kontrolü yapar. Node ölüyse izleyiciye `STREAM_FAILOVER_IN_PROGRESS` (HTTP 503) döner — izleyici failover başlatamaz, yalnızca bekler:
+
+```python
+# join_stream.py — izleyici token talebi:
+if not await orchestrator.is_node_healthy(stream.source_node_id):
+    raise ServiceUnavailableException(code="STREAM_FAILOVER_IN_PROGRESS")
+```
+
+Flutter izleyici ekranı bu kodu aldığında bağlantı UI yerine "Yayın aktarılıyor, lütfen bekleyin…" gösterir ve 2s sonra otomatik tekrar dener:
+
+```dart
+// viewer_stream_view_model.dart — join stream hata yönetimi:
+} on AppException catch (e) {
+  if (e.code == 'STREAM_FAILOVER_IN_PROGRESS') {
+    _setStatus(ViewerStatus.failoverWaiting);
+    Future.delayed(const Duration(seconds: 2), _joinStream);
+    return;
+  }
+}
+```
+
+Failover tamamlanınca (DB'de `source_node_id = node4`) izleyicinin retry isteği artık node4 URL'ini alır.
 
 #### Relay ile Etkileşim
 
@@ -752,9 +779,124 @@ Relay node3'e bağlıydı → crash → relay subprocess ölür → `_reap_finis
 
 | | Kayıt | Akış |
 |-|-------|------|
-| Part 1 | node3 crash öncesi MKV | Salvage → encoding → MinIO |
-| Part 2 | node4 failover pub/sub tetikledi | Normal kayıt → MinIO |
-| Birleştirme | Her iki part yüklendikten sonra | `ffmpeg -f concat -safe 0 -i parts.txt -c copy output.mp4` → MinIO; UI tek dosya gösterir |
+| Part 1 | node3 crash öncesi MKV | Salvage → encoding → MinIO (`status='available'`) |
+| Part 2 | node4 failover pub/sub tetikledi | Normal kayıt → MinIO (`status='available'`) |
+| Birleştirme | Part 1 + Part 2 her ikisi `available` olduğunda | ARQ worker `stream_concat_task` — MinIO'dan indir → ffprobe → concat/re-encode → MinIO yükle → part'ları sil |
+
+#### Concat Pipeline — Dağıtık Dosya Konumu
+
+`encoder.py`'nin `_maybe_concat_parts()` tasarımında kritik bir fiziksel kısıt vardır: Part 1 node3 diskindedir (`/var/recordings/encoded/123_part1.mp4`), Part 2 ise node4 diskindedir. Hiçbir edge node her iki dosyaya da yerel disk erişimine sahip değildir — `ffmpeg -f concat` yerel dosya olmadan çalışmaz.
+
+Concat işi node1 üzerindeki ARQ worker'a (`stream_concat_task`) devredilir. Her iki part MinIO'ya yüklenmiştir; node1 her ikisini MinIO'dan indirir, concat yapar, sonucu MinIO'ya yükler:
+
+```python
+# backend/app/tasks/stream_concat_task.py (ARQ worker, node1)
+async def stream_concat_task(ctx, stream_id: int):
+    """Her iki part available olduğunda tetiklenir."""
+    recs = await db.fetch(
+        "SELECT id, encoded_path, part_number FROM stream_recordings "
+        "WHERE stream_id=$1 AND status='available' AND is_concat_result=false "
+        "ORDER BY part_number",
+        stream_id,
+    )
+    if len(recs) < 2:
+        return  # henüz her iki part hazır değil
+
+    work_dir = Path(f"/tmp/concat_{stream_id}")
+    work_dir.mkdir(exist_ok=True)
+    try:
+        for rec in recs:
+            local = work_dir / f"part{rec['part_number']}.mp4"
+            await minio.fget_object("teqlif", rec["encoded_path"], str(local))
+        await _concat_or_reencode(work_dir, recs, stream_id)
+    finally:
+        shutil.rmtree(work_dir, ignore_errors=True)
+```
+
+Part'ların `available` durumu → concat tetiklemesi: `encoder.py` Part encoding tamamlanınca `teqlif:recording:part_available:{stream_id}` pub/sub mesajı yayınlar; node1 ARQ worker bu mesajı dinler, ikinci `available` gelince `stream_concat_task` kuyruğa girer.
+
+#### FFmpeg Resolution Mismatch Koruması
+
+Failover sırasında yayıncının telefonu çözünürlük, frame rate veya yön değiştirebilir (720p → 480p, portrait → landscape). `ffmpeg -f concat -c copy` bu durumda video stream'ini bozar — Part 2'ye geçişte görüntü donar veya yeşil ekrana döner.
+
+`_concat_or_reencode()` concat öncesi her iki parçayı `ffprobe` ile denetler:
+
+```python
+async def _probe(path: Path) -> dict:
+    proc = await asyncio.create_subprocess_exec(
+        "ffprobe", "-v", "quiet", "-print_format", "json", "-show_streams", str(path),
+        stdout=asyncio.subprocess.PIPE,
+    )
+    out, _ = await proc.communicate()
+    streams = json.loads(out)["streams"]
+    v = next(s for s in streams if s["codec_type"] == "video")
+    return {
+        "width": v["width"], "height": v["height"],
+        "r_frame_rate": v["r_frame_rate"], "codec_name": v["codec_name"],
+        "sample_rate": next(
+            (s["sample_rate"] for s in streams if s["codec_type"] == "audio"), None
+        ),
+    }
+
+async def _concat_or_reencode(work_dir: Path, recs, stream_id: int):
+    p1 = work_dir / "part1.mp4"
+    p2 = work_dir / "part2.mp4"
+    out = work_dir / "output.mp4"
+    probe1, probe2 = await asyncio.gather(_probe(p1), _probe(p2))
+
+    parts_file = work_dir / "parts.txt"
+    parts_file.write_text(f"file '{p1}'\nfile '{p2}'\n")
+
+    compatible = (
+        probe1["width"]        == probe2["width"]        and
+        probe1["height"]       == probe2["height"]       and
+        probe1["r_frame_rate"] == probe2["r_frame_rate"] and
+        probe1["codec_name"]   == probe2["codec_name"]   and
+        probe1["sample_rate"]  == probe2["sample_rate"]
+    )
+
+    if compatible:
+        cmd = ["ffmpeg", "-f", "concat", "-safe", "0", "-i", str(parts_file),
+               "-c", "copy", str(out)]
+    else:
+        # Re-encode: çözünürlük/codec mismatch'i gider
+        cmd = ["ionice", "-c", "3", "nice", "-n", "10",
+               "ffmpeg", "-f", "concat", "-safe", "0", "-i", str(parts_file),
+               "-vf", "scale=1280:720", "-r", "30",
+               "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+               "-c:a", "aac", "-ar", "44100", str(out)]
+        logger.warning("Concat re-encode: stream_id=%d p1=%s p2=%s",
+                       stream_id, probe1, probe2)
+
+    proc = await asyncio.create_subprocess_exec(*cmd)
+    await proc.wait()
+    # MinIO yükleme ve temizlik aşağıda
+```
+
+Re-encode yolu `ionice -c 3 nice -n 10` ile düşük öncelikte çalışır — node1'deki normal ARQ görevlerini etkilemez.
+
+#### MinIO Storage Hijyeni (Concat Sonrası Part Temizliği)
+
+Concat tamamlandıktan sonra MinIO'da 3 dosya bulunur:
+- `streams/123/part1.mp4` (~500 MB)
+- `streams/123/part2.mp4` (~500 MB)
+- `streams/123/123.mp4` (~1 GB, `is_concat_result=true`)
+
+Part dosyaları gereksizdir. `stream_concat_task` MinIO'ya başarılı yükleme yaptıktan hemen sonra temizler:
+
+```python
+# stream_concat_task.py — concat başarılı, temizlik:
+for rec in recs:
+    await minio.remove_object("teqlif", rec["encoded_path"])
+    await db.execute(
+        "UPDATE stream_recordings "
+        "SET status='merged_and_purged', updated_at=NOW() WHERE id=$1",
+        rec["id"],
+    )
+logger.info("Part'lar temizlendi: stream_id=%d", stream_id)
+```
+
+`stream_recordings` tablosuna `merged_and_purged` durumu eklenir. Bu durumdaki satırlar izleme panolarında gizlenir — yalnızca `is_concat_result=true` satırı UI'a gösterilir.
 
 ---
 
@@ -810,6 +952,7 @@ Böylece relay süreçleri gossip ve izleme panolarında görünür olur.
 | `teqlif-agent/livekit_relay.py` | Subprocess: source_node'a hidden participant olarak bağlanır, aldığı track'leri relay_node'da `relay_room` odasında yayınlar. `livekit_subscriber.py` baz alınır; MKVWriter yerine `rtc.LocalVideoTrack` + `rtc.LocalAudioTrack`. **H3**: `on_track_subscribed`'da `set_video_quality(HIGH)` zorunlu. İlk keyframe basıldıktan sonra `live:relay:ready:{room}` anahtarını TTL=30s ile yazar ve heartbeat döngüsüyle tazeler. `nice -n -5` ile başlatılır. Parametreler: `--source-url`, `--target-url`, `--room`, `--relay-room`, `--api-key`, `--api-secret` |
 | `teqlif-agent/modules/relay.py` | Agent modülü: 15s sustained window kontrolü, relay_node sağlık ön kontrolü, `livekit_relay.py` subprocess'ini başlatır/durdurur/izler; `_reap_finished` anında cleanup; circuit breaker (10dk/2 yeniden başlatma); `_recover_orphaned()` başlangıç temizliği; `mark_ok`/`mark_fail` sağlık raporlama; kill switch kontrolü. **H6**: WARMING_UP→ACTIVE warmup süresi ölçülür; `teqlif_stream_relay_warmup_seconds` metriği; > 5s Telegram uyarısı |
 | `backend/app/use_cases/streams/commands/failover_stream.py` | **Kural 3**: `FailoverStreamCommand` — guard kontrolleri (stream live, caller==host, node unhealthy, rate limit), `allocate_node(exclude_node_id)`, DB güncelleme, `teqlif:recording:stream_started` pub/sub ile Part 2 kaydı tetikleme, yeni host token dönme |
+| `backend/app/tasks/stream_concat_task.py` | ARQ worker (node1): her iki part `available` olunca `teqlif:recording:part_available:{stream_id}` pub/sub tetikler; MinIO'dan her iki parçayı indirir; `ffprobe` ile çözünürlük/codec kontrolü yapar; uyumluysa `-c copy`, değilse `filter_complex` re-encode; birleşik MP4'ü MinIO'ya yükler (`is_concat_result=true`); part dosyalarını MinIO'dan siler; DB'de part satırlarını `merged_and_purged` yapar |
 
 ### Değişecek Dosyalar
 
@@ -818,18 +961,19 @@ Böylece relay süreçleri gossip ve izleme panolarında görünür olur.
 | `deploy/scale/V2.1/cluster.yaml` | `relay:` bloğu eklenir (`tx_threshold_mbps`, `min_viewers_teardown`, `heartbeat_interval_sec`, `ready_ttl_sec`). **H2**: `recording.recording_grace_seconds: 120` eklenir — `webhooks.py:_HOST_GRACE_SECONDS` ile eşleşmeli |
 | `teqlif-agent` ana döngüsü | `relay.py` modülü entegre edilir; `net_tx_mbps` Redis'ten okunur (yeni okuyucu yazılmaz — zaten `edge:metrics:{node_id}`'de mevcut) |
 | `backend/app/services/edge_orchestrator.py` | `StreamEndpoint` dataclass + `resolve_stream_endpoint(stream)` metodu eklenir; `live:relay:ready:{room}` kontrolü ve yük dengesi bu metotta yapılır. **H1**: `_fallback()` URL→node_id eşleştirmesi ile gerçek node_id döner. **Kural 3**: `is_node_healthy(node_id)` metodu + `allocate_node(exclude_node_id)` parametresi |
-| `backend/app/use_cases/streams/commands/join_stream.py` | `orchestrator.resolve_stream_endpoint(stream)` çağrısı — Redis/routing kodu Command içine yazılmaz (CQRS/SRP). Host token talebinde `is_node_healthy(source_node_id)` kontrolü: ölü node → `NODE_UNAVAILABLE` hata kodu döner |
+| `backend/app/use_cases/streams/commands/join_stream.py` | `orchestrator.resolve_stream_endpoint(stream)` çağrısı — Redis/routing kodu Command içine yazılmaz (CQRS/SRP). Host token talebinde `is_node_healthy(source_node_id)` kontrolü: ölü node → `NODE_UNAVAILABLE` hata kodu döner. **İzleyici Yarış Durumu**: izleyici token talebi için de aynı `is_node_healthy` kontrolü — ölü node → `STREAM_FAILOVER_IN_PROGRESS` (HTTP 503) döner |
 | `backend/app/use_cases/streams/commands/lifecycle_commands.py` | Recording event payload'una `source_node_id` eklenir |
 | `backend/app/use_cases/streams/commands/start_stream.py` | Orchestrator'dan dönen `node["node_id"]` stream'e `source_node_id` olarak yazılır |
 | `backend/app/models/stream.py` | `source_node_id: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)` eklenir |
-| `backend/alembic/versions/zzzzzu_add_source_node_id_to_live_streams.py` | `source_node_id VARCHAR(50) nullable` migration; `stream_recordings` tablosuna `is_concat_result BOOLEAN DEFAULT false` eklenir |
+| `backend/alembic/versions/zzzzzu_add_source_node_id_to_live_streams.py` | `source_node_id VARCHAR(50) nullable` migration; `stream_recordings` tablosuna `is_concat_result BOOLEAN DEFAULT false` ve `part_number SMALLINT nullable` sütunları eklenir; `status` CHECK kısıtına `merged_and_purged` değeri eklenir |
 | `backend/app/routers/streams.py` | **Kural 3**: `POST /api/streams/{id}/failover` endpoint — `FailoverStreamCommand` çağırır |
 | `deploy/scale/V2.1/teqlif-agent/modules/recorder.py` | `source_node_id != self._cfg.node_id` ise kayıt pas geçilir; fallback poll `OR source_node_id IS NULL`. **H1** savunma: `source_node_id in (None, "fallback")` → URL eşleştirme. **Kural 1**: `_recover_orphaned()` MKV varsa `encoding`'e alır (Salvage). **Kural 2**: `_purge_ghost_streams()` LiveKit ListRooms kontrolü — init sırası: recover → purge → sync |
-| `deploy/scale/V2.1/teqlif-agent/modules/encoder.py` | `relay_procs` farkındalığı — relay aktifken `_MAX_PARALLEL = 1`. **H4**: FFmpeg subprocess `ionice -c 3` ile başlatılır. **Failover concat**: bir stream'in tüm part'ları `available` olduğunda `_maybe_concat_parts()` çalışır: `ffmpeg -f concat -safe 0 -c copy` → birleşik MP4 → MinIO; `stream_recordings` tablosuna `is_concat_result=true` satırı eklenir |
+| `deploy/scale/V2.1/teqlif-agent/modules/encoder.py` | `relay_procs` farkındalığı — relay aktifken `_MAX_PARALLEL = 1`. **H4**: FFmpeg subprocess `ionice -c 3` ile başlatılır. **Failover concat tetikleme**: Part encoding tamamlanınca `teqlif:recording:part_available:{stream_id}` pub/sub yayınlar — concat işinin kendisi edge node'da değil `stream_concat_task` ARQ worker'ında yapılır (dağıtık dosya konumu kısıtı nedeniyle) |
 | `deploy/scale/V2.1/teqlif-agent/livekit_subscriber.py` | **H2**: `on_participant_disconnected` → host ayrılınca `recording_grace_seconds` timer başlatılır; `on_participant_connected` host dönünce timer iptal eder; timer dolarsa `stop_evt.set()`; relay/izleyici ayrılması kaydı etkilemez |
 | `backend/app/routers/webhooks.py` | **H5**: `room_finished` handler'a `if "_relay_" in room_name: return` filtresi |
 | `mobile/lib/screens/live/viewmodels/host_stream_view_model.dart` | **Kural 3**: `_tryFailover()` metodu — `_kMaxReconnectAttempts` aşılınca `onNavigateHome` yerine çağrılır; `NODE_STILL_HEALTHY` durumunda retry sıfırlanır. `NODE_UNAVAILABLE` kodu gelince `_kMaxReconnectAttempts` beklemeden doğrudan `_tryFailover()` çağrılır (~5s failover yolu) |
 | `mobile/lib/services/stream_service.dart` | **Kural 3**: `failoverStream(int streamId)` metodu — `POST /api/streams/{id}/failover` |
+| `mobile/lib/screens/live/viewmodels/viewer_stream_view_model.dart` | **İzleyici Yarış Durumu**: `_joinStream()` içinde `STREAM_FAILOVER_IN_PROGRESS` (503) alınca `ViewerStatus.failoverWaiting` durumuna geçilir, 2s sonra otomatik tekrar dener; kullanıcı "Yayın aktarılıyor, lütfen bekleyin…" mesajını görür |
 
 ### livekit_relay.py Çalışma Prensibi
 
