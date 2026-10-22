@@ -672,28 +672,32 @@ class FailoverStreamCommand:
             if not await self.redis.set(rl_key, "1", nx=True, ex=300):
                 raise BadRequestException(code="FAILOVER_RATE_LIMITED")
 
-            new_node = await orchestrator.allocate_node(
-                ServiceType.MEDIA, exclude_node_id=stream.source_node_id
-            )
-            if new_node["node_id"].startswith("fallback"):
-                raise ServiceUnavailableException(code="NO_NODES_AVAILABLE")
+            try:
+                new_node = await orchestrator.allocate_node(
+                    ServiceType.MEDIA, exclude_node_id=stream.source_node_id
+                )
+                if new_node["node_id"].startswith("fallback"):
+                    raise ServiceUnavailableException(code="NO_NODES_AVAILABLE")
 
-            # LiveKit Redis DB:1 room-node pinning tuzağından kaçın:
-            # Aynı room_name node4'te açılamaz — Redis hâlâ node3'e kilitli.
-            # Yeni bağımsız oda adı türet: {base}_p{part_number}
-            part_count = await self.uow.session.scalar(
-                text("SELECT COUNT(*) FROM stream_recordings WHERE stream_id=:sid"),
-                {"sid": stream_id},
-            )
-            part_number  = (part_count or 0) + 1
-            base_room    = stream.room_name.split("_p")[0]   # önceki part suffix'i temizle
-            new_room_name = f"{base_room}_p{part_number}"
+                # LiveKit Redis DB:1 room-node pinning tuzağından kaçın:
+                # Aynı room_name node4'te açılamaz — Redis hâlâ node3'e kilitli.
+                # Yeni bağımsız oda adı türet: {base}_p{part_number}
+                part_count = await self.uow.session.scalar(
+                    text("SELECT COUNT(*) FROM stream_recordings WHERE stream_id=:sid"),
+                    {"sid": stream_id},
+                )
+                part_number  = (part_count or 0) + 1
+                base_room    = stream.room_name.split("_p")[0]   # önceki part suffix'i temizle
+                new_room_name = f"{base_room}_p{part_number}"
 
-            stream.source_node_id = new_node["node_id"]
-            stream.livekit_url    = new_node["livekit_url"]
-            stream.room_name      = new_room_name
-            await self.uow.session.flush()
-            await self.redis.set(f"live:host_reconnect:{stream_id}", str(time.time()), ex=300)
+                stream.source_node_id = new_node["node_id"]
+                stream.livekit_url    = new_node["livekit_url"]
+                stream.room_name      = new_room_name
+                await self.uow.session.flush()
+                await self.redis.set(f"live:host_reconnect:{stream_id}", str(time.time()), ex=300)
+            except Exception:
+                await self.redis.delete(rl_key)
+                raise
 
         await self.redis.publish("teqlif:recording:stream_started", json.dumps({
             "stream_id":      stream.id,
@@ -765,6 +769,12 @@ if not await orchestrator.is_node_healthy(stream.source_node_id):
     return;
   }
   scheduleReconnect();
+}
+
+// scheduleReconnect() içinde — ağ zaman aşımı / sessiz düşmelerde son güvence:
+if (_reconnectAttempts >= _kMaxReconnectAttempts) {
+  _tryFailover();
+  return;
 }
 
 Future<void> _tryFailover() async {
@@ -854,9 +864,9 @@ Concat işi node1 üzerindeki ARQ worker'a (`stream_concat_task`) devredilir. He
 ```python
 # backend/app/tasks/stream_concat_task.py (ARQ worker, node1)
 async def _do_concat(ctx: dict, stream_id: int):
-    """Her iki part available olduğunda tetiklenir."""
+    """Her iki veya daha fazla part available olduğunda tetiklenir."""
     recs = await db.fetch(
-        "SELECT id, minio_key, part_number, host_id FROM stream_recordings "
+        "SELECT id, minio_key, part_number, host_id, recording_started_at FROM stream_recordings "
         "WHERE stream_id=$1 AND status='available' AND is_concat_result=false "
         "ORDER BY part_number",
         stream_id,
@@ -876,7 +886,9 @@ async def _do_concat(ctx: dict, stream_id: int):
         for rec in recs:
             local = work_dir / f"part{rec['part_number']}.mp4"
             await minio.fget_object(settings.minio_bucket, rec["minio_key"], str(local))
-        await _concat_or_reencode(work_dir, recs, stream_id, recs[0]["host_id"])
+        await _concat_or_reencode(
+            work_dir, recs, stream_id, recs[0]["host_id"], recs[0]["recording_started_at"]
+        )
     finally:
         shutil.rmtree(work_dir, ignore_errors=True)
         await ctx["redis"].delete(lock_key)
@@ -927,7 +939,7 @@ async def stream_concat_task(ctx: dict) -> None:
 
 Failover sırasında yayıncının telefonu çözünürlük, frame rate veya yön değiştirebilir (720p → 480p, portrait → landscape). `ffmpeg -f concat -c copy` bu durumda video stream'ini bozar — Part 2'ye geçişte görüntü donar veya yeşil ekrana döner.
 
-`_concat_or_reencode()` concat öncesi her iki parçayı `ffprobe` ile denetler:
+`_concat_or_reencode()` concat öncesi tüm parçaları `ffprobe` ile denetler:
 
 ```python
 async def _probe(path: Path) -> dict:
@@ -946,21 +958,35 @@ async def _probe(path: Path) -> dict:
         ),
     }
 
-async def _concat_or_reencode(work_dir: Path, recs, stream_id: int, host_id: int):
-    p1 = work_dir / "part1.mp4"
-    p2 = work_dir / "part2.mp4"
+async def _probe_duration(path: Path) -> int:
+    proc = await asyncio.create_subprocess_exec(
+        "ffprobe", "-v", "quiet", "-show_entries", "format=duration",
+        "-of", "default=noprint_wrappers=1:nokey=1", str(path),
+        stdout=asyncio.subprocess.PIPE,
+    )
+    out, _ = await proc.communicate()
+    try:
+        return int(float(out.decode().strip() or 0))
+    except (ValueError, TypeError):
+        return 0
+
+async def _concat_or_reencode(work_dir: Path, recs, stream_id: int, host_id: int, recording_started_at):
+    part_files = [work_dir / f"part{r['part_number']}.mp4" for r in recs]
     out = work_dir / "output.mp4"
-    probe1, probe2 = await asyncio.gather(_probe(p1), _probe(p2))
+    probes = await asyncio.gather(*[_probe(p) for p in part_files])
 
+    parts_content = "".join(f"file '{p}'\n" for p in part_files)
     parts_file = work_dir / "parts.txt"
-    parts_file.write_text(f"file '{p1}'\nfile '{p2}'\n")
+    parts_file.write_text(parts_content)
 
-    compatible = (
-        probe1["width"]        == probe2["width"]        and
-        probe1["height"]       == probe2["height"]       and
-        probe1["r_frame_rate"] == probe2["r_frame_rate"] and
-        probe1["codec_name"]   == probe2["codec_name"]   and
-        probe1["sample_rate"]  == probe2["sample_rate"]
+    first = probes[0]
+    compatible = all(
+        p["width"]        == first["width"]        and
+        p["height"]       == first["height"]       and
+        p["r_frame_rate"] == first["r_frame_rate"] and
+        p["codec_name"]   == first["codec_name"]   and
+        p["sample_rate"]  == first["sample_rate"]
+        for p in probes[1:]
     )
 
     if compatible:
@@ -973,8 +999,8 @@ async def _concat_or_reencode(work_dir: Path, recs, stream_id: int, host_id: int
                "-vf", "scale=1280:720", "-r", "30",
                "-c:v", "libx264", "-preset", "fast", "-crf", "23",
                "-c:a", "aac", "-ar", "44100", str(out)]
-        logger.warning("Concat re-encode: stream_id=%d p1=%s p2=%s",
-                       stream_id, probe1, probe2)
+        logger.warning("Concat re-encode: stream_id=%d probes=%s",
+                       stream_id, probes)
 
     proc = await asyncio.create_subprocess_exec(*cmd)
     await proc.wait()
@@ -985,10 +1011,10 @@ Re-encode yolu `ionice -c 3 nice -n 10` ile düşük öncelikte çalışır — 
 
 #### MinIO Storage Hijyeni (Concat Sonrası Part Temizliği)
 
-Concat tamamlandıktan sonra MinIO'da 3 dosya bulunur:
-- `streams/123/part1.mp4` (~500 MB)
-- `streams/123/part2.mp4` (~500 MB)
-- `streams/123/123.mp4` (~1 GB, `is_concat_result=true`)
+Concat tamamlandıktan sonra MinIO'da part dosyaları ve birleşik dosya bulunur:
+- `recordings/123/part1.mp4` (~500 MB)
+- `recordings/123/part2.mp4` (~500 MB)
+- `recordings/123/123.mp4` (~1 GB, `is_concat_result=true`)
 
 Part dosyaları gereksizdir. `stream_concat_task` MinIO'ya başarılı yükleme ve DB kaydından hemen sonra part'ları temizler:
 
@@ -1002,12 +1028,14 @@ duration_secs = await _probe_duration(out)
 await db.execute("""
     INSERT INTO stream_recordings (
         stream_id, host_id, status, is_concat_result, minio_key,
-        encoded_size_bytes, duration_secs, available_at, expires_at, transferred_at, updated_at
+        encoded_size_bytes, duration_secs, recording_started_at,
+        available_at, expires_at, transferred_at, updated_at
     ) VALUES (
         $1, $2, 'available', true, $3,
-        $4, $5, NOW(), NOW() + INTERVAL '24 hours', NOW(), NOW()
+        $4, $5, $6,
+        NOW(), NOW() + INTERVAL '24 hours', NOW(), NOW()
     )
-""", stream_id, host_id, merged_key, merged_size, duration_secs)
+""", stream_id, host_id, merged_key, merged_size, duration_secs, recording_started_at)
 
 # Part'ları MinIO'dan sil ve DB'de merged_and_purged olarak güncelle:
 for rec in recs:
@@ -1075,8 +1103,8 @@ Böylece relay süreçleri gossip ve izleme panolarında görünür olur.
 |-------|----------|
 | `teqlif-agent/livekit_relay.py` | Subprocess: source_node'a hidden subscriber olarak (`hidden: true`, `canSubscribe: true`), target relay_node'a ise görünür publisher olarak (`hidden: false`, `canPublish: true`, `identity=str(host_id)`) bağlanır — `hidden: false` ve `identity=str(host_id)` zorunludur, aksi halde Flutter `remoteParticipants` listesinde görünmez ve `hostVideoTrack` olarak tanınmaz. `livekit_subscriber.py` baz alınır; MKVWriter yerine `rtc.VideoSource` + `rtc.AudioSource` ile `rtc.LocalVideoTrack` + `rtc.LocalAudioTrack`. **H3**: `on_track_subscribed`'da `set_video_quality(HIGH)` zorunlu. İlk keyframe basıldıktan sonra `live:relay:ready:{room}` anahtarını TTL=30s ile yazar ve heartbeat döngüsüyle tazeler. `nice -n -5` ile başlatılır. Parametreler: `--source-url`, `--target-url`, `--room`, `--relay-room`, `--host-identity`, `--api-key`, `--api-secret` |
 | `teqlif-agent/modules/relay.py` | Agent modülü: 15s sustained window kontrolü, relay_node sağlık ön kontrolü, `livekit_relay.py` subprocess'ini başlatır/durdurur/izler; `_reap_finished` anında cleanup; circuit breaker (10dk/2 yeniden başlatma); `_recover_orphaned()` başlangıç temizliği; `mark_ok`/`mark_fail` sağlık raporlama; kill switch kontrolü. **H6**: WARMING_UP→ACTIVE warmup süresi ölçülür; `teqlif_stream_relay_warmup_seconds` metriği; > 5s Telegram uyarısı |
-| `backend/app/use_cases/streams/commands/failover_stream.py` | **Kural 3**: `FailoverStreamCommand` — guard kontrolleri (stream live, caller==host, node unhealthy, rate limit), `allocate_node(exclude_node_id)`, **room_name = `{base}_p{part_number}`** (Redis DB:1 room-node pinning tuzağından kaçınmak için), DB güncelleme (`source_node_id`, `livekit_url`, `room_name`), `teqlif:recording:stream_started` pub/sub ile Part 2 kaydı tetikleme, yeni host token dönme; rate limit kilidini başarılı commit sonrası set etme ve `live:host_reconnect:{stream_id}` sinyali ile eski node grace periodunu iptal etme |
-| `backend/app/tasks/stream_concat_task.py` | ARQ **cron** task (node1, `worker.py`'e eklenir): periyodik DB taraması — `ls.status = 'ended'` ve aktif parçası olmayan 2+ `available` part'lı stream'ler bulunur; MinIO'dan `minio_key` üzerinden indirilir; `ffprobe` kontrolü; uyumluysa `-c copy`, değilse re-encode; birleşik MP4 MinIO'ya yüklenir (`is_concat_result=true`, `minio_key`); part dosyaları MinIO'dan silinir; DB'de part satırları `merged_and_purged` yapılır |
+| `backend/app/use_cases/streams/commands/failover_stream.py` | **Kural 3**: `FailoverStreamCommand` — guard kontrolleri (stream live, caller==host, node unhealthy, rate limit), `allocate_node(exclude_node_id)`, **room_name = `{base}_p{part_number}`** (Redis DB:1 room-node pinning tuzağından kaçınmak için), DB güncelleme (`source_node_id`, `livekit_url`, `room_name`), `teqlif:recording:stream_started` pub/sub ile Part 2 kaydı tetikleme, yeni host token dönme; hata durumunda rate limit kilidini silme (rollback); başarılı commit sonrası `live:host_reconnect:{stream_id}` sinyali ile eski node grace periodunu iptal etme |
+| `backend/app/tasks/stream_concat_task.py` | ARQ **cron** task (node1, `worker.py`'e eklenir): periyodik DB taraması — `ls.status = 'ended'` ve aktif parçası olmayan 2+ `available` part'lı stream'ler bulunur; dinamik N-part (Part 1, 2, 3...) desteği; MinIO'dan `minio_key` üzerinden indirilir; `ffprobe` kontrolü; uyumluysa `-c copy`, değilse re-encode; birleşik MP4 MinIO'ya yüklenir (`is_concat_result=true`, `minio_key`); `recording_started_at` Part 1'den devralınır (replay chat/bid offset uyumu); part dosyaları MinIO'dan silinir; DB'de part satırları `merged_and_purged` yapılır |
 
 ### Değişecek Dosyalar
 
@@ -1090,12 +1118,12 @@ Böylece relay süreçleri gossip ve izleme panolarında görünür olur.
 | `backend/app/use_cases/streams/commands/start_stream.py` | Orchestrator'dan dönen `node["node_id"]` stream'e `source_node_id` olarak yazılır |
 | `backend/app/models/stream.py` | `source_node_id: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)` eklenir |
 | `backend/alembic/versions/zzzzzu_add_source_node_id_to_live_streams.py` | `source_node_id VARCHAR(50) nullable` migration; `stream_recordings` tablosuna `is_concat_result BOOLEAN DEFAULT false` ve `part_number SMALLINT nullable` sütunları eklenir; `status` CHECK kısıtına `merged_and_purged` değeri eklenir |
-| `backend/app/routers/streams.py` | **Kural 3**: `POST /api/streams/{id}/failover` endpoint — `FailoverStreamCommand` çağırır; **`GET /{stream_id}/token` (`refresh_stream_token`)**: Host reconnect'inde ölü node → `NODE_UNAVAILABLE` (503); İzleyici reconnect'inde ölü node → `STREAM_FAILOVER_IN_PROGRESS` (503); İzleyici için node sağlıklıysa `resolve_stream_endpoint(stream)` ile relay yönlendirmesi |
+| `backend/app/routers/streams.py` | **Kural 3**: `POST /api/streams/{id}/failover` endpoint — `FailoverStreamCommand` çağırır; **`GET /{stream_id}/token` (`refresh_stream_token`)**: Host reconnect'inde ölü node → `NODE_UNAVAILABLE` (503); İzleyici reconnect'inde ölü node → `STREAM_FAILOVER_IN_PROGRESS` (503); İzleyici için node sağlıklıysa `resolve_stream_endpoint(stream)` ile relay yönlendirmesi; **`GET /{stream_id}/replay`**: `ORDER BY is_concat_result DESC, created_at DESC LIMIT 1` ve birleşme bekleyen multi-part kayıtlarda `RECORDING_PROCESSING` (409/425) döner |
 | `deploy/scale/V2.1/teqlif-agent/modules/recorder.py` | `source_node_id != self._cfg.node_id` ise kayıt pas geçilir; fallback poll `OR source_node_id IS NULL`. **H1** savunma: `source_node_id in (None, "fallback")` → URL eşleştirme. **Kural 1**: `_recover_orphaned()` MKV varsa `encoding`'e alır (Salvage). **Kural 2**: `_purge_ghost_streams()` LiveKit ListRooms kontrolü — init sırası: recover → purge → sync. **part_number**: INSERT sorgusunda `COALESCE(MAX(part_number),0)+1` ile atanır. **Çoklu part / Geri-failover koruması**: `_drain_event_queue` ve `_sync_recordings` içinde yalnızca `status = 'recording'` filtresi uygulanır; böylece aynı node'a geri dönen failover'larda (node3→node4→node3) Part 3 kaydı atlanmaz |
 | `deploy/scale/V2.1/teqlif-agent/modules/encoder.py` | `relay_procs` farkındalığı — relay aktifken `_MAX_PARALLEL = 1`. **H4**: FFmpeg subprocess `ionice -c 3` ile başlatılır. Concat tetikleme encoder.py'den yapılmaz — `encoder.py`'de Redis yoktur; `stream_concat_task` ARQ cron görevi DB'yi periyodik tarayarak concat adaylarını tespit eder |
 | `deploy/scale/V2.1/teqlif-agent/livekit_subscriber.py` | **H2**: `on_participant_disconnected` → host ayrılınca `recording_grace_seconds` timer başlatılır; `on_participant_connected` host dönünce timer iptal eder; timer dolarsa `stop_evt.set()`; relay/izleyici ayrılması kaydı etkilemez |
 | `backend/app/routers/webhooks.py` | **H5**: `room_finished` handler'a `if "_relay_" in room_name: return` filtresi |
-| `mobile/lib/screens/live/viewmodels/host_stream_view_model.dart` | **Kural 3**: `_tryFailover()` metodu — `_kMaxReconnectAttempts` aşılınca veya `NODE_UNAVAILABLE` kodu gelince anında çağrılır (~5s failover yolu); eski oda bağlantısını keser, yeni odaya bağlanır ve `setCameraEnabled(true)` + `setMicrophoneEnabled(true)` ile track'leri tekrar açar; `NODE_STILL_HEALTHY` durumunda retry sıfırlanır |
+| `mobile/lib/screens/live/viewmodels/host_stream_view_model.dart` | **Kural 3**: `_tryFailover()` metodu — `NODE_UNAVAILABLE` kodu gelince anında veya `_kMaxReconnectAttempts` aşılınca çağrılır (~5s failover yolu); eski oda bağlantısını keser, yeni odaya bağlanır ve `setCameraEnabled(true)` + `setMicrophoneEnabled(true)` ile track'leri tekrar açar; `NODE_STILL_HEALTHY` durumunda retry sıfırlanır |
 | `mobile/lib/services/stream_service.dart` | **Kural 3**: `failoverStream(int streamId)` metodu — `POST /api/streams/{id}/failover` |
 | `mobile/lib/services/stream_connection_manager.dart` | **İzleyici Yarış Durumu**: `_reconnectRoom()` içinde `STREAM_FAILOVER_IN_PROGRESS` (503) alınca `_reconnectAttempts` tüketilmeyip 2s sonra tekrar denenir; failover tamamlanınca izleyici node4'e kesintisiz bağlanır |
 | `backend/app/config.py` | **H1**: `edge_livekit_node_map: dict[str, str] = {}` alanı eklenir (key=livekit_url, value=node_id); ortam değişkeni `EDGE_LIVEKIT_NODE_MAP` ile doldurulur |
