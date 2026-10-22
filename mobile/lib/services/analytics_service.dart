@@ -643,7 +643,7 @@ class AnalyticsService {
 
       // Kullanıcı bakiyesi ve tipi her feature için gerekli
       final meResp = await http.get(
-        Uri.parse('${_api.config.baseUrl}/users/me'),
+        Uri.parse('${_api.config.baseUrl}/auth/me'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (meResp.statusCode != 200) return null;
