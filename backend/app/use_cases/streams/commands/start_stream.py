@@ -72,6 +72,7 @@ class StartStreamCommand:
                 "subcategory": subcategory,
                 "thumbnail_url": thumbnail_url,
                 "livekit_url": node["livekit_url"],  # Edge node kalıcı olarak kayıt altına alınır
+                "source_node_id": node.get("node_id"),
             }
             new_stream = await self.uow.streams.create(obj_in=stream_data)
             token = make_livekit_token(room_name, user, can_publish=True)

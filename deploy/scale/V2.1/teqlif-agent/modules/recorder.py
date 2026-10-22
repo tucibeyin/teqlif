@@ -147,9 +147,10 @@ class RecordingManager:
             except asyncio.QueueEmpty:
                 break
 
-            stream_id = data.get("stream_id")
-            room_name = data.get("room_name")
-            host_id   = data.get("host_id")
+            stream_id      = data.get("stream_id")
+            room_name      = data.get("room_name")
+            host_id        = data.get("host_id")
+            source_node_id = data.get("source_node_id")
 
             if not all([stream_id, room_name, host_id]):
                 logger.warning("Geçersiz kayıt eventi atlandı: %s", data)
@@ -180,7 +181,7 @@ class RecordingManager:
                 "Pub/sub → kayıt başlatılıyor | stream_id=%d room=%s",
                 stream_id, room_name,
             )
-            await self._start_recording(dsn, svc_cfg, stream_id, room_name, host_id)
+            await self._start_recording(dsn, svc_cfg, stream_id, room_name, host_id, source_node_id)
 
     # ── Agent restart: orphan kurtarma ───────────────────────────────────────
 
@@ -214,7 +215,7 @@ class RecordingManager:
             import asyncpg
             conn = await asyncpg.connect(dsn=dsn)
             streams = await conn.fetch("""
-                SELECT ls.id, ls.room_name, ls.host_id
+                SELECT ls.id, ls.room_name, ls.host_id, ls.source_node_id
                 FROM live_streams ls
                 WHERE ls.status = 'live'
                   AND NOT EXISTS (
@@ -230,11 +231,15 @@ class RecordingManager:
             return
 
         for s in streams:
-            await self._start_recording(dsn, svc_cfg, s["id"], s["room_name"], s["host_id"])
+            await self._start_recording(
+                dsn, svc_cfg, s["id"], s["room_name"], s["host_id"],
+                source_node_id=s["source_node_id"],
+            )
 
     async def _start_recording(
         self, dsn: str, svc_cfg: dict,
         stream_id: int, room_name: str, host_id: int,
+        source_node_id: str | None = None,
     ) -> None:
         api_key    = os.environ.get("LIVEKIT_API_KEY", "")
         api_secret = os.environ.get("LIVEKIT_API_SECRET", "")
@@ -257,6 +262,7 @@ class RecordingManager:
             "--api-key",    api_key,
             "--api-secret", api_secret,
             "--output",     str(raw_path),
+            "--host-identity", str(host_id),  # relay senaryosunda kayıt yalnızca host ayrılınca durur
         ]
 
         try:

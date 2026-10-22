@@ -1052,8 +1052,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
 
   Future<void> _acceptCoHostInvite() async {
     try {
-      final newToken = await ref.read(swipeLivePageViewModelProvider(widget.stream.id).notifier).acceptCoHostInvite();
-      await StreamConnectionManager.instance.upgradeToCoHost(widget.stream.id, newToken);
+      await ref.read(swipeLivePageViewModelProvider(widget.stream.id).notifier).acceptAndUpgradeCoHost();
       if (mounted) {
         setState(() {
           _isSelfCoHost = true;

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../services/stream_connection_manager.dart';
 import '../../../services/stream_service.dart';
 import '../../../models/stream.dart';
 
@@ -61,8 +62,10 @@ class SwipeLivePageViewModel extends AutoDisposeFamilyAsyncNotifier<SwipeLivePag
     } catch (_) {}
   }
 
-  Future<StreamTokenOut> acceptCoHostInvite() async {
-    return await ref.read(streamServiceProvider).acceptCoHostInvite(arg);
+  /// Token alır ve StreamConnectionManager üzerinden relay→source reconnect'i tetikler.
+  Future<void> acceptAndUpgradeCoHost() async {
+    final newToken = await ref.read(streamServiceProvider).acceptCoHostInvite(arg);
+    await StreamConnectionManager.instance.upgradeToCoHost(arg, newToken);
   }
 
   Future<bool> leaveCoHost() async {

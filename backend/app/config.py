@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     # --- V1.4 EDGE MİMARİSİ (Dinamik Medya & Yayın) ---
     edge_livekit_urls: str | list[str] = []
     edge_minio_urls: str | list[str] = []
+    edge_livekit_node_map: dict[str, str] = {}  # {livekit_url: node_id} — H1 fallback node_id çözümü
     minio_storage_quota_percent: int = 80
     edge_metrics_interval_sec: int = 3
 

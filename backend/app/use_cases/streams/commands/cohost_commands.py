@@ -68,6 +68,11 @@ class AcceptCohostInviteCommand:
                 raise BadRequestException(code="STREAM_NODE_MISSING")
             api_url = stream.livekit_url
 
+            from app.use_cases.streams.stream_utils import make_livekit_token
+            from app.schemas.stream import StreamTokenOut
+
+            # İzleyici relay'deyse UpdateParticipant çalışmaz (ParticipantNotFound).
+            # Relay durumunda direkt source node token'ı döneriz; Flutter disconnect+reconnect yapar.
             async with aiohttp.ClientSession() as session:
                 svc = RoomService(
                     session,
@@ -87,22 +92,39 @@ class AcceptCohostInviteCommand:
                     )
                     await svc.update_participant(req)
                 except Exception as e:
-                    logger.error("[COHOST] Yetki yükseltilirken hata: %s", str(e), exc_info=True)
-                    raise BadRequestException(code="COHOST_GRANT_FAILED")
+                    err = str(e).lower()
+                    if "not found" in err or "participant" in err:
+                        # İzleyici relay node'undaydı — source node token'ı ver
+                        relay_used = True
+                        logger.info(
+                            "[COHOST] Relay→source geçişi yapılıyor | stream=%s user=%s",
+                            stream_id, current_user.id,
+                        )
+                    else:
+                        logger.error("[COHOST] Yetki yükseltilirken hata: %s", str(e), exc_info=True)
+                        raise BadRequestException(code="COHOST_GRANT_FAILED")
 
             await publish_chat(stream_id, {
                 "type": WS.COHOST_ACCEPTED,
                 "username": current_user.username,
             })
 
-            from app.use_cases.streams.stream_utils import make_livekit_token
-            from app.schemas.stream import StreamTokenOut
+            # live:cohost:joined → relay agent ikinci subprocess başlatır
+            try:
+                redis2 = await get_redis()
+                import json as _json
+                await redis2.publish(
+                    f"live:cohost:joined:{stream_id}",
+                    _json.dumps({"user_id": current_user.id, "identity": str(current_user.id)}),
+                )
+            except Exception as exc:
+                logger.warning("[COHOST] cohost:joined pub/sub başarısız: %s", exc)
 
             token = make_livekit_token(stream.room_name, current_user, can_publish=True)
             return StreamTokenOut(
                 stream_id=stream.id,
                 room_name=stream.room_name,
-                livekit_url=api_url,
+                livekit_url=api_url,  # source node URL — Flutter relay varsa reconnect yapar
                 token=token,
                 category=stream.category,
             )
@@ -162,6 +184,18 @@ class RemoveCohostCommand:
                 "target_username": target.username,
                 "host_username": host.username,
             })
+
+            # live:cohost:left → relay agent co-host subprocess'ini sonlandırır
+            try:
+                import json as _json2
+                redis3 = await get_redis()
+                await redis3.publish(
+                    f"live:cohost:left:{stream_id}",
+                    _json2.dumps({"user_id": target.id, "identity": str(target.id)}),
+                )
+            except Exception as exc:
+                logger.warning("[COHOST] cohost:left pub/sub başarısız: %s", exc)
+
             return {"message": f"@{target.username} sahneden alındı"}
 
 class LeaveCohostCommand:
@@ -208,4 +242,16 @@ class LeaveCohostCommand:
                 "type": WS.COHOST_REMOVED,
                 "username": current_user.username,
             })
+
+            # live:cohost:left → relay agent co-host subprocess'ini sonlandırır
+            try:
+                import json as _json3
+                redis4 = await get_redis()
+                await redis4.publish(
+                    f"live:cohost:left:{stream_id}",
+                    _json3.dumps({"user_id": current_user.id, "identity": str(current_user.id)}),
+                )
+            except Exception as exc:
+                logger.warning("[COHOST] cohost:left pub/sub başarısız: %s", exc)
+
             return {"message": "Sahneden inildi, izleyici konumundasınız."}

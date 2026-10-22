@@ -52,11 +52,13 @@ async def livekit_webhook(request: Request, background_tasks: BackgroundTasks):
     if event_type == "room_finished" and room_name:
         if room_name.startswith("call_"):
             background_tasks.add_task(_on_call_room_finished, room_name)
+        elif "_relay_" in room_name:
+            pass  # Relay odası kapandığında DB'ye dokunma — relay.py zaten temizler
         else:
             background_tasks.add_task(_delayed_close_stream, room_name)
 
     # Katılımcı olayları — host grace period / reconnect yönetimi
-    if room_name and event.participant and not room_name.startswith("call_"):
+    if room_name and event.participant and not room_name.startswith("call_") and "_relay_" not in room_name:
         identity = event.participant.identity or ""
         if event_type == "participant_left":
             background_tasks.add_task(_on_host_left, room_name, identity, time.time())

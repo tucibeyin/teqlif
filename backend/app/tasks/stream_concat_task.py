@@ -1,0 +1,162 @@
+"""V1.7 Distributed Concat ARQ görev.
+
+Her 2 dakikada bir çalışır; bitişik part'ları olan bitmiş yayınları
+MinIO'dan indirir, ffmpeg ile birleştirir ve sonucu yeniden yükler.
+"""
+from __future__ import annotations
+
+from app.core.logger import get_logger, capture_exception
+
+logger = get_logger(__name__)
+
+_LOCK_PREFIX = "lock:concat:"
+_LOCK_TTL_SEC = 3600  # maks 1 saat — ffmpeg için yeterli
+
+
+async def stream_concat_task(ctx: dict) -> None:
+    """Birden fazla part kaydı olan bitmiş yayınları concat eder."""
+    try:
+        from app.database import AsyncSessionLocal
+        from sqlalchemy import text
+
+        async with AsyncSessionLocal() as session:
+            rows = (await session.execute(text("""
+                SELECT stream_id, COUNT(*) AS part_count
+                FROM stream_recordings
+                WHERE is_concat_result = FALSE
+                  AND part_number IS NOT NULL
+                  AND status = 'available'
+                GROUP BY stream_id
+                HAVING COUNT(*) > 1
+                ORDER BY stream_id
+                LIMIT 20
+            """))).mappings().all()
+
+        for row in rows:
+            stream_id = row["stream_id"]
+            try:
+                await _do_concat(stream_id)
+            except Exception as exc:
+                capture_exception(exc)
+                logger.error("stream_concat_task: stream_id=%s hata: %s", stream_id, exc)
+
+    except Exception as exc:
+        capture_exception(exc)
+        logger.error("stream_concat_task genel hata: %s", exc)
+        raise
+
+
+async def _do_concat(stream_id: int) -> None:
+    """Tek bir stream için concat işlemi yapar.
+
+    Dağıtık kilit ile aynı anda tek bir worker çalışır.
+    """
+    from app.utils.redis_client import get_redis
+
+    redis = await get_redis()
+    lock_key = f"{_LOCK_PREFIX}{stream_id}"
+
+    # Dağıtık kilit — nx=True ile atomik
+    acquired = await redis.set(lock_key, "1", nx=True, ex=_LOCK_TTL_SEC)
+    if not acquired:
+        logger.debug("_do_concat: stream_id=%s için kilit alınamadı, atlanıyor", stream_id)
+        return
+
+    try:
+        await _run_concat(stream_id)
+    finally:
+        await redis.delete(lock_key)
+
+
+async def _run_concat(stream_id: int) -> None:
+    import asyncio
+    import os
+    import tempfile
+
+    from app.database import AsyncSessionLocal
+    from app.services.storage_service import _get_presign_client
+    from app.config import settings
+    from sqlalchemy import text
+
+    async with AsyncSessionLocal() as session:
+        parts = (await session.execute(text("""
+            SELECT id, minio_key, part_number, host_id
+            FROM stream_recordings
+            WHERE stream_id = :stream_id
+              AND is_concat_result = FALSE
+              AND part_number IS NOT NULL
+              AND status = 'available'
+            ORDER BY part_number ASC
+        """), {"stream_id": stream_id})).mappings().all()
+
+    if len(parts) < 2:
+        return
+
+    host_id = parts[0]["host_id"]
+    minio = _get_presign_client()
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        part_files: list[str] = []
+
+        # Part'ları indir
+        for p in parts:
+            key = p["minio_key"]
+            if not key:
+                logger.warning("_run_concat: stream_id=%s part=%s minio_key yok", stream_id, p["part_number"])
+                return
+            local_path = os.path.join(tmpdir, f"part_{p['part_number']}.mp4")
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(
+                None,
+                lambda k=key, lp=local_path: minio.fget_object(settings.minio_bucket, k, lp),
+            )
+            part_files.append(local_path)
+
+        # ffmpeg concat list
+        list_path = os.path.join(tmpdir, "concat_list.txt")
+        with open(list_path, "w") as f:
+            for pf in part_files:
+                f.write(f"file '{pf}'\n")
+
+        out_path = os.path.join(tmpdir, "concat_output.mp4")
+        proc = await asyncio.create_subprocess_exec(
+            "ffmpeg", "-y", "-f", "concat", "-safe", "0",
+            "-i", list_path, "-c", "copy", out_path,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        _, stderr = await proc.communicate()
+        if proc.returncode != 0:
+            logger.error("_run_concat: ffmpeg hata stream_id=%s: %s", stream_id, stderr.decode()[-500:])
+            return
+
+        # Sonucu MinIO'ya yükle
+        concat_key = f"recordings/{stream_id}/concat.mp4"
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(
+            None,
+            lambda: minio.fput_object(settings.minio_bucket, concat_key, out_path, content_type="video/mp4"),
+        )
+
+    # DB'ye concat sonucu kaydet, part'ları işaretle
+    async with AsyncSessionLocal() as session:
+        part_ids = [p["id"] for p in parts]
+        placeholders = ", ".join(f":id_{i}" for i in range(len(part_ids)))
+        params = {f"id_{i}": pid for i, pid in enumerate(part_ids)}
+
+        await session.execute(text(f"""
+            UPDATE stream_recordings
+            SET status = 'merged_and_purged', updated_at = NOW()
+            WHERE id IN ({placeholders})
+        """), params)
+
+        await session.execute(text("""
+            INSERT INTO stream_recordings
+                (stream_id, host_id, minio_key, status, is_concat_result, created_at, updated_at)
+            VALUES
+                (:stream_id, :host_id, :minio_key, 'available', TRUE, NOW(), NOW())
+        """), {"stream_id": stream_id, "host_id": host_id, "minio_key": concat_key})
+
+        await session.commit()
+
+    logger.info("_run_concat: stream_id=%s concat tamamlandı → %s", stream_id, concat_key)

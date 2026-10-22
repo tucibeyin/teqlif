@@ -266,6 +266,18 @@ class StreamService {
     );
   }
 
+  /// Kural 3: Host NODE_UNAVAILABLE aldığında yeni node'a geçiş yapar.
+  /// Yeni room_name + yeni livekit_url + taze token döner.
+  Future<StreamTokenOut> failoverStream(int streamId) async {
+    final body = await _api.call(
+      () async => http.post(
+        Uri.parse('${_api.config.baseUrl}/streams/$streamId/failover'),
+        headers: await _headers(),
+      ),
+    );
+    return StreamTokenOut.fromJson(body);
+  }
+
   /// Reconnect için taze token al — stream sona erdiyse 410 → STREAM_ENDED fırlatır.
   /// Host: can_publish=True token. Viewer: can_publish=False token.
   Future<StreamTokenOut> refreshStreamToken(int streamId) async {

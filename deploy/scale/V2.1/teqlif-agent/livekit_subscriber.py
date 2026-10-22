@@ -200,6 +200,7 @@ class MKVWriter:
 async def _run(
     room_name: str, ws_url: str, api_key: str, api_secret: str,
     output: Path,
+    host_identity: str | None = None,
     stop_evt: asyncio.Event | None = None,
 ) -> None:
     if stop_evt is None:
@@ -336,7 +337,13 @@ async def _run(
     @room.on("participant_disconnected")
     def on_participant_disconnected(participant):
         logger.info("Katılımcı ayrıldı: %s", participant.identity)
-        if not room.remote_participants:
+        # Yalnızca host ayrıldığında kayıt durdurulur.
+        # Relay senaryosunda izleyiciler relay_room'dadır; source_room'da
+        # remote_participants boş görünse de host hâlâ yayıncıdır.
+        if host_identity and participant.identity == host_identity:
+            logger.info("Host ayrıldı, kayıt durduruluyor | identity=%s", participant.identity)
+            stop_evt.set()
+        elif not host_identity and not room.remote_participants:
             logger.info("Oda boşaldı, kayıt durduruluyor")
             stop_evt.set()
 
@@ -398,11 +405,12 @@ async def _run(
 
 async def _main_async() -> None:
     parser = argparse.ArgumentParser(description="LiveKit room kaydedici (livekit-rtc)")
-    parser.add_argument("--room",       required=True)
-    parser.add_argument("--ws-url",     required=True)
-    parser.add_argument("--api-key",    required=True)
-    parser.add_argument("--api-secret", required=True)
-    parser.add_argument("--output",     required=True)
+    parser.add_argument("--room",          required=True)
+    parser.add_argument("--ws-url",        required=True)
+    parser.add_argument("--api-key",       required=True)
+    parser.add_argument("--api-secret",    required=True)
+    parser.add_argument("--output",        required=True)
+    parser.add_argument("--host-identity", default=None, help="Sadece bu identity ayrılınca kayıt durur")
     args = parser.parse_args()
 
     output = Path(args.output)
@@ -428,12 +436,13 @@ async def _main_async() -> None:
 
     try:
         await _run(
-            room_name  = args.room,
-            ws_url     = args.ws_url,
-            api_key    = args.api_key,
-            api_secret = args.api_secret,
-            output     = output,
-            stop_evt   = stop_evt,
+            room_name     = args.room,
+            ws_url        = args.ws_url,
+            api_key       = args.api_key,
+            api_secret    = args.api_secret,
+            output        = output,
+            host_identity = args.host_identity,
+            stop_evt      = stop_evt,
         )
     except Exception as exc:
         logger.error("Hata: %s", exc)

@@ -198,3 +198,12 @@ class AIServiceBusyException(AppException):
 
     def __init__(self, message: str | None = None):
         super().__init__(status_code=503, message=message, code="AI_SERVICE_BUSY")
+
+
+# ── Stream altyapısı ───────────────────────────────────────────────────────────
+
+class NodeUnavailableException(AppException):
+    """503 — Yayının bağlı olduğu LiveKit node sağlıksız; istemci failover başlatmalı."""
+
+    def __init__(self, message: str | None = None):
+        super().__init__(status_code=503, message=message, code="NODE_UNAVAILABLE")

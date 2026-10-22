@@ -309,6 +309,79 @@ class HostStreamViewModel extends ChangeNotifier {
         onNavigateHome?.call();
         return;
       }
+      if (e.code == 'NODE_UNAVAILABLE') {
+        await _doFailover();
+        return;
+      }
+      scheduleReconnect();
+    } catch (_) {
+      scheduleReconnect();
+    }
+  }
+
+  /// Kural 3: Kaynak node çöktüğünde yeni node'a failover.
+  /// Yeni room_name + livekit_url alınır; kamera/mikrofon yeniden etkinleştirilir.
+  Future<void> _doFailover() async {
+    if (_disposed || _token == null) return;
+    try {
+      final newToken = await _stream.failoverStream(_token!.streamId);
+      _token = newToken;
+
+      _listener?.dispose();
+      _listener = null;
+      final oldRoom = room;
+      room = null;
+      localVideoTrack = null;
+      coHostTrack = null;
+      _notify();
+      try { await oldRoom?.disconnect(); } catch (_) {}
+
+      final newRoom = Room(
+        roomOptions: const RoomOptions(
+          adaptiveStream: true,
+          dynacast: true,
+          defaultVideoPublishOptions: VideoPublishOptions(
+            simulcast: true,
+            backupVideoCodec: BackupVideoCodec(codec: 'vp9'),
+            videoSimulcastLayers: [
+              VideoParametersPresets.h360_169,
+              VideoParametersPresets.h540_169,
+            ],
+            videoEncoding: VideoEncoding(maxBitrate: 1700000, maxFramerate: 30),
+            degradationPreference: DegradationPreference.balanced,
+          ),
+          defaultAudioPublishOptions: AudioPublishOptions(audioBitrate: 64000),
+        ),
+      );
+      _setupRoomListeners(newRoom, newToken.streamId);
+      await newRoom.connect(newToken.livekitUrl, newToken.token);
+      room = newRoom;
+
+      await newRoom.localParticipant?.setCameraEnabled(
+        true,
+        cameraCaptureOptions: const CameraCaptureOptions(params: VideoParametersPresets.h720_169),
+      );
+      await newRoom.localParticipant?.setMicrophoneEnabled(
+        true,
+        audioCaptureOptions: const AudioCaptureOptions(
+          noiseSuppression: true,
+          echoCancellation: true,
+          autoGainControl: true,
+        ),
+      );
+
+      LocalVideoTrack? foundTrack;
+      for (final pub in newRoom.localParticipant?.videoTrackPublications ?? []) {
+        if (pub.track != null) { foundTrack = pub.track as LocalVideoTrack; break; }
+      }
+      localVideoTrack = foundTrack;
+      _reconnectAttempts = 0;
+      _notify();
+    } on AppException catch (e) {
+      if (e.code == 'STREAM_ENDED') {
+        onNavigateHome?.call();
+        return;
+      }
       scheduleReconnect();
     } catch (_) {
       scheduleReconnect();

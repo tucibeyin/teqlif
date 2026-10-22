@@ -9,7 +9,7 @@ otomatik düşer, buraya yansır.
 import json
 import logging
 from enum import Enum
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from app.config import settings
 from app.utils.redis_client import get_redis
@@ -17,6 +17,7 @@ from app.utils.redis_client import get_redis
 logger = logging.getLogger(__name__)
 
 _MAX_MEDIA_PARTICIPANTS = 500  # medya score normalizasyon kapasitesi
+_NODE_HEALTHY_STALE_SEC = 15   # edge:metrics TTL eşiği — agent 5s'de bir yazar
 
 
 class ServiceType(Enum):
@@ -58,29 +59,70 @@ class EdgeOrchestrator:
                     for i, url in enumerate(_s.edge_livekit_urls) if url]
         return nodes
 
-    async def allocate_node(self, service_type: ServiceType) -> Dict[str, Any]:
-        """Servis tipine göre en uygun node'u seçer; metrik yoksa config fallback."""
+    async def is_node_healthy(self, node_id: str) -> bool:
+        """edge:metrics:{node_id} anahtarı mevcutsa node sağlıklıdır.
+
+        Agent 5s'de bir yazar; TTL aşılmışsa anahtar yoktur → unhealthy.
+        """
+        if not node_id or node_id.startswith("fallback"):
+            return False
+        redis = await get_redis()
+        return await redis.exists(f"edge:metrics:{node_id}") == 1
+
+    async def allocate_node(
+        self,
+        service_type: ServiceType,
+        exclude_node_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Servis tipine göre en uygun node'u seçer; metrik yoksa config fallback.
+
+        exclude_node_id: Kural 3 failover'da çöken node'u seçim dışı bırakır.
+        """
         all_m = await self.get_all_metrics()
         if not all_m:
             logger.debug("Metrik yok — %s için config fallback", service_type.value)
             return self._fallback(service_type)
 
         if service_type == ServiceType.MEDIA:
-            return self._pick_media(all_m)
+            return self._pick_media(all_m, exclude_node_id=exclude_node_id)
         if service_type == ServiceType.STORAGE:
             return self._pick_storage(all_m)
         if service_type == ServiceType.AI:
             return self._pick_ai(all_m)
         return self._fallback(service_type)
 
+    async def resolve_stream_endpoint(self, stream) -> Dict[str, Any]:
+        """Relay aktifse relay node'una, değilse source node'una yönlendirir.
+
+        Returns: {"livekit_url": str, "room_name": str, "node_id": str}
+        """
+        redis = await get_redis()
+        relay_data = await redis.get(f"live:relay:ready:{stream.room_name}")
+        if relay_data:
+            try:
+                info = json.loads(relay_data)
+                return {
+                    "livekit_url": info["relay_url"],
+                    "room_name":   info["relay_room"],
+                    "node_id":     info.get("relay_node_id", "relay"),
+                }
+            except Exception:
+                pass  # bozuk relay verisi — source'a düş
+        return {
+            "livekit_url": stream.livekit_url or "",
+            "room_name":   stream.room_name,
+            "node_id":     getattr(stream, "source_node_id", None) or "unknown",
+        }
+
     # ── Node seçiciler ────────────────────────────────────────────────────
 
-    def _pick_media(self, metrics: List[Dict]) -> Dict:
+    def _pick_media(self, metrics: List[Dict], exclude_node_id: Optional[str] = None) -> Dict:
         candidates = [
             m for m in metrics
             if "media" in m.get("node_type", [])
             and m.get("services", {}).get("livekit", {}).get("healthy", False)
             and m.get("livekit_url")
+            and m.get("node_id") != exclude_node_id
         ]
         if not candidates:
             logger.warning("Sağlıklı media node yok — fallback")
@@ -150,7 +192,10 @@ class EdgeOrchestrator:
             "ai_proxy_url": "",
         }
         if service_type == ServiceType.MEDIA:
-            node["livekit_url"] = settings.edge_livekit_urls[0] if settings.edge_livekit_urls else ""
+            url = settings.edge_livekit_urls[0] if settings.edge_livekit_urls else ""
+            node["livekit_url"] = url
+            # H1: URL → node_id çözümü; harita yoksa "fallback" kalır
+            node["node_id"] = settings.edge_livekit_node_map.get(url, "fallback")
         elif service_type == ServiceType.STORAGE:
             node["minio_url"] = settings.edge_minio_urls[0] if settings.edge_minio_urls else ""
         elif service_type == ServiceType.AI:

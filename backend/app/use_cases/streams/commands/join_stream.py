@@ -10,7 +10,7 @@ from app.utils.redis_client import get_redis
 from app.config import settings
 from app.core.logger import get_logger
 from app.schemas.stream import JoinTokenOut
-from app.services.edge_orchestrator import ServiceType
+from app.services.edge_orchestrator import orchestrator
 
 logger = get_logger(__name__)
 
@@ -34,11 +34,14 @@ class JoinStreamCommand:
             if await redis.sismember(kick_key(stream_id), str(user.id)):
                 raise ForbiddenException(code="STREAM_ACCESS_FORBIDDEN")
 
-            token = make_livekit_token(stream.room_name, user, can_publish=False)
-            if not stream.livekit_url:
+            # Relay aktifse izleyici relay node'una, değilse source node'una yönlenir (Kural 2)
+            endpoint = await orchestrator.resolve_stream_endpoint(stream)
+            token = make_livekit_token(endpoint["room_name"], user, can_publish=False)
+            if not endpoint["livekit_url"]:
                 logger.error("[JoinStream] Yayının livekit_url'i yok! stream_id=%s", stream.id)
                 raise BadRequestException(code="STREAM_NODE_MISSING")
-            node_url = stream.livekit_url
+            node_url = endpoint["livekit_url"]
+            room_name = endpoint["room_name"]
 
             await self.uow.session.execute(
                 pg_insert(LiveStreamViewer)
@@ -51,7 +54,7 @@ class JoinStreamCommand:
 
             return JoinTokenOut(
                 stream_id=stream.id,
-                room_name=stream.room_name,
+                room_name=room_name,
                 livekit_url=node_url,
                 token=token,
                 title=stream.title,

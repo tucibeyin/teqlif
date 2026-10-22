@@ -244,34 +244,23 @@ async def start_stream(
 @router.get("/{stream_id}/token", response_model=StreamTokenOut)
 async def refresh_stream_token(
     stream_id: int,
-    db: AsyncSession = Depends(get_db),
+    uow: SqlAlchemyUnitOfWork = Depends(get_uow),
     current_user: User = Depends(get_current_user),
 ):
-    """Reconnect için taze LiveKit token. Stream sona erdiyse 410 döner."""
-    from fastapi import HTTPException
-    from app.use_cases.streams.stream_utils import make_livekit_token
-    from app.config import settings
+    """Reconnect için taze LiveKit token. Stream sona erdiyse 404 döner."""
+    from app.use_cases.streams.queries.refresh_stream_token import RefreshStreamTokenQuery
+    return await RefreshStreamTokenQuery(uow).execute(stream_id, current_user)
 
-    from app.models.enums import StreamStatus
-    stream = await db.get(LiveStream, stream_id)
-    if not stream or stream.status != StreamStatus.LIVE:
-        raise HTTPException(
-            status_code=410,
-            detail={"error": {"code": "STREAM_ENDED", "message": "Stream has ended"}},
-        )
-    can_publish = stream.host_id == current_user.id
-    token = make_livekit_token(stream.room_name, current_user, can_publish=can_publish)
-    if not stream.livekit_url:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=500, detail={"error": {"code": "STREAM_NODE_MISSING", "message": "Stream has no allocated edge node"}})
-    node_url = stream.livekit_url
-    return StreamTokenOut(
-        stream_id=stream.id,
-        room_name=stream.room_name,
-        livekit_url=node_url,
-        token=token,
-        category=stream.category,
-    )
+
+@router.post("/{stream_id}/failover", response_model=StreamTokenOut)
+async def failover_stream(
+    stream_id: int,
+    uow: SqlAlchemyUnitOfWork = Depends(get_uow),
+    current_user: User = Depends(get_current_user),
+):
+    """Kural 3: Host NODE_UNAVAILABLE aldığında yeni node'a taşınır."""
+    from app.use_cases.streams.commands.failover_stream import FailoverStreamCommand
+    return await FailoverStreamCommand(uow).execute(stream_id, current_user.id)
 
 
 @router.post("/{stream_id}/confirm-live", status_code=status.HTTP_200_OK)
@@ -321,12 +310,13 @@ async def get_stream_recording(
     if not current_user.is_premium:
         raise HTTPException(status_code=403, detail={"error": {"code": "PRO_REQUIRED"}})
 
+    # Concat tamamlanmışsa birleşik kayıt önceliklenir; yoksa en son part döner
     row = (await db.execute(text("""
         SELECT id, status, minio_key, available_at, expires_at
         FROM stream_recordings
         WHERE stream_id = :stream_id
           AND status IN ('available', 'expired', 'archived')
-        ORDER BY created_at DESC
+        ORDER BY is_concat_result DESC, created_at DESC
         LIMIT 1
     """), {"stream_id": stream_id})).mappings().first()
 

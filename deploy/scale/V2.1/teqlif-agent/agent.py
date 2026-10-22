@@ -79,17 +79,20 @@ async def main() -> None:
         MorningReporter(cfg, db),
     ]
 
-    # Servis bazlı recording modülü keşfi
+    # Servis bazlı recording + relay modülü keşfi
     rec_services = await _active_recording_services()
     if rec_services:
         from modules.recorder import RecordingManager
         from modules.encoder import EncoderManager
+        from modules.relay import RelayManager
         for svc in rec_services:
-            rec_mgr = RecordingManager(cfg, db, svc)
-            enc_mgr = EncoderManager(cfg, db, svc, recording_procs=rec_mgr._procs)
+            rec_mgr   = RecordingManager(cfg, db, svc)
+            enc_mgr   = EncoderManager(cfg, db, svc, recording_procs=rec_mgr._procs)
+            relay_mgr = RelayManager(cfg, db, svc)
             modules.append(rec_mgr)
             modules.append(enc_mgr)
-            logger.info("Recording modülleri yüklendi: %s", svc)
+            modules.append(relay_mgr)
+            logger.info("Recording + Relay modülleri yüklendi: %s", svc)
 
     # Temiz kapanış
     loop = asyncio.get_running_loop()

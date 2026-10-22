@@ -461,12 +461,11 @@ class StreamConnectionManager with WidgetsBindingObserver {
   }
 
   /// T-HC-04: Kamera ve mikrofon izinlerini önce kontrol et; reddedilirse hata fırlat.
+  /// V1.7: İzleyici relay node'undaysa (newToken URL/room farklı) disconnect+reconnect yapılır.
   /// Caller (_acceptCoHostInvite) bu exception'ı yakalamalı ve kullanıcıya göstermeli.
   Future<void> upgradeToCoHost(int streamId, StreamTokenOut newToken) async {
     final session = getSession(streamId);
-    if (session.room == null) return;
 
-    // İzin kontrolü — yükseltmeden önce
     final camStatus = await Permission.camera.request();
     final micStatus = await Permission.microphone.request();
     if (!camStatus.isGranted || !micStatus.isGranted) {
@@ -478,8 +477,49 @@ class StreamConnectionManager with WidgetsBindingObserver {
     _connectionLocks.add(streamId);
 
     try {
-      // Best Practice: Backend yetkiyi güncellediği için disconnect/connect yapmamıza gerek yok!
-      // LiveKit SDK arkada yetki güncellemesini alacak, biz direkt kamerayı açabiliriz.
+      // Relay → source geçişi: URL veya room farklıysa full disconnect + reconnect
+      final currentUrl  = session.token?.livekitUrl ?? '';
+      final currentRoom = session.token?.roomName ?? '';
+      final needsReconnect = session.room == null
+          || newToken.livekitUrl != currentUrl
+          || newToken.roomName  != currentRoom;
+
+      if (needsReconnect) {
+        // Eski bağlantıyı temizle
+        session.listener?.dispose();
+        session.listener = null;
+        final oldRoom = session.room;
+        session.room = null;
+        session.hostVideoTrack   = null;
+        session.coHostVideoTrack = null;
+        session.hostParticipantSid = null;
+        session.localVideoTrack  = null;
+        session.isConnected = false;
+        session.update();
+        oldRoom?.disconnect();
+
+        // Yeni source node'a bağlan (token zaten can_publish=true)
+        final room = Room(roomOptions: const RoomOptions(adaptiveStream: true, dynacast: false));
+        session.listener = room.createListener();
+        _setupListeners(session);
+        await room.connect(newToken.livekitUrl, newToken.token);
+        session.room = room;
+        // Token alanlarını source node değerleriyle güncelle
+        if (session.token != null) {
+          session.token = JoinTokenOut(
+            streamId:            session.token!.streamId,
+            roomName:            newToken.roomName,
+            livekitUrl:          newToken.livekitUrl,
+            token:               newToken.token,
+            title:               session.token!.title,
+            category:            session.token!.category,
+            hostUsername:        session.token!.hostUsername,
+            hostLivekitIdentity: session.token!.hostLivekitIdentity,
+          );
+        }
+        session.isConnected = true;
+      }
+
       await session.room!.localParticipant?.setCameraEnabled(true);
       await session.room!.localParticipant?.setMicrophoneEnabled(true);
 
