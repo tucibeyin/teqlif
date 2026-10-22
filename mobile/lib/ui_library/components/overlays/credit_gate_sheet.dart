@@ -50,6 +50,8 @@ class CreditGateSheet extends ConsumerStatefulWidget {
     required CreditFeature feature,
     int? listingId,
     Future<CreditGateResult> Function()? onExecute,
+    /// Yetersiz bakiye durumunda kullanıcı "Cüzdana Git" tıklarsa çağrılır.
+    VoidCallback? onGoToWallet,
   }) async {
     final result = await showModalBottomSheet<CreditGateResult>(
       context: context,
@@ -61,6 +63,11 @@ class CreditGateSheet extends ConsumerStatefulWidget {
         onExecute: onExecute,
       ),
     );
+    // Cüzdan yönlendirme talebini merkezi olarak burada yakala.
+    if (result != null && result.isWalletRedirect) {
+      onGoToWallet?.call();
+      return CreditGateResult.cancelled();
+    }
     return result ?? CreditGateResult.cancelled();
   }
 
@@ -159,6 +166,7 @@ class _CreditGateSheetState extends ConsumerState<CreditGateSheet> {
                           ? _ErrorBody(
                               message: loc.t(vm.loadError!),
                               textColor: subColor,
+                              showRetry: vm.loadError != 'blastNoAudience',
                               onRetry: () =>
                                   ref
                                       .read(creditGateProvider.notifier)
@@ -178,6 +186,8 @@ class _CreditGateSheetState extends ConsumerState<CreditGateSheet> {
                               onConfirm: _handleConfirm,
                               onCancel: () => Navigator.of(context)
                                   .pop(CreditGateResult.cancelled()),
+                              onGoToWallet: () => Navigator.of(context)
+                                  .pop(CreditGateResult.walletRedirect()),
                             ),
                 ),
               ),
@@ -227,11 +237,13 @@ class _LoadingBody extends StatelessWidget {
 class _ErrorBody extends StatelessWidget {
   final String message;
   final Color textColor;
+  final bool showRetry;
   final VoidCallback onRetry;
   const _ErrorBody({
     required this.message,
     required this.textColor,
     required this.onRetry,
+    this.showRetry = true,
   });
 
   @override
@@ -245,11 +257,13 @@ class _ErrorBody extends StatelessWidget {
           const SizedBox(height: TeqSpacing.s),
           Text(message,
               style: TeqTypography.bodyMedium.copyWith(color: textColor)),
-          const SizedBox(height: TeqSpacing.m),
-          TeqButton.outline(
-            text: 'Tekrar Dene',
-            onPressed: onRetry,
-          ),
+          if (showRetry) ...[
+            const SizedBox(height: TeqSpacing.m),
+            TeqButton.outline(
+              text: 'Tekrar Dene',
+              onPressed: onRetry,
+            ),
+          ],
         ],
       ),
     );
@@ -265,6 +279,7 @@ class _LoadedBody extends StatelessWidget {
   final Color subColor;
   final VoidCallback onConfirm;
   final VoidCallback onCancel;
+  final VoidCallback onGoToWallet;
 
   const _LoadedBody({
     required this.vm,
@@ -275,6 +290,7 @@ class _LoadedBody extends StatelessWidget {
     required this.subColor,
     required this.onConfirm,
     required this.onCancel,
+    required this.onGoToWallet,
   });
 
   @override
@@ -332,12 +348,35 @@ class _LoadedBody extends StatelessWidget {
 
         if (!canAffordOp) ...[
           const SizedBox(height: TeqSpacing.xs),
-          Text(
-            loc.t('creditGateInsufficientBalance'),
-            style: TeqTypography.bodySmall.copyWith(
-              color: TeqColors.error,
-              fontWeight: FontWeight.w600,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  loc.t('creditGateInsufficientBalance'),
+                  style: TeqTypography.bodySmall.copyWith(
+                    color: TeqColors.error,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: onGoToWallet,
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: TeqSpacing.s, vertical: TeqSpacing.xxs),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(
+                  loc.t('creditGateGoToWallet'),
+                  style: TeqTypography.bodySmall.copyWith(
+                    color: TeqColors.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
 
@@ -413,6 +452,7 @@ class _BlastCountSelectorState
     final maxAllowed = widget.data.audienceSize < widget.data.perOpCap
         ? widget.data.audienceSize
         : widget.data.perOpCap;
+    if (maxAllowed < 1) return; // audienceSize=0 durumunda clamp(1,0) crash'i önle
     final clamped = parsed.clamp(1, maxAllowed);
     if (clamped != parsed) {
       final s = clamped.toString();

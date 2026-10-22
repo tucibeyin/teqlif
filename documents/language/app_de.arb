@@ -6665,5 +6665,7 @@
   "creditGateBalanceValue": "{balance} teqlik",
   "@creditGateBalanceValue": [["placeholders", [["balance", [["type", "int"]]]]]],
   "creditGateInsufficientBalance": "Unzureichendes Guthaben. Laden Sie teqlik auf, um fortzufahren.",
-  "creditGateConfirm": "Bestätigen"
+  "creditGateConfirm": "Bestätigen",
+  "creditGateGoToWallet": "Zur Geldbörse",
+  "blastNoAudience": "Derzeit sind keine Benutzer für Benachrichtigungen bereit."
 }

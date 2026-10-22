@@ -2992,6 +2992,8 @@ class _MyListingsScreenState extends ConsumerState<_MyListingsScreen> {
         ref: ref,
         feature: CreditFeature.reactivation,
         listingId: id,
+        onGoToWallet: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const WalletScreen())),
       );
       if (!mounted) return;
       if (result.success) {

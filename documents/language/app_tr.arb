@@ -6593,5 +6593,7 @@
   "creditGateBalanceValue": "{balance} teqlik",
   "@creditGateBalanceValue": [["placeholders", [["balance", [["type", "int"]]]]]],
   "creditGateInsufficientBalance": "Yetersiz bakiye. Devam etmek için teqlik yükleyin.",
-  "creditGateConfirm": "Onayla"
+  "creditGateConfirm": "Onayla",
+  "creditGateGoToWallet": "Cüzdana Git",
+  "blastNoAudience": "Şu an bildirim gönderilecek hazır kullanıcı bulunmuyor."
 }

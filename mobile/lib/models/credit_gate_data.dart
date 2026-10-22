@@ -71,6 +71,12 @@ class CreditGateResult {
   /// Cooldown veya detail gibi payload içeren başarısız sonuç.
   factory CreditGateResult.failureWithPayload(Map<String, dynamic> payload) =>
       CreditGateResult._(success: false, payload: payload);
+
+  /// Yetersiz bakiye durumunda cüzdana yönlendirme talebi.
+  factory CreditGateResult.walletRedirect() =>
+      const CreditGateResult._(success: false, errorKey: '_walletRedirect');
+
+  bool get isWalletRedirect => errorKey == '_walletRedirect';
 }
 
 class CreditGateData {

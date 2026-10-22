@@ -73,6 +73,11 @@ class CreditGateNotifier extends AutoDisposeNotifier<CreditGateState> {
       state = state.copyWith(isLoadingData: false, loadError: 'errorGeneric');
       return;
     }
+    // Blast'ta kitle sıfırsa devam etmenin anlamı yok.
+    if (feature == CreditFeature.blast && loaded.audienceSize == 0) {
+      state = state.copyWith(isLoadingData: false, loadError: 'blastNoAudience');
+      return;
+    }
     final defaultCount = feature == CreditFeature.blast
         ? (loaded.audienceSize < loaded.perOpCap
             ? loaded.audienceSize

@@ -30,6 +30,7 @@ import '../ui_library/components/overlays/teq_snackbar.dart';
 import '../ui_library/components/overlays/teq_bottom_sheet.dart';
 import '../ui_library/components/overlays/credit_gate_sheet.dart';
 import '../models/credit_gate_data.dart';
+import 'profile_screen.dart' show WalletScreen;
 import '../utils/snackbar_helper.dart';
 import '../ui_library/components/inputs/teq_multi_select.dart';
 import '../ui_library/components/inputs/teq_text_field.dart';
@@ -281,6 +282,8 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
         context: context,
         ref: ref,
         feature: CreditFeature.aiDesc,
+        onGoToWallet: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const WalletScreen())),
       );
       if (!mounted) return;
       if (!result.success) return;

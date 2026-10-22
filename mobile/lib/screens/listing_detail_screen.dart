@@ -742,6 +742,8 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
       ref: ref,
       feature: CreditFeature.blast,
       listingId: listingId,
+      onGoToWallet: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const WalletScreen())),
     );
 
     if (!mounted || !context.mounted) return;
@@ -777,6 +779,8 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
       ref: ref,
       feature: CreditFeature.boost,
       listingId: widget.listing['id'] as int,
+      onGoToWallet: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const WalletScreen())),
     );
 
     if (!mounted || !context.mounted) return;
