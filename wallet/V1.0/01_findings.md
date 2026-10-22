@@ -1,4 +1,4 @@
-# TEQlik Wallet — V1.0 Bulgular & Karar Belgesi
+# teqlik Wallet — V1.0 Bulgular & Karar Belgesi
 
 **Tarih:** 2026-10-23  
 **Kapsam:** iOS IAP entegrasyonu, fiyatlandırma stratejisi, UX mimarisi, Apple uyum gereksinimleri  
@@ -18,15 +18,15 @@
 | **Instagram Stars** | 1 Star | TR'de yok | ~$0,020 | ~%50 | İçerik üretici |
 | **Twitter/X Tips** | — | %0 (ext. işlemci) | %0 | **%0 X kesmez** | Doğrudan yaratıcı |
 | **Snapchat Tokens** | — | — | — | — | **Şubat 2025'te kapatıldı** |
-| **TEQlik (planlanan)** | 1 TEQLik | **₺1,43** (%30) / **₺1,18** (%15) | — | %30 veya %15 (Apple) | İlan güçlendirme |
+| **teqlik (planlanan)** | 1 teqlik | **₺1,43** (%30) / **₺1,18** (%15) | — | %30 veya %15 (Apple) | İlan güçlendirme |
 
-> **TikTok iOS vs Web:** App Store'da ₺0,88/coin, web'de ₺0,50/coin. Fark = Apple'ın %30'u + TikTok margin koruması. Bu, TEQlik ekranında "web'den al" ibaresi kullanılamayacağını doğruluyor (Kural 3.1.1 ihlali).
+> **TikTok iOS vs Web:** App Store'da ₺0,88/coin, web'de ₺0,50/coin. Fark = Apple'ın %30'u + TikTok margin koruması. Bu, teqlik ekranında "web'den al" ibaresi kullanılamayacağını doğruluyor (Kural 3.1.1 ihlali).
 >
 > **Instagram Stars:** Türkiye'de henüz aktif değil; yalnızca ABD ve seçili ülkelerde mevcut.
 >
 > **Twitter/X:** Harici ödeme işlemcisi (PayPal, Venmo); X %0 komisyon alıyor ancak iOS App Store üzerinden alım zorunlu olmadığından Apple da kesmiyor. Sanal para birimi yok.
 >
-> **Meta stratejisi:** Stars satışını kasıtlı olarak kendi web mağazasına taşıdı; Apple/Google %30'dan kaçınmak için. Teqlif'in bu opsiyonu yok — TEQlik dijital özellik kilidini açtığı için Apple Kural 3.1.1 kesinlikle geçerli.
+> **Meta stratejisi:** Stars satışını kasıtlı olarak kendi web mağazasına taşıdı; Apple/Google %30'dan kaçınmak için. Teqlif'in bu opsiyonu yok — teqlik dijital özellik kilidini açtığı için Apple Kural 3.1.1 kesinlikle geçerli.
 
 ### 1.2 Piyasa Okuma
 
@@ -34,11 +34,11 @@
 - **Snapchat Tokens** Şubat 2025'te tamamen kapatıldı — sanal para stratejisi başarısız oldu.
 - **Twitch Bits** en şeffaf model: kullanıcıya maliyet, yaratıcıya gelir açıkça yayımlıyor. %29 platform payı Apple ile neredeyse aynı.
 - **YouTube/Meta:** %30 komisyon modeli — Google Play / Apple Pay üzerinden veya doğrudan web ödeme.
-- **TEQlik farklı konumda:** Sosyal medyada sanal para = yaratıcıya hediye. TEQlik = kullanıcının **kendi ilanına yatırım**. Bu fiyat duyarlılığını azaltır — kullanıcı doğrudan ROI (daha fazla görüntülenme, satış) bekliyor.
+- **teqlik farklı konumda:** Sosyal medyada sanal para = yaratıcıya hediye. teqlik = kullanıcının **kendi ilanına yatırım**. Bu fiyat duyarlılığını azaltır — kullanıcı doğrudan ROI (daha fazla görüntülenme, satış) bekliyor.
 
 ---
 
-## 2. Apple Komisyon Analizi & TEQlik Fiyatlandırması
+## 2. Apple Komisyon Analizi & teqlik Fiyatlandırması
 
 ### 2.1 Apple Komisyon Yapısı
 
@@ -53,16 +53,16 @@
 
 ### 2.2 Hedef Fiyat Mantığı
 
-Hedef: **1 TEQLik = 1 TL net gelir** (Apple komisyonu kullanıcıya yansıtılıyor)
+Hedef: **1 teqlik = 1 TL net gelir** (Apple komisyonu kullanıcıya yansıtılıyor)
 
 **%30 komisyon ile:**
 ```
-Kullanıcı fiyatı = Net hedef / (1 - 0.30) = 1 TL / 0.70 = 1.4286 TL/TEQLik
+Kullanıcı fiyatı = Net hedef / (1 - 0.30) = 1 TL / 0.70 = 1.4286 TL/teqlik
 ```
 
 **%15 komisyon ile (Small Business):**
 ```
-Kullanıcı fiyatı = 1 TL / 0.85 = 1.176 TL/TEQLik
+Kullanıcı fiyatı = 1 TL / 0.85 = 1.176 TL/teqlik
 ```
 
 > **Öneri:** İlk lansman için %15 Small Business Program'a başvur, fiyatları buna göre belirle. Eğer programa girilemezse %30 hesabı geçerli.
@@ -71,7 +71,7 @@ Kullanıcı fiyatı = 1 TL / 0.85 = 1.176 TL/TEQLik
 
 #### %30 Komisyon Senaryosu (Konservatif / Garantili)
 
-| Paket | TEQlik | Bonus | Toplam | App Store Fiyatı | Net Gelir | Efektif TL/TEQLik |
+| Paket | teqlik | Bonus | Toplam | App Store Fiyatı | Net Gelir | Efektif TL/teqlik |
 |-------|--------|-------|--------|-----------------|-----------|-------------------|
 | Başlangıç | 100 | — | 100 | **₺149,99** | ₺104,99 | ₺1,50 |
 | Popüler 🔥 | 300 | +50 | 350 | **₺429,99** | ₺300,99 | ₺1,00 |
@@ -80,7 +80,7 @@ Kullanıcı fiyatı = 1 TL / 0.85 = 1.176 TL/TEQLik
 
 #### %15 Komisyon Senaryosu (Small Business — Önerilen)
 
-| Paket | TEQlik | Bonus | Toplam | App Store Fiyatı | Net Gelir | Efektif TL/TEQLik |
+| Paket | teqlik | Bonus | Toplam | App Store Fiyatı | Net Gelir | Efektif TL/teqlik |
 |-------|--------|-------|--------|-----------------|-----------|-------------------|
 | Başlangıç | 100 | — | 100 | **₺119,99** | ₺101,99 | ₺1,02 |
 | Popüler 🔥 | 300 | +50 | 350 | **₺349,99** | ₺297,49 | ₺0,85 |
@@ -91,14 +91,14 @@ Kullanıcı fiyatı = 1 TL / 0.85 = 1.176 TL/TEQLik
 
 ### 2.4 Birim Maliyet Rehberi (Kullanıcı Perspektifi)
 
-**%30 / ₺149,99 → 100 TEQLik paketi bazında:**
+**%30 / ₺149,99 → 100 teqlik paketi bazında:**
 
 | İşlem | Maliyet | ₺149,99 Paketi ile |
 |-------|---------|-------------------|
-| AI Açıklama (5 TEQLik) | ₺7,50 | 20 üretim |
-| Blast / Kitle Bildirimi (10 TEQLik) | ₺15,00 | 10 gönderim |
-| İlan Yenileme (10 TEQLik) | ₺15,00 | 10 yenileme |
-| İlan Boost (50 TEQLik) | ₺75,00 | 2 boost |
+| AI Açıklama (5 teqlik) | ₺7,50 | 20 üretim |
+| Blast / Kitle Bildirimi (10 teqlik) | ₺15,00 | 10 gönderim |
+| İlan Yenileme (10 teqlik) | ₺15,00 | 10 yenileme |
+| İlan Boost (50 teqlik) | ₺75,00 | 2 boost |
 
 ---
 
@@ -107,7 +107,7 @@ Kullanıcı fiyatı = 1 TL / 0.85 = 1.176 TL/TEQLik
 ### 3.1 Zorunlu Kurallar (İhlali = Red)
 
 **Kural 3.1.1 — Zorunlu IAP:**
-- TEQlik dijital özellik kilidi açtığı için Apple IAP **zorunlu**
+- teqlik dijital özellik kilidi açtığı için Apple IAP **zorunlu**
 - Ekranda asla şu ibareler yer alamaz:
   - "Web sitemizden daha ucuza alın"
   - "Kredi kartı / havale ile öde"
@@ -124,7 +124,7 @@ Kullanıcı fiyatı = 1 TL / 0.85 = 1.176 TL/TEQLik
 
 **Zorunlu Yasal Footer (App Review arar):**
 ```
-Satın alınan TEQlik'ler nakde çevrilemez veya devredilemez. 
+Satın alınan teqlik'ler nakde çevrilemez veya devredilemez. 
 Satın alımlar Apple Kimliği hesabınız üzerinden faturalandırılır.
 [Kullanım Koşulları]  [Gizlilik Politikası]
 ```
@@ -237,30 +237,30 @@ Apple bir satın alımı geri alabilir (`REFUND` App Store Server Notification).
 │  AppBar: Cüzdanım         [İşlem Geçmişi]    │
 ├──────────────────────────────────────────────┤
 │  Hero Balance Card (altın gradyan)           │
-│  • Bakiye: 140 TEQLik  [PRO rozeti]          │
+│  • Bakiye: 140 teqlik  [PRO rozeti]          │
 │  • Bakiye yüklenince sayı yukarı sayar       │
 ├──────────────────────────────────────────────┤
-│  [ TEQLik Yükle ] | [ İşlem Geçmişi ]       │
+│  [ teqlik Yükle ] | [ İşlem Geçmişi ]       │
 ├──────────────────────────────────────────────┤
 │  2 sütunlu paket grid (4 kart)               │
 │  ┌──────────────┐  ┌──────────────┐         │
-│  │  100 TEQLik  │  │ 🔥 EN POPÜLER│         │
-│  │   ₺149,99    │  │  300 TEQLik  │         │
+│  │  100 teqlik  │  │ 🔥 EN POPÜLER│         │
+│  │   ₺149,99    │  │  300 teqlik  │         │
 │  │              │  │   ₺429,99    │         │
 │  │              │  │  (+50 Bonus) │         │
 │  └──────────────┘  └──────────────┘         │
 │  ┌──────────────┐  ┌──────────────┐         │
-│  │💎 EN İYİ DEĞ.│  │ 1500 TEQLik  │         │
-│  │  700 TEQLik  │  │   ₺2.199,99  │         │
+│  │💎 EN İYİ DEĞ.│  │ 1500 teqlik  │         │
+│  │  700 teqlik  │  │   ₺2.199,99  │         │
 │  │   ₺999,99    │  │ (+400 Bonus) │         │
 │  │ (+150 Bonus) │  │              │         │
 │  └──────────────┘  └──────────────┘         │
 ├──────────────────────────────────────────────┤
-│  "TEQLik ile neler yapabilirsin?"            │
-│  ⚡ 50 TEQLik = 1 İlan Boost                 │
-│  📣 10 TEQLik = Kitle Bildirimi (Blast)      │
-│  🤖 5 TEQLik  = AI Açıklama                  │
-│  🔄 10 TEQLik = İlan Yenileme                │
+│  "teqlik ile neler yapabilirsin?"            │
+│  ⚡ 50 teqlik = 1 İlan Boost                 │
+│  📣 10 teqlik = Kitle Bildirimi (Blast)      │
+│  🤖 5 teqlik  = AI Açıklama                  │
+│  🔄 10 teqlik = İlan Yenileme                │
 ├──────────────────────────────────────────────┤
 │  [Yasal footer — zorunlu Apple metni]        │
 └──────────────────────────────────────────────┘
@@ -291,7 +291,7 @@ Apple bir satın alımı geri alabilir (`REFUND` App Store Server Notification).
       ├─► [200 OK]  ──► Haptic Heavy + Konfeti animasyonu
       │                 Bakiye sayacı yukarı sayar
       │                 CreditsChangedEvent fire edilir
-      │                 TeqSnackBar: "300 TEQLik yüklendi!"
+      │                 TeqSnackBar: "300 teqlik yüklendi!"
       │
       └─► [Ağ Hatası / Gecikme] ──► StoreKit kuyruğa alır
                                    "Ödemeniz güvende, kontrol ediliyor."
@@ -342,38 +342,56 @@ Apple bir satın alımı geri alabilir (`REFUND` App Store Server Notification).
 
 ---
 
-## 8. TEQLik Ekosistem Haritası & Genişleme Alanları
+## 8. teqlik Ekosistem Haritası & Genişleme Alanları
 
-### 8.1 Mevcut TEQLik Kullanım Alanları
+### 8.1 Mevcut teqlik Kullanım Alanları
 
 | Alan | Ekran | Maliyet | Durum |
 |------|-------|---------|-------|
-| AI Açıklama | İlan Ver (create_listing_screen) | 5 TEQLik | ✅ Aktif |
-| İlan Yenileme | İlan Detay + Profil toggle | 10 TEQLik | ✅ Aktif |
-| Blast / Kitle Bildirimi | İlan Detay | 10 TEQLik | ✅ Aktif |
-| İlan Boost (Öne Çıkarma) | İlan Detay | 50 TEQLik | ✅ Aktif |
+| AI Açıklama | İlan Ver (create_listing_screen) | 5 teqlik | ✅ Aktif |
+| İlan Yenileme | İlan Detay + Profil toggle | 10 teqlik | ✅ Aktif |
+| Blast / Kitle Bildirimi | İlan Detay | 10 teqlik | ✅ Aktif |
+| İlan Boost (Öne Çıkarma) | İlan Detay | 50 teqlik | ✅ Aktif |
 
-### 8.2 Hediye (Gift) Sistemi — Endüstri Analizi
+### 8.2 Hediye (Gift) Sistemi — Planlı Özellik
 
-**Konsept:** Kullanıcı A, kullanıcı B'ye TEQLik gönderir (örn. "Çok beğendim, boost yap" hediyesi).
+**Konsept:** Kullanıcı A, kullanıcı B'ye teqlik gönderir (örn. bir satıcıya "teşekkür" veya "boost yap" desteği).
 
-**Endüstri pratikleri:**
-- **OfferUp "Props":** Satıcıya beğeni/saygı gönderme — ancak parasal değer taşımıyor, sembolik
-- **Etsy Gift Cards:** Harici hediye kartı sistemi; in-app transfer yok
-- **Depop / Vinted:** Kullanıcılar arası para transferi yok; ödeme yalnızca satış üzerinden
-- **Facebook Marketplace:** Kullanıcı arası transfer yok
+**Apple IAP perspektifi:** Hediye transferi yeni bir Apple IAP satın alımı DEĞİLdir — halihazırda satın alınmış teqlik bakiyesinin kullanıcılar arasında aktarılmasıdır. Apple bunu yasaklamıyor; App Review kılavuzlarında "transferable virtual currency" özel bir kısıt içermiyor.
 
-**Risk analizi:**
-- ✅ Sosyal etkileşimi artırır, elde tutma (retention) yükseltir
-- ❌ Sahte hesap döngüsü riski: kullanıcı A kendi B hesabına gönderir, iade gibi kullanır
-- ❌ Apple perspektifi: Kullanıcılar arası transferable virtual currency → App Review ek dikkat gerektirir
-- ❌ Para transferi regülasyonu riski (BDDK, MASAK) — Türkiye'de sanal para transferi düzenleyici belirsizlik
+**Endüstri notu:** Kullanıcılar arası sanal para hediyesi classified/marketplace uygulamalarında nadir — çoğu uygulama bunu desteklemiyor. Bu, teqlik için differentiating bir özellik.
 
-**Karar önerisi — V1.0 dışında tut.** Hediye sistemi regülasyon riski ve sahte kullanım karmaşıklığı nedeniyle ilk versiyona eklenmemeli. V2.0 roadmap'e alınabilir, ancak hukuki değerlendirme şart.
+**Tasarım gereksinimleri:**
 
-### 8.3 İlan Ver Ekranında Ek TEQLik Noktaları
+```
+Kullanıcı B'nin profili / ilan detayı
+  [Hediye Gönder 🎁]
+       │
+       ▼
+  Miktar seç: [10] [25] [50] [100] veya özel giriş
+  "Gönderilecek: 50 teqlik"
+       │
+       ▼
+  [Onayla] → Bakiye kontrol → Transfer → Bildirim
+```
 
-**Mevcut:** AI Açıklama (5 TEQLik) — create_listing_screen'de aktif.
+**Akış:**
+- Gönderen: bakiyeden düşülür, işlem geçmişine "Hediye gönderildi → @kullanıcıB" yazılır
+- Alan: bakiyeye eklenir, bildirim: "@kullanıcıA sana 50 teqlik hediye gönderdi!"
+
+**Risk azaltma kuralları (zorunlu):**
+- Minimum hediye: 10 teqlik
+- Maksimum günlük gönderim: 200 teqlik / kullanıcı (döngüsel kullanımı engeller)
+- Alıcı sadece **aynı gün içinde alınan hediyeyi** transfer edemez (24s bekleme — self-transfer döngüsünü kırar)
+- Backend: `gift_transactions` tablosu, `giver_id + receiver_id + created_at` loglama
+
+**BDDK/MASAK notu:** Sanal oyun parası gibi kapalı ekosistem kurrencies Türkiye'de ödeme aracı sayılmıyor. Ancak bu konu hukuki belirsizlik taşıdığından, hediye sistemi açıldığında bir hukuki görüş alınması tavsiye edilir.
+
+**Scope:** Hediye sistemi teqlik satın alma akışına bağımlı değil — backend tek endpoint, bağımsız geliştirilebilir. V1.1 veya V2.0 planlanabilir.
+
+### 8.3 İlan Ver Ekranında Ek teqlik Noktaları
+
+**Mevcut:** AI Açıklama (5 teqlik) — create_listing_screen'de aktif.
 
 **Endüstri pratiklerinden:**
 - **Sahibinden.com:** İlan oluşturma sırasında "Öne Çıkar" seçeneği (kredi gerektirir)
@@ -385,7 +403,7 @@ Apple bir satın alımı geri alabilir (`REFUND` App Store Server Notification).
 İlanını Oluştur → Özet Ekranı
   ┌─────────────────────────────────────┐
   │  ✨ İlanını hemen öne çıkar         │
-  │  50 TEQLik ile ilk 24 saat vitrin  │
+  │  50 teqlik ile ilk 24 saat vitrin  │
   │  [Ekle]          [Geç]             │
   └─────────────────────────────────────┘
 ```
@@ -398,7 +416,7 @@ Apple bir satın alımı geri alabilir (`REFUND` App Store Server Notification).
 
 | Ürün Tipi | Kullanım | Apple Komisyonu |
 |-----------|---------|----------------|
-| Consumable | TEQLik paketleri | **%30 her zaman** (SBP: %15) |
+| Consumable | teqlik paketleri | **%30 her zaman** (SBP: %15) |
 | Auto-Renewable Subscription | PRO üyelik | **%30 yıl 1 → %15 yıl 2+** |
 
 > Auto-Renewable Subscription, abonelik 1 yılı geçince Apple otomatik olarak %15'e geçiyor. Consumable için bu indirim yok. PRO üyelik için subscription modeli hem Apple açısından daha avantajlı hem de iş modeli açısından öngörülebilir gelir sağlıyor.
@@ -420,14 +438,30 @@ Apple bir satın alımı geri alabilir (`REFUND` App Store Server Notification).
 | YouTube Premium | ~₺49,99 |
 | LinkedIn Career | ~₺249,99 |
 
-**Önerilen PRO Paket Yapısı:**
+**PRO Fiyat Metodolojisi — teqlik değeri üzerinden:**
 
-| Plan | App Store Fiyatı | Net Gelir (%30) | Avantajlar |
-|------|-----------------|----------------|-----------|
-| 1 Ay | **₺99,99** | ₺69,99 | — |
-| 3 Ay | **₺269,99** | ₺188,99 | %10 indirim |
-| 6 Ay | **₺499,99** | ₺349,99 | %17 indirim |
-| 12 Ay | **₺899,99** | ₺629,99 | %25 indirim |
+PRO'nun aylık sunduğu teqlik tasarrufu (30% komisyon senaryosunda iOS fiyatlarıyla):
+
+| Özellik | Standart ücreti | PRO tasarrufu |
+|---------|----------------|--------------|
+| +4 ekstra yenileme/ay | 4 × 10 teqlik × ₺1,43 | **₺57,20** |
+| +3 blast/ay | 3 × 10 teqlik × ₺1,43 | **₺42,90** |
+| **Toplam aylık teqlik değeri** | **70 teqlik** | **₺100,10** |
+
+> **Sonuç:** PRO ₺99,99'dan fiyatlanırsa kullanıcı "neredeyse sıfır kazanıyor" — abonelik yerine teqlik almak aynı şey. PRO en az %15-20 avantaj sunmalı ki karar net olsun. **Doğru anchor: ₺79,99/ay.** Kullanıcı aylık ₺20 kazanıyor, üstüne rozet + analitik + öncelik geliyor.
+
+**Önerilen PRO Paket Yapısı (Revize):**
+
+| Plan | App Store Fiyatı | Aylık maliyet | Net Gelir (%30) | Net Gelir (%15 SBP) | İndirim |
+|------|-----------------|--------------|----------------|--------------------|----|
+| 1 Ay | **₺79,99** | ₺79,99 | ₺55,99 | ₺67,99 | — |
+| 3 Ay | **₺214,99** | ₺71,66 | ₺150,49 | ₺182,74 | %10,4 |
+| 6 Ay | **₺389,99** | ₺65,00 | ₺272,99 | ₺331,49 | %18,7 |
+| 12 Ay | **₺679,99** | ₺56,67 | ₺475,99 | ₺577,99 | %29,2 |
+
+> **Neden ₺79,99 değil ₺99,99:** teqlik eşdeğeri aylık ₺100,10 — ₺99,99 ile fiyatlamak "başabaş" demek, kullanıcı neden abone olsun ki? ₺79,99 net bir kazanım mesajı veriyor: "PRO al, aylık ₺20 artı tasarruf et." Türkiye'de Spotify ₺39,99, YouTube ₺49,99 — ₺79,99 bu anchors'ların biraz üstünde ama PRO bir iş aracı, eğlence değil.
+
+> **Yıllık paket önerisi:** ₺679,99 = aylık ₺56,67 → ₺79,99'a göre %29 indirim. Standart endüstri pratiği yıllık için %25-30 indirim. Bu doğru aralıkta.
 
 **PRO Üye Avantajları (Öneri):**
 
@@ -440,32 +474,32 @@ Apple bir satın alımı geri alabilir (`REFUND` App Store Server Notification).
 | İstatistik / Analytics | Temel | Detaylı (görüntülenme, tıklama) |
 | Müşteri desteği | Standart | Öncelikli |
 
-> **App Store Connect'te iki ayrı ürün grubu gerekiyor:** Consumable grubu (TEQLik paketleri) + Auto-Renewable Subscription grubu (PRO planlar). Her grup ayrı Apple onayından geçiyor.
+> **App Store Connect'te iki ayrı ürün grubu gerekiyor:** Consumable grubu (teqlik paketleri) + Auto-Renewable Subscription grubu (PRO planlar). Her grup ayrı Apple onayından geçiyor.
 
 ### 8.5 Tüm Gelir Akışı Haritası (V1.0 + V2.0)
 
 ```
 TEQLif Gelir Akışı
-├── Consumable IAP (TEQLik paketleri)
-│    ├── 100 TEQLik — ₺149,99
-│    ├── 300 TEQLik +50 bonus — ₺429,99  
-│    ├── 700 TEQLik +150 bonus — ₺999,99
-│    └── 1500 TEQLik +400 bonus — ₺2.199,99
+├── Consumable IAP (teqlik paketleri)
+│    ├── 100 teqlik — ₺149,99
+│    ├── 300 teqlik +50 bonus — ₺429,99  
+│    ├── 700 teqlik +150 bonus — ₺999,99
+│    └── 1500 teqlik +400 bonus — ₺2.199,99
 │
 ├── Auto-Renewable Subscription (PRO)         ← V2.0
-│    ├── 1 Ay — ₺99,99
-│    ├── 3 Ay — ₺269,99
-│    ├── 6 Ay — ₺499,99
-│    └── 12 Ay — ₺899,99
+│    ├── 1 Ay — ₺79,99
+│    ├── 3 Ay — ₺214,99
+│    ├── 6 Ay — ₺389,99
+│    └── 12 Ay — ₺679,99
 │
-├── TEQLik Harcama Noktaları
-│    ├── AI Açıklama (5 TEQLik) — create_listing_screen ✅
-│    ├── İlan Yenileme (10 TEQLik) ✅
-│    ├── Blast / Kitle Bildirimi (10 TEQLik) ✅
-│    ├── İlan Boost (50 TEQLik) ✅
-│    └── Başlangıç Boost (ilan oluşturulurken, 50 TEQLik) ← V1.1
+├── teqlik Harcama Noktaları
+│    ├── AI Açıklama (5 teqlik) — create_listing_screen ✅
+│    ├── İlan Yenileme (10 teqlik) ✅
+│    ├── Blast / Kitle Bildirimi (10 teqlik) ✅
+│    ├── İlan Boost (50 teqlik) ✅
+│    └── Başlangıç Boost (ilan oluşturulurken, 50 teqlik) ← V1.1
 │
-└── Hediye Sistemi (kullanıcılar arası)       ← V3.0 (hukuki değerlendirme şart)
+└── Hediye Sistemi (kullanıcılar arası)       ← V1.1/V2.0 — hukuki görüş al
 ```
 
 ---
@@ -475,15 +509,16 @@ TEQLif Gelir Akışı
 | Konu | Karar |
 |------|-------|
 | Apple komisyon senaryosu | Small Business (%15) için başvur; fallback %30 |
-| Başlangıç paketi fiyatı (%30) | **₺149,99 → 100 TEQLik** |
-| Başlangıç paketi fiyatı (%15) | **₺119,99 → 100 TEQLik** |
-| Efektif TEQLik/TL oranı | ₺1,43 (%30) veya ₺1,18 (%15) |
-| TEQLik IAP ürün tipi | **Consumable** |
+| Başlangıç paketi fiyatı (%30) | **₺149,99 → 100 teqlik** |
+| Başlangıç paketi fiyatı (%15) | **₺119,99 → 100 teqlik** |
+| Efektif teqlik/TL oranı | ₺1,43 (%30) veya ₺1,18 (%15) |
+| teqlik IAP ürün tipi | **Consumable** |
 | PRO üyelik IAP ürün tipi | **Auto-Renewable Subscription** (V2.0) |
 | Backend doğrulama | App Store Server API v2 JWS |
 | Refund politikası V1.0 | Log kaydı, bakiye değişimi yok |
 | Android | V1.0 kapsamı dışı |
 | Tab yapısı | Tab 1: Mağaza, Tab 2: İşlem Geçmişi |
-| Hediye sistemi | V3.0 — hukuki değerlendirme şart |
+| Hediye sistemi | V1.1/V2.0 — planlı, hukuki görüş önerilir |
 | Başlangıç Boost (İlan Ver'de) | V1.1 — yüksek öncelik |
-| PRO planlar | V2.0 — aylık ₺99,99 / 3 ay ₺269,99 / 6 ay ₺499,99 / 12 ay ₺899,99 |
+| PRO anchor fiyatı | **₺79,99/ay** (₺99,99 değil — teqlik eşdeğeri ₺100, başabaş kabul edilemez) |
+| PRO planlar | V2.0 — 1ay ₺79,99 / 3ay ₺214,99 / 6ay ₺389,99 / 12ay ₺679,99 |
