@@ -46,3 +46,11 @@ class ValidationErrorEvent {
 class CreditsChangedEvent {
   const CreditsChangedEvent();
 }
+
+/// İlan aktif/pasif durumu değiştiğinde fırlatılır.
+/// _MyListingsScreenState bu event'i dinleyerek listesini günceller.
+class ListingStatusChangedEvent {
+  final int listingId;
+  final bool isActive;
+  const ListingStatusChangedEvent({required this.listingId, required this.isActive});
+}

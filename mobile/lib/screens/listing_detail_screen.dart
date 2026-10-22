@@ -423,6 +423,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
         TeqSnackBar.show(message: newActive ? loc.t("listingActivated") : loc.t("listingDeactivated"),
           type: TeqSnackBarType.success,
         );
+        eventBus.fire(ListingStatusChangedEvent(listingId: id, isActive: newActive));
         if (newActive) eventBus.fire(const CreditsChangedEvent());
       } else if (resp['statusCode'] == 402 && mounted) {
         TeqSnackBar.show(message: loc.t("listingReactivateInsufficientBalance"), type: TeqSnackBarType.error);

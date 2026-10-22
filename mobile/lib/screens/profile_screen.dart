@@ -3,6 +3,7 @@ import '../ui_library/components/overlays/teq_toast.dart';
 import '../ui_library/components/overlays/credit_gate_sheet.dart';
 import '../models/credit_gate_data.dart';
 import '../services/localization_service.dart';
+import '../core/event_bus.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -2857,6 +2858,7 @@ class _MyListingsScreenState extends ConsumerState<_MyListingsScreen> {
   bool _hasMore = true;
   int _offset = 0;
   final ScrollController _scrollController = ScrollController();
+  StreamSubscription<ListingStatusChangedEvent>? _statusSub;
 
   ListingFilterState _filter = const ListingFilterState();
 
@@ -2872,10 +2874,18 @@ class _MyListingsScreenState extends ConsumerState<_MyListingsScreen> {
         }
       }
     });
+    _statusSub = eventBus.on<ListingStatusChangedEvent>().listen((e) {
+      if (!mounted) return;
+      // Bu tab'ın gösterdiği durumla artık eşleşmiyorsa listeden kaldır.
+      if (e.isActive != widget.active) {
+        setState(() => _listings.removeWhere((l) => l['id'] == e.listingId));
+      }
+    });
   }
 
   @override
   void dispose() {
+    _statusSub?.cancel();
     _scrollController.dispose();
     super.dispose();
   }
