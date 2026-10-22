@@ -42,6 +42,7 @@ from app.core.exceptions import (
     AIServiceBusyException,
 )
 from app.services import credit_service
+from app.services.credit_service import CreditFeature
 from app.core.read_cache import cache_get, cache_set
 from app.utils.redis_client import get_redis
 
@@ -497,9 +498,9 @@ async def audience_estimate(
     if listing.status != ListingStatus.ACTIVE:
         raise ListingNotActiveException()
 
-    cap   = credit_service.per_op_cap("blast", current_user.user_type == 'pro')
-    limit = credit_service.free_limit("blast", current_user.user_type == 'pro')
-    used  = await credit_service.get_used("blast", current_user.id, current_user.premium_since)
+    cap   = credit_service.per_op_cap(CreditFeature.BLAST, current_user.user_type)
+    limit = credit_service.free_limit(CreditFeature.BLAST, current_user.user_type)
+    used  = await credit_service.get_used(CreditFeature.BLAST, current_user.id, current_user.premium_since)
     credits_remaining = max(0, limit - used)
 
     candidate_ids = await _build_listing_audience(
@@ -522,7 +523,7 @@ async def audience_estimate(
     actual_cap     = min(reachable, cap)
     free_used      = min(credits_remaining, actual_cap)
     paid_count     = actual_cap - free_used
-    estimated_cost = paid_count * credit_service.cost_teqlik("blast")
+    estimated_cost = paid_count * credit_service.cost_teqlik(CreditFeature.BLAST)
 
     return {
         "audience_size":           reachable,
@@ -693,18 +694,23 @@ class GenerateDescriptionRequest(BaseModel):
 async def ai_desc_credits(current_user: User = Depends(get_current_user)):
     """PRO kullanıcının bu ayki AI açıklama yazarı kredi durumunu döndürür."""
     if current_user.user_type != 'pro':
-        return {"used": 0, "limit": 0, "remaining": 0, "user_type": "standard", "renewal_date": None}
-    used  = await credit_service.get_used("ai_desc", current_user.id, current_user.premium_since)
-    limit = credit_service.free_limit("ai_desc", is_premium=True)
+        return {
+            "used": 0, "limit": 0, "remaining": 0,
+            "cost_teqlik": credit_service.cost_teqlik(CreditFeature.AI_DESC),
+            "user_type": "standard", "renewal_date": None,
+        }
+    used  = await credit_service.get_used(CreditFeature.AI_DESC, current_user.id, current_user.premium_since)
+    limit = credit_service.free_limit(CreditFeature.AI_DESC, current_user.user_type)
     remaining = max(0, limit - used)
     renewal_date: str | None = None
     if current_user.premium_since:
         renewal_date = credit_service.next_billing_date(current_user.premium_since).isoformat()
     return {
-        "used": used,
-        "limit": limit,
-        "remaining": remaining,
-        "user_type": "pro",
+        "used":       used,
+        "limit":      limit,
+        "remaining":  remaining,
+        "cost_teqlik": credit_service.cost_teqlik(CreditFeature.AI_DESC),
+        "user_type":  "pro",
         "renewal_date": renewal_date,
     }
 
@@ -727,10 +733,10 @@ async def generate_description(
     logger.info("[API] /generate-description user_id=%s title=%r", current_user.id, body.title[:60])
 
     # ── TEQlik / PRO kredi ön kontrolü ──────────────────────────────────────────
-    _ai_desc_cost  = credit_service.cost_teqlik("ai_desc")
-    _ai_desc_limit = credit_service.free_limit("ai_desc", is_premium=True)
+    _ai_desc_cost  = credit_service.cost_teqlik(CreditFeature.AI_DESC)
+    _ai_desc_limit = credit_service.free_limit(CreditFeature.AI_DESC, current_user.user_type)
     if current_user.user_type == 'pro':
-        ai_used = await credit_service.get_used("ai_desc", current_user.id, current_user.premium_since)
+        ai_used = await credit_service.get_used(CreditFeature.AI_DESC, current_user.id, current_user.premium_since)
         if ai_used >= _ai_desc_limit and current_user.teqlik_balance < _ai_desc_cost:
             raise InsufficientFundsException(code="MONTHLY_LIMIT_INSUFFICIENT_FUNDS")
     else:
@@ -752,10 +758,17 @@ async def generate_description(
     description, provider = await generate_via_proxy(params)
 
     # ── Kredi düş (başarılı yanıt sonrası) ───────────────────────────────────
+    # NOT: Bu blok exception fırlatırsa 500 döner ve description teslim edilmez.
+    # Sessiz yutma kasıtlı olarak kaldırıldı (A-01): kredi düşürülemeyen açıklama
+    # ücretsiz teslim edilmemelidir.
     teqlik_spent = 0
     try:
+        # Redis sayacı tüm kullanıcı tipleri için artırılır (abuse detection / analitik).
+        # PRO için ücretsiz limit hesabında kullanılır; standart için yalnızca iz bırakır.
+        ai_used_new = await credit_service.increment(
+            CreditFeature.AI_DESC, current_user.id, current_user.premium_since
+        )
         if current_user.user_type == 'pro':
-            ai_used_new = await credit_service.increment("ai_desc", current_user.id, current_user.premium_since)
             if ai_used_new > _ai_desc_limit:
                 await db.execute(
                     sql_text("UPDATE users SET teqlik_balance = GREATEST(0, teqlik_balance - :cost) WHERE id = :uid"),
@@ -773,7 +786,8 @@ async def generate_description(
             await db.commit()
             teqlik_spent = _ai_desc_cost
     except Exception as exc:
-        logger.error("[AI Desc] Kredi sayma başarısız: %s", exc)
+        logger.error("[AI Desc] Kredi düşürme başarısız — açıklama teslim edilmiyor: %s", exc)
+        raise
 
     logger.info("[API] /generate-description done | provider=%s teqlik_spent=%d", provider, teqlik_spent)
     return {"description": description, "provider": provider, "teqlik_spent": teqlik_spent}
@@ -818,17 +832,17 @@ async def send_mass_notification(
     if listing.status != ListingStatus.ACTIVE:
         raise ListingNotActiveException()
 
-    cap   = credit_service.per_op_cap("blast", current_user.user_type == 'pro')
-    limit = credit_service.free_limit("blast", current_user.user_type == 'pro')
-    used  = await credit_service.get_used("blast", current_user.id, current_user.premium_since)
+    cap   = credit_service.per_op_cap(CreditFeature.BLAST, current_user.user_type)
+    limit = credit_service.free_limit(CreditFeature.BLAST, current_user.user_type)
+    used  = await credit_service.get_used(CreditFeature.BLAST, current_user.id, current_user.premium_since)
     credits_remaining = max(0, limit - used)
 
     desired = body.recipient_count or cap
-    max_paid_authorized = body.estimated_cost // credit_service.cost_teqlik("blast")
+    max_paid_authorized = body.estimated_cost // credit_service.cost_teqlik(CreditFeature.BLAST)
     actual_count = min(desired, credits_remaining + max_paid_authorized, cap)
     free_used    = min(credits_remaining, actual_count)
     paid_count   = actual_count - free_used
-    teqlik_cost    = paid_count * credit_service.cost_teqlik("blast")
+    teqlik_cost    = paid_count * credit_service.cost_teqlik(CreditFeature.BLAST)
 
     if teqlik_cost > 0 and current_user.teqlik_balance < teqlik_cost:
         raise InsufficientFundsException()
@@ -908,7 +922,7 @@ async def send_mass_notification(
     await db.commit()
 
     if free_used > 0:
-        await credit_service.increment("blast", current_user.id, current_user.premium_since, count=free_used)
+        await credit_service.increment(CreditFeature.BLAST, current_user.id, current_user.premium_since, count=free_used)
 
     logging.getLogger(__name__).info(
         "[MassNotif] Gönderildi | seller=%d | listing=%d | sent=%d | free=%d | paid=%d | cost=%d TEQlik",

@@ -28,6 +28,8 @@ import '../utils/number_formatter.dart';
 
 import '../ui_library/components/overlays/teq_snackbar.dart';
 import '../ui_library/components/overlays/teq_bottom_sheet.dart';
+import '../ui_library/components/overlays/credit_gate_sheet.dart';
+import '../models/credit_gate_data.dart';
 import '../utils/snackbar_helper.dart';
 import '../ui_library/components/inputs/teq_multi_select.dart';
 import '../ui_library/components/inputs/teq_text_field.dart';
@@ -270,6 +272,20 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
       TeqSnackBar.show(message: loc.t('createNeedAllFieldsNew'), type: TeqSnackBarType.warning);
       return;
     }
+
+    // Ücretli kullanım öncesi onay: standart her zaman, PRO kredi bitince
+    final creditsLeft = _aiDescCreditsRemaining ?? 0;
+    final needsConfirm = !_isPro || creditsLeft <= 0;
+    if (needsConfirm && mounted) {
+      final result = await CreditGateSheet.show(
+        context: context,
+        ref: ref,
+        feature: CreditFeature.aiDesc,
+      );
+      if (!mounted) return;
+      if (!result.success) return;
+    }
+
     setState(() {
       _skipAnimation = false;
       _descCtrl.text = '';
@@ -1311,6 +1327,11 @@ class _AiDescButton extends ConsumerWidget {
                     _CreditBadge(
                         remaining: creditsRemaining,
                         suffix: loc.t('aiCreditsLeftSuffix')),
+                  ] else ...[
+                    const SizedBox(width: 8),
+                    _CreditBadge(
+                        remaining: 0,
+                        suffix: loc.t('aiDescCostBadge')),
                   ],
                 ],
         ),

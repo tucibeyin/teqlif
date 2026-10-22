@@ -4,6 +4,7 @@ from app.core.exceptions import NotFoundException
 from app.models.listing import Listing
 from app.models.user import User
 from app.services import credit_service
+from app.services.credit_service import CreditFeature
 
 
 class GetReactivationCostQuery:
@@ -21,11 +22,11 @@ class GetReactivationCostQuery:
 
         within_window = created_at > (datetime.now(timezone.utc) - timedelta(days=30))
 
-        reactivation_cost = credit_service.cost_teqlik("reactivation")
+        reactivation_cost = credit_service.cost_teqlik(CreditFeature.REACTIVATION)
 
         if current_user.user_type == 'pro':
-            used = await credit_service.get_used("reactivation", current_user.id, current_user.premium_since)
-            free_limit = credit_service.free_limit("reactivation", is_premium=True)
+            used = await credit_service.get_used(CreditFeature.REACTIVATION, current_user.id, current_user.premium_since)
+            free_limit = credit_service.free_limit(CreditFeature.REACTIVATION, current_user.user_type)
             remaining = max(0, free_limit - used)
             renewal_date: str | None = (
                 credit_service.next_billing_date(current_user.premium_since).isoformat()

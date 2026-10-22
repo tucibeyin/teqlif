@@ -170,13 +170,22 @@
   "giftNameDiamond": "ماس",
   "giftNameCrown": "تاج ملكي",
   "giftSentHud": "🎉 أرسل {sender} هدية!",
-  "@giftSentHud": {
-    "placeholders": {
-      "sender": {
-        "type": "String"
-      }
-    }
-  },
+  "@giftSentHud": [
+    [
+      "placeholders",
+      [
+        [
+          "sender",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "giftErrorGeneric": "حدث خطأ.",
   "giftInsufficientBalance": "رصيد غير كاف. شراء teqlik لإرسال هدية.",
   "giftLoadBalanceButton": "شحن الرصيد",
@@ -191,13 +200,22 @@
   "errorListingsLoad": "تعذّر تحميل الإعلانات",
   "errorOperationFailed": "تعذّر إتمام العملية.",
   "errorCoHostDuringCall": "دعاك @{hostUsername} إلى المسرح، لكن تم الرفض لأنك في مكالمة.",
-  "@errorCoHostDuringCall": {
-    "placeholders": {
-      "hostUsername": {
-        "type": "String"
-      }
-    }
-  },
+  "@errorCoHostDuringCall": [
+    [
+      "placeholders",
+      [
+        [
+          "hostUsername",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "errorCallHistoryLoad": "تعذّر تحميل سجل المكالمات. يرجى المحاولة مرة أخرى.",
   "errorPhotoUpload": "تعذّر رفع الصورة. حاول مجدداً.",
   "errorCaptchaFailed": "فشل التحقق الأمني. يرجى المحاولة مجدداً.",
@@ -214,13 +232,22 @@
   "homeAppBarTitle": "الإعلانات",
   "homeSearchingHeader": "جارٍ البحث...",
   "homeResultsCount": "تم العثور على {count} إعلان",
-  "@homeResultsCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@homeResultsCount": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "searchUserHint": "ابحث عن مستخدم...",
   "searchNoUser": "لم يُعثر على مستخدم",
   "searchLiveStreams": "البثوث المباشرة",
@@ -309,13 +336,22 @@
   "followBtnFollow": "متابعة",
   "pubProfileUserNotFound": "لم يُعثر على المستخدم",
   "pubProfileListingsCount": "إعلاناته ({count})",
-  "@pubProfileListingsCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@pubProfileListingsCount": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "pubProfileStatListings": "الإعلانات",
   "pubProfileStatFollowers": "المتابعون",
   "pubProfileStatFollowing": "المتابَعون",
@@ -339,41 +375,83 @@
   "ratingSaveFailed": "تعذّر حفظ التقييم",
   "ratingReviews": "التقييمات",
   "ratingCount": "{count} تقييم",
-  "@ratingCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@ratingCount": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "ratingStarCount": "({count} تقييم)",
-  "@ratingStarCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@ratingStarCount": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "createListingPhotoCount": "الصور ({count}/{max})",
-  "@createListingPhotoCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      },
-      "max": {
-        "type": "int"
-      }
-    }
-  },
+  "@createListingPhotoCount": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "max",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "createListingSelectOption": "-- اختر --",
   "createListingPhotoUploadFailed": "تعذّر رفع الصورة: {error}",
-  "@createListingPhotoUploadFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
+  "@createListingPhotoUploadFailed": [
+    [
+      "placeholders",
+      [
+        [
+          "error",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "createListingConnError": "خطأ في الاتصال. يرجى المحاولة مجدداً.",
   "notifSettingsMessagesTitle": "الرسائل",
   "notifSettingsMessagesDesc": "عند وصول رسالة مباشرة جديدة",
@@ -447,13 +525,22 @@
   "liveConnectingViewer": "جارٍ الاتصال بالبث...",
   "livePermissionRequired": "مطلوب إذن الكاميرا والميكروفون",
   "liveViewersTitle": "👁 المشاهدون ({count})",
-  "@liveViewersTitle": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@liveViewersTitle": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "liveNoViewers": "لا يوجد مشاهدون بعد",
   "streamViewerMuted": "مكتوم الصوت",
   "liveEndStreamTitle": "إنهاء البث",
@@ -470,21 +557,39 @@
   "liveCameraClosed": "الكاميرا مغلقة",
   "liveWaitingVideo": "في انتظار الفيديو...",
   "liveModDemotedSelf": "تم إلغاء صلاحيات الإشراف بواسطة @{username}.",
-  "@liveModDemotedSelf": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@liveModDemotedSelf": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "liveModPromotedSelf": "⭐ جعلك @{username} مشرفاً! يمكنك الآن إدارة المشاهدين.",
-  "@liveModPromotedSelf": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@liveModPromotedSelf": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "modTitle": "🛡 الإشراف",
   "modMute": "كتم",
   "modUnmute": "إلغاء الكتم",
@@ -492,65 +597,128 @@
   "modDemote": "إلغاء الإشراف",
   "modKick": "طرد من البث",
   "modMutedMsg": "تم كتم @{username}",
-  "@modMutedMsg": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@modMutedMsg": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "modUnmutedMsg": "تم إلغاء الكتم",
   "modPromotedMsg": "تم تعيين @{username} مشرفاً",
-  "@modPromotedMsg": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@modPromotedMsg": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "modDemotedMsg": "تم إلغاء إشراف @{username}",
-  "@modDemotedMsg": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@modDemotedMsg": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "modKickedMsg": "تم طرد @{username} من البث",
-  "@modKickedMsg": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@modKickedMsg": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "modPromotedSnack": "⭐ تم تعيين @{username} مشرفاً!",
-  "@modPromotedSnack": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@modPromotedSnack": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "modDemotedSnack": "✖ تم إلغاء إشراف @{username}",
-  "@modDemotedSnack": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@modDemotedSnack": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "chatMessageHint": "اكتب رسالة...",
   "chatMutedHint": "🔇 تم كتمك",
   "chatHistoryTitle": "سجل المحادثة",
   "chatHistoryCount": "آخر {count} رسالة",
-  "@chatHistoryCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@chatHistoryCount": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "auctionTitle": "مزاد علني",
   "auctionBidsHeader": "العروض",
   "auctionAcceptBidTitle": "✅ قبول العرض",
@@ -582,22 +750,40 @@
   "auctionStartBtn": "▶ ابدأ",
   "auctionBidBtn": "قدّم عرضاً",
   "auctionSwipeToBid": "اسحب لتقديم {price}",
-  "@auctionSwipeToBid": {
-    "placeholders": {
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@auctionSwipeToBid": [
+    [
+      "placeholders",
+      [
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "auctionSwipeToBidNoPrice": "اسحب لتقديم عرض",
   "auctionBidReceived": "تم استلام عرضك ₺{amount}!",
-  "@auctionBidReceived": {
-    "placeholders": {
-      "amount": {
-        "type": "String"
-      }
-    }
-  },
+  "@auctionBidReceived": [
+    [
+      "placeholders",
+      [
+        [
+          "amount",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "chatJoinedStream": "انضم إلى البث",
   "auctionMutedBtn": "🔇 تم كتمك",
   "auctionBuyNowTitle": "⚡ اشتر الآن",
@@ -614,32 +800,59 @@
   "auctionApprovalWaitingDesc": "تم إرسال طلب الشراء الفوري إلى المُضيف.",
   "auctionInProgress": "⏳ جارٍ المعالجة",
   "auctionInProgressDesc": "جارٍ إتمام الشراء الفوري مع @{username}.",
-  "@auctionInProgressDesc": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@auctionInProgressDesc": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "auctionInProgressNoBid": "لا يمكنك تقديم عرض حتى تنتهي العملية.",
   "auctionSold": "🛒 مُباع!",
   "auctionBoughtBy": "تم الشراء الفوري بواسطة @{username}",
-  "@auctionBoughtBy": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@auctionBoughtBy": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "auctionBuyNowCongrats": "🎉 تهانينا! اكتمل الشراء.",
   "auctionBuyNowSoldOther": "🛒 تم بيع المنتج فوراً! اشتراه @{buyer}.",
-  "@auctionBuyNowSoldOther": {
-    "placeholders": {
-      "buyer": {
-        "type": "String"
-      }
-    }
-  },
+  "@auctionBuyNowSoldOther": [
+    [
+      "placeholders",
+      [
+        [
+          "buyer",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "auctionBinRejected": "تم رفض طلب الشراء الفوري، المزاد مستمر.",
   "auctionBinRejectedOther": "اكتمل الشراء الفوري، المزاد مستمر.",
   "auctionBuyNowBtn": "⚡ اشتر الآن — ",
@@ -649,21 +862,39 @@
   "auctionCustomAmountHint": "مبلغ مخصص (₺)",
   "auctionFirstBid": "كن أول من يقدّم عرضاً!",
   "auctionHighestBidder": "@{username} صاحب أعلى عرض",
-  "@auctionHighestBidder": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@auctionHighestBidder": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "auctionBidCount": "{count} عرض",
-  "@auctionBidCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@auctionBidCount": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "auctionManualEntry": "إدخال يدوي",
   "auctionFromListings": "من إعلاناتي",
   "auctionNoActiveListings": "لا توجد إعلانات نشطة.",
@@ -672,16 +903,31 @@
   "auctionStartPrice": "سعر البداية (₺)",
   "auctionBuyNowPriceHint": "سعر الشراء الفوري (₺، اختياري)",
   "auctionBuyNowCompleted": "🛒 اكتمل الشراء الفوري! @{buyer} — ₺{price}",
-  "@auctionBuyNowCompleted": {
-    "placeholders": {
-      "buyer": {
-        "type": "String"
-      },
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@auctionBuyNowCompleted": [
+    [
+      "placeholders",
+      [
+        [
+          "buyer",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ],
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "offerHistory": "سجل العروض",
   "offerAmountHint": "مبلغ العرض (₺)",
   "offerBtn": "قدّم عرضاً",
@@ -747,13 +993,22 @@
   "walletTxnStreamGiftReceived": "هدية بث مستلمة",
   "walletTxnDailyLogin": "مكافأة الدخول اليومي",
   "walletSeeAllTxns": "عرض جميع {n} معاملة",
-  "@walletSeeAllTxns": {
-    "placeholders": {
-      "n": {
-        "type": "int"
-      }
-    }
-  },
+  "@walletSeeAllTxns": [
+    [
+      "placeholders",
+      [
+        [
+          "n",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "walletAllTxnsTitle": "جميع المعاملات",
   "walletDetailTitle": "تفاصيل المعاملة",
   "walletDetailDate": "التاريخ",
@@ -803,13 +1058,22 @@
   "reportChipSale": "البيع",
   "reportChipBids": "العروض",
   "reportHesitation": "{count} عرض متردد — هؤلاء المشاهدون كانوا قريبين من السعر لكنهم لم يتحولوا.",
-  "@reportHesitation": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@reportHesitation": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "reportSmartInsight": "توصية ذكية",
   "reportDurationMin": "د",
   "reportDurationHour": "س",
@@ -841,13 +1105,22 @@
   "planLifetime": "مدى الحياة",
   "proStatusDesc": "جميع أدوات التحليل نشطة",
   "proRenewalDate": "التجديد: {date}",
-  "@proRenewalDate": {
-    "placeholders": {
-      "date": {
-        "type": "String"
-      }
-    }
-  },
+  "@proRenewalDate": [
+    [
+      "placeholders",
+      [
+        [
+          "date",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "proUnlockTitle": "فتح أدوات PRO",
   "proUnlockDesc": "بِع بالبيانات، لا بالتخمين",
   "proUnlockBtn": "الترقية إلى PRO",
@@ -864,97 +1137,202 @@
   "proCreditsAiDescDesc": "ينشئ وصفاً تلقائياً للإعلان من العنوان والفئة والحالة.",
   "proCreditsReactivationDesc": "يسمح لك بإعادة نشر الإعلانات منتهية الصلاحية أو المعلقة مجاناً.",
   "proReactivationWindowHint": "{count} إعلان ضمن نافذة 30 يوماً",
-  "@proReactivationWindowHint": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@proReactivationWindowHint": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "proCreditsUsedFormat": "تم استخدام {used}، {remaining} متبقٍ",
-  "@proCreditsUsedFormat": {
-    "placeholders": {
-      "used": {
-        "type": "int"
-      },
-      "remaining": {
-        "type": "int"
-      }
-    }
-  },
+  "@proCreditsUsedFormat": [
+    [
+      "placeholders",
+      [
+        [
+          "used",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "remaining",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "proCreditsLimitFormat": "{remaining} / {limit}",
-  "@proCreditsLimitFormat": {
-    "placeholders": {
-      "remaining": {
-        "type": "int"
-      },
-      "limit": {
-        "type": "int"
-      }
-    }
-  },
+  "@proCreditsLimitFormat": [
+    [
+      "placeholders",
+      [
+        [
+          "remaining",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "limit",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "blastConfirmCostFreeLabel": "التكلفة",
   "blastConfirmCostPaidLabel": "تكلفة teqlik",
   "blastSubtitleFree": "إشعار عند بدء البث • مجاني",
   "blastSubtitlePaid": "إشعار عند بدء البث • {cost} teqlik",
-  "@blastSubtitlePaid": {
-    "placeholders": {
-      "cost": {
-        "type": "int"
-      }
-    }
-  },
+  "@blastSubtitlePaid": [
+    [
+      "placeholders",
+      [
+        [
+          "cost",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "blastConfirmCostFree": "يُخصم من حصتك المجانية",
   "blastInviteDialogTitle": "🎯 ادعُ جمهورك",
   "blastTargetAudience": "الجمهور المستهدف",
   "blastNotificationLabel": "إشعار",
   "blastNotificationValue": "Push + رابط البث",
   "audienceReadyBuyersBanner": "أرسل إشعاراً لـ {count} مشترٍ جاهز!",
-  "@audienceReadyBuyersBanner": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@audienceReadyBuyersBanner": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "blastBtnFree": "{count} مشترٍ جاهز — أرسل إشعاراً (مجاني)",
-  "@blastBtnFree": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@blastBtnFree": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "blastBtnPaid": "{count} مشترٍ جاهز — أرسل إشعاراً ({cost} teqlik)",
-  "@blastBtnPaid": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      },
-      "cost": {
-        "type": "int"
-      }
-    }
-  },
+  "@blastBtnPaid": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "cost",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "blastConfirmBodyFree": "سيتم إشعار {count} مشترٍ جاهز.\n\nسيُستخدم أحد إشعاراتك المجانية.",
-  "@blastConfirmBodyFree": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@blastConfirmBodyFree": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "blastConfirmBodyPaid": "سيتم إشعار {count} مشترٍ جاهز.\n\nالتكلفة الإجمالية: {cost} teqlik",
-  "@blastConfirmBodyPaid": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      },
-      "cost": {
-        "type": "int"
-      }
-    }
-  },
+  "@blastConfirmBodyPaid": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "cost",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "proAnalyticsTitle": "تحليلات PRO",
   "proSectionOverview": "ملخص مبيعاتي",
   "proSectionFunnel": "كم شخصاً قدّم عرضاً؟",
@@ -995,73 +1373,148 @@
   "proStreamAvgViewers": "متوسط المشاهدين",
   "proStreamPeak": "الأعلى",
   "proStreamAvgDuration": "متوسط مدة البث: {dur} دقيقة",
-  "@proStreamAvgDuration": {
-    "placeholders": {
-      "dur": {
-        "type": "String"
-      }
-    }
-  },
+  "@proStreamAvgDuration": [
+    [
+      "placeholders",
+      [
+        [
+          "dur",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "proEngagements": "تفاعل",
   "proShowAll": "عرض {count} المزيد",
-  "@proShowAll": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@proShowAll": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "proShowLess": "عرض أقل",
   "proStreamRowStats": "{viewers} مشاهد · {bids} عرض · {dur} د",
-  "@proStreamRowStats": {
-    "placeholders": {
-      "viewers": {
-        "type": "int"
-      },
-      "bids": {
-        "type": "int"
-      },
-      "dur": {
-        "type": "int"
-      }
-    }
-  },
+  "@proStreamRowStats": [
+    [
+      "placeholders",
+      [
+        [
+          "viewers",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "bids",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "dur",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "proLoadError": "تعذّر تحميل البيانات. يرجى المحاولة مرة أخرى.",
   "hotLeadViewed": "شوهد {count} مرة",
-  "@hotLeadViewed": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@hotLeadViewed": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "hotLeadHesitated": "{count} أشخاص تردّدوا",
-  "@hotLeadHesitated": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@hotLeadHesitated": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "hotLeadBoosted": "مميّز",
-  "@hotLeadBoosted": {},
+  "@hotLeadBoosted": [],
   "listingCtrExplain": "{ctr} نقرة لكل 100 مشاهدة",
-  "@listingCtrExplain": {
-    "placeholders": {
-      "ctr": {
-        "type": "String"
-      }
-    }
-  },
+  "@listingCtrExplain": [
+    [
+      "placeholders",
+      [
+        [
+          "ctr",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "marketSearchTitle": "ما يبحث عنه الناس",
   "marketDayFilter": "{days} يوم",
-  "@marketDayFilter": {
-    "placeholders": {
-      "days": {
-        "type": "int"
-      }
-    }
-  },
+  "@marketDayFilter": [
+    [
+      "placeholders",
+      [
+        [
+          "days",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "marketNoSearchData": "لا توجد بيانات بحث بعد. ستظهر عندما يبحث المستخدمون.",
   "marketCategoryTitle": "الفئات التي يبحثون فيها",
   "marketPeakHoursTitle": "التسوق في أوجه في هذه الساعات",
@@ -1070,21 +1523,39 @@
   "marketTrendingTitle": "هذه الفئات تتصاعد",
   "marketTrendingDesc": "الإعلان في هذه الفئات قد يزيد فرص البيع.",
   "marketGrowthPos": "النمو العام للمنصة: +{pct}%",
-  "@marketGrowthPos": {
-    "placeholders": {
-      "pct": {
-        "type": "String"
-      }
-    }
-  },
+  "@marketGrowthPos": [
+    [
+      "placeholders",
+      [
+        [
+          "pct",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "marketGrowthNeg": "التراجع العام للمنصة: {pct}%",
-  "@marketGrowthNeg": {
-    "placeholders": {
-      "pct": {
-        "type": "String"
-      }
-    }
-  },
+  "@marketGrowthNeg": [
+    [
+      "placeholders",
+      [
+        [
+          "pct",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "marketGrowthSub": "متوسط مبلغ الشراء مقارنة بالـ30 يوماً السابقة",
   "marketPaywallDesc": "شاهد ما يبحث عنه المشترون، ومتى يتسوقون، وأي الفئات ترتفع.",
   "listingPerfTitle": "أداء إعلاناتك مع PRO",
@@ -1093,53 +1564,98 @@
   "listingTotalViews": "إجمالي المشاهدات",
   "listingAvgCtr": "متوسط معدل النقر",
   "listingVideoBeatsPhoto": "🎬 إعلانات الفيديو تحصل على {x}× نقرات أكثر من الصور.",
-  "@listingVideoBeatsPhoto": {
-    "placeholders": {
-      "x": {
-        "type": "String"
-      }
-    }
-  },
+  "@listingVideoBeatsPhoto": [
+    [
+      "placeholders",
+      [
+        [
+          "x",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "listingPhotoBeatsVideo": "📸 إعلانات الصور تحصل على {x}× نقرات أكثر من الفيديو.",
-  "@listingPhotoBeatsVideo": {
-    "placeholders": {
-      "x": {
-        "type": "String"
-      }
-    }
-  },
+  "@listingPhotoBeatsVideo": [
+    [
+      "placeholders",
+      [
+        [
+          "x",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "listingMediaEqual": "إعلانات الفيديو والصور تحظى باهتمام مماثل.",
   "listingVideoLabel": "فيديو",
   "listingPhotoLabel": "صورة",
   "listingWatchRateLabel": "معدل المشاهدة",
   "listingWatchedPct": "تمت مشاهدة {pct}%",
-  "@listingWatchedPct": {
-    "placeholders": {
-      "pct": {
-        "type": "String"
-      }
-    }
-  },
+  "@listingWatchedPct": [
+    [
+      "placeholders",
+      [
+        [
+          "pct",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "listingGalleryLabel": "اهتمام المعرض",
   "listingGalleryDeep": "تمرير حتى الصورة {n}",
-  "@listingGalleryDeep": {
-    "placeholders": {
-      "n": {
-        "type": "String"
-      }
-    }
-  },
+  "@listingGalleryDeep": [
+    [
+      "placeholders",
+      [
+        [
+          "n",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "listingGalleryShallow": "شاهد الصورة الأولى فقط",
   "metricViewed": "مرات الظهور",
   "metricClicked": "نقر",
   "listingReach": "شاهده {count} شخص",
-  "@listingReach": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@listingReach": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "listingPaywallDesc": "تتبع كم شخصاً رأى كل إعلان، وكم نقر، ومدى الاهتمام به.",
   "onboardingTitle": "ما الذي يهمك؟",
   "onboardingSubtitle": "دعنا نعرض لك إعلانات وبثاً مباشراً مخصصاً لك",
@@ -1167,26 +1683,44 @@
   "badgeTrending": "🔥 رائج",
   "searchAlertTitle": "تنبيه البحث",
   "searchAlertBody": "احصل على إشعار عند إضافة إعلان جديد يطابق \"{query}\".",
-  "@searchAlertBody": {
-    "placeholders": {
-      "query": {
-        "type": "String"
-      }
-    }
-  },
+  "@searchAlertBody": [
+    [
+      "placeholders",
+      [
+        [
+          "query",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "searchAlertCreate": "إنشاء تنبيه",
   "searchAlertCreated": "تم إنشاء تنبيه البحث ✓",
   "searchAlertFailed": "فشل إنشاء التنبيه، حاول مجدداً",
   "searchAlertTooltip": "إنشاء تنبيه بحث",
   "audienceInsightsTitle": "تحليل ميزانية الجمهور",
   "audienceInsightsViewers": "{count} مشاهد",
-  "@audienceInsightsViewers": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@audienceInsightsViewers": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "audienceAvgBudget": "متوسط الميزانية",
   "audienceProViewers": "مشاهدون PRO",
   "audienceHighBudget": "ميزانية عالية (+1000₺)",
@@ -1204,46 +1738,94 @@
   "bestTimeNoDataHint": "سيكون التحليل جاهزاً بعد بث واحد على الأقل",
   "bestTimeSlotsHeader": "أفضل الأوقات",
   "bestTimeSlotStats": "{wins} مبيعة / {count} بث",
-  "@bestTimeSlotStats": {
-    "placeholders": {
-      "wins": {
-        "type": "int"
-      },
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@bestTimeSlotStats": [
+    [
+      "placeholders",
+      [
+        [
+          "wins",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "conversionNoData": "لا توجد بيانات مبيعات بعد",
   "conversionNoDataHint": "بعد إجراء مزادات مباشرة، ستظهر هنا مبيعاتك حسب الفئة",
   "conversionSectionHeader": "أي فئة تبيع أكثر؟ (آخر 90 يوماً)",
   "conversionCategoryCount": "إجمالي {count} فئة",
-  "@conversionCategoryCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@conversionCategoryCount": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "conversionCategorySales": "{won}/{total} مبيعة",
-  "@conversionCategorySales": {
-    "placeholders": {
-      "won": {
-        "type": "int"
-      },
-      "total": {
-        "type": "int"
-      }
-    }
-  },
+  "@conversionCategorySales": [
+    [
+      "placeholders",
+      [
+        [
+          "won",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "total",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "conversionAvgPrice": "متوسط {price} ₺",
-  "@conversionAvgPrice": {
-    "placeholders": {
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@conversionAvgPrice": [
+    [
+      "placeholders",
+      [
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "accountInfoTitle": "معلوماتي",
   "accountInfoBasicSection": "المعلومات الأساسية",
   "accountInfoSecuritySection": "أمان الحساب",
@@ -1261,13 +1843,22 @@
   "accountInfoSaved": "تم تحديث المعلومات",
   "accountInfoEmailChangeTitle": "تغيير البريد الإلكتروني",
   "accountInfoEmailCurrent": "الحالي: {email}",
-  "@accountInfoEmailCurrent": {
-    "placeholders": {
-      "email": {
-        "type": "String"
-      }
-    }
-  },
+  "@accountInfoEmailCurrent": [
+    [
+      "placeholders",
+      [
+        [
+          "email",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "accountInfoNewEmail": "عنوان البريد الإلكتروني الجديد",
   "accountInfoVerifyCode": "رمز التحقق",
   "accountInfoSendCode": "إرسال الرمز",
@@ -1278,13 +1869,22 @@
   "accountInfoPhoneAddTitle": "إضافة هاتف",
   "accountInfoPhoneChangeTitle": "تغيير الهاتف",
   "accountInfoPhoneCurrent": "الحالي: {phone}",
-  "@accountInfoPhoneCurrent": {
-    "placeholders": {
-      "phone": {
-        "type": "String"
-      }
-    }
-  },
+  "@accountInfoPhoneCurrent": [
+    [
+      "placeholders",
+      [
+        [
+          "phone",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "accountInfoPhoneSendVerify": "إرسال بريد التحقق",
   "accountInfoEmailSent": "تم إرسال البريد",
   "accountInfoEmailSentDesc": "أرسلنا رابط التحقق إلى بريدك المسجّل. انقر الرابط للتحقق من رقم هاتفك.",
@@ -1295,15 +1895,23 @@
   "phoneInfoTitle": "لماذا رقم الهاتف؟",
   "phoneInfoBody": "يُستخدم رقم هاتفك لتأمين حسابك عند تقديم عروض بقيم عالية. نحتاج إلى التحقق منه لمنع العروض الوهمية وللتواصل معك عند فوزك. لن يُشارك رقمك مع أي جهة خارجية.",
   "phoneInfoGotIt": "فهمت",
-  "boostOnlyPro": "⭐ تمييز الإعلانات متاح لأعضاء Pro فقط.",
   "boostLimitExhausted": "لقد استنفدت {limit} رصيداً لتمييز الإعلانات هذا الشهر. يُجدَّد في بداية الشهر القادم.",
-  "@boostLimitExhausted": {
-    "placeholders": {
-      "limit": {
-        "type": "int"
-      }
-    }
-  },
+  "@boostLimitExhausted": [
+    [
+      "placeholders",
+      [
+        [
+          "limit",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "profileInviteShareText": "انضم إلى Teqlif! عنوان المزادات الحية والتسوق المستعمل 🎁\n\nأدخل رمز الدعوة هذا عند التسجيل واكسب مكافأة teqlik فوراً:\n\n🔑 الرمز: {code}\n⏳ تنتهي الصلاحية في: {expiry}\n\n📱 iOS App Store: apps.apple.com/app/teqlif\n🤖 Google Play: play.google.com/store/apps/details?id=com.teqlif.teqlif_mobile\n🌐 Web: teqlif.com",
   "boostDialogTitle": "تمييز الإعلان",
   "boostDialogPlanLabel": "خطة الحملة:",
@@ -1315,26 +1923,50 @@
   "boostDialogEstClicksValue": "~50 نقرة",
   "boostDialogFeedHint": "سيظهر إعلانك بشكل مميز في خلاصة \"لك\".",
   "boostDialogCredits": "⭐ الأرصدة المتبقية: {remaining} / {limit}",
-  "@boostDialogCredits": {
-    "placeholders": {
-      "remaining": {
-        "type": "int"
-      },
-      "limit": {
-        "type": "int"
-      }
-    }
-  },
+  "@boostDialogCredits": [
+    [
+      "placeholders",
+      [
+        [
+          "remaining",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "limit",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "boostDialogStart": "بدء",
   "boostDialogPaidTitle": "تمييز مدفوع",
   "boostDialogPaidBadge": "لقد استنفدت {limit} تمييزاً مجانياً هذا الشهر",
-  "@boostDialogPaidBadge": {
-    "placeholders": {
-      "limit": {
-        "type": "int"
-      }
-    }
-  },
+  "@boostDialogPaidBadge": [
+    [
+      "placeholders",
+      [
+        [
+          "limit",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "boostDialogPaidDesc": "سيظهر إعلانك بشكل مميز في خلاصة \"لك\".",
   "boostDialogPaidCost": "التكلفة",
   "boostDialogPaidCostValue": "50 teqlik",
@@ -1360,69 +1992,147 @@
   "adReportMetricClicks": "النقرات",
   "adReportMetricClickRate": "عدد النقرات\nلكل 100 مشاهدة",
   "adReportMetricClickRateHint": "{clicks} نقرة / {impressions} مشاهدة",
-  "@adReportMetricClickRateHint": {
-    "placeholders": {
-      "clicks": {
-        "type": "int"
-      },
-      "impressions": {
-        "type": "int"
-      }
-    }
-  },
+  "@adReportMetricClickRateHint": [
+    [
+      "placeholders",
+      [
+        [
+          "clicks",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "impressions",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "adReportMetricActiveDays": "مدة\nالنشاط",
   "adReportMetricActiveDaysLessThan1": "أقل من يوم",
   "adReportMetricActiveDaysValue": "{days} أيام",
-  "@adReportMetricActiveDaysValue": {
-    "placeholders": {
-      "days": {
-        "type": "int"
-      }
-    }
-  },
+  "@adReportMetricActiveDaysValue": [
+    [
+      "placeholders",
+      [
+        [
+          "days",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "adReportSmartAnalysis": "تحليل ذكي",
   "adReportInsightNoImpressions": "لم يرَ أحد إعلانك بعد. ستُحدَّث هذه الصفحة فور دخول الإعلان إلى الخلاصة.",
   "adReportInsightGreat": "رائع! نقر ما يقارب {clicks} من كل 100 شخص رأوا إعلانك — هذه نسبة تفاعل ممتازة. العنوان والصورة يجذبان المشترين.",
-  "@adReportInsightGreat": {
-    "placeholders": {
-      "clicks": {
-        "type": "int"
-      }
-    }
-  },
+  "@adReportInsightGreat": [
+    [
+      "placeholders",
+      [
+        [
+          "clicks",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "adReportInsightGood": "أداء جيد. شاهد {impressions} شخصاً إعلانك وتفاعل معه {clicks}. تحسين الصور أو العنوان قد يجلب اهتماماً أكبر.",
-  "@adReportInsightGood": {
-    "placeholders": {
-      "clicks": {
-        "type": "int"
-      },
-      "impressions": {
-        "type": "int"
-      }
-    }
-  },
+  "@adReportInsightGood": [
+    [
+      "placeholders",
+      [
+        [
+          "clicks",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "impressions",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "adReportInsightLow": "شاهد {impressions} شخصاً إعلانك لكن {clicks} فقط نقروا عليه. قد لا تكون الصورة الرئيسية أو السعر جذّابَيْن بما يكفي.",
-  "@adReportInsightLow": {
-    "placeholders": {
-      "clicks": {
-        "type": "int"
-      },
-      "impressions": {
-        "type": "int"
-      }
-    }
-  },
+  "@adReportInsightLow": [
+    [
+      "placeholders",
+      [
+        [
+          "clicks",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "impressions",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "adReportInsightVeryLow": "شاهد {impressions} شخصاً إعلانك وحصل على {clicks} نقرة. ننصح بمراجعة العنوان والصور والسعر.",
-  "@adReportInsightVeryLow": {
-    "placeholders": {
-      "clicks": {
-        "type": "int"
-      },
-      "impressions": {
-        "type": "int"
-      }
-    }
-  },
+  "@adReportInsightVeryLow": [
+    [
+      "placeholders",
+      [
+        [
+          "clicks",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "impressions",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notInterested": "لست مهتمًا",
   "notInterestedConfirmed": "لن يظهر هذا الإعلان مرة أخرى.",
   "proMetricAvgDwell": "متوسط وقت التصفح",
@@ -1461,132 +2171,279 @@
   "hostAcceptSaleBtnCapture": "التقاط وتأكيد",
   "hostAcceptSaleBtnSkip": "تأكيد بدون صورة",
   "radarSuggestedCopied": "تم نسخ {price} ₺ إلى الحافظة",
-  "@radarSuggestedCopied": {
-    "placeholders": {
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@radarSuggestedCopied": [
+    [
+      "placeholders",
+      [
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "radarCopyBtn": "نسخ السعر المقترح: {price} ₺",
-  "@radarCopyBtn": {
-    "placeholders": {
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@radarCopyBtn": [
+    [
+      "placeholders",
+      [
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "retargetingBlastSent": "تم إرسال إشعار إلى {count} شخص!",
-  "@retargetingBlastSent": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@retargetingBlastSent": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifSettingsBlastTitle": "إشعارات الجمهور المجمّعة",
   "notifSettingsBlastDesc": "عند الإيقاف، لن يصلك تنبيه فوري؛ سيظهر الإشعار في قائمتك فقط.",
   "retargetingCooldownLabel": "الإرسال التالي خلال:",
   "retargetingBlastCooldown": "يمكنك إرسال الإشعار الجماعي التالي لهذا الإعلان بعد 24 ساعة.",
   "retargetingDialogTitle": "إرسال إشعار؟",
   "retargetingDialogBodyFree": "سيتم إرسال إشعار \"هل لا تزال مهتمًا؟\" إلى {count} شخص. لديك {credits} رصيد إشعار، سيُرسل مجانًا.",
-  "@retargetingDialogBodyFree": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      },
-      "credits": {
-        "type": "int"
-      }
-    }
-  },
+  "@retargetingDialogBodyFree": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "credits",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "retargetingDialogBodyPaid": "سيتم إرسال إشعار \"هل لا تزال مهتمًا؟\" إلى {count} شخص. سيُخصم {cost} teqlik من محفظتك.",
-  "@retargetingDialogBodyPaid": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      },
-      "cost": {
-        "type": "int"
-      }
-    }
-  },
+  "@retargetingDialogBodyPaid": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "cost",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "retargetingDialogBodyKarma": "سيتم إرسال إشعار إلى {count} شخص.\n\nسيُستخدم {free} رصيد + سيُدفع {cost} teqlik.",
-  "@retargetingDialogBodyKarma": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      },
-      "free": {
-        "type": "int"
-      },
-      "cost": {
-        "type": "int"
-      }
-    }
-  },
+  "@retargetingDialogBodyKarma": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "free",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "cost",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "retargetingDialogBodyInsufficient": "رصيد teqlik غير كافٍ.\nالمطلوب: {cost} teqlik | المتاح: {balance} teqlik",
-  "@retargetingDialogBodyInsufficient": {
-    "placeholders": {
-      "cost": {
-        "type": "int"
-      },
-      "balance": {
-        "type": "int"
-      }
-    }
-  },
+  "@retargetingDialogBodyInsufficient": [
+    [
+      "placeholders",
+      [
+        [
+          "cost",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "balance",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "retargetingCostFree": "مجاني",
   "retargetingCreditsLeft": "{count} رصيد متبقٍ",
-  "@retargetingCreditsLeft": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@retargetingCreditsLeft": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "retargetingFreeSubtitle": "{count} شخص — يُستخدم رصيد بث واحد",
-  "@retargetingFreeSubtitle": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@retargetingFreeSubtitle": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "retargetingPaidSubtitle": "{count} شخص × 10 teqlik",
-  "@retargetingPaidSubtitle": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@retargetingPaidSubtitle": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "retargetingEstimatedCost": "التكلفة المتوقعة",
   "retargetingSending": "جارٍ الإرسال...",
   "retargetingSendBtnLabel": "إرسال إشعار إلى {count} شخص",
-  "@retargetingSendBtnLabel": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@retargetingSendBtnLabel": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "retargetingCreditsBadge": "{count} رصيد متبقٍ · يُرسل مجانًا",
-  "@retargetingCreditsBadge": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@retargetingCreditsBadge": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "retargetingCostBadge": "سيُنفق {cost} teqlik",
-  "@retargetingCostBadge": {
-    "placeholders": {
-      "cost": {
-        "type": "int"
-      }
-    }
-  },
+  "@retargetingCostBadge": [
+    [
+      "placeholders",
+      [
+        [
+          "cost",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "retargetingFootnote": "سيتلقى المستخدمون إشعارًا \"هل لا تزال مهتمًا؟\". يُرسل فقط لغير المشترين.",
   "retargetingInfoText": "يرسل إشعار تذكير للأشخاص الذين شاهدوا إعلانك ولم يشتروا. مجاني إذا كان لديك رصيد بث شهري، وإلا 10 teqlik لكل شخص.",
   "retargetingLast30Days": "آخر 30 يومًا",
@@ -1604,21 +2461,39 @@
   "btnResetPassword": "إعادة تعيين كلمة المرور",
   "radarScreenTitle": "رادار المنافسين وسرعة المبيعات",
   "priceMinLabel": "{price} ₺ (الحد الأدنى)",
-  "@priceMinLabel": {
-    "placeholders": {
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@priceMinLabel": [
+    [
+      "placeholders",
+      [
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "priceMaxLabel": "{price} ₺ (الحد الأقصى)",
-  "@priceMaxLabel": {
-    "placeholders": {
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@priceMaxLabel": [
+    [
+      "placeholders",
+      [
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "forYouLabel": "مخصص لك",
   "messagesUpdateFailed": "فشل التحديث",
   "staleDataBannerMessage": "قد تكون البيانات غير محدّثة",
@@ -1631,69 +2506,138 @@
   "hostNotifDialogTitle": "إرسال إشعار",
   "hostStreamDataError": "تعذّر تحميل البيانات",
   "hostInviteError": "تعذّر إرسال الدعوة: {error}",
-  "@hostInviteError": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
+  "@hostInviteError": [
+    [
+      "placeholders",
+      [
+        [
+          "error",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "hostModRemoved": "✖ @{username} تمت إزالته من المشرفين",
-  "@hostModRemoved": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@hostModRemoved": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "genericErrorDetail": "خطأ: {error}",
-  "@genericErrorDetail": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
+  "@genericErrorDetail": [
+    [
+      "placeholders",
+      [
+        [
+          "error",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "profilePhotoUploadError": "تعذّر تحميل الصورة. حاول مرة أخرى.",
   "profileInviteCodeError": "تعذّر استرداد رمز الدعوة، حاول مرة أخرى.",
   "profileInviteTitle": "ادعُ أصدقاءك، اكسب teqlik!",
   "profileInviteSubtitle": "+50 teqlik لكل دعوة، صديقك يحصل على +10 teqlik",
-  "@profileInviteShareText": {
-    "placeholders": {
-      "code": {
-        "type": "String"
-      },
-      "expiry": {
-        "type": "String"
-      }
-    }
-  },
+  "@profileInviteShareText": [
+    [
+      "placeholders",
+      [
+        [
+          "code",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ],
+        [
+          "expiry",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "profileInviteExpiryDays": "{days} أيام",
-  "@profileInviteExpiryDays": {
-    "placeholders": {
-      "days": {
-        "type": "int"
-      }
-    }
-  },
+  "@profileInviteExpiryDays": [
+    [
+      "placeholders",
+      [
+        [
+          "days",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "profileInviteExpiryHours": "{hours} ساعات",
-  "@profileInviteExpiryHours": {
-    "placeholders": {
-      "hours": {
-        "type": "int"
-      }
-    }
-  },
+  "@profileInviteExpiryHours": [
+    [
+      "placeholders",
+      [
+        [
+          "hours",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "profileInviteExpirySoon": "وقت قصير",
   "profileInviteCodeCopied": "تم نسخ الرمز!",
   "profileInviteModalExpiry": "⏳ صالح لمدة: {expiry}",
-  "@profileInviteModalExpiry": {
-    "placeholders": {
-      "expiry": {
-        "type": "String"
-      }
-    }
-  },
+  "@profileInviteModalExpiry": [
+    [
+      "placeholders",
+      [
+        [
+          "expiry",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "profileInviteShareBtn": "مشاركة رابط الدعوة",
   "profilePickGallery": "اختر من المعرض",
   "profilePickCamera": "التقط صورة",
@@ -1704,93 +2648,186 @@
   "favoritesEmpty": "لا توجد مفضلات بعد",
   "createNeedTitle": "يرجى إدخال عنوان الإعلان أولاً.",
   "teqlikSpent": "تم إنفاق {count} teqlik.",
-  "@teqlikSpent": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@teqlikSpent": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "videoTooLong": "لا يمكن أن يتجاوز الفيديو {max} ثانية ({actual}ث).",
-  "@videoTooLong": {
-    "placeholders": {
-      "max": {
-        "type": "int"
-      },
-      "actual": {
-        "type": "int"
-      }
-    }
-  },
+  "@videoTooLong": [
+    [
+      "placeholders",
+      [
+        [
+          "max",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "actual",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "createPickCamera": "تسجيل بالكاميرا (حد أقصى {sec} ث)",
-  "@createPickCamera": {
-    "placeholders": {
-      "sec": {
-        "type": "int"
-      }
-    }
-  },
+  "@createPickCamera": [
+    [
+      "placeholders",
+      [
+        [
+          "sec",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "videoUploading": "الفيديو لا يزال يُحمَّل، يرجى الانتظار.",
   "videoLabel": "فيديو (حد أقصى {sec} ث)",
-  "@videoLabel": {
-    "placeholders": {
-      "sec": {
-        "type": "int"
-      }
-    }
-  },
+  "@videoLabel": [
+    [
+      "placeholders",
+      [
+        [
+          "sec",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "forYouStreams": "بثوث مخصصة لك",
   "searchNoResults": "لا توجد نتائج",
   "searchNoSupplyHint": "لا توجد إعلانات كثيرة لهذا البحث. أنشئ تنبيهاً لتحصل على إشعار عند وصول إعلانات جديدة.",
   "searchCreateAlertBtn": "إنشاء تنبيه",
   "proSearchCount": "{count} بحث",
-  "@proSearchCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@proSearchCount": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "listingDeactivateTitle": "إيقاف الإعلان",
   "listingDeactivateWarning": "إذا قمت بإلغاء التنشيط، سيتم حذف الترويج النشط.",
   "listingDeactivateCostHint": "تحذير: انتهت فترة الـ 30 يومًا المجانية. إعادة التفعيل ستكلف {cost} teqlik من رصيدك.",
-  "@listingDeactivateCostHint": {
-    "placeholders": {
-      "cost": {
-        "type": "int"
-      }
-    }
-  },
+  "@listingDeactivateCostHint": [
+    [
+      "placeholders",
+      [
+        [
+          "cost",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "listingDeactivateFreeCreditHint": "تحذير: انتهت فترة الـ 30 يومًا المجانية. إعادة التفعيل ستستخدم 1 رصيد PRO مجاني.",
   "listingDeactivateConfirm": "أفهم ذلك، قم بإلغاء التنشيط",
   "listingReactivateTitle": "إعادة تفعيل الإعلان",
   "listingReactivateFreeCredit": "لديك {remaining} رصيد مجاني. سيُستخدم 1.",
-  "@listingReactivateFreeCredit": {
-    "placeholders": {
-      "remaining": {
-        "type": "int"
-      }
-    }
-  },
+  "@listingReactivateFreeCredit": [
+    [
+      "placeholders",
+      [
+        [
+          "remaining",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "listingReactivatePaidPro": "استُنفدت الأرصدة الشهرية. سيُخصم {cost} teqlik.",
-  "@listingReactivatePaidPro": {
-    "placeholders": {
-      "cost": {
-        "type": "int"
-      }
-    }
-  },
+  "@listingReactivatePaidPro": [
+    [
+      "placeholders",
+      [
+        [
+          "cost",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "listingReactivatePaidNormal": "سيُخصم {cost} teqlik. رصيدك: {balance} teqlik.",
-  "@listingReactivatePaidNormal": {
-    "placeholders": {
-      "cost": {
-        "type": "int"
-      },
-      "balance": {
-        "type": "int"
-      }
-    }
-  },
+  "@listingReactivatePaidNormal": [
+    [
+      "placeholders",
+      [
+        [
+          "cost",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "balance",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "listingReactivateProUpsell": "اشترك في PRO واحصل على 5 إعادة تفعيل مجانية شهرياً.",
   "listingReactivateInsufficientBalance": "رصيد غير كافٍ. أضف teqlik للمتابعة.",
   "listingReactivateConfirm": "تفعيل",
@@ -1798,13 +2835,22 @@
   "suggestedStreamers": "المذيعون المقترحون",
   "latestLiveStreams": "أحدث البثوث المباشرة",
   "categoryStreams": "بثوث {category}",
-  "@categoryStreams": {
-    "placeholders": {
-      "category": {
-        "type": "String"
-      }
-    }
-  },
+  "@categoryStreams": [
+    [
+      "placeholders",
+      [
+        [
+          "category",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "listingsSelectedForYou": "القوائم المختارة لك",
   "profileFaq": "الأسئلة الشائعة",
   "faqCatAccount": "الحساب والملف الشخصي والدعم",
@@ -1931,13 +2977,22 @@
   "analyticsNoAuctions": "لم يتم إنشاء مزادات في هذا البث.",
   "analyticsItemsSold": "العناصر المباعة",
   "analyticsDuration": "{minutes} دقيقة",
-  "@analyticsDuration": {
-    "placeholders": {
-      "minutes": {
-        "type": "int"
-      }
-    }
-  },
+  "@analyticsDuration": [
+    [
+      "placeholders",
+      [
+        [
+          "minutes",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "proToolStreamHistoryDesc": "قم بتحليل إحصائيات المبيعات والجمهور لبثوثك المباشرة السابقة بالتفصيل.",
   "proTabSales": "الأداء",
   "proTabMarket": "السوق",
@@ -2042,13 +3097,22 @@
   "emailPhoneNote": "📱 لقد أدخلت رقم هاتف أثناء التسجيل. يمكنك التحقق من هاتفك من شاشة <strong style='color:#f1f5f9'>الملف الشخصي ← معلوماتي</strong> بعد تسجيل الدخول.",
   "emailResetBody": "تم تقديم طلب لإعادة تعيين كلمة مرور حسابك. استخدم الرمز التالي لإكمال العملية:",
   "emailIgnoreIfNotYou": "إذا لم تقم بهذا الطلب، يمكنك تجاهل هذا البريد الإلكتروني بأمان.",
-  "@emailPhoneAdded": {
-    "placeholders": {
-      "phone": {
-        "type": "String"
-      }
-    }
-  },
+  "@emailPhoneAdded": [
+    [
+      "placeholders",
+      [
+        [
+          "phone",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "emailWelcomeHeroTitle": "أهلاً وسهلاً، {first_name}! 🎉",
   "emailWelcomeHeroSub": "لقد دخلت عالم المزادات الحية.<br>صفقات رائعة في انتظارك.",
   "emailWelcomeIntro": "مرحباً <strong style=\"color:#f1f5f9\">{full_name}</strong>،",
@@ -2066,46 +3130,91 @@
   "emailWelcomeCopyright": "© 2026 teqlif · يمكنك تحديث تفضيلات الإشعارات من إعدادات الحساب.",
   "emailResetGreeting": "مرحباً <strong>{full_name}</strong>،",
   "emailResetFooter": "للاستفسارات: <a href='mailto:destek@teqlif.com' style='color:#0d9488;text-decoration:none'>destek@teqlif.com</a>",
-  "@emailWelcomeHeroTitle": {
-    "placeholders": {
-      "first_name": {
-        "type": "String"
-      }
-    }
-  },
-  "@emailWelcomeIntro": {
-    "placeholders": {
-      "full_name": {
-        "type": "String"
-      }
-    }
-  },
-  "@emailResetGreeting": {
-    "placeholders": {
-      "full_name": {
-        "type": "String"
-      }
-    }
-  },
+  "@emailWelcomeHeroTitle": [
+    [
+      "placeholders",
+      [
+        [
+          "first_name",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
+  "@emailWelcomeIntro": [
+    [
+      "placeholders",
+      [
+        [
+          "full_name",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
+  "@emailResetGreeting": [
+    [
+      "placeholders",
+      [
+        [
+          "full_name",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "fieldVerifyCode": "رمز التحقق",
   "authVerifyCodeSentMsg": "تم إرسال رمز تحقق جديد إلى {email}.",
   "authVerifyCodeSentDesc": "لقد أرسلنا رمز تحقق مكون من 6 أرقام إلى {email}.",
   "authEnterCodeTitle": "أدخل رمزك",
   "authVerifyCodeResent": "تم إرسال رمز تحقق جديد.",
-  "@authVerifyCodeSentMsg": {
-    "placeholders": {
-      "email": {
-        "type": "String"
-      }
-    }
-  },
-  "@authVerifyCodeSentDesc": {
-    "placeholders": {
-      "email": {
-        "type": "String"
-      }
-    }
-  },
+  "@authVerifyCodeSentMsg": [
+    [
+      "placeholders",
+      [
+        [
+          "email",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
+  "@authVerifyCodeSentDesc": [
+    [
+      "placeholders",
+      [
+        [
+          "email",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "authResendCode": "إعادة إرسال الرمز",
   "authResendCodeIn": "رمز جديد خلال:",
   "validPasswordEmpty": "لا يمكن أن تكون كلمة المرور فارغة",
@@ -2172,29 +3281,56 @@
   "timeJustNow": "الآن فقط",
   "timeNow": "الآن",
   "timeMinAgo": "قبل {n} د",
-  "@timeMinAgo": {
-    "placeholders": {
-      "n": {
-        "type": "int"
-      }
-    }
-  },
+  "@timeMinAgo": [
+    [
+      "placeholders",
+      [
+        [
+          "n",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "timeHoursAgo": "قبل {n} س",
-  "@timeHoursAgo": {
-    "placeholders": {
-      "n": {
-        "type": "int"
-      }
-    }
-  },
+  "@timeHoursAgo": [
+    [
+      "placeholders",
+      [
+        [
+          "n",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "timeDaysAgo": "قبل {n} ي",
-  "@timeDaysAgo": {
-    "placeholders": {
-      "n": {
-        "type": "int"
-      }
-    }
-  },
+  "@timeDaysAgo": [
+    [
+      "placeholders",
+      [
+        [
+          "n",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "radarExpensive": "غال",
   "radarAffordable": "بأسعار معقولة",
   "radarExpensivePrice": "سعر باهظ",
@@ -2207,32 +3343,65 @@
   "btnViewNotificationReport": "عرض تقرير الإشعارات",
   "btnSendMassNotification": "إرسال إشعار جماعي",
   "massNotifCooldownHours": "متاح خلال {hours}س {min}د",
-  "@massNotifCooldownHours": {
-    "placeholders": {
-      "hours": {
-        "type": "int"
-      },
-      "min": {
-        "type": "int"
-      }
-    }
-  },
+  "@massNotifCooldownHours": [
+    [
+      "placeholders",
+      [
+        [
+          "hours",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "min",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "massNotifCooldownMinutes": "متاح خلال {min}د",
-  "@massNotifCooldownMinutes": {
-    "placeholders": {
-      "min": {
-        "type": "int"
-      }
-    }
-  },
+  "@massNotifCooldownMinutes": [
+    [
+      "placeholders",
+      [
+        [
+          "min",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "massNotifCooldownSeconds": "متاح خلال {sec}ث",
-  "@massNotifCooldownSeconds": {
-    "placeholders": {
-      "sec": {
-        "type": "int"
-      }
-    }
-  },
+  "@massNotifCooldownSeconds": [
+    [
+      "placeholders",
+      [
+        [
+          "sec",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "massNotifPerListingInfo": "يمكن إرسال إشعار جماعي مرة واحدة كل 24 ساعة لكل إعلان.",
   "massNotifUnavailableListingNotActive": "هذه الميزة غير متاحة لأن الإعلان غير نشط.",
   "btnShare": "مشاركة",
@@ -2245,27 +3414,57 @@
   "apiMsgReferralSavedVerify": "تم حفظ رمز الدعوة! يرجى إكمال التحقق من البريد الإلكتروني والهاتف للمطالبة بمكافأتك.",
   "notifReferralTitle": "مكافأة الدعوة!",
   "notifReferralBody": "استخدم صديقك ({username}) الرمز الخاص بك وأكمل التحقق! ربحت {bonus} teqlik.",
-  "@notifReferralBody": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      },
-      "bonus": {
-        "type": "int"
-      }
-    }
-  },
+  "@notifReferralBody": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ],
+        [
+          "bonus",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "apiMsgReferralSuccess": "اكتملت التحققات! دعاك {referrer_username}. تمت إضافة {your_bonus} teqlik إلى حسابك.",
-  "@apiMsgReferralSuccess": {
-    "placeholders": {
-      "referrer_username": {
-        "type": "String"
-      },
-      "your_bonus": {
-        "type": "int"
-      }
-    }
-  },
+  "@apiMsgReferralSuccess": [
+    [
+      "placeholders",
+      [
+        [
+          "referrer_username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ],
+        [
+          "your_bonus",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "proTipPriceDownTitle": "نصيحة تعديل السعر",
   "proTipPriceDownBody": "\"{title}\" أعلى من متوسط السوق بنسبة {diff}%. تخفيض السعر إلى حوالي {avg} ₺ يمكن أن يسرع البيع.",
   "proTipPriceUpTitle": "فرصة زيادة السعر",
@@ -2279,158 +3478,332 @@
   "proTipAllGoodTitle": "كل شيء على ما يرام",
   "proTipAllGoodBody": "بيانات إعلاناتك ومبيعاتك تبدو جيدة. ستظهر هنا نصائح مخصصة عند توفر المزيد من البيانات.",
   "notifNewBid": "قدّم @{username} عرضاً",
-  "@notifNewBid": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifNewBid": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifNewBidBody": "{item} — {price}",
-  "@notifNewBidBody": {
-    "placeholders": {
-      "item": {
-        "type": "String"
-      },
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifNewBidBody": [
+    [
+      "placeholders",
+      [
+        [
+          "item",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ],
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifNewBidBodyNoItem": "{price}",
-  "@notifNewBidBodyNoItem": {
-    "placeholders": {
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifNewBidBodyNoItem": [
+    [
+      "placeholders",
+      [
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifOutbid": "تمّ تجاوز عرضك!",
   "notifOutbidBody": "{item} — عرض جديد: {price}",
-  "@notifOutbidBody": {
-    "placeholders": {
-      "item": {
-        "type": "String"
-      },
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifOutbidBody": [
+    [
+      "placeholders",
+      [
+        [
+          "item",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ],
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifOutbidBodyNoItem": "عرض جديد: {price}",
-  "@notifOutbidBodyNoItem": {
-    "placeholders": {
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifOutbidBodyNoItem": [
+    [
+      "placeholders",
+      [
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifAuctionWon": "🏆 تمّ قبول عرضك!",
   "notifAuctionWonBody": "{item} — {price}",
-  "@notifAuctionWonBody": {
-    "placeholders": {
-      "item": {
-        "type": "String"
-      },
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifAuctionWonBody": [
+    [
+      "placeholders",
+      [
+        [
+          "item",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ],
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifBuyItNow": "🛒 اكتمل الشراء الفوري!",
   "notifBuyItNowBody": "{item} — {price}",
-  "@notifBuyItNowBody": {
-    "placeholders": {
-      "item": {
-        "type": "String"
-      },
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifBuyItNowBody": [
+    [
+      "placeholders",
+      [
+        [
+          "item",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ],
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifAuctionEnded": "انتهى المزاد",
   "notifAuctionEndedBody": "{item} — السعر الفائز: {price}",
-  "@notifAuctionEndedBody": {
-    "placeholders": {
-      "item": {
-        "type": "String"
-      },
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifAuctionEndedBody": [
+    [
+      "placeholders",
+      [
+        [
+          "item",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ],
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifAuctionEndedBodyNoItem": "السعر الفائز: {price}",
-  "@notifAuctionEndedBodyNoItem": {
-    "placeholders": {
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifAuctionEndedBodyNoItem": [
+    [
+      "placeholders",
+      [
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifAuctionCancelled": "تمّ إلغاء المزاد",
   "notifAuctionCancelledBody": "{item} — لم يُقبل أي عرض",
-  "@notifAuctionCancelledBody": {
-    "placeholders": {
-      "item": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifAuctionCancelledBody": [
+    [
+      "placeholders",
+      [
+        [
+          "item",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifAuctionCancelledBodyNoItem": "لم يُقبل أي عرض",
   "notifRecordingAvailableTitle": "تسجيل البث المباشر جاهز 🎬",
   "notifRecordingAvailableBody": "شاهد التسجيل وراجع إحصاءات المبيعات.",
   "notifRecordingUpsellTitle": "تسجيل بثك جاهز 🎬",
   "notifRecordingUpsellBody": "انتقل إلى PRO واحصل على وصول لمدة 24 ساعة.",
   "notifStreamStarted": "بدأ @{username} بثاً مباشراً",
-  "@notifStreamStarted": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifStreamStarted": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifFollow": "بدأ @{username} بمتابعتك",
-  "@notifFollow": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifFollow": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifStoryLiked": "أعجب @{username} بقصتك",
-  "@notifStoryLiked": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifStoryLiked": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifMessage": "أرسل @{username} رسالة إليك",
-  "@notifMessage": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifMessage": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifMsgRequestAccepted": "@{username} قبل طلب رسالتك",
-  "@notifMsgRequestAccepted": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifMsgRequestAccepted": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "msgReqBannerReceiver": "{username} أرسل إليك طلب رسالة.",
-  "@msgReqBannerReceiver": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@msgReqBannerReceiver": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "msgReqBannerInitiator": "تم إرسال طلب رسالتك وهو في انتظار الرد.",
   "msgReqBannerAccept": "قبول",
   "msgReqBannerDecline": "رفض",
@@ -2439,102 +3812,204 @@
   "notifMessageVideo": "🎬 فيديو",
   "notifMessageFile": "📎 ملف",
   "notifNewListing": "أضاف @{username} إعلاناً جديداً",
-  "@notifNewListing": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifNewListing": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifListingDeactivated": "تمّ إيقاف إعلانك",
   "notifListingDeactivatedBodySingle": "وصل إعلانك \"{title}\" إلى نهاية فترته المجانية البالغة 30 يوماً وتمّ إيقافه.",
-  "@notifListingDeactivatedBodySingle": {
-    "placeholders": {
-      "title": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifListingDeactivatedBodySingle": [
+    [
+      "placeholders",
+      [
+        [
+          "title",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifListingDeactivatedBodyMultiple": "وصل {count} إعلان من إعلاناتك إلى نهاية فترتها المجانية وتمّ إيقافها.",
-  "@notifListingDeactivatedBodyMultiple": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@notifListingDeactivatedBodyMultiple": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifListingDeleted": "تمّت إزالة إعلانك",
   "notifListingDeletedBodySingle": "تمّت إزالة إعلانك \"{title}\" من المنصة. يمكنك إنشاء إعلان جديد لإعادة نشره.",
-  "@notifListingDeletedBodySingle": {
-    "placeholders": {
-      "title": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifListingDeletedBodySingle": [
+    [
+      "placeholders",
+      [
+        [
+          "title",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifListingDeletedBodyMultiple": "تمّت إزالة {count} من إعلاناتك. يمكنك إنشاء إعلانات جديدة لإعادة نشرها.",
-  "@notifListingDeletedBodyMultiple": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@notifListingDeletedBodyMultiple": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifListingRemoved": "تمّت إزالة إعلانك",
   "notifListingRemovedBody": "تمّت إزالة إعلانك لأنه يحتوي على محتوى يخالف إرشادات المجتمع.",
   "notifSearchAlert": "تنبيه البحث: إعلان جديد",
   "notifSearchAlertBody": "تمّت إضافة منتج جديد في {category}",
-  "@notifSearchAlertBody": {
-    "placeholders": {
-      "category": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifSearchAlertBody": [
+    [
+      "placeholders",
+      [
+        [
+          "category",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifSmartAuctionAlert": "بدأ بث مناسب لك! 🎯",
   "notifPriceDrop": "انخفض السعر! 🔥",
   "notifPriceDropBody": "{item} — الآن {price}",
-  "@notifPriceDropBody": {
-    "placeholders": {
-      "item": {
-        "type": "String"
-      },
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifPriceDropBody": [
+    [
+      "placeholders",
+      [
+        [
+          "item",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ],
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifBudgetMatch": "إعلان جديد ضمن ميزانيتك! 💡",
   "notifBudgetMatchBody": "{item} — {price}",
-  "@notifBudgetMatchBody": {
-    "placeholders": {
-      "item": {
-        "type": "String"
-      },
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifBudgetMatchBody": [
+    [
+      "placeholders",
+      [
+        [
+          "item",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ],
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifRetargetTitle": "إعلان ينتظرك",
   "notifChurnAirdropSeller": "إعلاناتك تنتظرك! 🛍️",
   "notifChurnBodySeller": "أضفنا {amount} teqlik إلى حسابك. أنشئ إعلاناً جديداً وتواصل مع المشترين!",
-  "@notifChurnBodySeller": {
-    "placeholders": {
-      "amount": {
-        "type": "int"
-      }
-    }
-  },
+  "@notifChurnBodySeller": [
+    [
+      "placeholders",
+      [
+        [
+          "amount",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifChurnAirdropBuyer": "اشتقنا إليك! 🎁",
   "notifChurnBodyBuyer": "أضفنا {amount} teqlik إلى حسابك، تصفّح البثوث المباشرة وأنفقها!",
-  "@notifChurnBodyBuyer": {
-    "placeholders": {
-      "amount": {
-        "type": "int"
-      }
-    }
-  },
+  "@notifChurnBodyBuyer": [
+    [
+      "placeholders",
+      [
+        [
+          "amount",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "cat_electronics": "إلكترونيات",
   "cat_fashion": "ملابس وموضة",
   "cat_home": "المنزل والمعيشة",
@@ -2577,50 +4052,95 @@
   "editProfileUsername": "اسم المستخدم",
   "editProfileFillAll": "يرجى ملء جميع الحقول",
   "aiAdviceSimilarCount": "تم تحليل {count} منتج مشابه",
-  "@aiAdviceSimilarCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@aiAdviceSimilarCount": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "aiAdviceSameCategory": "{count} من نفس الفئة",
-  "@aiAdviceSameCategory": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@aiAdviceSameCategory": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "aiAdviceCityBased": "حسب المدينة",
   "aiAdviceMarketClose": "متوسط سعر الإغلاق: {price} ₺.",
-  "@aiAdviceMarketClose": {
-    "placeholders": {
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@aiAdviceMarketClose": [
+    [
+      "placeholders",
+      [
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "aiAdviceBimodal": "تم اكتشاف مستويين مختلفين للسعر (ثنائي النمط) في هذه المجموعة. قد يتفاوت السعر بحسب نوع المنتج أو الضمان.",
   "aiAdviceNoData": "لم يتم العثور على بيانات كافية لمنتجات مشابهة حتى الآن. ستتحسن التقديرات مع إضافة المزيد من الإعلانات. يمكنك تحديد سعرك بإجراء بحث في السوق.",
   "listingBlastEstimateLoading": "جارٍ حساب الجمهور المستهدف...",
   "listingBlastDialogTitle": "إشعار جماعي للجمهور",
   "listingBlastDialogBody": "تم العثور على {count} مشترٍ محتمل قد يهتم بإعلانك. هل تريد إرسال إشعار فوري لهم؟",
-  "@listingBlastDialogBody": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@listingBlastDialogBody": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "listingBlastCost": "التكلفة: {cost} teqlik",
-  "@listingBlastCost": {
-    "placeholders": {
-      "cost": {
-        "type": "int"
-      }
-    }
-  },
+  "@listingBlastCost": [
+    [
+      "placeholders",
+      [
+        [
+          "cost",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "listingVideoComplete": "اكتمل الفيديو",
   "audienceTotalViewers": "إجمالي المشاهدين",
   "proToolDemandTrendsTitle": "اتجاه طلب الفئات",
@@ -2633,13 +4153,22 @@
   "demandTrendsSupplyGapLabel": "فجوة العرض",
   "demandTrendsSupplyGapHint": "يبحث المستخدمون لكن الإعلانات شحيحة",
   "demandTrendsChangeLabel": "تغيير {pct}٪ (8 أسابيع)",
-  "@demandTrendsChangeLabel": {
-    "placeholders": {
-      "pct": {
-        "type": "String"
-      }
-    }
-  },
+  "@demandTrendsChangeLabel": [
+    [
+      "placeholders",
+      [
+        [
+          "pct",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "demandTrendsEmptyLabel": "لا توجد بيانات بحث كافية بعد.",
   "trustScoreLabel": "درجة الثقة",
   "trustScoreHint": "نقاط مصداقية من 0 إلى 100. تُحسب من معدل إتمام المزادات وتاريخ الفوز وجودة الإعلانات وعمر الحساب. يتجدد يومياً.",
@@ -2649,13 +4178,22 @@
   "influenceRankLabel": "Influencer نقاط",
   "influenceRankHint": "Influencer نقاط بناءً على شبكة المتابعين. كلما زادت النقاط، كان نطاق وصولك أوسع. يتجدد أسبوعياً.",
   "influenceRankValue": "المرتبة #{rank}",
-  "@influenceRankValue": {
-    "placeholders": {
-      "rank": {
-        "type": "int"
-      }
-    }
-  },
+  "@influenceRankValue": [
+    [
+      "placeholders",
+      [
+        [
+          "rank",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "radarNoActiveListing": "لم يتم العثور على قوائم نشطة.",
   "radarNeedActiveListing": "يلزم وجود قائمة نشطة واحدة على الأقل لرادار المنافسين.",
   "radarNoPriceSet": "لم يتم تحديد سعر لهذا الإعلان.",
@@ -2665,22 +4203,40 @@
   "radarActiveListings": "إعلانات نشطة",
   "radarDaysAvg": "أيام (متوسط)",
   "radarDayRange": "النطاق: {min} – {max} يوم",
-  "@radarDayRange": {
-    "placeholders": {
-      "min": {},
-      "max": {}
-    }
-  },
+  "@radarDayRange": [
+    [
+      "placeholders",
+      [
+        [
+          "min",
+          []
+        ],
+        [
+          "max",
+          []
+        ]
+      ]
+    ]
+  ],
   "radarAverage": "متوسط",
   "radarSweetSpotLabel": "نطاق السعر الأكثر مبيعاً",
   "radarPriceSensitivity": "حساسية السعر",
   "radarDaySaleStat": "{days} يوم ({count} مبيعات)",
-  "@radarDaySaleStat": {
-    "placeholders": {
-      "days": {},
-      "count": {}
-    }
-  },
+  "@radarDaySaleStat": [
+    [
+      "placeholders",
+      [
+        [
+          "days",
+          []
+        ],
+        [
+          "count",
+          []
+        ]
+      ]
+    ]
+  ],
   "proNotEnoughStreamData": "لا توجد بيانات بث كافية بعد (الحد الأدنى: بثّان).",
   "saleTypeBuyNow": "اشتر الآن",
   "saleTypeBid": "مزايدة",
@@ -2696,13 +4252,22 @@
   "notifQuietHoursDesc": "تأجيل الإشعارات خلال هذه الساعات، وعرضها في الصباح",
   "quickAuctionBtn": "سريع",
   "quickAuctionItem": "منتج {count}",
-  "@quickAuctionItem": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@quickAuctionItem": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "quickAuctionStarted": "بدأ المزاد",
   "quickSaleSheetTitle": "بيع مباشر سريع",
   "quickSaleStarted": "بدأ البيع",
@@ -2727,67 +4292,130 @@
   "errBidOutbid": "سبقك عرض آخر للتو. تحقق من السعر الحالي.",
   "btnRemovePin": "✕ إزالة",
   "blastSent": "🎯 تم إرسال إشعار إلى {count} شخص!",
-  "@blastSent": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@blastSent": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "blastStarted": "🎯 تم بدء حملة الإشعارات!",
   "blastError": "فشل إرسال الإشعار.",
   "blastSending": "جارٍ الإرسال…",
   "hostRemoveFromStageBtn": "✕ إزالة من المسرح",
   "hostViewersTitle": "👁 المشاهدون ({count})",
-  "@hostViewersTitle": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@hostViewersTitle": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "auctionGroupFallback": "مزاد",
   "hostMuteSuccess": "تم كتم @{username}",
-  "@hostMuteSuccess": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@hostMuteSuccess": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "hostUnmuteSuccess": "تم رفع الكتم",
   "hostPromoteSuccess": "تم تعيين @{username} مشرفاً",
-  "@hostPromoteSuccess": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@hostPromoteSuccess": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "hostDemoteSuccess": "تمت إزالة @{username} من المشرفين",
-  "@hostDemoteSuccess": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@hostDemoteSuccess": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "hostKickSuccess": "تمت إزالة @{username} من البث",
-  "@hostKickSuccess": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@hostKickSuccess": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "whaleInRoom": "مشتري {tier} في الغرفة",
-  "@whaleInRoom": {
-    "placeholders": {
-      "tier": {
-        "type": "String"
-      }
-    }
-  },
+  "@whaleInRoom": [
+    [
+      "placeholders",
+      [
+        [
+          "tier",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "whaleShowBestItems": "حان وقت عرض أفضل منتجاتك!",
   "badgePassive": "غير نشط",
   "hesitatedSectionTitle": "انظر للخلف",
@@ -2798,32 +4426,59 @@
   "hesitatedDismissed": "تمت الإزالة من قائمتك",
   "searchSmartResultsLabel": "نتائج ذكية",
   "searchShowAllAccounts": "عرض كل الحسابات ({count})",
-  "@searchShowAllAccounts": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@searchShowAllAccounts": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "explorePersonalizedHint": "تصفح بعض الإعلانات،\nيتم تحضير المحتوى الخاص بك!",
   "personalizedGridExhausted": "تم عرض جميع التوصيات · اسحب للأسفل للتحديث",
   "joinLiveStreamBanner": "انضم إلى البث المباشر →",
   "audienceCountPeople": "{count} أشخاص",
-  "@audienceCountPeople": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@audienceCountPeople": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "audienceFreeSlots": "-{count} أشخاص",
-  "@audienceFreeSlots": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@audienceFreeSlots": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "defaultUserFallback": "مستخدم",
   "noResultsFound": "لا توجد نتائج",
   "removeFromFavoritesTooltip": "إزالة من المفضلة",
@@ -2856,13 +4511,22 @@
   "callSpeaker": "مكبر الصوت",
   "callIncomingTitle": "مكالمة واردة",
   "callIncomingBody": "{username}@ يتصل بك",
-  "@callIncomingBody": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@callIncomingBody": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "callReturnToActive": "اضغط للعودة إلى المكالمة",
   "callNotifAccept": "رد",
   "callNotifDecline": "رفض",
@@ -2871,27 +4535,51 @@
   "callChat": "دردشة",
   "callAddPerson": "إضافة",
   "notifCallMissed": "مكالمة فائتة: @{username}",
-  "@notifCallMissed": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifCallMissed": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifCallMissedBody": "حاول الاتصال بك.",
   "callNotifTitle": "@{username} يتصل بك",
-  "@callNotifTitle": {
-    "description": "Incoming call push notification title",
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@callNotifTitle": [
+    [
+      "description",
+      "Incoming call push notification title"
+    ],
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "callNotifBody": "مكالمة صوتية واردة",
-  "@callNotifBody": {
-    "description": "Incoming call push notification body"
-  },
+  "@callNotifBody": [
+    [
+      "description",
+      "Incoming call push notification body"
+    ]
+  ],
   "privateAccount": "حساب خاص",
   "privateAccountDesc": "عندما يكون حسابك خاصًا، يمكن فقط للأشخاص الذين توافق عليهم متابعتك.",
   "followRequests": "طلبات المتابعة",
@@ -2902,17 +4590,29 @@
   "thisAccountIsPrivate": "هذا الحساب خاص",
   "thisAccountIsPrivateDesc": "تابع هذا الحساب لرؤية إعلاناته.",
   "notifFollowRequestTitle": "@{username} يريد متابعتك",
-  "@notifFollowRequestTitle": {
-    "placeholders": {
-      "username": {}
-    }
-  },
+  "@notifFollowRequestTitle": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          []
+        ]
+      ]
+    ]
+  ],
   "notifFollowAcceptedTitle": "@{username} وافق على طلب المتابعة",
-  "@notifFollowAcceptedTitle": {
-    "placeholders": {
-      "username": {}
-    }
-  },
+  "@notifFollowAcceptedTitle": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          []
+        ]
+      ]
+    ]
+  ],
   "errFollowSelf": "لا يمكنك متابعة نفسك",
   "errUserNotFound": "المستخدم غير موجود",
   "errAlreadyFollowing": "أنت تتابع بالفعل أو تم إرسال الطلب",
@@ -2959,125 +4659,248 @@
   "callHistoryOutgoing": "الصادرة",
   "callHistoryEmpty": "لا توجد مكالمات بعد",
   "callHistoryDurationShort": "{mm}:{ss}",
-  "@callHistoryDurationShort": {
-    "placeholders": {
-      "mm": {
-        "type": "String"
-      },
-      "ss": {
-        "type": "String"
-      }
-    }
-  },
+  "@callHistoryDurationShort": [
+    [
+      "placeholders",
+      [
+        [
+          "mm",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ],
+        [
+          "ss",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "callCameraSwitch": "تبديل الكاميرا",
   "callCameraOn": "الكاميرا مفتوحة",
   "callCameraOff": "الكاميرا مغلقة",
   "callVideoStarted": "{name} فتح الكاميرا",
-  "@callVideoStarted": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
+  "@callVideoStarted": [
+    [
+      "placeholders",
+      [
+        [
+          "name",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "callVideoStopped": "{name} أغلق الكاميرا",
-  "@callVideoStopped": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
+  "@callVideoStopped": [
+    [
+      "placeholders",
+      [
+        [
+          "name",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "callInviteTitle": "دعوة للمكالمة",
   "callInviteButton": "إرسال دعوة",
   "callSearchFollowing": "ابحث عمن تتابعهم...",
   "callAlreadyInCall": "في مكالمة بالفعل",
   "callInvitePending": "تم إرسال الدعوة",
   "callInviteSent": "تم إرسال دعوة لـ {name}",
-  "@callInviteSent": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
+  "@callInviteSent": [
+    [
+      "placeholders",
+      [
+        [
+          "name",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "callInviteRejected": "{name} رفض الدعوة",
-  "@callInviteRejected": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
+  "@callInviteRejected": [
+    [
+      "placeholders",
+      [
+        [
+          "name",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "callInviteTimeout": "{name} لم يستجب",
-  "@callInviteTimeout": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
+  "@callInviteTimeout": [
+    [
+      "placeholders",
+      [
+        [
+          "name",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "callParticipantJoined": "{name} انضم إلى المكالمة",
-  "@callParticipantJoined": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
+  "@callParticipantJoined": [
+    [
+      "placeholders",
+      [
+        [
+          "name",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "callParticipantLeft": "{name} غادر المكالمة",
-  "@callParticipantLeft": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
+  "@callParticipantLeft": [
+    [
+      "placeholders",
+      [
+        [
+          "name",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "callParticipantRemovedSelf": "تم إزالتك من المكالمة",
   "callParticipantRemovedOther": "تم إزالة {name} من المكالمة",
-  "@callParticipantRemovedOther": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
+  "@callParticipantRemovedOther": [
+    [
+      "placeholders",
+      [
+        [
+          "name",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "callGroupInviteTitle": "دعوة لمكالمة نشطة",
   "callGroupInviteFrom": "{inviter} يدعوك للانضمام إلى مكالمة",
-  "@callGroupInviteFrom": {
-    "placeholders": {
-      "inviter": {
-        "type": "String"
-      }
-    }
-  },
+  "@callGroupInviteFrom": [
+    [
+      "placeholders",
+      [
+        [
+          "inviter",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "callJoinButton": "انضم",
   "callDeclineInviteButton": "رفض",
   "callParticipantCount": "{count} مشاركين",
-  "@callParticipantCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@callParticipantCount": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "callMaxParticipantsReached": "المكالمة ممتلئة (الحد الأقصى {max})",
-  "@callMaxParticipantsReached": {
-    "placeholders": {
-      "max": {
-        "type": "int"
-      }
-    }
-  },
+  "@callMaxParticipantsReached": [
+    [
+      "placeholders",
+      [
+        [
+          "max",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "callRemoveParticipantTitle": "إزالة من المكالمة",
   "callRemoveParticipantConfirm": "هل تريد إزالة {name} من المكالمة؟",
-  "@callRemoveParticipantConfirm": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
+  "@callRemoveParticipantConfirm": [
+    [
+      "placeholders",
+      [
+        [
+          "name",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "callRemoveParticipantButton": "إزالة",
   "callCurrentParticipants": "في المكالمة الآن",
   "callHistoryToday": "اليوم",
@@ -3094,7 +4917,7 @@
   "aiDescButton": "كتابة الوصف بالذكاء الاصطناعي",
   "aiDescGenerating": "الذكاء الاصطناعي يكتب الوصف...",
   "aiDescFallbackNotice": "الذكاء الاصطناعي الرئيسي مشغول، يُستخدم النموذج الاحتياطي.",
-  "@aiDescFallbackNotice": {},
+  "@aiDescFallbackNotice": [],
   "aiDescError": "فشل إنشاء الوصف. حاول مجدداً.",
   "aiDescUnavailable": "خدمة الذكاء الاصطناعي لكتابة الوصف غير متاحة حالياً.",
   "fieldCondition": "حالة المنتج",
@@ -3113,21 +4936,39 @@
   "uploadErrorAuthExpired": "انتهت صلاحية جلستك، يرجى تسجيل الدخول مرة أخرى.",
   "uploadErrorGeneric": "تعذر تحميل الوسائط، يرجى المحاولة مرة أخرى.",
   "apiErrorInsufficientFundsPro": "لقد وصلت إلى حد الذكاء الاصطناعي المجاني لهذا الشهر. تحتاج إلى {cost} teqlik على الأقل في حسابك للمتابعة.",
-  "@apiErrorInsufficientFundsPro": {
-    "placeholders": {
-      "cost": {
-        "type": "int"
-      }
-    }
-  },
+  "@apiErrorInsufficientFundsPro": [
+    [
+      "placeholders",
+      [
+        [
+          "cost",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "apiErrorInsufficientFundsStd": "رصيد teqlik غير كافٍ. تحتاج إلى {cost} teqlik على الأقل في حسابك لهذا الإجراء.",
-  "@apiErrorInsufficientFundsStd": {
-    "placeholders": {
-      "cost": {
-        "type": "int"
-      }
-    }
-  },
+  "@apiErrorInsufficientFundsStd": [
+    [
+      "placeholders",
+      [
+        [
+          "cost",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "apiErrorAiServiceBusy": "خدمة الذكاء الاصطناعي مشغولة حالياً. يرجى المحاولة مرة أخرى.",
   "apiErrorAiServiceTimeout": "انتهت مهلة خدمة الذكاء الاصطناعي.",
   "errorServerBusy": "الخادم مشغول حالياً، يرجى المحاولة لاحقاً.",
@@ -4316,19 +6157,37 @@
   "micToggleFailed": "تعذّر تبديل الميكروفون",
   "cameraToggleFailed": "تعذّر تبديل الكاميرا",
   "notifRatingUpdatedTitle": "قام @{username} بتحديث تقييمه",
-  "@notifRatingUpdatedTitle": {
-    "description": "عنوان الإشعار عند تحديث تقييم",
-    "placeholders": {
-      "username": {}
-    }
-  },
+  "@notifRatingUpdatedTitle": [
+    [
+      "description",
+      "عنوان الإشعار عند تحديث تقييم"
+    ],
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          []
+        ]
+      ]
+    ]
+  ],
   "notifRatingReplyTitle": "ردّ @{username} على تقييمك",
-  "@notifRatingReplyTitle": {
-    "description": "عنوان الإشعار عند الرد على تقييم",
-    "placeholders": {
-      "username": {}
-    }
-  },
+  "@notifRatingReplyTitle": [
+    [
+      "description",
+      "عنوان الإشعار عند الرد على تقييم"
+    ],
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          []
+        ]
+      ]
+    ]
+  ],
   "notifSettingsRatingsTitle": "إشعارات التقييم",
   "notifSettingsRatingsDesc": "عند تحديث تقييم أو الرد عليه",
   "extraField_listing_type": "حالة الإعلان",
@@ -4360,24 +6219,48 @@
   "directSalePausedLabel": "Sale paused",
   "directSaleResumedFeedback": "▶ Sale resumed",
   "directSalePurchaseHostMsg": "✅ @{buyer} ×{qty} purchased",
-  "@directSalePurchaseHostMsg": {
-    "placeholders": {
-      "buyer": {
-        "type": "String"
-      },
-      "qty": {
-        "type": "String"
-      }
-    }
-  },
+  "@directSalePurchaseHostMsg": [
+    [
+      "placeholders",
+      [
+        [
+          "buyer",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ],
+        [
+          "qty",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "directSalePurchaseViewerMsg": "@{buyer} purchased",
-  "@directSalePurchaseViewerMsg": {
-    "placeholders": {
-      "buyer": {
-        "type": "String"
-      }
-    }
-  },
+  "@directSalePurchaseViewerMsg": [
+    [
+      "placeholders",
+      [
+        [
+          "buyer",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "directSaleSoldOutBanner": "Sold out 🎉",
   "directSaleEndedSoldOut": "Everything sold out! 🎉",
   "directSaleEndedByHost": "Sale ended.",
@@ -4386,13 +6269,22 @@
   "directSaleCancelledOrderKept": "تم إلغاء البيع، طلبك لا يزال صالحاً.",
   "directSaleCancelledOrderVoided": "تم إلغاء البيع، تم إلغاء طلبك.",
   "directSaleStockUrgency": "Only {count} left!",
-  "@directSaleStockUrgency": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@directSaleStockUrgency": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "directSaleFormTitle": "بدء البيع",
   "directSaleFormProductTitle": "اسم المنتج",
   "directSaleFormPrice": "السعر (₺)",
@@ -4412,56 +6304,101 @@
   "directSaleRevenueLabel": "Total Revenue",
   "directSaleEndDialogTitle": "End Sale",
   "directSaleEndDialogBody": "{count} orders placed. These orders will remain valid.",
-  "@directSaleEndDialogBody": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@directSaleEndDialogBody": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "directSaleEndDialogBodyNoOrders": "Are you sure you want to end the sale?",
   "directSaleCancelDialogTitle": "إلغاء البيع",
   "directSaleCancelDialogBody": "تم تقديم {count} طلب حتى الآن. ماذا تريد أن يحدث لها؟",
-  "@directSaleCancelDialogBody": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@directSaleCancelDialogBody": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "directSaleCancelDialogBodyNoOrders": "هل أنت متأكد من إلغاء البيع؟",
   "directSaleCancelVoidOrders": "إلغاء الطلبات",
   "directSaleCancelKeepOrders": "الإبقاء على الطلبات",
   "directSaleSummaryTitle": "Sale Completed",
   "directSaleSummarySold": "{count} sold",
-  "@directSaleSummarySold": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@directSaleSummarySold": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "directSaleSummaryRevenue": "Total: {amount}",
-  "@directSaleSummaryRevenue": {
-    "placeholders": {
-      "amount": {
-        "type": "String"
-      }
-    }
-  },
+  "@directSaleSummaryRevenue": [
+    [
+      "placeholders",
+      [
+        [
+          "amount",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "directSaleNewSaleBtn": "Start New Sale",
   "directSaleBuyBtn": "Buy Now",
   "directSaleBuySheetTitle": "Purchase",
   "directSaleBuySheetQuantity": "Quantity",
   "directSaleBuySheetTotal": "Total",
   "directSaleBuySheetPreviousBadge": "✓ You bought {count}",
-  "@directSaleBuySheetPreviousBadge": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@directSaleBuySheetPreviousBadge": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "directSaleBuySheetConfirm": "Buy",
   "directSaleProofDialogTitle": "Starting Your Sale",
   "directSaleProofDialogBody": "Show the product on camera before starting the sale and take a proof photo.",
@@ -4473,21 +6410,39 @@
   "directSaleOrdersTitle": "Buyers",
   "directSaleOrderCancelled": "Cancelled",
   "directSaleOrderQuantity": "{count} pcs",
-  "@directSaleOrderQuantity": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@directSaleOrderQuantity": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "directSaleBuyerCount": "{count} buyers",
-  "@directSaleBuyerCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@directSaleBuyerCount": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "directSaleSaleStatusLabel": "Sale Status",
   "directSaleOrderCompleted": "Completed",
   "directSaleQuantityLabel": "Quantity",
@@ -4612,5 +6567,31 @@
   "recordingTabSalesGifts": "مبيعات وهدايا",
   "recordingTabParticipants": "المشاركون",
   "recordingSearchAuctions": "بحث في المزادات...",
-  "recordingSearchParticipants": "بحث في المشاركين..."
+  "recordingSearchParticipants": "بحث في المشاركين...",
+  "boostDialogPaidBadgeStandard": "لا تتوفر رصيد تعزيز شهري مجاني للأعضاء العاديين",
+  "aiDescConfirmStandardTitle": "سيتم خصم 5 TEQlik",
+  "aiDescConfirmStandardBody": "إنشاء وصف بالذكاء الاصطناعي سيخصم 5 TEQlik من رصيدك. هل تريد المتابعة؟",
+  "aiDescConfirmProExhaustedTitle": "نفدت أرصدتك الشهرية",
+  "aiDescConfirmProExhaustedBody": "لقد استخدمت أرصدتك المجانية الشهرية. المتابعة ستخصم 5 TEQlik.",
+  "aiDescConfirmAction": "متابعة",
+  "aiDescCostBadge": "teqlik",
+  "creditGateBlastTitle": "إرسال إشعار جماعي",
+  "creditGateBoostTitle": "تعزيز الإعلان",
+  "creditGateAiDescTitle": "وصف بالذكاء الاصطناعي",
+  "creditGateReactivationTitle": "إعادة نشر الإعلان",
+  "creditGateFreeRemaining": "لديك {remaining} / {total} رصيد مجاني هذه الفترة",
+  "@creditGateFreeRemaining": [["placeholders", [["remaining", [["type", "int"]]], ["total", [["type", "int"]]]]]],
+  "creditGateWithinWindow": "نافذة 30 يوماً — هذا الإجراء مجاني",
+  "creditGateStandardPaid": "لا توجد رصيد مجاني للأعضاء العاديين",
+  "creditGateProExhausted": "لقد استخدمت جميع الـ {total} رصيد المجاني هذه الفترة",
+  "@creditGateProExhausted": [["placeholders", [["total", [["type", "int"]]]]]],
+  "creditGateCostLabel": "التكلفة",
+  "creditGateFree": "مجاني",
+  "creditGateCostValue": "{cost} teqlik",
+  "@creditGateCostValue": [["placeholders", [["cost", [["type", "int"]]]]]],
+  "creditGateBalanceLabel": "رصيدك",
+  "creditGateBalanceValue": "{balance} teqlik",
+  "@creditGateBalanceValue": [["placeholders", [["balance", [["type", "int"]]]]]],
+  "creditGateInsufficientBalance": "رصيد غير كافٍ. أضف teqlik للمتابعة.",
+  "creditGateConfirm": "تأكيد والمتابعة"
 }

@@ -38,9 +38,11 @@ import '../utils/number_formatter.dart';
 
 import '../ui_library/components/overlays/teq_snackbar.dart';
 import '../ui_library/components/overlays/teq_dialog.dart';
+import '../ui_library/components/overlays/credit_gate_sheet.dart';
 import '../ui_library/components/inputs/teq_text_field.dart';
 import '../ui_library/components/buttons/teq_button.dart';
 import '../ui_library/components/buttons/teq_async_button.dart';
+import '../models/credit_gate_data.dart';
 import '../core/event_bus.dart';
 
 class ListingDetailScreen extends ConsumerStatefulWidget {
@@ -734,68 +736,26 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     final loc = ref.read(localizationProvider);
     final listingId = widget.listing['id'] as int;
     final notifier = ref.read(listingDetailProvider(listingId).notifier);
-    notifier.setSending(true);
 
-    // Hedef kitle büyüklüğünü çek
-    final est = await ref.read(analyticsServiceProvider).estimateAudienceForListing(listingId);
-    if (est == null || !mounted || !context.mounted) {
-      notifier.setSending(false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(loc.t("audienceCalcError"))),
-      );
-      return;
-    }
-
-    final maxAudience = est['audience_size'] as int? ?? 0;
-    if (maxAudience == 0) {
-      if (!mounted || !context.mounted) return;
-      notifier.setSending(false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(loc.t("audienceNoPotentialFound"))),
-      );
-      return;
-    }
-
-    final creditsLeft = est['blast_credits_remaining'] as int? ?? 0;
-    final perBlastCap = est['per_blast_cap'] as int? ?? maxAudience;
-    final teqlikBalance = est['teqlik_balance'] as int? ?? 0;
-    notifier.setSending(false);
-
-    // Onay penceresi (Akıllı Modal)
-    final result = await showDialog<Map<String, int>>(
+    final result = await CreditGateSheet.show(
       context: context,
-      builder: (_) => _MassNotificationDialog(
-        maxAudience: maxAudience,
-        creditsLeft: creditsLeft,
-        perBlastCap: perBlastCap,
-        teqlikBalance: teqlikBalance,
-      ),
-    );
-
-    if (result == null || !mounted || !context.mounted) return;
-
-    notifier.setSending(true);
-    final apiResult = await ref.read(analyticsServiceProvider).sendMassNotificationForListing(
+      ref: ref,
+      feature: CreditFeature.blast,
       listingId: listingId,
-      estimatedCost: result['cost']!,
-      recipientCount: result['count']!,
     );
+
     if (!mounted || !context.mounted) return;
 
-    if (apiResult != null && apiResult['cooldown'] == true) {
-      final secs = (apiResult['seconds_remaining'] as num?)?.toInt() ?? 86400;
+    if (result.payload?['cooldown'] == true) {
+      final secs = (result.payload?['seconds_remaining'] as num?)?.toInt() ?? 86400;
       notifier.startCooldown(secs);
       TeqSnackBar.show(message: _formatCooldown(secs), type: TeqSnackBarType.warning);
-    } else if (apiResult != null && apiResult.containsKey('error')) {
-      notifier.setSending(false);
-      TeqSnackBar.show(message: apiResult['error'] as String, type: TeqSnackBarType.error);
-    } else if (apiResult != null) {
+    } else if (result.success) {
       ref.read(cacheServiceProvider).clearData('user_wallet_data');
       notifier.startCooldown(86400);
-      TeqSnackBar.show(message: loc.t("audienceMassSendSuccess"), type: TeqSnackBarType.success);
-    } else {
-      notifier.setSending(false);
-      TeqSnackBar.show(message: loc.t("audienceMassSendError"), type: TeqSnackBarType.error);
+      TeqSnackBar.show(message: loc.t('audienceMassSendSuccess'), type: TeqSnackBarType.success);
+    } else if (result.errorKey != null) {
+      TeqSnackBar.show(message: loc.t(result.errorKey!), type: TeqSnackBarType.error);
     }
   }
 
@@ -811,265 +771,31 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
   }
 
   Future<void> _boostListing(BuildContext ctx) async {
-    final boostMessenger = ScaffoldMessenger.of(context);
     final loc = ref.read(localizationProvider);
-    // Önce boost kredi durumunu çek
-    int remaining = 0;
-    int limit = 0;
-    bool isPro = false;
-    int teqlikBalance = 0;
-
-    // Check loading state while fetching data — spinner shown by AsyncElevatedButton
-
-    try {
-      final token = await StorageService.getToken();
-      final cr = await http.get(
-        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/ads/boost-credits'),
-        headers: {if (token != null) 'Authorization': 'Bearer $token'},
-      );
-      if (cr.statusCode == 200) {
-        final d = jsonDecode(cr.body) as Map<String, dynamic>;
-        remaining = (d['remaining'] as num).toInt();
-        limit = (d['limit'] as num).toInt();
-        isPro = d['is_pro'] == true;
-        // teqlik bakiyesini de çek
-        final tokenInner = await StorageService.getToken();
-        final ur = await http.get(
-          Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/users/me'),
-          headers: {
-            if (tokenInner != null) 'Authorization': 'Bearer $tokenInner',
-          },
-        );
-        if (ur.statusCode == 200) {
-          final ud = jsonDecode(ur.body) as Map<String, dynamic>;
-          teqlikBalance = ((ud['wallet_balance'] ?? 0) as num).toInt();
-        }
-      }
-    } catch (_) {}
+    final result = await CreditGateSheet.show(
+      context: context,
+      ref: ref,
+      feature: CreditFeature.boost,
+      listingId: widget.listing['id'] as int,
+    );
 
     if (!mounted || !context.mounted) return;
 
-    // Pro değilse bilgilendir
-    if (!isPro) {
-      boostMessenger.showSnackBar(
-        SnackBar(
-          content: Text(loc.t("boostOnlyPro")),
-          backgroundColor: const Color(0xFFF97316),
-        ),
+    if (result.success) {
+      final wasFree = result.payload?['is_free'] == true;
+      ref.read(cacheServiceProvider).clearData('user_wallet_data');
+      setState(() {
+        _campaignId = result.payload?['id'] as int?;
+        widget.listing['campaign_id'] = _campaignId;
+        widget.listing['is_sponsored'] = true;
+      });
+      TeqSnackBar.show(
+        message: wasFree ? loc.t('boostSuccessFree') : loc.t('boostSuccessPaid'),
+        type: TeqSnackBarType.success,
       );
-      return;
+    } else if (result.errorKey != null) {
+      TeqSnackBar.show(message: loc.t(result.errorKey!), type: TeqSnackBarType.error);
     }
-
-    // Ücretli veya ücretsiz boost dialog'ını göster
-    final bool isFreeMode = remaining > 0;
-
-    showDialog<void>(
-      context: context,
-      builder: (dlgCtx) {
-        final loc = ref.read(localizationProvider);
-
-        Future<void> performBoost() async {
-          final token = await StorageService.getToken();
-          try {
-            final resp = await http.post(
-              Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/ads/campaigns'),
-              headers: {
-                'Content-Type': 'application/json',
-                if (token != null) 'Authorization': 'Bearer $token',
-              },
-              body: jsonEncode({
-                'listing_id': widget.listing['id'],
-                'total_budget': 50,
-                'cpc_bid': 1,
-              }),
-            );
-            if (!mounted || !context.mounted) return;
-            Navigator.pop(dlgCtx);
-            final loc = ref.read(localizationProvider);
-            if (resp.statusCode == 201) {
-              final data = jsonDecode(resp.body) as Map<String, dynamic>;
-              final wasFree = data['is_free'] == true;
-              ref.read(cacheServiceProvider).clearData('user_wallet_data');
-              setState(() {
-                _campaignId = data['id'] as int?;
-                widget.listing['campaign_id'] = _campaignId;
-                widget.listing['is_sponsored'] = true;
-              });
-              TeqSnackBar.show(message: wasFree ? loc.t("boostSuccessFree") : loc.t("boostSuccessPaid"),
-                type: TeqSnackBarType.success,
-              );
-            } else {
-              final body = jsonDecode(resp.body) as Map<String, dynamic>;
-              final msg = body['detail'] ?? loc.t("boostErrorDefault");
-              TeqSnackBar.show(message: msg.toString(),
-                type: TeqSnackBarType.error,
-              );
-            }
-          } catch (_) {
-            if (mounted && context.mounted) {
-              final loc = ref.read(localizationProvider);
-              Navigator.pop(dlgCtx);
-              TeqSnackBar.show(message: loc.t("boostErrorConnection"), type: TeqSnackBarType.error);
-            }
-          }
-        }
-
-        if (isFreeMode) {
-          // Ücretsiz boost dialog'ı
-          return AlertDialog(
-            title: Text(
-              loc.t("boostDialogTitle"),
-              style: const TextStyle(fontWeight: FontWeight.w700),
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  loc.t("boostDialogPlanLabel"),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                _BoostRow(
-                  icon: Icons.account_balance_wallet_outlined,
-                  label: loc.t("boostDialogTotalBudget"),
-                  value: loc.t("boostDialogTotalBudgetValue"),
-                ),
-                _BoostRow(
-                  icon: Icons.ads_click,
-                  label: loc.t("boostDialogCpc"),
-                  value: loc.t("boostDialogCpcValue"),
-                ),
-                _BoostRow(
-                  icon: Icons.touch_app_outlined,
-                  label: loc.t("boostDialogEstClicks"),
-                  value: loc.t("boostDialogEstClicksValue"),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  loc.t("boostDialogFeedHint"),
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFF7ED),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    loc.t("boostDialogCredits", {"remaining": remaining.toString(), "limit": limit.toString()}),
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFFF97316),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            actions: [
-              TeqButton(
-                onPressed: () => Navigator.pop(dlgCtx, false),
-                text: loc.t("btnCancel"),
-                type: TeqButtonType.text,
-                isExpanded: false,
-              ),
-              TeqButton(
-                onPressed: performBoost,
-                text: loc.t("boostDialogStart"),
-                type: TeqButtonType.primary,
-                isExpanded: false,
-              ),
-            ],
-          );
-        } else {
-          // Ücretli boost dialog'ı — kredit bitti
-          return AlertDialog(
-            title: Row(
-              children: [
-                const Icon(
-                  Icons.monetization_on_rounded,
-                  color: Color(0xFF6366F1),
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  loc.t("boostDialogPaidTitle"),
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-              ],
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFEF2F2),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    loc.t("boostDialogPaidBadge", {"limit": limit.toString()}),
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFFDC2626),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  loc.t("boostDialogPaidDesc"),
-                  style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-                ),
-                const SizedBox(height: 12),
-                _BoostRow(
-                  icon: Icons.price_change_outlined,
-                  label: loc.t("boostDialogPaidCost"),
-                  value: loc.t("boostDialogPaidCostValue"),
-                ),
-                _BoostRow(
-                  icon: Icons.account_balance_wallet_outlined,
-                  label: loc.t("boostDialogPaidBalance"),
-                  value: '$teqlikBalance teqlik',
-                  valueColor: teqlikBalance >= 50
-                      ? const Color(0xFF16A34A)
-                      : const Color(0xFFDC2626),
-                ),
-              ],
-            ),
-            actions: [
-              TeqButton(
-                onPressed: () => Navigator.pop(dlgCtx, false),
-                text: loc.t("btnCancel"),
-                type: TeqButtonType.text,
-                isExpanded: false,
-              ),
-              TeqButton(
-                onPressed: teqlikBalance >= 50
-                    ? () => Navigator.pop(dlgCtx, true)
-                    : null,
-                text: loc.t("boostDialogPaidConfirm"),
-                type: TeqButtonType.primary,
-                isExpanded: false,
-              ),
-            ],
-          );
-        }
-      },
-    );
   }
 
   void _openReport(BuildContext context) {
@@ -2861,262 +2587,6 @@ class _BoostRow extends ConsumerWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _MassNotificationDialog extends ConsumerStatefulWidget {
-  final int maxAudience;
-  final int creditsLeft;
-  final int perBlastCap;
-  final int teqlikBalance;
-
-  const _MassNotificationDialog({
-    required this.maxAudience,
-    required this.creditsLeft,
-    required this.perBlastCap,
-    required this.teqlikBalance,
-  });
-
-  @override
-  ConsumerState<_MassNotificationDialog> createState() =>
-      _MassNotificationDialogState();
-}
-
-class _MassNotificationDialogState extends ConsumerState<_MassNotificationDialog> {
-  bool _useCustomCount = false;
-  late TextEditingController _countCtrl;
-
-  @override
-  void initState() {
-    super.initState();
-    final defaultCount = widget.maxAudience < widget.perBlastCap
-        ? widget.maxAudience
-        : widget.perBlastCap;
-    _countCtrl = TextEditingController(text: defaultCount.toString());
-    _countCtrl.addListener(_onCountChanged);
-  }
-
-  @override
-  void dispose() {
-    _countCtrl.dispose();
-    super.dispose();
-  }
-
-  void _onCountChanged() {
-    final parsed = int.tryParse(_countCtrl.text);
-    if (parsed != null) {
-      final maxAllowed = widget.maxAudience < widget.perBlastCap
-          ? widget.maxAudience
-          : widget.perBlastCap;
-      final clamped = parsed.clamp(1, maxAllowed);
-      if (clamped != parsed) {
-        final s = clamped.toString();
-        _countCtrl.value = TextEditingValue(
-          text: s,
-          selection: TextSelection.collapsed(offset: s.length),
-        );
-        return;
-      }
-    }
-    setState(() {});
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final loc = ref.watch(localizationProvider);
-    int requestedCount = int.tryParse(_countCtrl.text) ?? 0;
-    if (!_useCustomCount) {
-      requestedCount = widget.maxAudience < widget.perBlastCap
-          ? widget.maxAudience
-          : widget.perBlastCap;
-    }
-    if (requestedCount > widget.maxAudience) {
-      requestedCount = widget.maxAudience;
-    }
-
-    final actualCount = requestedCount;
-    final freeUsed = widget.creditsLeft < actualCount
-        ? widget.creditsLeft
-        : actualCount;
-    final paidCount = actualCount - freeUsed;
-    final teqlikCost = paidCount * 10;
-    final bool hasEnoughBalance = widget.teqlikBalance >= teqlikCost;
-
-    return AlertDialog(
-      backgroundColor: const Color(0xFF1E293B),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: Text(
-        loc.t("massAudienceNotification"),
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w800,
-        ),
-      ),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              loc.t("listingBlastDialogBody", {"count": widget.maxAudience.toString()}),
-              style: const TextStyle(color: Color(0xFF94A3B8), height: 1.5),
-            ),
-            const SizedBox(height: 16),
-            // Checkbox for custom count
-            Row(
-              children: [
-                SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: Checkbox(
-                    value: _useCustomCount,
-                    activeColor: const Color(0xFF14B8A6),
-                    side: const BorderSide(color: Color(0xFF64748B)),
-                    onChanged: (val) {
-                      setState(() => _useCustomCount = val ?? false);
-                    },
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    loc.t("audienceSendToX"),
-                    style: const TextStyle(color: Color(0xFFCBD5E1)),
-                  ),
-                ),
-              ],
-            ),
-            if (_useCustomCount)
-              Padding(
-                padding: const EdgeInsets.only(
-                  top: 8.0,
-                  bottom: 8.0,
-                  left: 32.0,
-                ),
-                child: TeqTextField(
-                  controller: _countCtrl,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  hintText: loc.t("audiencePersonCountHint"),
-                ),
-              ),
-            const SizedBox(height: 16),
-            // Calculation Card
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0x3314B8A6),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0x5514B8A6)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        loc.t("audienceNotificationWillGoTo"),
-                        style: TextStyle(
-                          color: Color(0xFF94A3B8),
-                          fontSize: 13,
-                        ),
-                      ),
-                      Text(
-                        loc.t("audienceCountPeople", {"count": actualCount.toString()}),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        loc.t("audienceMonthlyFreeRights"),
-                        style: TextStyle(
-                          color: Color(0xFF94A3B8),
-                          fontSize: 13,
-                        ),
-                      ),
-                      Text(
-                        loc.t("audienceFreeSlots", {"count": freeUsed.toString()}),
-                        style: const TextStyle(
-                          color: Color(0xFF2DD4BF),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 4),
-                    child: Divider(color: Color(0x5514B8A6)),
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        loc.t("audienceTotalCost"),
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        '$teqlikCost teqlik',
-                        style: TextStyle(
-                          color: hasEnoughBalance
-                              ? const Color(0xFF2DD4BF)
-                              : const Color(0xFFEF4444),
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            if (!hasEnoughBalance)
-              Padding(
-                padding: const EdgeInsets.only(top: 8.0),
-                child: Text(
-                  loc.t("audienceInsufficientTeqlik"),
-                  style: const TextStyle(
-                    color: Color(0xFFEF4444),
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-      actions: [
-        TeqButton(
-          onPressed: () => Navigator.pop(context, null),
-          text: loc.t("btnCancel"),
-          type: TeqButtonType.text,
-          isExpanded: false,
-        ),
-        TeqButton(
-          onPressed: hasEnoughBalance && actualCount > 0
-              ? () => Navigator.pop(context, {
-                  'count': actualCount,
-                  'cost': teqlikCost,
-                })
-              : null,
-          text: loc.t("btnSend"),
-          type: TeqButtonType.primary,
-          customColor: const Color(0xFF14B8A6),
-          isExpanded: false,
-        ),
-      ],
     );
   }
 }

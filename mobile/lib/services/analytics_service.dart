@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/network/api_client.dart';
 import '../core/app_exception.dart';
 import '../models/pro_insights_data.dart';
+import '../models/credit_gate_data.dart';
 import '../services/api_service.dart';
 import '../services/cache_service.dart';
 import '../services/storage_service.dart';
@@ -626,6 +627,95 @@ class AnalyticsService {
       }
     } catch (_) {}
     return null;
+  }
+
+  /// Bir feature için gerekli tüm kredi verilerini tek seferde çeker ve
+  /// [CreditGateData] olarak döndürür. Hata durumunda `null` döner.
+  ///
+  /// [listingId] blast ve reactivation için zorunlu, diğerleri için opsiyonel.
+  Future<CreditGateData?> fetchCreditGateData(
+    CreditFeature feature, {
+    int? listingId,
+  }) async {
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return null;
+
+      // Kullanıcı bakiyesi ve tipi her feature için gerekli
+      final meResp = await http.get(
+        Uri.parse('${_api.config.baseUrl}/users/me'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (meResp.statusCode != 200) return null;
+      final me = await compute(jsonDecode, meResp.body) as Map<String, dynamic>;
+      final balance = ((me['wallet_balance'] ?? 0) as num).toInt();
+      final userType = me['user_type'] as String? ?? 'standard';
+
+      // Feature'a özgü kredi endpoint'i
+      final String creditsPath;
+      switch (feature) {
+        case CreditFeature.blast:
+          creditsPath = '/leads/blast-credits';
+        case CreditFeature.boost:
+          creditsPath = '/ads/boost-credits';
+        case CreditFeature.aiDesc:
+          creditsPath = '/listings/ai-desc-credits';
+        case CreditFeature.reactivation:
+          creditsPath = '/analytics/reactivation-credits';
+      }
+
+      final credResp = await http.get(
+        Uri.parse('${_api.config.baseUrl}$creditsPath'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (credResp.statusCode != 200) return null;
+      final cred = await compute(jsonDecode, credResp.body) as Map<String, dynamic>;
+
+      final freeRemaining = (cred['remaining'] as num?)?.toInt() ?? 0;
+      final freeLimitTotal = (cred['limit'] as num?)?.toInt() ?? 0;
+      // cost_teqlik tüm endpoint'lerde artık dönüyor; fallback API değişikliğine karşı koruma.
+      final costTeqlik = (cred['cost_teqlik'] as num?)?.toInt()
+          ?? feature.fallbackCostTeqlik;
+
+      // Blast: kitle tahmini + per_op_cap
+      int audienceSize = 0;
+      int perOpCap = 0;
+      if (feature == CreditFeature.blast && listingId != null) {
+        final est = await estimateAudienceForListing(listingId);
+        audienceSize = (est?['audience_size'] as num?)?.toInt() ?? 0;
+        // per_op_cap tercih edilir; eski backend versiyonları per_blast_cap döndürürdü.
+        perOpCap = (cred['per_op_cap'] as num?)?.toInt()
+            ?? (cred['per_blast_cap'] as num?)?.toInt()
+            ?? audienceSize;
+      }
+
+      // Reactivation: 30 gün penceresi
+      bool withinWindow = false;
+      if (feature == CreditFeature.reactivation && listingId != null) {
+        final costResp = await http.get(
+          Uri.parse('${_api.config.baseUrl}/listings/$listingId/reactivation-cost'),
+          headers: {'Authorization': 'Bearer $token'},
+        );
+        if (costResp.statusCode == 200) {
+          final costData = await compute(jsonDecode, costResp.body) as Map<String, dynamic>;
+          withinWindow = costData['within_window'] as bool? ?? false;
+        }
+      }
+
+      return CreditGateData(
+        feature: feature,
+        userType: userType,
+        freeRemaining: freeRemaining,
+        freeLimitTotal: freeLimitTotal,
+        costTeqlik: costTeqlik,
+        teqlikBalance: balance,
+        audienceSize: audienceSize,
+        perOpCap: perOpCap,
+        withinWindow: withinWindow,
+      );
+    } catch (_) {
+      return null;
+    }
   }
 
   /// İlan başına 24h bildirim cooldown süresi (saniye). 0 = gönderim yapılabilir.

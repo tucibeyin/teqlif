@@ -167,13 +167,22 @@
   "errorListingsLoad": "Anzeigen konnten nicht geladen werden",
   "errorOperationFailed": "Die Aktion konnte nicht abgeschlossen werden.",
   "errorCoHostDuringCall": "@{hostUsername} hat dich auf die Bühne eingeladen, aber dies wurde abgelehnt, da du dich in einem Anruf befindest.",
-  "@errorCoHostDuringCall": {
-    "placeholders": {
-      "hostUsername": {
-        "type": "String"
-      }
-    }
-  },
+  "@errorCoHostDuringCall": [
+    [
+      "placeholders",
+      [
+        [
+          "hostUsername",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "errorCallHistoryLoad": "Der Anrufverlauf konnte nicht geladen werden. Bitte versuche es erneut.",
   "errorVideoProcessing": "Das Video konnte nicht verarbeitet werden. Bitte versuche es erneut.",
   "giftSheetTitle": "🎁 Geschenk senden",
@@ -181,13 +190,22 @@
   "giftNameDiamond": "Diamant",
   "giftNameCrown": "Königskrone",
   "giftSentHud": "🎉 {sender} hat ein Geschenk gesendet!",
-  "@giftSentHud": {
-    "placeholders": {
-      "sender": {
-        "type": "String"
-      }
-    }
-  },
+  "@giftSentHud": [
+    [
+      "placeholders",
+      [
+        [
+          "sender",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "giftErrorGeneric": "Ein Fehler ist aufgetreten.",
   "giftInsufficientBalance": "Unzureichendes Guthaben. Kaufe teqlik, um ein Geschenk zu senden.",
   "giftLoadBalanceButton": "Guthaben aufladen",
@@ -213,13 +231,22 @@
   "homeAppBarTitle": "Anzeigen",
   "homeSearchingHeader": "Suchen...",
   "homeResultsCount": "{count} Anzeigen gefunden",
-  "@homeResultsCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@homeResultsCount": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "searchUserHint": "Benutzer suchen...",
   "searchNoUser": "Keine Benutzer gefunden",
   "searchLiveStreams": "Live-Streams",
@@ -308,13 +335,22 @@
   "followBtnFollow": "Folgen",
   "pubProfileUserNotFound": "Benutzer nicht gefunden",
   "pubProfileListingsCount": "Anzeigen ({count})",
-  "@pubProfileListingsCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@pubProfileListingsCount": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "pubProfileStatListings": "Anzeigen",
   "pubProfileStatFollowers": "Follower",
   "pubProfileStatFollowing": "Folgt",
@@ -338,41 +374,83 @@
   "ratingSaveFailed": "Bewertung konnte nicht gespeichert werden",
   "ratingReviews": "Bewertungen",
   "ratingCount": "{count} Bewertungen",
-  "@ratingCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@ratingCount": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "ratingStarCount": "({count} Bewertungen)",
-  "@ratingStarCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@ratingStarCount": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "createListingPhotoCount": "Fotos ({count}/{max})",
-  "@createListingPhotoCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      },
-      "max": {
-        "type": "int"
-      }
-    }
-  },
+  "@createListingPhotoCount": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "max",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "createListingSelectOption": "-- Auswählen --",
   "createListingPhotoUploadFailed": "Foto konnte nicht hochgeladen werden: {error}",
-  "@createListingPhotoUploadFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
+  "@createListingPhotoUploadFailed": [
+    [
+      "placeholders",
+      [
+        [
+          "error",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "createListingConnError": "Verbindungsfehler. Bitte versuche es erneut.",
   "notifSettingsMessagesTitle": "Nachrichten",
   "notifSettingsMessagesDesc": "Wenn eine neue Direktnachricht eingeht",
@@ -443,13 +521,22 @@
   "liveConnectingViewer": "Verbindung zum Stream wird hergestellt...",
   "livePermissionRequired": "Kamera- und Mikrofonberechtigung erforderlich",
   "liveViewersTitle": "👁 Zuschauer ({count})",
-  "@liveViewersTitle": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@liveViewersTitle": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "liveNoViewers": "Noch keine Zuschauer",
   "streamViewerMuted": "Stummgeschaltet",
   "liveEndStreamTitle": "Stream beenden",
@@ -466,21 +553,39 @@
   "liveCameraClosed": "Kamera aus",
   "liveWaitingVideo": "Warten auf Video...",
   "liveModDemotedSelf": "Deine Moderatorrolle wurde von @{username} entfernt.",
-  "@liveModDemotedSelf": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@liveModDemotedSelf": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "liveModPromotedSelf": "⭐ @{username} hat dich zum Moderator gemacht! Du kannst jetzt die Zuschauer verwalten.",
-  "@liveModPromotedSelf": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@liveModPromotedSelf": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "modTitle": "🛡 Moderation",
   "modMute": "Stummschalten",
   "modUnmute": "Stummschaltung aufheben",
@@ -488,65 +593,128 @@
   "modDemote": "Moderator entfernen",
   "modKick": "Aus Stream entfernen",
   "modMutedMsg": "@{username} wurde stummgeschaltet",
-  "@modMutedMsg": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@modMutedMsg": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "modUnmutedMsg": "Stummschaltung aufgehoben",
   "modPromotedMsg": "@{username} wurde zum Moderator gemacht",
-  "@modPromotedMsg": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@modPromotedMsg": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "modDemotedMsg": "@{username} wurde als Moderator entfernt",
-  "@modDemotedMsg": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@modDemotedMsg": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "modKickedMsg": "@{username} wurde aus dem Stream entfernt",
-  "@modKickedMsg": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@modKickedMsg": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "modPromotedSnack": "⭐ @{username} ist jetzt ein Moderator!",
-  "@modPromotedSnack": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@modPromotedSnack": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "modDemotedSnack": "✖ @{username} wurde als Moderator entfernt",
-  "@modDemotedSnack": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@modDemotedSnack": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "chatMessageHint": "Schreibe eine Nachricht...",
   "chatMutedHint": "🔇 Du bist stummgeschaltet",
   "chatHistoryTitle": "Chat-Verlauf",
   "chatHistoryCount": "Letzte {count} Nachrichten",
-  "@chatHistoryCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@chatHistoryCount": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "auctionTitle": "Auktion",
   "auctionBidsHeader": "GEBOTE",
   "auctionAcceptBidTitle": "✅ Gebot akzeptieren",
@@ -579,22 +747,40 @@
   "auctionStartBtn": "▶ Start",
   "auctionBidBtn": "Gebot abgeben",
   "auctionSwipeToBid": "Wische, um {price} zu bieten",
-  "@auctionSwipeToBid": {
-    "placeholders": {
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@auctionSwipeToBid": [
+    [
+      "placeholders",
+      [
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "auctionSwipeToBidNoPrice": "Wische zum Bieten",
   "auctionBidReceived": "Gebot von ₺{amount} erhalten!",
-  "@auctionBidReceived": {
-    "placeholders": {
-      "amount": {
-        "type": "String"
-      }
-    }
-  },
+  "@auctionBidReceived": [
+    [
+      "placeholders",
+      [
+        [
+          "amount",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "chatJoinedStream": "ist dem Stream beigetreten",
   "auctionMutedBtn": "🔇 Du bist stummgeschaltet",
   "auctionBuyNowTitle": "⚡ Sofort-Kauf",
@@ -611,32 +797,59 @@
   "auctionApprovalWaitingDesc": "Deine Sofort-Kauf-Anfrage wurde an den Gastgeber gesendet.",
   "auctionInProgress": "⏳ Transaktion in Bearbeitung",
   "auctionInProgressDesc": "Sofort-Kauf-Transaktion mit @{username} in Bearbeitung.",
-  "@auctionInProgressDesc": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@auctionInProgressDesc": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "auctionInProgressNoBid": "Du kannst nicht bieten, bis dies geklärt ist.",
   "auctionSold": "🛒 VERKAUFT!",
   "auctionBoughtBy": "Sofort gekauft von @{username}",
-  "@auctionBoughtBy": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@auctionBoughtBy": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "auctionBuyNowCongrats": "🎉 Herzlichen Glückwunsch! Kauf abgeschlossen.",
   "auctionBuyNowSoldOther": "🛒 Artikel per Sofort-Kauf verkauft! Gekauft von @{buyer}.",
-  "@auctionBuyNowSoldOther": {
-    "placeholders": {
-      "buyer": {
-        "type": "String"
-      }
-    }
-  },
+  "@auctionBuyNowSoldOther": [
+    [
+      "placeholders",
+      [
+        [
+          "buyer",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "auctionBinRejected": "Deine Sofort-Kauf-Anfrage wurde abgelehnt. Die Auktion geht weiter.",
   "auctionBinRejectedOther": "Sofort-Kauf-Transaktion abgeschlossen. Die Auktion geht weiter.",
   "auctionBuyNowBtn": "⚡ Sofort-Kauf — ",
@@ -646,21 +859,39 @@
   "auctionCustomAmountHint": "Eigener Betrag (₺)",
   "auctionFirstBid": "Gib das erste Gebot ab!",
   "auctionHighestBidder": "@{username} ist der Höchstbietende",
-  "@auctionHighestBidder": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@auctionHighestBidder": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "auctionBidCount": "{count} Gebote",
-  "@auctionBidCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@auctionBidCount": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "auctionManualEntry": "Manuell eingeben",
   "auctionFromListings": "Aus meinen Anzeigen",
   "auctionNoActiveListings": "Keine aktiven Anzeigen.",
@@ -669,16 +900,31 @@
   "auctionStartPrice": "Startpreis (₺)",
   "auctionBuyNowPriceHint": "Sofort-Kauf-Preis (₺, optional)",
   "auctionBuyNowCompleted": "🛒 Sofort-Kauf abgeschlossen! @{buyer} — ₺{price}",
-  "@auctionBuyNowCompleted": {
-    "placeholders": {
-      "buyer": {
-        "type": "String"
-      },
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@auctionBuyNowCompleted": [
+    [
+      "placeholders",
+      [
+        [
+          "buyer",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ],
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "offerHistory": "Angebotsverlauf",
   "offerAmountHint": "Angebotsbetrag (₺)",
   "offerBtn": "Angebot machen",
@@ -744,13 +990,22 @@
   "walletTxnStreamGiftReceived": "Stream-Geschenk erhalten",
   "walletTxnDailyLogin": "Tägliche Anmeldebelohnung",
   "walletSeeAllTxns": "Alle {n} Transaktionen ansehen",
-  "@walletSeeAllTxns": {
-    "placeholders": {
-      "n": {
-        "type": "int"
-      }
-    }
-  },
+  "@walletSeeAllTxns": [
+    [
+      "placeholders",
+      [
+        [
+          "n",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "walletAllTxnsTitle": "Alle Transaktionen",
   "walletDetailTitle": "Transaktionsdetails",
   "walletDetailDate": "Datum",
@@ -800,13 +1055,22 @@
   "reportChipSale": "Verkauf",
   "reportChipBids": "Gebote",
   "reportHesitation": "{count} zögerliche(s) Gebot(e) — diese Zuschauer waren nah am Preis, haben aber nicht gekauft.",
-  "@reportHesitation": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@reportHesitation": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "reportSmartInsight": "Smarter Einblick",
   "reportDurationMin": "Min.",
   "reportDurationHour": "Std.",
@@ -838,13 +1102,22 @@
   "planLifetime": "Lebenslang",
   "proStatusDesc": "Alle Analysetools sind aktiv",
   "proRenewalDate": "Erneuert sich am: {date}",
-  "@proRenewalDate": {
-    "placeholders": {
-      "date": {
-        "type": "String"
-      }
-    }
-  },
+  "@proRenewalDate": [
+    [
+      "placeholders",
+      [
+        [
+          "date",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "proUnlockTitle": "PRO-Tools freischalten",
   "proUnlockDesc": "Verkaufe mit Daten, nicht mit Raten",
   "proUnlockBtn": "PRO werden",
@@ -861,97 +1134,202 @@
   "proCreditsAiDescDesc": "Generiert automatisch eine Anzeigenbeschreibung aus Titel, Kategorie und Zustand.",
   "proCreditsReactivationDesc": "Ermöglicht es dir, abgelaufene oder gesperrte Anzeigen kostenlos neu zu veröffentlichen.",
   "proReactivationWindowHint": "{count} Anzeige(n) innerhalb des 30-Tage-Fensters",
-  "@proReactivationWindowHint": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@proReactivationWindowHint": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "proCreditsUsedFormat": "{used} verwendet, {remaining} verbleibend",
-  "@proCreditsUsedFormat": {
-    "placeholders": {
-      "used": {
-        "type": "int"
-      },
-      "remaining": {
-        "type": "int"
-      }
-    }
-  },
+  "@proCreditsUsedFormat": [
+    [
+      "placeholders",
+      [
+        [
+          "used",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "remaining",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "proCreditsLimitFormat": "{remaining} / {limit}",
-  "@proCreditsLimitFormat": {
-    "placeholders": {
-      "remaining": {
-        "type": "int"
-      },
-      "limit": {
-        "type": "int"
-      }
-    }
-  },
+  "@proCreditsLimitFormat": [
+    [
+      "placeholders",
+      [
+        [
+          "remaining",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "limit",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "blastConfirmCostFreeLabel": "Kosten",
   "blastConfirmCostPaidLabel": "teqlik Kosten",
   "blastSubtitleFree": "Push-Benachrichtigung bei Stream-Start • Kostenlos",
   "blastSubtitlePaid": "Push-Benachrichtigung bei Stream-Start • {cost} teqlik",
-  "@blastSubtitlePaid": {
-    "placeholders": {
-      "cost": {
-        "type": "int"
-      }
-    }
-  },
+  "@blastSubtitlePaid": [
+    [
+      "placeholders",
+      [
+        [
+          "cost",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "blastConfirmCostFree": "Von deinem kostenlosen Kontingent abgezogen",
   "blastInviteDialogTitle": "🎯 Lade deine Zuschauer ein",
   "blastTargetAudience": "Zielgruppe",
   "blastNotificationLabel": "Benachrichtigung",
   "blastNotificationValue": "Push + Stream-Link",
   "audienceReadyBuyersBanner": "Benachrichtige {count} bereite Käufer!",
-  "@audienceReadyBuyersBanner": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@audienceReadyBuyersBanner": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "blastBtnFree": "{count} bereite Käufer — Benachrichtigung senden (Kostenlos)",
-  "@blastBtnFree": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@blastBtnFree": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "blastBtnPaid": "{count} bereite Käufer — Benachrichtigung senden ({cost} teqlik)",
-  "@blastBtnPaid": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      },
-      "cost": {
-        "type": "int"
-      }
-    }
-  },
+  "@blastBtnPaid": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "cost",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "blastConfirmBodyFree": "{count} bereite Käufer werden benachrichtigt.\n\nDies verbraucht eine deiner kostenlosen Broadcast-Benachrichtigungen.",
-  "@blastConfirmBodyFree": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@blastConfirmBodyFree": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "blastConfirmBodyPaid": "{count} bereite Käufer werden benachrichtigt.\n\nGesamtkosten: {cost} teqlik",
-  "@blastConfirmBodyPaid": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      },
-      "cost": {
-        "type": "int"
-      }
-    }
-  },
+  "@blastConfirmBodyPaid": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "cost",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "proAnalyticsTitle": "PRO-Analysen",
   "proSectionOverview": "Meine Verkaufszusammenfassung",
   "proSectionFunnel": "Wie viele Personen haben ein Gebot abgegeben?",
@@ -992,73 +1370,148 @@
   "proStreamAvgViewers": "Durchschn. Zuschauer",
   "proStreamPeak": "Höchstwert",
   "proStreamAvgDuration": "Durchschn. Stream-Dauer: {dur} Min.",
-  "@proStreamAvgDuration": {
-    "placeholders": {
-      "dur": {
-        "type": "String"
-      }
-    }
-  },
+  "@proStreamAvgDuration": [
+    [
+      "placeholders",
+      [
+        [
+          "dur",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "proEngagements": "Interakt.",
   "proShowAll": "Weitere {count} ansehen",
-  "@proShowAll": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@proShowAll": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "proShowLess": "Weniger anzeigen",
   "proStreamRowStats": "{viewers} Zuschauer · {bids} Gebote · {dur} Min.",
-  "@proStreamRowStats": {
-    "placeholders": {
-      "viewers": {
-        "type": "int"
-      },
-      "bids": {
-        "type": "int"
-      },
-      "dur": {
-        "type": "int"
-      }
-    }
-  },
+  "@proStreamRowStats": [
+    [
+      "placeholders",
+      [
+        [
+          "viewers",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "bids",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "dur",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "proLoadError": "Daten konnten nicht geladen werden. Bitte versuche es erneut.",
   "hotLeadViewed": "{count} Mal angesehen",
-  "@hotLeadViewed": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@hotLeadViewed": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "hotLeadHesitated": "{count} Personen haben gezögert",
-  "@hotLeadHesitated": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@hotLeadHesitated": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "hotLeadBoosted": "Hervorgehoben",
-  "@hotLeadBoosted": {},
+  "@hotLeadBoosted": [],
   "listingCtrExplain": "{ctr} Klicks pro 100 Aufrufe",
-  "@listingCtrExplain": {
-    "placeholders": {
-      "ctr": {
-        "type": "String"
-      }
-    }
-  },
+  "@listingCtrExplain": [
+    [
+      "placeholders",
+      [
+        [
+          "ctr",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "marketSearchTitle": "Danach suchen die Leute",
   "marketDayFilter": "{days} Tage",
-  "@marketDayFilter": {
-    "placeholders": {
-      "days": {
-        "type": "int"
-      }
-    }
-  },
+  "@marketDayFilter": [
+    [
+      "placeholders",
+      [
+        [
+          "days",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "marketNoSearchData": "Noch keine Suchdaten. Wird angezeigt, sobald Benutzer suchen.",
   "marketCategoryTitle": "In welchen Kategorien sie suchen",
   "marketPeakHoursTitle": "Einkaufen erreicht zu diesen Zeiten seinen Höhepunkt",
@@ -1067,21 +1520,39 @@
   "marketTrendingTitle": "Diese Kategorien liegen im Trend",
   "marketTrendingDesc": "Anzeigen in diesen Kategorien können deine Verkaufschancen erhöhen.",
   "marketGrowthPos": "Plattform-Gesamtwachstum: +{pct}%",
-  "@marketGrowthPos": {
-    "placeholders": {
-      "pct": {
-        "type": "String"
-      }
-    }
-  },
+  "@marketGrowthPos": [
+    [
+      "placeholders",
+      [
+        [
+          "pct",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "marketGrowthNeg": "Plattform-Gesamtrückgang: {pct}%",
-  "@marketGrowthNeg": {
-    "placeholders": {
-      "pct": {
-        "type": "String"
-      }
-    }
-  },
+  "@marketGrowthNeg": [
+    [
+      "placeholders",
+      [
+        [
+          "pct",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "marketGrowthSub": "Durchschnittlicher Kaufbetrag im Vergleich zu den letzten 30 Tagen",
   "marketPaywallDesc": "Sieh, was Käufer suchen, wann sie einkaufen und welche Kategorien im Trend liegen.",
   "listingPerfTitle": "Die PRO-Leistung deiner Anzeigen",
@@ -1090,53 +1561,98 @@
   "listingTotalViews": "Gesamtaufrufe",
   "listingAvgCtr": "Durchschn. Klickrate",
   "listingVideoBeatsPhoto": "🎬 Video-Anzeigen erhalten {x}× mehr Klicks als Foto-Anzeigen.",
-  "@listingVideoBeatsPhoto": {
-    "placeholders": {
-      "x": {
-        "type": "String"
-      }
-    }
-  },
+  "@listingVideoBeatsPhoto": [
+    [
+      "placeholders",
+      [
+        [
+          "x",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "listingPhotoBeatsVideo": "📸 Foto-Anzeigen erhalten {x}× mehr Klicks als Video-Anzeigen.",
-  "@listingPhotoBeatsVideo": {
-    "placeholders": {
-      "x": {
-        "type": "String"
-      }
-    }
-  },
+  "@listingPhotoBeatsVideo": [
+    [
+      "placeholders",
+      [
+        [
+          "x",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "listingMediaEqual": "Video- und Foto-Anzeigen erhalten ähnliche Aufmerksamkeit.",
   "listingVideoLabel": "Video",
   "listingPhotoLabel": "Foto",
   "listingWatchRateLabel": "Sehquote",
   "listingWatchedPct": "{pct}% angesehen",
-  "@listingWatchedPct": {
-    "placeholders": {
-      "pct": {
-        "type": "String"
-      }
-    }
-  },
+  "@listingWatchedPct": [
+    [
+      "placeholders",
+      [
+        [
+          "pct",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "listingGalleryLabel": "Galerie-Interesse",
   "listingGalleryDeep": "Bis zum Foto {n} gescrollt",
-  "@listingGalleryDeep": {
-    "placeholders": {
-      "n": {
-        "type": "String"
-      }
-    }
-  },
+  "@listingGalleryDeep": [
+    [
+      "placeholders",
+      [
+        [
+          "n",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "listingGalleryShallow": "Nur das erste Foto angesehen",
   "metricViewed": "Impressionen",
   "metricClicked": "geklickt",
   "listingReach": "{count} Personen haben dies gesehen",
-  "@listingReach": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@listingReach": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "listingPaywallDesc": "Verfolge, wie viele Personen jede Anzeige gesehen haben, wie viele geklickt haben und wie viel Interesse sie erhalten hat.",
   "onboardingTitle": "Wofür interessierst du dich?",
   "onboardingSubtitle": "Lass uns dir personalisierte Anzeigen und Streams zeigen",
@@ -1164,26 +1680,44 @@
   "badgeTrending": "🔥 Im Trend",
   "searchAlertTitle": "Suchalarm",
   "searchAlertBody": "Lass dich benachrichtigen, wenn eine neue Anzeige zu \"{query}\" passt.",
-  "@searchAlertBody": {
-    "placeholders": {
-      "query": {
-        "type": "String"
-      }
-    }
-  },
+  "@searchAlertBody": [
+    [
+      "placeholders",
+      [
+        [
+          "query",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "searchAlertCreate": "Alarm erstellen",
   "searchAlertCreated": "Suchalarm erstellt ✓",
   "searchAlertFailed": "Alarm konnte nicht erstellt werden, versuche es erneut",
   "searchAlertTooltip": "Suchalarm erstellen",
   "audienceInsightsTitle": "Zuschauer-Budget-Analyse",
   "audienceInsightsViewers": "{count} Zuschauer",
-  "@audienceInsightsViewers": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@audienceInsightsViewers": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "audienceAvgBudget": "Durchschnittliches Budget",
   "audienceProViewers": "PRO-Zuschauer",
   "audienceHighBudget": "Hohes Budget (1000₺+)",
@@ -1201,46 +1735,94 @@
   "bestTimeNoDataHint": "Die Analyse ist nach mindestens 1 Stream verfügbar",
   "bestTimeSlotsHeader": "Beste Zeitfenster",
   "bestTimeSlotStats": "{wins} Verkäufe / {count} Streams",
-  "@bestTimeSlotStats": {
-    "placeholders": {
-      "wins": {
-        "type": "int"
-      },
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@bestTimeSlotStats": [
+    [
+      "placeholders",
+      [
+        [
+          "wins",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "conversionNoData": "Noch keine Verkaufsdaten",
   "conversionNoDataHint": "Nachdem du Live-Auktionen durchgeführt hast, werden deine Verkäufe nach Kategorie hier angezeigt",
   "conversionSectionHeader": "Welche Kategorie verkauft sich am besten? (Letzte 90 Tage)",
   "conversionCategoryCount": "Insgesamt {count} Kategorien",
-  "@conversionCategoryCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@conversionCategoryCount": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "conversionCategorySales": "{won}/{total} Verkäufe",
-  "@conversionCategorySales": {
-    "placeholders": {
-      "won": {
-        "type": "int"
-      },
-      "total": {
-        "type": "int"
-      }
-    }
-  },
+  "@conversionCategorySales": [
+    [
+      "placeholders",
+      [
+        [
+          "won",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "total",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "conversionAvgPrice": "Durchschn. {price} ₺",
-  "@conversionAvgPrice": {
-    "placeholders": {
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@conversionAvgPrice": [
+    [
+      "placeholders",
+      [
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "accountInfoTitle": "Meine Informationen",
   "accountInfoBasicSection": "Grundlegende Informationen",
   "accountInfoSecuritySection": "Kontosicherheit",
@@ -1258,13 +1840,22 @@
   "accountInfoSaved": "Informationen aktualisiert",
   "accountInfoEmailChangeTitle": "E-Mail ändern",
   "accountInfoEmailCurrent": "Aktuell: {email}",
-  "@accountInfoEmailCurrent": {
-    "placeholders": {
-      "email": {
-        "type": "String"
-      }
-    }
-  },
+  "@accountInfoEmailCurrent": [
+    [
+      "placeholders",
+      [
+        [
+          "email",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "accountInfoNewEmail": "Neue E-Mail-Adresse",
   "accountInfoVerifyCode": "Bestätigungscode",
   "accountInfoSendCode": "Code senden",
@@ -1275,13 +1866,22 @@
   "accountInfoPhoneAddTitle": "Telefon hinzufügen",
   "accountInfoPhoneChangeTitle": "Telefon ändern",
   "accountInfoPhoneCurrent": "Aktuell: {phone}",
-  "@accountInfoPhoneCurrent": {
-    "placeholders": {
-      "phone": {
-        "type": "String"
-      }
-    }
-  },
+  "@accountInfoPhoneCurrent": [
+    [
+      "placeholders",
+      [
+        [
+          "phone",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "accountInfoPhoneSendVerify": "Bestätigungs-E-Mail senden",
   "accountInfoEmailSent": "E-Mail gesendet",
   "accountInfoEmailSentDesc": "Wir haben einen Bestätigungslink an deine registrierte E-Mail gesendet. Klicke auf den Link, um deine Telefonnummer zu verifizieren.",
@@ -1292,15 +1892,23 @@
   "phoneInfoTitle": "Warum Telefonnummer?",
   "phoneInfoBody": "Deine Telefonnummer hilft uns, dein Konto bei hohen Geboten zu schützen. Wir müssen sie verifizieren, um gefälschte Gebote zu verhindern und dich zu erreichen, wenn du gewinnst. Deine Nummer wird niemals an Dritte weitergegeben.",
   "phoneInfoGotIt": "Verstanden",
-  "boostOnlyPro": "⭐ Das Bewerben einer Anzeige ist exklusiv für Pro-Mitglieder.",
   "boostLimitExhausted": "Du hast alle {limit} Boost-Credits in diesem Monat aufgebraucht. Setzt sich zu Beginn des nächsten Monats zurück.",
-  "@boostLimitExhausted": {
-    "placeholders": {
-      "limit": {
-        "type": "int"
-      }
-    }
-  },
+  "@boostLimitExhausted": [
+    [
+      "placeholders",
+      [
+        [
+          "limit",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "boostDialogTitle": "Anzeige bewerben",
   "boostDialogPlanLabel": "Kampagnenplan:",
   "boostDialogTotalBudget": "Gesamtbudget",
@@ -1311,26 +1919,50 @@
   "boostDialogEstClicksValue": "~50 Klicks",
   "boostDialogFeedHint": "Deine Anzeige wird im \"Für dich\"-Feed hervorgehoben.",
   "boostDialogCredits": "⭐ Verbleibende Boosts: {remaining} / {limit}",
-  "@boostDialogCredits": {
-    "placeholders": {
-      "remaining": {
-        "type": "int"
-      },
-      "limit": {
-        "type": "int"
-      }
-    }
-  },
+  "@boostDialogCredits": [
+    [
+      "placeholders",
+      [
+        [
+          "remaining",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "limit",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "boostDialogStart": "Start",
   "boostDialogPaidTitle": "Bezahlte Werbung",
   "boostDialogPaidBadge": "Du hast alle {limit} kostenlosen Boosts in diesem Monat aufgebraucht",
-  "@boostDialogPaidBadge": {
-    "placeholders": {
-      "limit": {
-        "type": "int"
-      }
-    }
-  },
+  "@boostDialogPaidBadge": [
+    [
+      "placeholders",
+      [
+        [
+          "limit",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "boostDialogPaidDesc": "Deine Anzeige wird weiterhin im \"Für dich\"-Feed hervorgehoben.",
   "boostDialogPaidCost": "Kosten",
   "boostDialogPaidCostValue": "50 teqlik",
@@ -1356,69 +1988,147 @@
   "adReportMetricClicks": "Klicks",
   "adReportMetricClickRate": "Klicks pro\n100 Aufrufe",
   "adReportMetricClickRateHint": "{clicks} Klicks / {impressions} Aufrufe",
-  "@adReportMetricClickRateHint": {
-    "placeholders": {
-      "clicks": {
-        "type": "int"
-      },
-      "impressions": {
-        "type": "int"
-      }
-    }
-  },
+  "@adReportMetricClickRateHint": [
+    [
+      "placeholders",
+      [
+        [
+          "clicks",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "impressions",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "adReportMetricActiveDays": "Aktive\nDauer",
   "adReportMetricActiveDaysLessThan1": "<1 Tag",
   "adReportMetricActiveDaysValue": "{days} Tage",
-  "@adReportMetricActiveDaysValue": {
-    "placeholders": {
-      "days": {
-        "type": "int"
-      }
-    }
-  },
+  "@adReportMetricActiveDaysValue": [
+    [
+      "placeholders",
+      [
+        [
+          "days",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "adReportSmartAnalysis": "Smarte Analyse",
   "adReportInsightNoImpressions": "Noch niemand hat deine Anzeige gesehen. Dies wird aktualisiert, sobald die Anzeige im Feed erscheint.",
   "adReportInsightGreat": "Großartig! Ungefähr {clicks} von 100 Personen, die deine Anzeige gesehen haben, haben darauf geklickt — das ist eine hervorragende Interaktionsrate. Dein Titel und Foto ziehen Käufer an.",
-  "@adReportInsightGreat": {
-    "placeholders": {
-      "clicks": {
-        "type": "int"
-      }
-    }
-  },
+  "@adReportInsightGreat": [
+    [
+      "placeholders",
+      [
+        [
+          "clicks",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "adReportInsightGood": "Läuft gut. {impressions} Personen haben deine Anzeige gesehen und {clicks} haben sie angeklickt. Die Verbesserung deiner Fotos oder deines Titels kann noch mehr Interesse wecken.",
-  "@adReportInsightGood": {
-    "placeholders": {
-      "clicks": {
-        "type": "int"
-      },
-      "impressions": {
-        "type": "int"
-      }
-    }
-  },
+  "@adReportInsightGood": [
+    [
+      "placeholders",
+      [
+        [
+          "clicks",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "impressions",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "adReportInsightLow": "{impressions} Personen haben deine Anzeige gesehen, aber nur {clicks} haben geklickt. Dein Titelbild oder Preis ist für Käufer möglicherweise nicht attraktiv genug.",
-  "@adReportInsightLow": {
-    "placeholders": {
-      "clicks": {
-        "type": "int"
-      },
-      "impressions": {
-        "type": "int"
-      }
-    }
-  },
+  "@adReportInsightLow": [
+    [
+      "placeholders",
+      [
+        [
+          "clicks",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "impressions",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "adReportInsightVeryLow": "{impressions} Personen haben deine Anzeige gesehen und sie hat {clicks} Klicks erhalten. Wir empfehlen, deinen Titel, deine Fotos und deine Preisgestaltung zu überprüfen.",
-  "@adReportInsightVeryLow": {
-    "placeholders": {
-      "clicks": {
-        "type": "int"
-      },
-      "impressions": {
-        "type": "int"
-      }
-    }
-  },
+  "@adReportInsightVeryLow": [
+    [
+      "placeholders",
+      [
+        [
+          "clicks",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "impressions",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notInterested": "Nicht interessiert",
   "notInterestedConfirmed": "Du wirst diese Anzeige nicht mehr sehen.",
   "proMetricAvgDwell": "Durchschn. Verweildauer",
@@ -1457,132 +2167,279 @@
   "hostAcceptSaleBtnCapture": "Aufnehmen & Bestätigen",
   "hostAcceptSaleBtnSkip": "Ohne Foto bestätigen",
   "radarSuggestedCopied": "{price} ₺ in die Zwischenablage kopiert",
-  "@radarSuggestedCopied": {
-    "placeholders": {
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@radarSuggestedCopied": [
+    [
+      "placeholders",
+      [
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "radarCopyBtn": "Vorgeschlagenen Preis kopieren: {price} ₺",
-  "@radarCopyBtn": {
-    "placeholders": {
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@radarCopyBtn": [
+    [
+      "placeholders",
+      [
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "retargetingBlastSent": "Benachrichtigung an {count} Personen gesendet!",
-  "@retargetingBlastSent": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@retargetingBlastSent": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifSettingsBlastTitle": "Massen-Zuschauerbenachrichtigungen",
   "notifSettingsBlastDesc": "Wenn deaktiviert, wird Push unterdrückt; Benachrichtigung erscheint weiterhin in deiner Liste.",
   "retargetingCooldownLabel": "Nächster Blast in:",
   "retargetingBlastCooldown": "Du kannst die nächste Übertragung für diese Anzeige in 24 Stunden senden.",
   "retargetingDialogTitle": "Benachrichtigung senden?",
   "retargetingDialogBodyFree": "Eine \"Noch interessiert?\"-Benachrichtigung wird an {count} Personen gesendet. Du hast {credits} Benachrichtigungs-Credits, wird kostenlos gesendet.",
-  "@retargetingDialogBodyFree": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      },
-      "credits": {
-        "type": "int"
-      }
-    }
-  },
+  "@retargetingDialogBodyFree": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "credits",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "retargetingDialogBodyPaid": "Eine \"Noch interessiert?\"-Benachrichtigung wird an {count} Personen gesendet. {cost} teqlik werden von deinem Wallet abgezogen.",
-  "@retargetingDialogBodyPaid": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      },
-      "cost": {
-        "type": "int"
-      }
-    }
-  },
+  "@retargetingDialogBodyPaid": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "cost",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "retargetingDialogBodyKarma": "Eine Benachrichtigung wird an {count} Personen gesendet.\n\n{free} Credit(s) werden verwendet + {cost} teqlik werden berechnet.",
-  "@retargetingDialogBodyKarma": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      },
-      "free": {
-        "type": "int"
-      },
-      "cost": {
-        "type": "int"
-      }
-    }
-  },
+  "@retargetingDialogBodyKarma": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "free",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "cost",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "retargetingDialogBodyInsufficient": "Unzureichendes teqlik-Guthaben.\nErforderlich: {cost} teqlik | Verfügbar: {balance} teqlik",
-  "@retargetingDialogBodyInsufficient": {
-    "placeholders": {
-      "cost": {
-        "type": "int"
-      },
-      "balance": {
-        "type": "int"
-      }
-    }
-  },
+  "@retargetingDialogBodyInsufficient": [
+    [
+      "placeholders",
+      [
+        [
+          "cost",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "balance",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "retargetingCostFree": "Kostenlos",
   "retargetingCreditsLeft": "{count} Credits verbleibend",
-  "@retargetingCreditsLeft": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@retargetingCreditsLeft": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "retargetingFreeSubtitle": "{count} Personen — 1 Übertragungs-Credit verwendet",
-  "@retargetingFreeSubtitle": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@retargetingFreeSubtitle": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "retargetingPaidSubtitle": "{count} Personen × 10 teqlik",
-  "@retargetingPaidSubtitle": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@retargetingPaidSubtitle": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "retargetingEstimatedCost": "Geschätzte Kosten",
   "retargetingSending": "Senden...",
   "retargetingSendBtnLabel": "Benachrichtigung an {count} Personen senden",
-  "@retargetingSendBtnLabel": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@retargetingSendBtnLabel": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "retargetingCreditsBadge": "{count} Credits verbleibend · kostenlos gesendet",
-  "@retargetingCreditsBadge": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@retargetingCreditsBadge": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "retargetingCostBadge": "{cost} teqlik werden ausgegeben",
-  "@retargetingCostBadge": {
-    "placeholders": {
-      "cost": {
-        "type": "int"
-      }
-    }
-  },
+  "@retargetingCostBadge": [
+    [
+      "placeholders",
+      [
+        [
+          "cost",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "retargetingFootnote": "Benutzer erhalten eine \"Noch interessiert?\"-Benachrichtigung. Wird nur an Nicht-Käufer gesendet.",
   "retargetingInfoText": "Sendet eine Erinnerungsbenachrichtigung an Personen, die deine Anzeige angesehen, aber nicht gekauft haben. Kostenlos, wenn du monatliche Übertragungs-Credits hast, andernfalls 10 teqlik pro Person.",
   "retargetingLast30Days": "Letzte 30 Tage",
@@ -1600,21 +2457,39 @@
   "btnResetPassword": "Passwort zurücksetzen",
   "radarScreenTitle": "Konkurrenz-Radar & Verkaufsgeschwindigkeit",
   "priceMinLabel": "{price} ₺ (min)",
-  "@priceMinLabel": {
-    "placeholders": {
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@priceMinLabel": [
+    [
+      "placeholders",
+      [
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "priceMaxLabel": "{price} ₺ (max)",
-  "@priceMaxLabel": {
-    "placeholders": {
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@priceMaxLabel": [
+    [
+      "placeholders",
+      [
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "forYouLabel": "Für dich",
   "messagesUpdateFailed": "Aktualisierung fehlgeschlagen",
   "staleDataBannerMessage": "Daten sind möglicherweise veraltet",
@@ -1627,70 +2502,139 @@
   "hostNotifDialogTitle": "Benachrichtigung senden",
   "hostStreamDataError": "Daten konnten nicht geladen werden",
   "hostInviteError": "Einladung konnte nicht gesendet werden: {error}",
-  "@hostInviteError": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
+  "@hostInviteError": [
+    [
+      "placeholders",
+      [
+        [
+          "error",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "hostModRemoved": "✖ @{username} als Moderator entfernt",
-  "@hostModRemoved": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@hostModRemoved": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "genericErrorDetail": "Fehler: {error}",
-  "@genericErrorDetail": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
+  "@genericErrorDetail": [
+    [
+      "placeholders",
+      [
+        [
+          "error",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "profilePhotoUploadError": "Foto konnte nicht hochgeladen werden. Versuche es erneut.",
   "profileInviteCodeError": "Einladungscode konnte nicht abgerufen werden, versuche es erneut.",
   "profileInviteTitle": "Lade Freunde ein, verdiene teqlik!",
   "profileInviteSubtitle": "+50 teqlik pro Einladung, dein Freund erhält +10 teqlik",
   "profileInviteShareText": "Werde Teil von Teqlif! Das Zuhause von Live-Auktionen und Second-Hand-Shopping 🎁\n\nGib diesen Einladungscode bei der Anmeldung ein und erhalte sofort Bonus-teqlik:\n\n🔑 Code: {code}\n⏳ Läuft ab in: {expiry}\n\n📱 iOS App Store: apps.apple.com/app/teqlif\n🤖 Google Play: play.google.com/store/apps/details?id=com.teqlif.teqlif_mobile\n🌐 Web: teqlif.com",
-  "@profileInviteShareText": {
-    "placeholders": {
-      "code": {
-        "type": "String"
-      },
-      "expiry": {
-        "type": "String"
-      }
-    }
-  },
+  "@profileInviteShareText": [
+    [
+      "placeholders",
+      [
+        [
+          "code",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ],
+        [
+          "expiry",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "profileInviteExpiryDays": "{days} Tage",
-  "@profileInviteExpiryDays": {
-    "placeholders": {
-      "days": {
-        "type": "int"
-      }
-    }
-  },
+  "@profileInviteExpiryDays": [
+    [
+      "placeholders",
+      [
+        [
+          "days",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "profileInviteExpiryHours": "{hours} Stunden",
-  "@profileInviteExpiryHours": {
-    "placeholders": {
-      "hours": {
-        "type": "int"
-      }
-    }
-  },
+  "@profileInviteExpiryHours": [
+    [
+      "placeholders",
+      [
+        [
+          "hours",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "profileInviteExpirySoon": "kurze Zeit",
   "profileInviteCodeCopied": "Code kopiert!",
   "profileInviteModalExpiry": "⏳ Läuft ab in: {expiry}",
-  "@profileInviteModalExpiry": {
-    "placeholders": {
-      "expiry": {
-        "type": "String"
-      }
-    }
-  },
+  "@profileInviteModalExpiry": [
+    [
+      "placeholders",
+      [
+        [
+          "expiry",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "profileInviteShareBtn": "Einladungslink teilen",
   "profilePickGallery": "Aus Galerie wählen",
   "profilePickCamera": "Ein Foto machen",
@@ -1701,93 +2645,186 @@
   "favoritesEmpty": "Noch keine Favoriten",
   "createNeedTitle": "Bitte gib zuerst den Anzeigentitel ein.",
   "teqlikSpent": "{count} teqlik ausgegeben.",
-  "@teqlikSpent": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@teqlikSpent": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "videoTooLong": "Video darf {max} Sekunden nicht überschreiten ({actual}s).",
-  "@videoTooLong": {
-    "placeholders": {
-      "max": {
-        "type": "int"
-      },
-      "actual": {
-        "type": "int"
-      }
-    }
-  },
+  "@videoTooLong": [
+    [
+      "placeholders",
+      [
+        [
+          "max",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "actual",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "createPickCamera": "Mit Kamera aufnehmen (max. {sec}s)",
-  "@createPickCamera": {
-    "placeholders": {
-      "sec": {
-        "type": "int"
-      }
-    }
-  },
+  "@createPickCamera": [
+    [
+      "placeholders",
+      [
+        [
+          "sec",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "videoUploading": "Video wird noch hochgeladen, bitte warten.",
   "videoLabel": "Video (max. {sec}s)",
-  "@videoLabel": {
-    "placeholders": {
-      "sec": {
-        "type": "int"
-      }
-    }
-  },
+  "@videoLabel": [
+    [
+      "placeholders",
+      [
+        [
+          "sec",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "forYouStreams": "Streams für dich",
   "searchNoResults": "Keine Ergebnisse gefunden",
   "searchNoSupplyHint": "Sehr wenige Anzeigen passen zu dieser Suche. Richte einen Alarm ein, um benachrichtigt zu werden, wenn neue hinzukommen.",
   "searchCreateAlertBtn": "Alarm erstellen",
   "proSearchCount": "{count} Suchen",
-  "@proSearchCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@proSearchCount": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "listingDeactivateTitle": "Anzeige deaktivieren",
   "listingDeactivateWarning": "Wenn du deaktivierst, werden aktive Schaufenster/Werbeaktionen entfernt.",
   "listingDeactivateCostHint": "Warnung: Dein 30-tägiges kostenloses Fenster ist abgelaufen. Die Reaktivierung kostet {cost} teqlik von deinem Guthaben.",
-  "@listingDeactivateCostHint": {
-    "placeholders": {
-      "cost": {
-        "type": "int"
-      }
-    }
-  },
+  "@listingDeactivateCostHint": [
+    [
+      "placeholders",
+      [
+        [
+          "cost",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "listingDeactivateFreeCreditHint": "Warnung: Dein 30-tägiges kostenloses Fenster ist abgelaufen. Für die Reaktivierung wird 1 kostenloser PRO-Credit verwendet.",
   "listingDeactivateConfirm": "Ich verstehe, Deaktivieren",
   "listingReactivateTitle": "Anzeige reaktivieren",
   "listingReactivateFreeCredit": "Du hast {remaining} kostenlose Credits. 1 wird verwendet.",
-  "@listingReactivateFreeCredit": {
-    "placeholders": {
-      "remaining": {
-        "type": "int"
-      }
-    }
-  },
+  "@listingReactivateFreeCredit": [
+    [
+      "placeholders",
+      [
+        [
+          "remaining",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "listingReactivatePaidPro": "Monatliche Credits aufgebraucht. {cost} teqlik werden berechnet.",
-  "@listingReactivatePaidPro": {
-    "placeholders": {
-      "cost": {
-        "type": "int"
-      }
-    }
-  },
+  "@listingReactivatePaidPro": [
+    [
+      "placeholders",
+      [
+        [
+          "cost",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "listingReactivatePaidNormal": "{cost} teqlik werden berechnet. Guthaben: {balance} teqlik.",
-  "@listingReactivatePaidNormal": {
-    "placeholders": {
-      "cost": {
-        "type": "int"
-      },
-      "balance": {
-        "type": "int"
-      }
-    }
-  },
+  "@listingReactivatePaidNormal": [
+    [
+      "placeholders",
+      [
+        [
+          "cost",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "balance",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "listingReactivateProUpsell": "Werde PRO, um 5 kostenlose Reaktivierungen pro Monat zu erhalten.",
   "listingReactivateInsufficientBalance": "Unzureichendes Guthaben. Lade teqlik auf, um fortzufahren.",
   "listingReactivateConfirm": "Aktivieren",
@@ -1795,13 +2832,22 @@
   "suggestedStreamers": "Vorgeschlagene Sender",
   "latestLiveStreams": "Neueste Live-Streams",
   "categoryStreams": "{category}-Streams",
-  "@categoryStreams": {
-    "placeholders": {
-      "category": {
-        "type": "String"
-      }
-    }
-  },
+  "@categoryStreams": [
+    [
+      "placeholders",
+      [
+        [
+          "category",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "listingsSelectedForYou": "Für dich ausgewählte Anzeigen",
   "profileFaq": "Häufig gestellte Fragen",
   "faqCatAccount": "Konto, Profil und Support",
@@ -1886,21 +2932,39 @@
   "listingBlastEstimateLoading": "Publikum wird geschätzt...",
   "listingBlastDialogTitle": "Massen-Zuschauerbenachrichtigung",
   "listingBlastDialogBody": "{count} potenzielle Käufer gefunden, die sich für deine Anzeige interessieren könnten. Möchtest du ihnen eine sofortige Benachrichtigung senden?",
-  "@listingBlastDialogBody": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@listingBlastDialogBody": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "listingBlastCost": "Kosten: {cost} teqlik",
-  "@listingBlastCost": {
-    "placeholders": {
-      "cost": {
-        "type": "int"
-      }
-    }
-  },
+  "@listingBlastCost": [
+    [
+      "placeholders",
+      [
+        [
+          "cost",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "reportMassNotificationTitle": "Massenbenachrichtigungsbericht",
   "reportMassNotificationDesc": "Dieser Bildschirm zeigt die Konversionsstatistiken der in Live-Streams und Anzeigendetails gesendeten Massen-Zuschauerbenachrichtigungen.",
   "reportLoadError": "Bericht konnte nicht geladen werden: ",
@@ -1946,13 +3010,22 @@
   "analyticsNoAuctions": "In diesem Stream wurden keine Auktionen erstellt.",
   "analyticsItemsSold": "Verkaufte Artikel",
   "analyticsDuration": "{minutes} Min.",
-  "@analyticsDuration": {
-    "placeholders": {
-      "minutes": {
-        "type": "int"
-      }
-    }
-  },
+  "@analyticsDuration": [
+    [
+      "placeholders",
+      [
+        [
+          "minutes",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "proToolStreamHistoryDesc": "Analysiere die Verkaufs- und Zuschauerstatistiken deiner vergangenen Live-Streams im Detail.",
   "proTabSales": "Leistung",
   "proTabMarket": "Markt",
@@ -2059,13 +3132,22 @@
   "emailPhoneNote": "📱 Du hast bei der Registrierung eine Telefonnummer eingegeben. Du kannst dein Telefon nach der Anmeldung unter <strong style='color:#f1f5f9'>Profil → Meine Infos</strong> verifizieren.",
   "emailResetBody": "Es wurde eine Anfrage zum Zurücksetzen deines Kontopassworts gestellt. Verwende den folgenden Code, um den Vorgang abzuschließen:",
   "emailIgnoreIfNotYou": "Wenn du diese Anfrage nicht gestellt hast, kannst du diese E-Mail sicher ignorieren.",
-  "@emailPhoneAdded": {
-    "placeholders": {
-      "phone": {
-        "type": "String"
-      }
-    }
-  },
+  "@emailPhoneAdded": [
+    [
+      "placeholders",
+      [
+        [
+          "phone",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "emailWelcomeHeroTitle": "Willkommen, {first_name}! 🎉",
   "emailWelcomeHeroSub": "Du hast gerade die Welt der Live-Auktionen betreten.<br>Fantastische Angebote warten auf dich.",
   "emailWelcomeIntro": "Hallo <strong style=\"color:#f1f5f9\">{full_name}</strong>,",
@@ -2083,46 +3165,91 @@
   "emailWelcomeCopyright": "© 2026 teqlif · Du kannst deine Benachrichtigungseinstellungen in den Kontoeinstellungen aktualisieren.",
   "emailResetGreeting": "Hallo <strong>{full_name}</strong>,",
   "emailResetFooter": "Fragen? Kontaktiere uns: <a href='mailto:destek@teqlif.com' style='color:#0d9488;text-decoration:none'>destek@teqlif.com</a>",
-  "@emailWelcomeHeroTitle": {
-    "placeholders": {
-      "first_name": {
-        "type": "String"
-      }
-    }
-  },
-  "@emailWelcomeIntro": {
-    "placeholders": {
-      "full_name": {
-        "type": "String"
-      }
-    }
-  },
-  "@emailResetGreeting": {
-    "placeholders": {
-      "full_name": {
-        "type": "String"
-      }
-    }
-  },
+  "@emailWelcomeHeroTitle": [
+    [
+      "placeholders",
+      [
+        [
+          "first_name",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
+  "@emailWelcomeIntro": [
+    [
+      "placeholders",
+      [
+        [
+          "full_name",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
+  "@emailResetGreeting": [
+    [
+      "placeholders",
+      [
+        [
+          "full_name",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "fieldVerifyCode": "Bestätigungscode",
   "authVerifyCodeSentMsg": "Ein neuer Bestätigungscode wurde an {email} gesendet.",
   "authVerifyCodeSentDesc": "Wir haben einen 6-stelligen Bestätigungscode an {email} gesendet.",
   "authEnterCodeTitle": "Gib deinen Code ein",
   "authVerifyCodeResent": "Neuer Bestätigungscode gesendet.",
-  "@authVerifyCodeSentMsg": {
-    "placeholders": {
-      "email": {
-        "type": "String"
-      }
-    }
-  },
-  "@authVerifyCodeSentDesc": {
-    "placeholders": {
-      "email": {
-        "type": "String"
-      }
-    }
-  },
+  "@authVerifyCodeSentMsg": [
+    [
+      "placeholders",
+      [
+        [
+          "email",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
+  "@authVerifyCodeSentDesc": [
+    [
+      "placeholders",
+      [
+        [
+          "email",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "authResendCode": "Code erneut senden",
   "authResendCodeIn": "Neuer Code in:",
   "validPasswordEmpty": "Das Passwort darf nicht leer sein",
@@ -2189,29 +3316,56 @@
   "timeJustNow": "Gerade eben",
   "timeNow": "jetzt",
   "timeMinAgo": "vor {n} Min.",
-  "@timeMinAgo": {
-    "placeholders": {
-      "n": {
-        "type": "int"
-      }
-    }
-  },
+  "@timeMinAgo": [
+    [
+      "placeholders",
+      [
+        [
+          "n",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "timeHoursAgo": "vor {n} Std.",
-  "@timeHoursAgo": {
-    "placeholders": {
-      "n": {
-        "type": "int"
-      }
-    }
-  },
+  "@timeHoursAgo": [
+    [
+      "placeholders",
+      [
+        [
+          "n",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "timeDaysAgo": "vor {n} Tg.",
-  "@timeDaysAgo": {
-    "placeholders": {
-      "n": {
-        "type": "int"
-      }
-    }
-  },
+  "@timeDaysAgo": [
+    [
+      "placeholders",
+      [
+        [
+          "n",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "radarExpensive": "Teuer",
   "radarAffordable": "Erschwinglich",
   "radarExpensivePrice": "Teurer Preis",
@@ -2224,32 +3378,65 @@
   "btnViewNotificationReport": "Benachrichtigungsbericht ansehen",
   "btnSendMassNotification": "Massenbenachrichtigung senden",
   "massNotifCooldownHours": "Verfügbar in {hours}h {min}m",
-  "@massNotifCooldownHours": {
-    "placeholders": {
-      "hours": {
-        "type": "int"
-      },
-      "min": {
-        "type": "int"
-      }
-    }
-  },
+  "@massNotifCooldownHours": [
+    [
+      "placeholders",
+      [
+        [
+          "hours",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "min",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "massNotifCooldownMinutes": "Verfügbar in {min}m",
-  "@massNotifCooldownMinutes": {
-    "placeholders": {
-      "min": {
-        "type": "int"
-      }
-    }
-  },
+  "@massNotifCooldownMinutes": [
+    [
+      "placeholders",
+      [
+        [
+          "min",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "massNotifCooldownSeconds": "Verfügbar in {sec}s",
-  "@massNotifCooldownSeconds": {
-    "placeholders": {
-      "sec": {
-        "type": "int"
-      }
-    }
-  },
+  "@massNotifCooldownSeconds": [
+    [
+      "placeholders",
+      [
+        [
+          "sec",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "massNotifPerListingInfo": "Eine Massenbenachrichtigung kann einmal alle 24 Stunden pro Anzeige gesendet werden.",
   "massNotifUnavailableListingNotActive": "Diese Funktion ist nicht verfügbar, da die Anzeige inaktiv ist.",
   "btnShare": "Teilen",
@@ -2262,27 +3449,57 @@
   "apiMsgReferralSavedVerify": "Einladungscode gespeichert! Bitte schließe deine E-Mail- und Telefonverifizierung ab, um deine Belohnung einzufordern.",
   "notifReferralTitle": "Einladungsbelohnung!",
   "notifReferralBody": "Dein Freund ({username}) hat deinen Code verwendet und die Verifizierung abgeschlossen! Du hast {bonus} teqlik verdient.",
-  "@notifReferralBody": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      },
-      "bonus": {
-        "type": "int"
-      }
-    }
-  },
+  "@notifReferralBody": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ],
+        [
+          "bonus",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "apiMsgReferralSuccess": "Verifizierungen abgeschlossen! {referrer_username} hat dich eingeladen. {your_bonus} teqlik wurden deinem Konto gutgeschrieben.",
-  "@apiMsgReferralSuccess": {
-    "placeholders": {
-      "referrer_username": {
-        "type": "String"
-      },
-      "your_bonus": {
-        "type": "int"
-      }
-    }
-  },
+  "@apiMsgReferralSuccess": [
+    [
+      "placeholders",
+      [
+        [
+          "referrer_username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ],
+        [
+          "your_bonus",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "proTipPriceDownTitle": "Tipp zur Preisanpassung",
   "proTipPriceDownBody": "\"{title}\" liegt {diff}% über dem Marktdurchschnitt. Eine Preissenkung auf etwa {avg} ₺ kann den Verkauf beschleunigen.",
   "proTipPriceUpTitle": "Chance auf Preiserhöhung",
@@ -2296,158 +3513,332 @@
   "proTipAllGoodTitle": "Alles ist gut",
   "proTipAllGoodBody": "Deine Anzeigen- und Verkaufsdaten sehen gesund aus. Benutzerdefinierte Tipps werden hier angezeigt, sobald mehr Daten gesammelt wurden.",
   "notifNewBid": "@{username} hat ein Gebot abgegeben",
-  "@notifNewBid": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifNewBid": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifNewBidBody": "{item} — {price}",
-  "@notifNewBidBody": {
-    "placeholders": {
-      "item": {
-        "type": "String"
-      },
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifNewBidBody": [
+    [
+      "placeholders",
+      [
+        [
+          "item",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ],
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifNewBidBodyNoItem": "{price}",
-  "@notifNewBidBodyNoItem": {
-    "placeholders": {
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifNewBidBodyNoItem": [
+    [
+      "placeholders",
+      [
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifOutbid": "Du wurdest überboten!",
   "notifOutbidBody": "{item} — neues Gebot: {price}",
-  "@notifOutbidBody": {
-    "placeholders": {
-      "item": {
-        "type": "String"
-      },
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifOutbidBody": [
+    [
+      "placeholders",
+      [
+        [
+          "item",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ],
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifOutbidBodyNoItem": "Neues Gebot: {price}",
-  "@notifOutbidBodyNoItem": {
-    "placeholders": {
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifOutbidBodyNoItem": [
+    [
+      "placeholders",
+      [
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifAuctionWon": "🏆 Dein Gebot wurde akzeptiert!",
   "notifAuctionWonBody": "{item} — {price}",
-  "@notifAuctionWonBody": {
-    "placeholders": {
-      "item": {
-        "type": "String"
-      },
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifAuctionWonBody": [
+    [
+      "placeholders",
+      [
+        [
+          "item",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ],
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifBuyItNow": "🛒 Sofort-Kauf abgeschlossen!",
   "notifBuyItNowBody": "{item} — {price}",
-  "@notifBuyItNowBody": {
-    "placeholders": {
-      "item": {
-        "type": "String"
-      },
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifBuyItNowBody": [
+    [
+      "placeholders",
+      [
+        [
+          "item",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ],
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifAuctionEnded": "Auktion beendet",
   "notifAuctionEndedBody": "{item} — Gewinnerpreis: {price}",
-  "@notifAuctionEndedBody": {
-    "placeholders": {
-      "item": {
-        "type": "String"
-      },
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifAuctionEndedBody": [
+    [
+      "placeholders",
+      [
+        [
+          "item",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ],
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifAuctionEndedBodyNoItem": "Gewinnerpreis: {price}",
-  "@notifAuctionEndedBodyNoItem": {
-    "placeholders": {
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifAuctionEndedBodyNoItem": [
+    [
+      "placeholders",
+      [
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifAuctionCancelled": "Auktion abgebrochen",
   "notifAuctionCancelledBody": "{item} — kein Gebot wurde akzeptiert",
-  "@notifAuctionCancelledBody": {
-    "placeholders": {
-      "item": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifAuctionCancelledBody": [
+    [
+      "placeholders",
+      [
+        [
+          "item",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifAuctionCancelledBodyNoItem": "Kein Gebot wurde akzeptiert",
   "notifRecordingAvailableTitle": "Dein Live-Stream-Replay ist bereit 🎬",
   "notifRecordingAvailableBody": "Sieh dir dein Replay an und überprüfe deine Verkaufsstatistiken.",
   "notifRecordingUpsellTitle": "Deine Stream-Aufnahme ist bereit 🎬",
   "notifRecordingUpsellBody": "Wechsle zu PRO und greife 24 Stunden auf dein Replay zu.",
   "notifStreamStarted": "@{username} hat einen Live-Stream gestartet",
-  "@notifStreamStarted": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifStreamStarted": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifFollow": "@{username} folgt dir jetzt",
-  "@notifFollow": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifFollow": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifStoryLiked": "@{username} hat deine Story gefällt",
-  "@notifStoryLiked": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifStoryLiked": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifMessage": "@{username} hat dir eine Nachricht gesendet",
-  "@notifMessage": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifMessage": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifMsgRequestAccepted": "@{username} hat deine Nachrichtenanfrage akzeptiert",
-  "@notifMsgRequestAccepted": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifMsgRequestAccepted": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "msgReqBannerReceiver": "{username} hat dir eine Nachrichtenanfrage gesendet.",
-  "@msgReqBannerReceiver": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@msgReqBannerReceiver": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "msgReqBannerInitiator": "Deine Nachrichtenanfrage wurde gesendet und wartet auf eine Antwort.",
   "msgReqBannerAccept": "Akzeptieren",
   "msgReqBannerDecline": "Ablehnen",
@@ -2456,102 +3847,204 @@
   "notifMessageVideo": "🎬 Video",
   "notifMessageFile": "📎 Datei",
   "notifNewListing": "@{username} hat eine neue Anzeige hinzugefügt",
-  "@notifNewListing": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifNewListing": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifListingDeactivated": "Deine Anzeige wurde deaktiviert",
   "notifListingDeactivatedBodySingle": "Deine Anzeige \"{title}\" hat ihren 30-tägigen kostenlosen Zeitraum erreicht und wurde deaktiviert.",
-  "@notifListingDeactivatedBodySingle": {
-    "placeholders": {
-      "title": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifListingDeactivatedBodySingle": [
+    [
+      "placeholders",
+      [
+        [
+          "title",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifListingDeactivatedBodyMultiple": "{count} deiner Anzeigen haben ihren 30-tägigen kostenlosen Zeitraum erreicht und wurden deaktiviert.",
-  "@notifListingDeactivatedBodyMultiple": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@notifListingDeactivatedBodyMultiple": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifListingDeleted": "Deine Anzeige wurde gelöscht",
   "notifListingDeletedBodySingle": "Deine Anzeige \"{title}\" wurde entfernt. Du kannst eine neue Anzeige erstellen, um sie erneut zu veröffentlichen.",
-  "@notifListingDeletedBodySingle": {
-    "placeholders": {
-      "title": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifListingDeletedBodySingle": [
+    [
+      "placeholders",
+      [
+        [
+          "title",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifListingDeletedBodyMultiple": "{count} deiner Anzeigen wurden entfernt. Du kannst neue Anzeigen erstellen, um sie erneut zu veröffentlichen.",
-  "@notifListingDeletedBodyMultiple": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@notifListingDeletedBodyMultiple": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifListingRemoved": "Deine Anzeige wurde entfernt",
   "notifListingRemovedBody": "Deine Anzeige wurde entfernt, da sie Inhalte enthielt, die gegen unsere Community-Richtlinien verstoßen.",
   "notifSearchAlert": "Suchalarm: neue Anzeige",
   "notifSearchAlertBody": "Neuer Artikel in {category} hinzugefügt",
-  "@notifSearchAlertBody": {
-    "placeholders": {
-      "category": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifSearchAlertBody": [
+    [
+      "placeholders",
+      [
+        [
+          "category",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifSmartAuctionAlert": "Ein Stream nur für dich hat begonnen! 🎯",
   "notifPriceDrop": "Preis gesenkt! 🔥",
   "notifPriceDropBody": "{item} — jetzt {price}",
-  "@notifPriceDropBody": {
-    "placeholders": {
-      "item": {
-        "type": "String"
-      },
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifPriceDropBody": [
+    [
+      "placeholders",
+      [
+        [
+          "item",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ],
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifBudgetMatch": "Neue Anzeige in deinem Budget! 💡",
   "notifBudgetMatchBody": "{item} — {price}",
-  "@notifBudgetMatchBody": {
-    "placeholders": {
-      "item": {
-        "type": "String"
-      },
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifBudgetMatchBody": [
+    [
+      "placeholders",
+      [
+        [
+          "item",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ],
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifRetargetTitle": "Eine Anzeige für dich",
   "notifChurnAirdropSeller": "Deine Anzeigen warten auf dich! 🛍️",
   "notifChurnBodySeller": "Wir haben {amount} teqlik zu deinem Konto hinzugefügt. Erstelle eine neue Anzeige und verbinde dich mit Käufern!",
-  "@notifChurnBodySeller": {
-    "placeholders": {
-      "amount": {
-        "type": "int"
-      }
-    }
-  },
+  "@notifChurnBodySeller": [
+    [
+      "placeholders",
+      [
+        [
+          "amount",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifChurnAirdropBuyer": "Wir haben dich vermisst! 🎁",
   "notifChurnBodyBuyer": "Wir haben {amount} teqlik zu deinem Konto hinzugefügt. Durchstöbere Live-Streams und gib sie aus!",
-  "@notifChurnBodyBuyer": {
-    "placeholders": {
-      "amount": {
-        "type": "int"
-      }
-    }
-  },
+  "@notifChurnBodyBuyer": [
+    [
+      "placeholders",
+      [
+        [
+          "amount",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "cat_electronics": "Elektronik",
   "cat_fashion": "Kleidung & Mode",
   "cat_home": "Haus & Wohnen",
@@ -2575,53 +4068,89 @@
   "recHighReach": "Das durchschnittliche Budget deines Publikums beträgt {budget} ₺. Dein Publikumsprofil sieht stark aus. Du kannst den Umsatz steigern, indem du in deinem nächsten Stream Premiumprodukte bis zu {high} ₺ anbietest.",
   "recDefault": "Das durchschnittliche Budget deines Publikums beträgt {budget} ₺. Du kannst deine Verkäufe steigern, indem du Produkte in dieser Preisklasse anbietest.",
   "radarCheap": "Billiger als %{pct_rank} der Konkurrenten — erwäge eine Preiserhöhung",
-  "@radarCheap": {
-    "description": "Analytics missing key: radarCheap"
-  },
+  "@radarCheap": [
+    [
+      "description",
+      "Analytics missing key: radarCheap"
+    ]
+  ],
   "radarFair": "Nahe am Marktdurchschnitt bepreist",
-  "@radarFair": {
-    "description": "Analytics missing key: radarFair"
-  },
+  "@radarFair": [
+    [
+      "description",
+      "Analytics missing key: radarFair"
+    ]
+  ],
   "errStreamNotFound": "Stream nicht gefunden",
-  "@errStreamNotFound": {
-    "description": "Analytics missing key: errStreamNotFound"
-  },
+  "@errStreamNotFound": [
+    [
+      "description",
+      "Analytics missing key: errStreamNotFound"
+    ]
+  ],
   "errAccessDenied": "Du hast keine Berechtigung, auf diesen Bericht zuzugreifen",
-  "@errAccessDenied": {
-    "description": "Analytics missing key: errAccessDenied"
-  },
+  "@errAccessDenied": [
+    [
+      "description",
+      "Analytics missing key: errAccessDenied"
+    ]
+  ],
   "errListingNotFound": "Anzeige nicht gefunden",
-  "@errListingNotFound": {
-    "description": "Analytics missing key: errListingNotFound"
-  },
+  "@errListingNotFound": [
+    [
+      "description",
+      "Analytics missing key: errListingNotFound"
+    ]
+  ],
   "errProRequired": "Diese Funktion ist exklusiv für Pro-Benutzer",
-  "@errProRequired": {
-    "description": "Analytics missing key: errProRequired"
-  },
+  "@errProRequired": [
+    [
+      "description",
+      "Analytics missing key: errProRequired"
+    ]
+  ],
   "radarCheapLabel": "Billig",
-  "@radarCheapLabel": {
-    "description": "Analytics missing key: radarCheapLabel"
-  },
+  "@radarCheapLabel": [
+    [
+      "description",
+      "Analytics missing key: radarCheapLabel"
+    ]
+  ],
   "radarFairLabel": "Fair",
-  "@radarFairLabel": {
-    "description": "Analytics missing key: radarFairLabel"
-  },
+  "@radarFairLabel": [
+    [
+      "description",
+      "Analytics missing key: radarFairLabel"
+    ]
+  ],
   "proSalesSpeedTip": "Anzeigen unter dem Marktdurchschnitt verkaufen sich {ratio}× schneller",
-  "@proSalesSpeedTip": {
-    "description": "Analytics missing key: proSalesSpeedTip"
-  },
+  "@proSalesSpeedTip": [
+    [
+      "description",
+      "Analytics missing key: proSalesSpeedTip"
+    ]
+  ],
   "proBestStreamRec": "Du erzielst die besten Ergebnisse am {day} um {hours} mit einer Konversionsrate von {rate}%.",
-  "@proBestStreamRec": {
-    "description": "Analytics missing key: proBestStreamRec"
-  },
+  "@proBestStreamRec": [
+    [
+      "description",
+      "Analytics missing key: proBestStreamRec"
+    ]
+  ],
   "tabReports": "Berichte",
-  "@tabReports": {
-    "description": "Analytics missing key: tabReports"
-  },
+  "@tabReports": [
+    [
+      "description",
+      "Analytics missing key: tabReports"
+    ]
+  ],
   "badgeSponsored": "Gesponsert",
-  "@badgeSponsored": {
-    "description": "Badge label for sponsored listing"
-  },
+  "@badgeSponsored": [
+    [
+      "description",
+      "Badge label for sponsored listing"
+    ]
+  ],
   "confidenceHigh": "● Hohes Vertrauen",
   "confidenceMedium": "● Mittleres Vertrauen",
   "confidenceLow": "● Geringes Vertrauen",
@@ -2630,30 +4159,57 @@
   "editProfileUsername": "Benutzername",
   "editProfileFillAll": "Bitte fülle alle Felder aus",
   "aiAdviceSimilarCount": "{count} ähnliche Produkte analysiert",
-  "@aiAdviceSimilarCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@aiAdviceSimilarCount": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "aiAdviceSameCategory": "{count} in derselben Kategorie",
-  "@aiAdviceSameCategory": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@aiAdviceSameCategory": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "aiAdviceCityBased": "stadtbasiert",
   "aiAdviceMarketClose": "Durchschnittlicher Marktabschluss: {price} ₺.",
-  "@aiAdviceMarketClose": {
-    "placeholders": {
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@aiAdviceMarketClose": [
+    [
+      "placeholders",
+      [
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "aiAdviceBimodal": "Zwei unterschiedliche Marktpreisniveaus (bimodal) in dieser Produktgruppe festgestellt. Der Preis kann je nach Produktvariante oder Garantie variieren.",
   "aiAdviceNoData": "Noch nicht genügend ähnliche Produktdaten gefunden. Schätzungen werden besser, wenn mehr Anzeigen zur Plattform hinzugefügt werden. Erforsche den Markt, um deinen Preis festzulegen.",
   "proToolDemandTrendsTitle": "Kategorie-Nachfragetrends",
@@ -2666,13 +4222,22 @@
   "demandTrendsSupplyGapLabel": "Angebotslücke",
   "demandTrendsSupplyGapHint": "Benutzer suchen, aber Anzeigen sind rar",
   "demandTrendsChangeLabel": "{pct}% Veränderung (8 Wochen)",
-  "@demandTrendsChangeLabel": {
-    "placeholders": {
-      "pct": {
-        "type": "String"
-      }
-    }
-  },
+  "@demandTrendsChangeLabel": [
+    [
+      "placeholders",
+      [
+        [
+          "pct",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "demandTrendsEmptyLabel": "Noch nicht genug Suchdaten.",
   "trustScoreLabel": "Vertrauenswert",
   "trustScoreHint": "Ein Glaubwürdigkeitswert von 0–100. Berechnet aus Auktionsabschlussrate, Gewinnhistorie, Anzeigenqualität, Kontoalter und Gebotskonsistenz. Wird nächtlich aktualisiert.",
@@ -2682,13 +4247,22 @@
   "influenceRankLabel": "Influencer-Score",
   "influenceRankHint": "Influencer-Score basierend auf dem Follower-Netzwerk. Je höher der Score, desto größer deine Reichweite. Wird wöchentlich aktualisiert.",
   "influenceRankValue": "Rang #{rank}",
-  "@influenceRankValue": {
-    "placeholders": {
-      "rank": {
-        "type": "int"
-      }
-    }
-  },
+  "@influenceRankValue": [
+    [
+      "placeholders",
+      [
+        [
+          "rank",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "radarNoActiveListing": "Keine aktiven Anzeigen gefunden.",
   "radarNeedActiveListing": "Mindestens 1 aktive Anzeige ist für das Konkurrenz-Radar erforderlich.",
   "radarNoPriceSet": "Für diese Anzeige ist kein Preis festgelegt.",
@@ -2698,22 +4272,40 @@
   "radarActiveListings": "aktive Anzeigen",
   "radarDaysAvg": "Tage (Durchschn.)",
   "radarDayRange": "Bereich: {min} – {max} Tage",
-  "@radarDayRange": {
-    "placeholders": {
-      "min": {},
-      "max": {}
-    }
-  },
+  "@radarDayRange": [
+    [
+      "placeholders",
+      [
+        [
+          "min",
+          []
+        ],
+        [
+          "max",
+          []
+        ]
+      ]
+    ]
+  ],
   "radarAverage": "Durchschnitt",
   "radarSweetSpotLabel": "Beste Verkaufsspanne",
   "radarPriceSensitivity": "Preissensibilität",
   "radarDaySaleStat": "{days} Tage ({count} Verkäufe)",
-  "@radarDaySaleStat": {
-    "placeholders": {
-      "days": {},
-      "count": {}
-    }
-  },
+  "@radarDaySaleStat": [
+    [
+      "placeholders",
+      [
+        [
+          "days",
+          []
+        ],
+        [
+          "count",
+          []
+        ]
+      ]
+    ]
+  ],
   "proNotEnoughStreamData": "Noch nicht genug Stream-Daten (mind. 2 Streams erforderlich).",
   "saleTypeBuyNow": "Sofort-Kauf",
   "saleTypeBid": "Gebot",
@@ -2729,13 +4321,22 @@
   "notifQuietHoursDesc": "Benachrichtigungen zu diesen Zeiten verzögern, morgens anzeigen",
   "quickAuctionBtn": "Schnell",
   "quickAuctionItem": "Artikel {count}",
-  "@quickAuctionItem": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@quickAuctionItem": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "quickAuctionStarted": "Auktion gestartet",
   "quickSaleSheetTitle": "Schneller Direktverkauf",
   "quickSaleStarted": "Verkauf gestartet",
@@ -2760,67 +4361,130 @@
   "errBidOutbid": "Ein anderes Gebot ging kurz vor deinem ein. Überprüfe den aktuellen Preis.",
   "btnRemovePin": "✕ Entfernen",
   "blastSent": "🎯 Benachrichtigung an {count} Personen gesendet!",
-  "@blastSent": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@blastSent": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "blastStarted": "🎯 Benachrichtigungskampagne gestartet!",
   "blastError": "Benachrichtigung konnte nicht gesendet werden.",
   "blastSending": "Senden...",
   "hostRemoveFromStageBtn": "✕ Von der Bühne entfernen",
   "hostViewersTitle": "👁 Zuschauer ({count})",
-  "@hostViewersTitle": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@hostViewersTitle": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "auctionGroupFallback": "Auktion",
   "hostMuteSuccess": "@{username} stummgeschaltet",
-  "@hostMuteSuccess": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@hostMuteSuccess": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "hostUnmuteSuccess": "Stummschaltung aufgehoben",
   "hostPromoteSuccess": "@{username} zum Moderator gemacht",
-  "@hostPromoteSuccess": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@hostPromoteSuccess": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "hostDemoteSuccess": "@{username} als Moderator entfernt",
-  "@hostDemoteSuccess": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@hostDemoteSuccess": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "hostKickSuccess": "@{username} aus dem Stream entfernt",
-  "@hostKickSuccess": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@hostKickSuccess": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "whaleInRoom": "{tier}-Käufer im Raum",
-  "@whaleInRoom": {
-    "placeholders": {
-      "tier": {
-        "type": "String"
-      }
-    }
-  },
+  "@whaleInRoom": [
+    [
+      "placeholders",
+      [
+        [
+          "tier",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "whaleShowBestItems": "Zeit, deine besten Artikel zu zeigen!",
   "badgePassive": "Inaktiv",
   "hesitatedSectionTitle": "Rückblick",
@@ -2831,32 +4495,59 @@
   "hesitatedDismissed": "Von deiner Liste entfernt",
   "searchSmartResultsLabel": "Smarte Ergebnisse",
   "searchShowAllAccounts": "Alle Konten ansehen ({count})",
-  "@searchShowAllAccounts": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@searchShowAllAccounts": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "explorePersonalizedHint": "Durchstöbere einige Anzeigen,\nPersonalisierte Inhalte werden vorbereitet!",
   "personalizedGridExhausted": "Alle Empfehlungen angesehen · Zum Aktualisieren nach unten ziehen",
   "joinLiveStreamBanner": "Live-Stream beitreten →",
   "audienceCountPeople": "{count} Personen",
-  "@audienceCountPeople": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@audienceCountPeople": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "audienceFreeSlots": "-{count} Personen",
-  "@audienceFreeSlots": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@audienceFreeSlots": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "defaultUserFallback": "Benutzer",
   "noResultsFound": "Keine Ergebnisse gefunden",
   "removeFromFavoritesTooltip": "Aus Favoriten entfernen",
@@ -2889,13 +4580,22 @@
   "callSpeaker": "Lautsprecher",
   "callIncomingTitle": "Eingehender Anruf",
   "callIncomingBody": "@{username} ruft an",
-  "@callIncomingBody": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@callIncomingBody": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "callReturnToActive": "Tippen, um zum Anruf zurückzukehren",
   "callNotifAccept": "Antworten",
   "callNotifDecline": "Ablehnen",
@@ -2904,27 +4604,51 @@
   "callChat": "Chat",
   "callAddPerson": "Hinzufügen",
   "notifCallMissed": "Verpasster Anruf: @{username}",
-  "@notifCallMissed": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifCallMissed": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifCallMissedBody": "Hat versucht, dich zu erreichen.",
   "callNotifTitle": "@{username} ruft dich an",
-  "@callNotifTitle": {
-    "description": "Incoming call push notification title",
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@callNotifTitle": [
+    [
+      "description",
+      "Incoming call push notification title"
+    ],
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "callNotifBody": "Eingehender Sprachanruf",
-  "@callNotifBody": {
-    "description": "Incoming call push notification body"
-  },
+  "@callNotifBody": [
+    [
+      "description",
+      "Incoming call push notification body"
+    ]
+  ],
   "privateAccount": "Privates Konto",
   "privateAccountDesc": "Wenn dein Konto privat ist, können dir nur Personen folgen, die du genehmigst.",
   "followRequests": "Follow-Anfragen",
@@ -2935,17 +4659,29 @@
   "thisAccountIsPrivate": "Dieses Konto ist privat",
   "thisAccountIsPrivateDesc": "Folge diesem Konto, um seine Anzeigen zu sehen.",
   "notifFollowRequestTitle": "@{username} möchte dir folgen",
-  "@notifFollowRequestTitle": {
-    "placeholders": {
-      "username": {}
-    }
-  },
+  "@notifFollowRequestTitle": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          []
+        ]
+      ]
+    ]
+  ],
   "notifFollowAcceptedTitle": "@{username} hat deine Follow-Anfrage akzeptiert",
-  "@notifFollowAcceptedTitle": {
-    "placeholders": {
-      "username": {}
-    }
-  },
+  "@notifFollowAcceptedTitle": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          []
+        ]
+      ]
+    ]
+  ],
   "errFollowSelf": "Du kannst dir nicht selbst folgen",
   "errUserNotFound": "Benutzer nicht gefunden",
   "errAlreadyFollowing": "Folgt bereits oder Anfrage gesendet",
@@ -2992,125 +4728,248 @@
   "callHistoryOutgoing": "Ausgehend",
   "callHistoryEmpty": "Noch keine Anrufe",
   "callHistoryDurationShort": "{mm}:{ss}",
-  "@callHistoryDurationShort": {
-    "placeholders": {
-      "mm": {
-        "type": "String"
-      },
-      "ss": {
-        "type": "String"
-      }
-    }
-  },
+  "@callHistoryDurationShort": [
+    [
+      "placeholders",
+      [
+        [
+          "mm",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ],
+        [
+          "ss",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "callCameraSwitch": "Kamera wechseln",
   "callCameraOn": "Kamera an",
   "callCameraOff": "Kamera aus",
   "callVideoStarted": "{name} hat die Kamera eingeschaltet",
-  "@callVideoStarted": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
+  "@callVideoStarted": [
+    [
+      "placeholders",
+      [
+        [
+          "name",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "callVideoStopped": "{name} hat die Kamera ausgeschaltet",
-  "@callVideoStopped": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
+  "@callVideoStopped": [
+    [
+      "placeholders",
+      [
+        [
+          "name",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "callInviteTitle": "Zum Anruf einladen",
   "callInviteButton": "Einladung senden",
   "callSearchFollowing": "Suche nach Personen, denen du folgst...",
   "callAlreadyInCall": "Bereits in einem Anruf",
   "callInvitePending": "Einladung gesendet",
   "callInviteSent": "Einladung an {name} gesendet",
-  "@callInviteSent": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
+  "@callInviteSent": [
+    [
+      "placeholders",
+      [
+        [
+          "name",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "callInviteRejected": "{name} hat die Einladung abgelehnt",
-  "@callInviteRejected": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
+  "@callInviteRejected": [
+    [
+      "placeholders",
+      [
+        [
+          "name",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "callInviteTimeout": "{name} hat nicht geantwortet",
-  "@callInviteTimeout": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
+  "@callInviteTimeout": [
+    [
+      "placeholders",
+      [
+        [
+          "name",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "callParticipantJoined": "{name} ist dem Anruf beigetreten",
-  "@callParticipantJoined": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
+  "@callParticipantJoined": [
+    [
+      "placeholders",
+      [
+        [
+          "name",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "callParticipantLeft": "{name} hat den Anruf verlassen",
-  "@callParticipantLeft": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
+  "@callParticipantLeft": [
+    [
+      "placeholders",
+      [
+        [
+          "name",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "callParticipantRemovedSelf": "Du wurdest aus dem Anruf entfernt",
   "callParticipantRemovedOther": "{name} wurde aus dem Anruf entfernt",
-  "@callParticipantRemovedOther": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
+  "@callParticipantRemovedOther": [
+    [
+      "placeholders",
+      [
+        [
+          "name",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "callGroupInviteTitle": "Aktive Anrufeinladung",
   "callGroupInviteFrom": "{inviter} lädt dich zu einem Anruf ein",
-  "@callGroupInviteFrom": {
-    "placeholders": {
-      "inviter": {
-        "type": "String"
-      }
-    }
-  },
+  "@callGroupInviteFrom": [
+    [
+      "placeholders",
+      [
+        [
+          "inviter",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "callJoinButton": "Beitreten",
   "callDeclineInviteButton": "Ablehnen",
   "callParticipantCount": "{count} Teilnehmer",
-  "@callParticipantCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@callParticipantCount": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "callMaxParticipantsReached": "Anruf ist voll (max. {max})",
-  "@callMaxParticipantsReached": {
-    "placeholders": {
-      "max": {
-        "type": "int"
-      }
-    }
-  },
+  "@callMaxParticipantsReached": [
+    [
+      "placeholders",
+      [
+        [
+          "max",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "callRemoveParticipantTitle": "Aus Anruf entfernen",
   "callRemoveParticipantConfirm": "{name} aus dem Anruf entfernen?",
-  "@callRemoveParticipantConfirm": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
+  "@callRemoveParticipantConfirm": [
+    [
+      "placeholders",
+      [
+        [
+          "name",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "callRemoveParticipantButton": "Entfernen",
   "callCurrentParticipants": "Derzeit im Anruf",
   "callHistoryToday": "Heute",
@@ -3127,7 +4986,7 @@
   "aiDescButton": "Beschreibung mit Künstlicher Intelligenz schreiben",
   "aiDescGenerating": "KI schreibt deine Beschreibung...",
   "aiDescFallbackNotice": "Primäre KI ist beschäftigt, Backup-Modell wird verwendet.",
-  "@aiDescFallbackNotice": {},
+  "@aiDescFallbackNotice": [],
   "aiDescError": "Beschreibung konnte nicht generiert werden. Bitte versuche es erneut.",
   "aiDescUnavailable": "Der Beschreibungsdienst der Künstlichen Intelligenz ist derzeit nicht verfügbar.",
   "fieldCondition": "Artikelzustand",
@@ -3146,21 +5005,39 @@
   "uploadErrorAuthExpired": "Deine Sitzung ist abgelaufen, bitte melde dich erneut an.",
   "uploadErrorGeneric": "Medien konnten nicht hochgeladen werden, bitte versuche es erneut.",
   "apiErrorInsufficientFundsPro": "Du hast dein kostenloses KI-Limit für diesen Monat erreicht. Du benötigst mindestens {cost} teqlik auf deinem Konto, um fortzufahren.",
-  "@apiErrorInsufficientFundsPro": {
-    "placeholders": {
-      "cost": {
-        "type": "int"
-      }
-    }
-  },
+  "@apiErrorInsufficientFundsPro": [
+    [
+      "placeholders",
+      [
+        [
+          "cost",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "apiErrorInsufficientFundsStd": "Unzureichendes teqlik-Guthaben. Du benötigst mindestens {cost} teqlik auf deinem Konto für diese Aktion.",
-  "@apiErrorInsufficientFundsStd": {
-    "placeholders": {
-      "cost": {
-        "type": "int"
-      }
-    }
-  },
+  "@apiErrorInsufficientFundsStd": [
+    [
+      "placeholders",
+      [
+        [
+          "cost",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "apiErrorAiServiceBusy": "KI-Dienst ist derzeit beschäftigt. Bitte versuche es erneut.",
   "apiErrorAiServiceTimeout": "Zeitüberschreitung des KI-Dienstes.",
   "errorServerBusy": "Server ist beschäftigt, bitte versuche es später erneut.",
@@ -4352,19 +6229,37 @@
   "micToggleFailed": "Mikrofon konnte nicht umgeschaltet werden",
   "cameraToggleFailed": "Kamera konnte nicht umgeschaltet werden",
   "notifRatingUpdatedTitle": "@{username} hat seine Bewertung aktualisiert",
-  "@notifRatingUpdatedTitle": {
-    "description": "Push notification title when a rating is updated",
-    "placeholders": {
-      "username": {}
-    }
-  },
+  "@notifRatingUpdatedTitle": [
+    [
+      "description",
+      "Push notification title when a rating is updated"
+    ],
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          []
+        ]
+      ]
+    ]
+  ],
   "notifRatingReplyTitle": "@{username} hat auf deine Bewertung geantwortet",
-  "@notifRatingReplyTitle": {
-    "description": "Push notification title when a rating reply is posted",
-    "placeholders": {
-      "username": {}
-    }
-  },
+  "@notifRatingReplyTitle": [
+    [
+      "description",
+      "Push notification title when a rating reply is posted"
+    ],
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          []
+        ]
+      ]
+    ]
+  ],
   "notifSettingsRatingsTitle": "Bewertungsbenachrichtigungen",
   "notifSettingsRatingsDesc": "Wenn eine Bewertung aktualisiert oder beantwortet wird",
   "extraField_listing_type": "Anzeigenstatus",
@@ -4396,24 +6291,48 @@
   "directSalePausedLabel": "Verkauf pausiert",
   "directSaleResumedFeedback": "▶ Verkauf fortgesetzt",
   "directSalePurchaseHostMsg": "✅ @{buyer} ×{qty} gekauft",
-  "@directSalePurchaseHostMsg": {
-    "placeholders": {
-      "buyer": {
-        "type": "String"
-      },
-      "qty": {
-        "type": "String"
-      }
-    }
-  },
+  "@directSalePurchaseHostMsg": [
+    [
+      "placeholders",
+      [
+        [
+          "buyer",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ],
+        [
+          "qty",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "directSalePurchaseViewerMsg": "@{buyer} hat gekauft",
-  "@directSalePurchaseViewerMsg": {
-    "placeholders": {
-      "buyer": {
-        "type": "String"
-      }
-    }
-  },
+  "@directSalePurchaseViewerMsg": [
+    [
+      "placeholders",
+      [
+        [
+          "buyer",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "directSaleSoldOutBanner": "Ausverkauft 🎉",
   "directSaleEndedSoldOut": "Alles ausverkauft! 🎉",
   "directSaleEndedByHost": "Verkauf beendet.",
@@ -4422,13 +6341,22 @@
   "directSaleCancelledOrderKept": "Verkauf abgebrochen, deine Bestellung ist gültig.",
   "directSaleCancelledOrderVoided": "Verkauf abgebrochen, deine Bestellung wurde storniert.",
   "directSaleStockUrgency": "Nur noch {count} übrig!",
-  "@directSaleStockUrgency": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@directSaleStockUrgency": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "directSaleFormTitle": "Verkauf starten",
   "directSaleFormProductTitle": "Produktname",
   "directSaleFormPrice": "Preis (₺)",
@@ -4448,56 +6376,101 @@
   "directSaleRevenueLabel": "Gesamtumsatz",
   "directSaleEndDialogTitle": "Verkauf beenden",
   "directSaleEndDialogBody": "{count} Bestellungen aufgegeben. Diese Bestellungen bleiben gültig.",
-  "@directSaleEndDialogBody": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@directSaleEndDialogBody": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "directSaleEndDialogBodyNoOrders": "Bist du sicher, dass du den Verkauf beenden möchtest?",
   "directSaleCancelDialogTitle": "Verkauf abbrechen",
   "directSaleCancelDialogBody": "Bisher {count} Bestellungen aufgegeben. Was soll mit ihnen geschehen?",
-  "@directSaleCancelDialogBody": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@directSaleCancelDialogBody": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "directSaleCancelDialogBodyNoOrders": "Bist du sicher, dass du den Verkauf abbrechen möchtest?",
   "directSaleCancelVoidOrders": "Bestellungen stornieren",
   "directSaleCancelKeepOrders": "Bestellungen behalten",
   "directSaleSummaryTitle": "Verkauf abgeschlossen",
   "directSaleSummarySold": "{count} verkauft",
-  "@directSaleSummarySold": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@directSaleSummarySold": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "directSaleSummaryRevenue": "Gesamt: {amount}",
-  "@directSaleSummaryRevenue": {
-    "placeholders": {
-      "amount": {
-        "type": "String"
-      }
-    }
-  },
+  "@directSaleSummaryRevenue": [
+    [
+      "placeholders",
+      [
+        [
+          "amount",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "directSaleNewSaleBtn": "Neuen Verkauf starten",
   "directSaleBuyBtn": "Sofort-Kauf",
   "directSaleBuySheetTitle": "Kauf",
   "directSaleBuySheetQuantity": "Menge",
   "directSaleBuySheetTotal": "Gesamt",
   "directSaleBuySheetPreviousBadge": "✓ Du hast {count} gekauft",
-  "@directSaleBuySheetPreviousBadge": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@directSaleBuySheetPreviousBadge": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "directSaleBuySheetConfirm": "Kaufen",
   "directSaleProofDialogTitle": "Start deines Verkaufs",
   "directSaleProofDialogBody": "Zeige das Produkt vor Beginn des Verkaufs in die Kamera und mache ein Beweisfoto.",
@@ -4510,20 +6483,38 @@
   "directSaleOrderCancelled": "Abgebrochen",
   "directSaleOrderQuantity": "{count} Stk.",
   "directSaleBuyerCount": "{count} Käufer",
-  "@directSaleBuyerCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "@directSaleOrderQuantity": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@directSaleBuyerCount": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
+  "@directSaleOrderQuantity": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "directSaleSaleStatusLabel": "Verkaufsstatus",
   "directSaleOrderCompleted": "Abgeschlossen",
   "directSaleQuantityLabel": "Menge",
@@ -4648,5 +6639,31 @@
   "recordingTabSalesGifts": "Verkauf & Geschenke",
   "recordingTabParticipants": "Teilnehmer",
   "recordingSearchAuctions": "Auktionen suchen...",
-  "recordingSearchParticipants": "Teilnehmer suchen..."
+  "recordingSearchParticipants": "Teilnehmer suchen...",
+  "boostDialogPaidBadgeStandard": "Standardmitglieder haben keine kostenlosen monatlichen Boost-Guthaben",
+  "aiDescConfirmStandardTitle": "5 TEQlik werden abgezogen",
+  "aiDescConfirmStandardBody": "Das Erstellen einer KI-Beschreibung zieht 5 TEQlik von Ihrem Guthaben ab. Möchten Sie fortfahren?",
+  "aiDescConfirmProExhaustedTitle": "Monatliche Guthaben aufgebraucht",
+  "aiDescConfirmProExhaustedBody": "Sie haben Ihre kostenlosen Monatsguthaben aufgebraucht. Fortfahren kostet 5 TEQlik.",
+  "aiDescConfirmAction": "Fortfahren",
+  "aiDescCostBadge": "teqlik",
+  "creditGateBlastTitle": "Massenbenachrichtigung senden",
+  "creditGateBoostTitle": "Inserat boosten",
+  "creditGateAiDescTitle": "KI-Beschreibung",
+  "creditGateReactivationTitle": "Inserat reaktivieren",
+  "creditGateFreeRemaining": "Sie haben {remaining} / {total} kostenlose Credits in diesem Zeitraum",
+  "@creditGateFreeRemaining": [["placeholders", [["remaining", [["type", "int"]]], ["total", [["type", "int"]]]]]],
+  "creditGateWithinWindow": "30-Tage-Fenster — diese Aktion ist kostenlos",
+  "creditGateStandardPaid": "Keine kostenlosen Credits für Standard-Mitglieder",
+  "creditGateProExhausted": "Sie haben alle {total} kostenlosen Credits in diesem Zeitraum verwendet",
+  "@creditGateProExhausted": [["placeholders", [["total", [["type", "int"]]]]]],
+  "creditGateCostLabel": "Kosten",
+  "creditGateFree": "Kostenlos",
+  "creditGateCostValue": "{cost} teqlik",
+  "@creditGateCostValue": [["placeholders", [["cost", [["type", "int"]]]]]],
+  "creditGateBalanceLabel": "Ihr Guthaben",
+  "creditGateBalanceValue": "{balance} teqlik",
+  "@creditGateBalanceValue": [["placeholders", [["balance", [["type", "int"]]]]]],
+  "creditGateInsufficientBalance": "Unzureichendes Guthaben. Laden Sie teqlik auf, um fortzufahren.",
+  "creditGateConfirm": "Bestätigen & Fortfahren"
 }

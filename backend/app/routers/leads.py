@@ -13,6 +13,7 @@ import logging
 from fastapi import APIRouter, Depends, Query
 from app.core.exceptions import NotFoundException, ForbiddenException, InsufficientFundsException, CooldownException
 from app.services import credit_service
+from app.services.credit_service import CreditFeature
 from pydantic import BaseModel, Field
 from sqlalchemy import select, text as sql_text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -97,15 +98,15 @@ async def audience_size(
     else:
         reachable = 0
 
-    cap   = credit_service.per_op_cap("blast", current_user.user_type == 'pro')
-    limit = credit_service.free_limit("blast", current_user.user_type == 'pro')
-    used  = await credit_service.get_used("blast", current_user.id, current_user.premium_since)
+    cap   = credit_service.per_op_cap(CreditFeature.BLAST, current_user.user_type)
+    limit = credit_service.free_limit(CreditFeature.BLAST, current_user.user_type)
+    used  = await credit_service.get_used(CreditFeature.BLAST, current_user.id, current_user.premium_since)
     credits_remaining = max(0, limit - used)
 
     actual_cap      = min(reachable, cap)
     free_used       = min(credits_remaining, actual_cap)
     paid_count      = actual_cap - free_used
-    estimated_cost  = paid_count * credit_service.cost_teqlik("blast")
+    estimated_cost  = paid_count * credit_service.cost_teqlik(CreditFeature.BLAST)
 
     return {
         "audience_size":          reachable,
@@ -125,20 +126,22 @@ async def blast_credits(
     current_user: User = Depends(get_current_user),
 ):
     """Kullanıcının bu ayki blast kredi durumunu döndürür."""
-    limit = credit_service.free_limit("blast", current_user.user_type == 'pro')
-    cap   = credit_service.per_op_cap("blast", current_user.user_type == 'pro')
-    used  = await credit_service.get_used("blast", current_user.id, current_user.premium_since)
+    limit = credit_service.free_limit(CreditFeature.BLAST, current_user.user_type)
+    cap   = credit_service.per_op_cap(CreditFeature.BLAST, current_user.user_type)
+    used  = await credit_service.get_used(CreditFeature.BLAST, current_user.id, current_user.premium_since)
     renewal_date: str | None = None
     if current_user.premium_since:
         renewal_date = credit_service.next_billing_date(current_user.premium_since).isoformat()
     return {
-        "used":          used,
-        "limit":         limit,
-        "remaining":     max(0, limit - used),
-        "user_type": current_user.user_type,
-        "per_blast_cap": cap,
-        "teqlik_balance":  current_user.teqlik_balance,
-        "renewal_date":  renewal_date,
+        "used":           used,
+        "limit":          limit,
+        "remaining":      max(0, limit - used),
+        "cost_teqlik":    credit_service.cost_teqlik(CreditFeature.BLAST),
+        "user_type":      current_user.user_type,
+        "per_op_cap":     cap,
+        "per_blast_cap":  cap,  # geriye dönük uyumluluk
+        "teqlik_balance": current_user.teqlik_balance,
+        "renewal_date":   renewal_date,
     }
 
 
@@ -181,9 +184,9 @@ async def send_blast(
     if _last_lead_blast is not None:
         raise CooldownException()
 
-    cap   = credit_service.per_op_cap("blast", current_user.user_type == 'pro')
-    limit = credit_service.free_limit("blast", current_user.user_type == 'pro')
-    used  = await credit_service.get_used("blast", current_user.id, current_user.premium_since)
+    cap   = credit_service.per_op_cap(CreditFeature.BLAST, current_user.user_type)
+    limit = credit_service.free_limit(CreditFeature.BLAST, current_user.user_type)
+    used  = await credit_service.get_used(CreditFeature.BLAST, current_user.id, current_user.premium_since)
     credits_remaining = max(0, limit - used)
 
     # İstenen maksimum kişi sayısı
@@ -191,7 +194,7 @@ async def send_blast(
     # estimated_cost >= 0 → kullanıcının onayladığı fatura tavanı; bu kadarı geçme.
     desired = body.recipient_count if body.recipient_count else cap
     if body.estimated_cost is not None:
-        max_paid_authorized = body.estimated_cost // credit_service.cost_teqlik("blast")
+        max_paid_authorized = body.estimated_cost // credit_service.cost_teqlik(CreditFeature.BLAST)
         actual_count_max = min(desired, credits_remaining + max_paid_authorized, cap)
     else:
         actual_count_max = min(desired, cap)
@@ -266,7 +269,7 @@ async def send_blast(
     # ── Kesin Maliyet Hesabı (Sadece Bulunan FCM Sayısına Göre) ─────────────
     free_used  = min(credits_remaining, actual_count)
     paid_count = actual_count - free_used
-    teqlik_cost  = paid_count * credit_service.cost_teqlik("blast")
+    teqlik_cost  = paid_count * credit_service.cost_teqlik(CreditFeature.BLAST)
 
     # ── TEQlik bakiye kontrolü ─────────────────────────────────────────────────
     if teqlik_cost > 0 and current_user.teqlik_balance < teqlik_cost:
@@ -315,7 +318,7 @@ async def send_blast(
             pass
 
     if free_used > 0:
-        await credit_service.increment("blast", current_user.id, current_user.premium_since, count=free_used)
+        await credit_service.increment(CreditFeature.BLAST, current_user.id, current_user.premium_since, count=free_used)
 
     # ── In-app bildirim kayıtları (tüm alıcılar — push almayacaklar dahil) ─────
     from app.models.notification import Notification
@@ -445,13 +448,13 @@ async def retargeting_audience(
         else:
             reachable_with_token = 0
 
-        cap   = credit_service.per_op_cap("blast", is_premium=True)
-        used  = await credit_service.get_used("blast", current_user.id, current_user.premium_since)
-        credits_remaining = max(0, credit_service.free_limit("blast", is_premium=True) - used)
+        cap   = credit_service.per_op_cap(CreditFeature.BLAST, current_user.user_type)
+        used  = await credit_service.get_used(CreditFeature.BLAST, current_user.id, current_user.premium_since)
+        credits_remaining = max(0, credit_service.free_limit(CreditFeature.BLAST, current_user.user_type) - used)
         actual_cap   = min(reachable_with_token, cap)
         free_used    = min(credits_remaining, actual_cap)
         paid_count   = actual_cap - free_used
-        estimated_cost = paid_count * credit_service.cost_teqlik("blast")
+        estimated_cost = paid_count * credit_service.cost_teqlik(CreditFeature.BLAST)
 
         return {
             "listing_id": listing_id,
@@ -462,7 +465,7 @@ async def retargeting_audience(
             "non_follower_audience": reachable_with_token,
             "estimated_cost_teqlik": estimated_cost,
             "blast_credits_remaining": credits_remaining,
-            "blast_credits_limit": credit_service.free_limit("blast", is_premium=True),
+            "blast_credits_limit": credit_service.free_limit(CreditFeature.BLAST, current_user.user_type),
             "per_blast_cap": cap,
             "teqlik_balance": current_user.teqlik_balance,
         }
@@ -478,8 +481,8 @@ async def retargeting_audience(
             "non_follower_audience": 0,
             "estimated_cost_teqlik": 0,
             "blast_credits_remaining": 0,
-            "blast_credits_limit": credit_service.free_limit("blast", is_premium=True),
-            "per_blast_cap": credit_service.per_op_cap("blast", is_premium=True),
+            "blast_credits_limit": credit_service.free_limit(CreditFeature.BLAST, current_user.user_type),
+            "per_blast_cap": credit_service.per_op_cap(CreditFeature.BLAST, current_user.user_type),
             "teqlik_balance": current_user.teqlik_balance,
         }
 
@@ -511,19 +514,19 @@ async def send_retargeting(
         raise NotFoundException()
 
     # Karma model: kredi ücretsiz, kalan × 10 TEQlik
-    cap   = credit_service.per_op_cap("blast", is_premium=True)
-    used  = await credit_service.get_used("blast", current_user.id, current_user.premium_since)
-    credits_remaining = max(0, credit_service.free_limit("blast", is_premium=True) - used)
+    cap   = credit_service.per_op_cap(CreditFeature.BLAST, current_user.user_type)
+    used  = await credit_service.get_used(CreditFeature.BLAST, current_user.id, current_user.premium_since)
+    credits_remaining = max(0, credit_service.free_limit(CreditFeature.BLAST, current_user.user_type) - used)
 
     desired = body.recipient_count if body.recipient_count else cap
     if body.estimated_cost is not None:
-        max_paid_authorized = body.estimated_cost // credit_service.cost_teqlik("blast")
+        max_paid_authorized = body.estimated_cost // credit_service.cost_teqlik(CreditFeature.BLAST)
         actual_count = min(desired, credits_remaining + max_paid_authorized, cap)
     else:
         actual_count = min(desired, cap)
     free_used    = min(credits_remaining, actual_count)
     paid_count   = actual_count - free_used
-    teqlik_cost    = paid_count * credit_service.cost_teqlik("blast")
+    teqlik_cost    = paid_count * credit_service.cost_teqlik(CreditFeature.BLAST)
 
     if teqlik_cost > 0 and current_user.teqlik_balance < teqlik_cost:
         raise InsufficientFundsException()
@@ -616,7 +619,7 @@ async def send_retargeting(
             pass
 
     if free_used > 0:
-        await credit_service.increment("blast", current_user.id, current_user.premium_since, count=free_used)
+        await credit_service.increment(CreditFeature.BLAST, current_user.id, current_user.premium_since, count=free_used)
 
     logger.info("[Retargeting] Gönderildi | seller=%d | sent=%d | free=%d | paid=%d | cost=%d TEQlik",
                 current_user.id, sent, free_used, paid_count, teqlik_cost)

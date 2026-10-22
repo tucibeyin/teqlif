@@ -167,13 +167,22 @@
   "errorListingsLoad": "İlanlar yüklenemedi",
   "errorOperationFailed": "İşlem gerçekleştirilemedi.",
   "errorCoHostDuringCall": "@{hostUsername} sizi sahneye davet etti, ancak görüşmede olduğunuz için reddedildi.",
-  "@errorCoHostDuringCall": {
-    "placeholders": {
-      "hostUsername": {
-        "type": "String"
-      }
-    }
-  },
+  "@errorCoHostDuringCall": [
+    [
+      "placeholders",
+      [
+        [
+          "hostUsername",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "errorCallHistoryLoad": "Çağrı geçmişi yüklenemedi. Lütfen tekrar deneyin.",
   "errorVideoProcessing": "Video işlenemedi. Lütfen tekrar deneyin.",
   "errorPhotoUpload": "Fotoğraf yüklenemedi. Tekrar deneyin.",
@@ -189,13 +198,22 @@
   "giftNameDiamond": "Elmas",
   "giftNameCrown": "Kral Tacı",
   "giftSentHud": "🎉 {sender} hediye gönderdi!",
-  "@giftSentHud": {
-    "placeholders": {
-      "sender": {
-        "type": "String"
-      }
-    }
-  },
+  "@giftSentHud": [
+    [
+      "placeholders",
+      [
+        [
+          "sender",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "giftErrorGeneric": "Hata oluştu.",
   "giftInsufficientBalance": "Bakiyeniz yetersiz. Hediye göndermek için teqlik satın alın.",
   "giftLoadBalanceButton": "Bakiye Yükle",
@@ -214,13 +232,22 @@
   "homeAppBarTitle": "İlanlar",
   "homeSearchingHeader": "Aranıyor...",
   "homeResultsCount": "{count} ilan bulundu",
-  "@homeResultsCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@homeResultsCount": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "searchUserHint": "Kullanıcı ara...",
   "searchNoUser": "Kullanıcı bulunamadı",
   "searchLiveStreams": "Canlı Yayınlar",
@@ -309,13 +336,22 @@
   "followBtnFollow": "Takip Et",
   "pubProfileUserNotFound": "Kullanıcı bulunamadı",
   "pubProfileListingsCount": "İlanları ({count})",
-  "@pubProfileListingsCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@pubProfileListingsCount": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "pubProfileStatListings": "İlanlar",
   "pubProfileStatFollowers": "Takipçi",
   "pubProfileStatFollowing": "Takip",
@@ -339,41 +375,83 @@
   "ratingSaveFailed": "Puan kaydedilemedi",
   "ratingReviews": "Değerlendirmeler",
   "ratingCount": "{count} değerlendirme",
-  "@ratingCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@ratingCount": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "ratingStarCount": "({count} puan)",
-  "@ratingStarCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@ratingStarCount": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "createListingPhotoCount": "Fotoğraflar ({count}/{max})",
-  "@createListingPhotoCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      },
-      "max": {
-        "type": "int"
-      }
-    }
-  },
+  "@createListingPhotoCount": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "max",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "createListingSelectOption": "-- Seçiniz --",
   "createListingPhotoUploadFailed": "Fotoğraf yüklenemedi: {error}",
-  "@createListingPhotoUploadFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
+  "@createListingPhotoUploadFailed": [
+    [
+      "placeholders",
+      [
+        [
+          "error",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "createListingConnError": "Bağlantı hatası. Lütfen tekrar deneyin.",
   "notifSettingsMessagesTitle": "Mesajlar",
   "notifSettingsMessagesDesc": "Yeni direkt mesaj geldiğinde",
@@ -444,13 +522,22 @@
   "liveConnectingViewer": "Yayına bağlanıyor...",
   "livePermissionRequired": "Kamera ve mikrofon izni gerekli",
   "liveViewersTitle": "👁 İzleyiciler ({count})",
-  "@liveViewersTitle": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@liveViewersTitle": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "liveNoViewers": "Henüz izleyici yok",
   "streamViewerMuted": "Susturuldu",
   "liveEndStreamTitle": "Yayını Bitir",
@@ -467,21 +554,39 @@
   "liveCameraClosed": "Kamera Kapalı",
   "liveWaitingVideo": "Video bekleniyor...",
   "liveModDemotedSelf": "Moderatörlüğünüz @{username} tarafından kaldırıldı.",
-  "@liveModDemotedSelf": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@liveModDemotedSelf": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "liveModPromotedSelf": "⭐ @{username} sizi moderatör yaptı! Artık izleyicileri yönetebilirsiniz.",
-  "@liveModPromotedSelf": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@liveModPromotedSelf": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "modTitle": "🛡 Moderasyon",
   "modMute": "Sustur",
   "modUnmute": "Susturmayı Kaldır",
@@ -489,65 +594,128 @@
   "modDemote": "Moderatörlüğü Kaldır",
   "modKick": "Yayından At",
   "modMutedMsg": "@{username} susturuldu",
-  "@modMutedMsg": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@modMutedMsg": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "modUnmutedMsg": "Susturma kaldırıldı",
   "modPromotedMsg": "@{username} moderatör yapıldı",
-  "@modPromotedMsg": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@modPromotedMsg": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "modDemotedMsg": "@{username} moderatörlükten alındı",
-  "@modDemotedMsg": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@modDemotedMsg": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "modKickedMsg": "@{username} yayından atıldı",
-  "@modKickedMsg": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@modKickedMsg": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "modPromotedSnack": "⭐ @{username} moderatör yapıldı!",
-  "@modPromotedSnack": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@modPromotedSnack": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "modDemotedSnack": "✖ @{username} moderatörlükten alındı",
-  "@modDemotedSnack": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@modDemotedSnack": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "chatMessageHint": "Mesaj yaz...",
   "chatMutedHint": "🔇 Susturuldunuz",
   "chatHistoryTitle": "Sohbet Geçmişi",
   "chatHistoryCount": "Son {count} mesaj",
-  "@chatHistoryCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@chatHistoryCount": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "auctionTitle": "Açık Artırma",
   "auctionBidsHeader": "TEKLİFLER",
   "auctionAcceptBidTitle": "✅ Teklifi Kabul Et",
@@ -579,22 +747,40 @@
   "auctionStartBtn": "▶ Başlat",
   "auctionBidBtn": "Teklif Ver",
   "auctionSwipeToBid": "{price} Teklif Vermek için Kaydırın",
-  "@auctionSwipeToBid": {
-    "placeholders": {
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@auctionSwipeToBid": [
+    [
+      "placeholders",
+      [
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "auctionSwipeToBidNoPrice": "Teklif Vermek için Kaydırın",
   "auctionBidReceived": "₺{amount} teklifiniz alındı!",
-  "@auctionBidReceived": {
-    "placeholders": {
-      "amount": {
-        "type": "String"
-      }
-    }
-  },
+  "@auctionBidReceived": [
+    [
+      "placeholders",
+      [
+        [
+          "amount",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "chatJoinedStream": "yayına katıldı",
   "auctionMutedBtn": "🔇 Susturuldunuz",
   "auctionBuyNowTitle": "⚡ Hemen Al",
@@ -611,32 +797,59 @@
   "auctionApprovalWaitingDesc": "Hemen Al talebiniz host onayına gönderildi.",
   "auctionInProgress": "⏳ İşlem Devam Ediyor",
   "auctionInProgressDesc": "@{username} ile Hemen Al işlemi yapılıyor.",
-  "@auctionInProgressDesc": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@auctionInProgressDesc": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "auctionInProgressNoBid": "Sonuçlanana kadar teklif veremezsiniz.",
   "auctionSold": "🛒 SATILDI!",
   "auctionBoughtBy": "@{username} tarafından Hemen Alındı",
-  "@auctionBoughtBy": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@auctionBoughtBy": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "auctionBuyNowCongrats": "🎉 Tebrikler! Satın alma tamamlandı.",
   "auctionBuyNowSoldOther": "🛒 Ürün Hemen Satıldı! @{buyer} tarafından alındı.",
-  "@auctionBuyNowSoldOther": {
-    "placeholders": {
-      "buyer": {
-        "type": "String"
-      }
-    }
-  },
+  "@auctionBuyNowSoldOther": [
+    [
+      "placeholders",
+      [
+        [
+          "buyer",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "auctionBinRejected": "Hemen Al talebiniz reddedildi, artırma devam ediyor.",
   "auctionBinRejectedOther": "Hemen Al işlemi sonuçlandı, artırma devam ediyor.",
   "auctionBuyNowBtn": "⚡ Hemen Al — ",
@@ -646,21 +859,39 @@
   "auctionCustomAmountHint": "Özel tutar (₺)",
   "auctionFirstBid": "İlk teklifi sen ver!",
   "auctionHighestBidder": "@{username} en yüksek teklif sahibi",
-  "@auctionHighestBidder": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@auctionHighestBidder": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "auctionBidCount": "{count} teklif",
-  "@auctionBidCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@auctionBidCount": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "auctionManualEntry": "Manuel Gir",
   "auctionFromListings": "İlanlarımdan",
   "auctionNoActiveListings": "Aktif ilanınız yok.",
@@ -669,16 +900,31 @@
   "auctionStartPrice": "Başlangıç fiyatı (₺)",
   "auctionBuyNowPriceHint": "Hemen Al fiyatı (₺, opsiyonel)",
   "auctionBuyNowCompleted": "🛒 Hemen Al tamamlandı! @{buyer} — ₺{price}",
-  "@auctionBuyNowCompleted": {
-    "placeholders": {
-      "buyer": {
-        "type": "String"
-      },
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@auctionBuyNowCompleted": [
+    [
+      "placeholders",
+      [
+        [
+          "buyer",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ],
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "offerHistory": "Teklif Geçmişi",
   "offerAmountHint": "Teklif miktarı (₺)",
   "offerBtn": "Teklif Ver",
@@ -744,13 +990,22 @@
   "walletTxnStreamGiftReceived": "Yayın hediyesi alındı",
   "walletTxnDailyLogin": "Günlük giriş ödülü",
   "walletSeeAllTxns": "Tümünü gör ({n} işlem)",
-  "@walletSeeAllTxns": {
-    "placeholders": {
-      "n": {
-        "type": "int"
-      }
-    }
-  },
+  "@walletSeeAllTxns": [
+    [
+      "placeholders",
+      [
+        [
+          "n",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "walletAllTxnsTitle": "Tüm İşlemler",
   "walletDetailTitle": "İşlem Detayı",
   "walletDetailDate": "Tarih",
@@ -800,13 +1055,22 @@
   "reportChipSale": "Satış",
   "reportChipBids": "Teklif",
   "reportHesitation": "{count} kararsız teklif — bu izleyiciler fiyat noktasına yakın ama dönüştüremedik.",
-  "@reportHesitation": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@reportHesitation": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "reportSmartInsight": "Akıllı Öneri",
   "reportDurationMin": "dk",
   "reportDurationHour": "sa",
@@ -838,13 +1102,22 @@
   "planLifetime": "Ömür Boyu",
   "proStatusDesc": "Tüm analitik araçlara erişiminiz aktif",
   "proRenewalDate": "Yenileme: {date}",
-  "@proRenewalDate": {
-    "placeholders": {
-      "date": {
-        "type": "String"
-      }
-    }
-  },
+  "@proRenewalDate": [
+    [
+      "placeholders",
+      [
+        [
+          "date",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "proUnlockTitle": "PRO araçları kilidi aç",
   "proUnlockDesc": "Tahminle değil, verilerle sat",
   "proUnlockBtn": "PRO'ya Geç",
@@ -861,97 +1134,202 @@
   "proCreditsAiDescDesc": "İlan başlığı, kategori ve durum bilgilerinizden otomatik Türkçe açıklama oluşturur.",
   "proCreditsReactivationDesc": "Süresi dolmuş veya askıya alınmış ilanlarınızı ücretsiz olarak tekrar yayına almanızı sağlar.",
   "proReactivationWindowHint": "{count} ilanın 30 gün penceresi içinde",
-  "@proReactivationWindowHint": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@proReactivationWindowHint": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "proCreditsUsedFormat": "{used} kullanıldı, {remaining} kaldı",
-  "@proCreditsUsedFormat": {
-    "placeholders": {
-      "used": {
-        "type": "int"
-      },
-      "remaining": {
-        "type": "int"
-      }
-    }
-  },
+  "@proCreditsUsedFormat": [
+    [
+      "placeholders",
+      [
+        [
+          "used",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "remaining",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "proCreditsLimitFormat": "{remaining} / {limit}",
-  "@proCreditsLimitFormat": {
-    "placeholders": {
-      "remaining": {
-        "type": "int"
-      },
-      "limit": {
-        "type": "int"
-      }
-    }
-  },
+  "@proCreditsLimitFormat": [
+    [
+      "placeholders",
+      [
+        [
+          "remaining",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "limit",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "blastConfirmCostFreeLabel": "Ücret",
   "blastConfirmCostPaidLabel": "teqlik Maliyeti",
   "blastSubtitleFree": "Yayın başladığında push bildirim • Ücretsiz",
   "blastSubtitlePaid": "Yayın başladığında push bildirim • {cost} teqlik",
-  "@blastSubtitlePaid": {
-    "placeholders": {
-      "cost": {
-        "type": "int"
-      }
-    }
-  },
+  "@blastSubtitlePaid": [
+    [
+      "placeholders",
+      [
+        [
+          "cost",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "blastConfirmCostFree": "Ücretsiz hakkınızdan düşülür",
   "blastInviteDialogTitle": "🎯 Kitleyi Davet Et",
   "blastTargetAudience": "Hedef Kitle",
   "blastNotificationLabel": "Bildirim",
   "blastNotificationValue": "Push + Yayın linki",
   "audienceReadyBuyersBanner": "{count} Hazır Alıcıya Bildirim Gönder!",
-  "@audienceReadyBuyersBanner": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@audienceReadyBuyersBanner": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "blastBtnFree": "{count} Hazır Alıcı — Bildirim Gönder (Ücretsiz)",
-  "@blastBtnFree": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@blastBtnFree": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "blastBtnPaid": "{count} Hazır Alıcı — Bildirim Gönder ({cost} teqlik)",
-  "@blastBtnPaid": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      },
-      "cost": {
-        "type": "int"
-      }
-    }
-  },
+  "@blastBtnPaid": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "cost",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "blastConfirmBodyFree": "{count} hazır alıcıya bildirim gönderilecek.\n\nÜcretsiz toplu duyuru hakkınızdan düşülecek.",
-  "@blastConfirmBodyFree": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@blastConfirmBodyFree": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "blastConfirmBodyPaid": "{count} hazır alıcıya bildirim gönderilecek.\n\nToplam ücret: {cost} teqlik",
-  "@blastConfirmBodyPaid": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      },
-      "cost": {
-        "type": "int"
-      }
-    }
-  },
+  "@blastConfirmBodyPaid": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "cost",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "proAnalyticsTitle": "PRO Analitik",
   "proSectionOverview": "Satış Özetim",
   "proSectionFunnel": "Kaç Kişi Teklif Verdi?",
@@ -992,73 +1370,148 @@
   "proStreamAvgViewers": "Ort. İzleyen",
   "proStreamPeak": "En Yüksek",
   "proStreamAvgDuration": "Ortalama yayın süresi: {dur} dakika",
-  "@proStreamAvgDuration": {
-    "placeholders": {
-      "dur": {
-        "type": "String"
-      }
-    }
-  },
+  "@proStreamAvgDuration": [
+    [
+      "placeholders",
+      [
+        [
+          "dur",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "proEngagements": "etk.",
   "proShowAll": "{count} tanesini daha gör",
-  "@proShowAll": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@proShowAll": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "proShowLess": "Daha az göster",
   "proStreamRowStats": "{viewers} izleyici · {bids} teklif · {dur} dk",
-  "@proStreamRowStats": {
-    "placeholders": {
-      "viewers": {
-        "type": "int"
-      },
-      "bids": {
-        "type": "int"
-      },
-      "dur": {
-        "type": "int"
-      }
-    }
-  },
+  "@proStreamRowStats": [
+    [
+      "placeholders",
+      [
+        [
+          "viewers",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "bids",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "dur",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "proLoadError": "Veriler yüklenemedi. Lütfen tekrar deneyin.",
   "hotLeadViewed": "{count} kez bakıldı",
-  "@hotLeadViewed": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@hotLeadViewed": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "hotLeadHesitated": "{count} kişi tereddüt etti",
-  "@hotLeadHesitated": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@hotLeadHesitated": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "hotLeadBoosted": "Öne Çıkarıldı",
-  "@hotLeadBoosted": {},
+  "@hotLeadBoosted": [],
   "listingCtrExplain": "Her 100 görüntülemede {ctr} tıklama",
-  "@listingCtrExplain": {
-    "placeholders": {
-      "ctr": {
-        "type": "String"
-      }
-    }
-  },
+  "@listingCtrExplain": [
+    [
+      "placeholders",
+      [
+        [
+          "ctr",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "marketSearchTitle": "İnsanlar şunları arıyor",
   "marketDayFilter": "{days} gün",
-  "@marketDayFilter": {
-    "placeholders": {
-      "days": {
-        "type": "int"
-      }
-    }
-  },
+  "@marketDayFilter": [
+    [
+      "placeholders",
+      [
+        [
+          "days",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "marketNoSearchData": "Henüz arama verisi yok. Kullanıcılar arama yaptıkça burada görünecek.",
   "marketCategoryTitle": "Hangi kategoride arıyorlar",
   "marketPeakHoursTitle": "Alışveriş en çok bu saatlerde",
@@ -1067,21 +1520,39 @@
   "marketTrendingTitle": "Bu kategoriler ilgi görüyor",
   "marketTrendingDesc": "Bu kategorilerde ilan açmak satış şansınızı artırabilir.",
   "marketGrowthPos": "Platform genel büyüme: +{pct}%",
-  "@marketGrowthPos": {
-    "placeholders": {
-      "pct": {
-        "type": "String"
-      }
-    }
-  },
+  "@marketGrowthPos": [
+    [
+      "placeholders",
+      [
+        [
+          "pct",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "marketGrowthNeg": "Platform genel düşüş: {pct}%",
-  "@marketGrowthNeg": {
-    "placeholders": {
-      "pct": {
-        "type": "String"
-      }
-    }
-  },
+  "@marketGrowthNeg": [
+    [
+      "placeholders",
+      [
+        [
+          "pct",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "marketGrowthSub": "Ortalama alışveriş tutarı — önceki 30 güne kıyasla",
   "marketPaywallDesc": "Alıcılar ne arıyor, hangi saatlerde alışveriş yapıyor, hangi kategoriler yükseliyor — hepsini görün.",
   "listingPerfTitle": "İlanlarınızın PRO ile Performansı",
@@ -1090,53 +1561,98 @@
   "listingTotalViews": "Toplam Görüntülenme",
   "listingAvgCtr": "Ortalama Tıklanma",
   "listingVideoBeatsPhoto": "🎬 Videolu ilanlarınız, fotoğraflılara göre {x} kat daha fazla tıklanıyor.",
-  "@listingVideoBeatsPhoto": {
-    "placeholders": {
-      "x": {
-        "type": "String"
-      }
-    }
-  },
+  "@listingVideoBeatsPhoto": [
+    [
+      "placeholders",
+      [
+        [
+          "x",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "listingPhotoBeatsVideo": "📸 Fotoğraflı ilanlarınız, videolulara göre {x} kat daha fazla tıklanıyor.",
-  "@listingPhotoBeatsVideo": {
-    "placeholders": {
-      "x": {
-        "type": "String"
-      }
-    }
-  },
+  "@listingPhotoBeatsVideo": [
+    [
+      "placeholders",
+      [
+        [
+          "x",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "listingMediaEqual": "Video ve fotoğraflı ilanlarınız benzer ilgi görüyor.",
   "listingVideoLabel": "Videolu",
   "listingPhotoLabel": "Fotoğraflı",
   "listingWatchRateLabel": "İzleme oranı",
   "listingWatchedPct": "%{pct} izlendi",
-  "@listingWatchedPct": {
-    "placeholders": {
-      "pct": {
-        "type": "String"
-      }
-    }
-  },
+  "@listingWatchedPct": [
+    [
+      "placeholders",
+      [
+        [
+          "pct",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "listingGalleryLabel": "Galeri ilgisi",
   "listingGalleryDeep": "{n}. fotoğrafa kadar baktı",
-  "@listingGalleryDeep": {
-    "placeholders": {
-      "n": {
-        "type": "String"
-      }
-    }
-  },
+  "@listingGalleryDeep": [
+    [
+      "placeholders",
+      [
+        [
+          "n",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "listingGalleryShallow": "Sadece ilk fotoğrafa baktı",
   "metricViewed": "gösterim",
   "metricClicked": "tıkladı",
   "listingReach": "{count} kişi gördü",
-  "@listingReach": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@listingReach": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "listingPaywallDesc": "Her ilanınızın kaç kişiye ulaştığını, kaçının tıkladığını ve ne kadar ilgi gördüğünü takip edin.",
   "onboardingTitle": "Nelerle ilgileniyorsun?",
   "onboardingSubtitle": "Sana özel ilan ve yayınlar gösterelim",
@@ -1164,26 +1680,44 @@
   "badgeTrending": "🔥 Trend",
   "searchAlertTitle": "Arama Alarmı",
   "searchAlertBody": "\"{query}\" için yeni ilan eklendiğinde bildirim al.",
-  "@searchAlertBody": {
-    "placeholders": {
-      "query": {
-        "type": "String"
-      }
-    }
-  },
+  "@searchAlertBody": [
+    [
+      "placeholders",
+      [
+        [
+          "query",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "searchAlertCreate": "Alarm Oluştur",
   "searchAlertCreated": "Arama alarmı oluşturuldu ✓",
   "searchAlertFailed": "Alarm oluşturulamadı, tekrar dene",
   "searchAlertTooltip": "Arama Alarmı Oluştur",
   "audienceInsightsTitle": "İzleyici Bütçe Analizi",
   "audienceInsightsViewers": "{count} izleyici",
-  "@audienceInsightsViewers": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@audienceInsightsViewers": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "audienceAvgBudget": "Ortalama Bütçe",
   "audienceProViewers": "PRO İzleyici",
   "audienceHighBudget": "Yüksek Bütçe (1000₺+)",
@@ -1201,46 +1735,94 @@
   "bestTimeNoDataHint": "En az 1 yayın yapıldıktan sonra analiz hazır olacak",
   "bestTimeSlotsHeader": "En İyi Zaman Dilimleri",
   "bestTimeSlotStats": "{wins} satış / {count} yayın",
-  "@bestTimeSlotStats": {
-    "placeholders": {
-      "wins": {
-        "type": "int"
-      },
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@bestTimeSlotStats": [
+    [
+      "placeholders",
+      [
+        [
+          "wins",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "conversionNoData": "Henüz satış verisi yok",
   "conversionNoDataHint": "Canlı yayında açık artırma düzenledikten sonra burada satışlarını göreceksin",
   "conversionSectionHeader": "Hangi Kategoride Daha Çok Satıyorsun? (Son 90 Gün)",
   "conversionCategoryCount": "Toplam {count} kategori",
-  "@conversionCategoryCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@conversionCategoryCount": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "conversionCategorySales": "{won}/{total} satış",
-  "@conversionCategorySales": {
-    "placeholders": {
-      "won": {
-        "type": "int"
-      },
-      "total": {
-        "type": "int"
-      }
-    }
-  },
+  "@conversionCategorySales": [
+    [
+      "placeholders",
+      [
+        [
+          "won",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "total",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "conversionAvgPrice": "Ort. {price} ₺",
-  "@conversionAvgPrice": {
-    "placeholders": {
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@conversionAvgPrice": [
+    [
+      "placeholders",
+      [
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "accountInfoTitle": "Bilgilerim",
   "accountInfoBasicSection": "Temel Bilgiler",
   "accountInfoSecuritySection": "Hesap Güvenliği",
@@ -1258,13 +1840,22 @@
   "accountInfoSaved": "Bilgiler güncellendi",
   "accountInfoEmailChangeTitle": "E-posta Değiştir",
   "accountInfoEmailCurrent": "Mevcut: {email}",
-  "@accountInfoEmailCurrent": {
-    "placeholders": {
-      "email": {
-        "type": "String"
-      }
-    }
-  },
+  "@accountInfoEmailCurrent": [
+    [
+      "placeholders",
+      [
+        [
+          "email",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "accountInfoNewEmail": "Yeni e-posta adresi",
   "accountInfoVerifyCode": "Doğrulama kodu",
   "accountInfoSendCode": "Kod Gönder",
@@ -1275,13 +1866,22 @@
   "accountInfoPhoneAddTitle": "Telefon Ekle",
   "accountInfoPhoneChangeTitle": "Telefonu Değiştir",
   "accountInfoPhoneCurrent": "Mevcut: {phone}",
-  "@accountInfoPhoneCurrent": {
-    "placeholders": {
-      "phone": {
-        "type": "String"
-      }
-    }
-  },
+  "@accountInfoPhoneCurrent": [
+    [
+      "placeholders",
+      [
+        [
+          "phone",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "accountInfoPhoneSendVerify": "Doğrulama E-postası Gönder",
   "accountInfoEmailSent": "E-posta Gönderildi",
   "accountInfoEmailSentDesc": "Kayıtlı e-posta adresinize doğrulama bağlantısı gönderdik. Bağlantıya tıklayarak telefon numaranızı doğrulayın.",
@@ -1292,15 +1892,23 @@
   "phoneInfoTitle": "Neden telefon numarası?",
   "phoneInfoBody": "Telefon numaranız, yüksek tutarlı tekliflerde hesabınızın güvenliğini sağlamak için kullanılır. Sahte teklifleri önlemek ve kazandığınızda size ulaşabilmek için bu bilgiyi doğrulamamız gerekir. Numaranız hiçbir zaman üçüncü taraflarla paylaşılmaz.",
   "phoneInfoGotIt": "Anladım",
-  "boostOnlyPro": "⭐ İlan öne çıkarma yalnızca Pro üyelere özeldir.",
   "boostLimitExhausted": "Bu ay {limit} boost hakkını kullandın. Yeni ay başında sıfırlanır.",
-  "@boostLimitExhausted": {
-    "placeholders": {
-      "limit": {
-        "type": "int"
-      }
-    }
-  },
+  "@boostLimitExhausted": [
+    [
+      "placeholders",
+      [
+        [
+          "limit",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "boostDialogTitle": "İlanı Öne Çıkar",
   "boostDialogPlanLabel": "Kampanya planı:",
   "boostDialogTotalBudget": "Toplam Bütçe",
@@ -1311,26 +1919,50 @@
   "boostDialogEstClicksValue": "~50 tıklama",
   "boostDialogFeedHint": "İlanınız \"Sana Özel\" akışında öne çıkarılacak.",
   "boostDialogCredits": "⭐ Kalan boost hakkı: {remaining} / {limit}",
-  "@boostDialogCredits": {
-    "placeholders": {
-      "remaining": {
-        "type": "int"
-      },
-      "limit": {
-        "type": "int"
-      }
-    }
-  },
+  "@boostDialogCredits": [
+    [
+      "placeholders",
+      [
+        [
+          "remaining",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "limit",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "boostDialogStart": "Başlat",
   "boostDialogPaidTitle": "Ücretli Öne Çıkar",
   "boostDialogPaidBadge": "Bu ay {limit} ücretsiz hakkını kullandın",
-  "@boostDialogPaidBadge": {
-    "placeholders": {
-      "limit": {
-        "type": "int"
-      }
-    }
-  },
+  "@boostDialogPaidBadge": [
+    [
+      "placeholders",
+      [
+        [
+          "limit",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "boostDialogPaidDesc": "Ücretli boost ile ilanın yine \"Sana Özel\" akışında öne çıkarılır.",
   "boostDialogPaidCost": "Maliyet",
   "boostDialogPaidCostValue": "50 teqlik",
@@ -1356,69 +1988,147 @@
   "adReportMetricClicks": "Tıklama",
   "adReportMetricClickRate": "Her 100 Görüntülemede\nKaç Kişi Tıkladı",
   "adReportMetricClickRateHint": "{clicks} tıklama / {impressions} görüntüleme",
-  "@adReportMetricClickRateHint": {
-    "placeholders": {
-      "clicks": {
-        "type": "int"
-      },
-      "impressions": {
-        "type": "int"
-      }
-    }
-  },
+  "@adReportMetricClickRateHint": [
+    [
+      "placeholders",
+      [
+        [
+          "clicks",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "impressions",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "adReportMetricActiveDays": "Aktif\nSüre",
   "adReportMetricActiveDaysLessThan1": "<1 gün",
   "adReportMetricActiveDaysValue": "{days} gün",
-  "@adReportMetricActiveDaysValue": {
-    "placeholders": {
-      "days": {
-        "type": "int"
-      }
-    }
-  },
+  "@adReportMetricActiveDaysValue": [
+    [
+      "placeholders",
+      [
+        [
+          "days",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "adReportSmartAnalysis": "Akıllı Analiz",
   "adReportInsightNoImpressions": "Henüz kimse ilanınızı görmedi. İlan akışa girdiğinde burası güncellenecek.",
   "adReportInsightGreat": "Harika! İlanınızı gören her 100 kişiden yaklaşık {clicks}'i tıkladı — bu çok iyi bir ilgi oranı. İlan başlığı ve görseli alıcıları çekiyor.",
-  "@adReportInsightGreat": {
-    "placeholders": {
-      "clicks": {
-        "type": "int"
-      }
-    }
-  },
+  "@adReportInsightGreat": [
+    [
+      "placeholders",
+      [
+        [
+          "clicks",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "adReportInsightGood": "İyi gidiyorsunuz. {impressions} kişi ilanınızı gördü, {clicks}'i inceledi. Fotoğrafları veya başlığı geliştirerek daha fazla ilgi çekebilirsiniz.",
-  "@adReportInsightGood": {
-    "placeholders": {
-      "clicks": {
-        "type": "int"
-      },
-      "impressions": {
-        "type": "int"
-      }
-    }
-  },
+  "@adReportInsightGood": [
+    [
+      "placeholders",
+      [
+        [
+          "clicks",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "impressions",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "adReportInsightLow": "{impressions} kişi ilanınızı gördü ama sadece {clicks}'i tıkladı. İlan kapak fotoğrafı veya fiyat, alıcıları yeterince çekmemiş olabilir.",
-  "@adReportInsightLow": {
-    "placeholders": {
-      "clicks": {
-        "type": "int"
-      },
-      "impressions": {
-        "type": "int"
-      }
-    }
-  },
+  "@adReportInsightLow": [
+    [
+      "placeholders",
+      [
+        [
+          "clicks",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "impressions",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "adReportInsightVeryLow": "{impressions} kişi ilanınızı gördü, {clicks} tıklama aldı. İlan başlığını, fotoğrafını ve fiyatını gözden geçirmenizi öneririz.",
-  "@adReportInsightVeryLow": {
-    "placeholders": {
-      "clicks": {
-        "type": "int"
-      },
-      "impressions": {
-        "type": "int"
-      }
-    }
-  },
+  "@adReportInsightVeryLow": [
+    [
+      "placeholders",
+      [
+        [
+          "clicks",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "impressions",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notInterested": "İlgilenmiyorum",
   "notInterestedConfirmed": "Bu ilan bir daha gösterilmeyecek.",
   "proMetricAvgDwell": "Ort. İnceleme Süresi",
@@ -1457,132 +2167,279 @@
   "hostAcceptSaleBtnCapture": "Çek ve Onayla",
   "hostAcceptSaleBtnSkip": "Çekmeden Onayla",
   "radarSuggestedCopied": "{price} ₺ panoya kopyalandı",
-  "@radarSuggestedCopied": {
-    "placeholders": {
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@radarSuggestedCopied": [
+    [
+      "placeholders",
+      [
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "radarCopyBtn": "Önerilen fiyatı kopyala: {price} ₺",
-  "@radarCopyBtn": {
-    "placeholders": {
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@radarCopyBtn": [
+    [
+      "placeholders",
+      [
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "retargetingBlastSent": "{count} kişiye bildirim gönderildi!",
-  "@retargetingBlastSent": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@retargetingBlastSent": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifSettingsBlastTitle": "Toplu Kitle Bildirimleri",
   "notifSettingsBlastDesc": "Kapalıyken push bildirim gelmez; bildirim listesinde görünmeye devam eder.",
   "retargetingCooldownLabel": "Tekrar göndermek için:",
   "retargetingBlastCooldown": "Bu ilan için bir sonraki toplu duyuruyu 24 saat sonra gönderebilirsiniz.",
   "retargetingDialogTitle": "Bildirim gönderilsin mi?",
   "retargetingDialogBodyFree": "{count} kişiye \"Hâlâ ilgileniyor musun?\" bildirimi gönderilecek. {credits} bildirim krediniz var, ücretsiz gönderilecek.",
-  "@retargetingDialogBodyFree": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      },
-      "credits": {
-        "type": "int"
-      }
-    }
-  },
+  "@retargetingDialogBodyFree": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "credits",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "retargetingDialogBodyPaid": "{count} kişiye \"Hâlâ ilgileniyor musun?\" bildirimi gönderilecek. Bunun karşılığında cüzdanından {cost} teqlik düşülecek.",
-  "@retargetingDialogBodyPaid": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      },
-      "cost": {
-        "type": "int"
-      }
-    }
-  },
+  "@retargetingDialogBodyPaid": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "cost",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "retargetingDialogBodyKarma": "{count} kişiye bildirim gönderilecek.\n\n{free} kredi kullanılacak + {cost} teqlik ödenecek.",
-  "@retargetingDialogBodyKarma": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      },
-      "free": {
-        "type": "int"
-      },
-      "cost": {
-        "type": "int"
-      }
-    }
-  },
+  "@retargetingDialogBodyKarma": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "free",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "cost",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "retargetingDialogBodyInsufficient": "Yetersiz teqlik bakiyesi.\nGerekli: {cost} teqlik | Mevcut: {balance} teqlik",
-  "@retargetingDialogBodyInsufficient": {
-    "placeholders": {
-      "cost": {
-        "type": "int"
-      },
-      "balance": {
-        "type": "int"
-      }
-    }
-  },
+  "@retargetingDialogBodyInsufficient": [
+    [
+      "placeholders",
+      [
+        [
+          "cost",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "balance",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "retargetingCostFree": "Ücretsiz",
   "retargetingCreditsLeft": "{count} kredi kaldı",
-  "@retargetingCreditsLeft": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@retargetingCreditsLeft": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "retargetingFreeSubtitle": "{count} kişi — 1 toplu duyuru krediniz kullanılır",
-  "@retargetingFreeSubtitle": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@retargetingFreeSubtitle": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "retargetingPaidSubtitle": "{count} kişi × 10 teqlik",
-  "@retargetingPaidSubtitle": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@retargetingPaidSubtitle": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "retargetingEstimatedCost": "Tahmini maliyet",
   "retargetingSending": "Gönderiliyor...",
   "retargetingSendBtnLabel": "{count} kişiye bildirim gönder",
-  "@retargetingSendBtnLabel": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@retargetingSendBtnLabel": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "retargetingCreditsBadge": "{count} kredi kaldı · ücretsiz gönderilir",
-  "@retargetingCreditsBadge": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@retargetingCreditsBadge": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "retargetingCostBadge": "{cost} teqlik harcanır",
-  "@retargetingCostBadge": {
-    "placeholders": {
-      "cost": {
-        "type": "int"
-      }
-    }
-  },
+  "@retargetingCostBadge": [
+    [
+      "placeholders",
+      [
+        [
+          "cost",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "retargetingFootnote": "Kullanıcılar \"Hâlâ ilgileniyor musun?\" bildirimi alacak. Satın almayan kişilere gönderilir.",
   "retargetingInfoText": "İlanını daha önce görüntüleyen ama satın almayan kişilere hatırlatma bildirimi gönderir. Aylık toplu duyuru krediniz varsa ücretsiz, bitince her kişi için 10 teqlik harcanır.",
   "retargetingLast30Days": "Son 30 gün içinde",
@@ -1600,21 +2457,39 @@
   "btnResetPassword": "Şifreyi Sıfırla",
   "radarScreenTitle": "Rakip Radarı & Satış Hızı",
   "priceMinLabel": "{price} ₺ (min)",
-  "@priceMinLabel": {
-    "placeholders": {
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@priceMinLabel": [
+    [
+      "placeholders",
+      [
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "priceMaxLabel": "{price} ₺ (max)",
-  "@priceMaxLabel": {
-    "placeholders": {
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@priceMaxLabel": [
+    [
+      "placeholders",
+      [
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "forYouLabel": "Sana Özel",
   "messagesUpdateFailed": "Güncellenemedi",
   "staleDataBannerMessage": "Veriler güncel olmayabilir",
@@ -1627,70 +2502,139 @@
   "hostNotifDialogTitle": "Bildirim Gönder",
   "hostStreamDataError": "Veri alınamadı",
   "hostInviteError": "Davet gönderilemedi: {error}",
-  "@hostInviteError": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
+  "@hostInviteError": [
+    [
+      "placeholders",
+      [
+        [
+          "error",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "hostModRemoved": "✖ @{username} moderatörlükten alındı",
-  "@hostModRemoved": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@hostModRemoved": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "genericErrorDetail": "Hata: {error}",
-  "@genericErrorDetail": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
+  "@genericErrorDetail": [
+    [
+      "placeholders",
+      [
+        [
+          "error",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "profilePhotoUploadError": "Fotoğraf yüklenemedi. Tekrar deneyin.",
   "profileInviteCodeError": "Davet kodu alınamadı, tekrar deneyin.",
   "profileInviteTitle": "Arkadaşlarını Davet Et, teqlik Kazan!",
   "profileInviteSubtitle": "Her davet için +50, arkadaşın +10 teqlik kazanır",
   "profileInviteShareText": "Teqlif'e katıl! Canlı mezat ve ikinci el alışverişin adresi 🎁\n\nKayıt olurken şu davet kodunu gir ve anında bonus teqlik kazan:\n\n🔑 Kod: {code}\n⏳ Son kullanım: {expiry} içinde\n\n📱 iOS App Store: apps.apple.com/app/teqlif\n🤖 Google Play: play.google.com/store/apps/details?id=com.teqlif.teqlif_mobile\n🌐 Web: teqlif.com",
-  "@profileInviteShareText": {
-    "placeholders": {
-      "code": {
-        "type": "String"
-      },
-      "expiry": {
-        "type": "String"
-      }
-    }
-  },
+  "@profileInviteShareText": [
+    [
+      "placeholders",
+      [
+        [
+          "code",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ],
+        [
+          "expiry",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "profileInviteExpiryDays": "{days} gün",
-  "@profileInviteExpiryDays": {
-    "placeholders": {
-      "days": {
-        "type": "int"
-      }
-    }
-  },
+  "@profileInviteExpiryDays": [
+    [
+      "placeholders",
+      [
+        [
+          "days",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "profileInviteExpiryHours": "{hours} saat",
-  "@profileInviteExpiryHours": {
-    "placeholders": {
-      "hours": {
-        "type": "int"
-      }
-    }
-  },
+  "@profileInviteExpiryHours": [
+    [
+      "placeholders",
+      [
+        [
+          "hours",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "profileInviteExpirySoon": "kısa süre",
   "profileInviteCodeCopied": "Kod kopyalandı!",
   "profileInviteModalExpiry": "⏳ Son kullanım: {expiry} içinde",
-  "@profileInviteModalExpiry": {
-    "placeholders": {
-      "expiry": {
-        "type": "String"
-      }
-    }
-  },
+  "@profileInviteModalExpiry": [
+    [
+      "placeholders",
+      [
+        [
+          "expiry",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "profileInviteShareBtn": "Daveti Paylaş",
   "profilePickGallery": "Galeriden Seç",
   "profilePickCamera": "Kameradan Çek",
@@ -1701,93 +2645,186 @@
   "favoritesEmpty": "Henüz favori ilan yok",
   "createNeedTitle": "Önce ilan başlığını giriniz.",
   "teqlikSpent": "{count} teqlik harcandı.",
-  "@teqlikSpent": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@teqlikSpent": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "videoTooLong": "Video {max} saniyeyi geçemez ({actual}s).",
-  "@videoTooLong": {
-    "placeholders": {
-      "max": {
-        "type": "int"
-      },
-      "actual": {
-        "type": "int"
-      }
-    }
-  },
+  "@videoTooLong": [
+    [
+      "placeholders",
+      [
+        [
+          "max",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "actual",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "createPickCamera": "Kamera ile çek (maks {sec} sn)",
-  "@createPickCamera": {
-    "placeholders": {
-      "sec": {
-        "type": "int"
-      }
-    }
-  },
+  "@createPickCamera": [
+    [
+      "placeholders",
+      [
+        [
+          "sec",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "videoUploading": "Video henüz yükleniyor, lütfen bekleyin.",
   "videoLabel": "Video (maks {sec} sn)",
-  "@videoLabel": {
-    "placeholders": {
-      "sec": {
-        "type": "int"
-      }
-    }
-  },
+  "@videoLabel": [
+    [
+      "placeholders",
+      [
+        [
+          "sec",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "forYouStreams": "Sana Özel Yayınlar",
   "searchNoResults": "Sonuç bulunamadı",
   "searchNoSupplyHint": "Bu arama için şu an ilan az. Uyarı kur, yeni ilan gelince bildirim al.",
   "searchCreateAlertBtn": "Uyarı Kur",
   "proSearchCount": "{count} arama",
-  "@proSearchCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@proSearchCount": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "listingDeactivateTitle": "İlanı Pasife Al",
   "listingDeactivateWarning": "İlanı pasife alırsanız aktif vitrin/promosyon hakları silinir.",
   "listingDeactivateCostHint": "Uyarı: Ücretsiz 30 günlük pencere süreniz dolmuş. İlanı tekrar yayına almak için {cost} teqlik bakiyenizden düşülecektir.",
-  "@listingDeactivateCostHint": {
-    "placeholders": {
-      "cost": {
-        "type": "int"
-      }
-    }
-  },
+  "@listingDeactivateCostHint": [
+    [
+      "placeholders",
+      [
+        [
+          "cost",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "listingDeactivateFreeCreditHint": "Uyarı: Ücretsiz 30 günlük pencere süreniz dolmuş. İlanı tekrar yayına almak için 1 adet PRO ücretsiz hakkınız kullanılacaktır.",
   "listingDeactivateConfirm": "Anladım, Pasife Al",
   "listingReactivateTitle": "İlanı Tekrar Yayınla",
   "listingReactivateFreeCredit": "{remaining} ücretsiz hakkınız var. 1 hak kullanılacak.",
-  "@listingReactivateFreeCredit": {
-    "placeholders": {
-      "remaining": {
-        "type": "int"
-      }
-    }
-  },
+  "@listingReactivateFreeCredit": [
+    [
+      "placeholders",
+      [
+        [
+          "remaining",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "listingReactivatePaidPro": "Bu ayki hakkınız doldu. {cost} teqlik ödenecek.",
-  "@listingReactivatePaidPro": {
-    "placeholders": {
-      "cost": {
-        "type": "int"
-      }
-    }
-  },
+  "@listingReactivatePaidPro": [
+    [
+      "placeholders",
+      [
+        [
+          "cost",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "listingReactivatePaidNormal": "{cost} teqlik ödenecek. Bakiyeniz: {balance} teqlik.",
-  "@listingReactivatePaidNormal": {
-    "placeholders": {
-      "cost": {
-        "type": "int"
-      },
-      "balance": {
-        "type": "int"
-      }
-    }
-  },
+  "@listingReactivatePaidNormal": [
+    [
+      "placeholders",
+      [
+        [
+          "cost",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "balance",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "listingReactivateProUpsell": "PRO'ya geçerek ayda 5 ücretsiz hak kazanın.",
   "listingReactivateInsufficientBalance": "Yetersiz bakiye. Devam etmek için teqlik yükleyin.",
   "listingReactivateConfirm": "Aktif Yap",
@@ -1795,13 +2832,22 @@
   "suggestedStreamers": "Önerilen Yayıncılar",
   "latestLiveStreams": "En Son Canlı Yayınlar",
   "categoryStreams": "{category} Yayınları",
-  "@categoryStreams": {
-    "placeholders": {
-      "category": {
-        "type": "String"
-      }
-    }
-  },
+  "@categoryStreams": [
+    [
+      "placeholders",
+      [
+        [
+          "category",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "listingsSelectedForYou": "Sizin İçin Seçilen İlanlar",
   "profileFaq": "Sıkça Sorulan Sorular",
   "faqCatAccount": "Hesap İşlemleri, Profil ve Destek",
@@ -1886,21 +2932,39 @@
   "listingBlastEstimateLoading": "Hedef kitle hesaplanıyor...",
   "listingBlastDialogTitle": "Toplu Kitle Bildirimi",
   "listingBlastDialogBody": "İlanınızla ilgilenebilecek potansiyel {count} kişi bulundu. Bu kişilere anında bildirim göndermek ister misiniz?",
-  "@listingBlastDialogBody": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@listingBlastDialogBody": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "listingBlastCost": "Maliyet: {cost} teqlik",
-  "@listingBlastCost": {
-    "placeholders": {
-      "cost": {
-        "type": "int"
-      }
-    }
-  },
+  "@listingBlastCost": [
+    [
+      "placeholders",
+      [
+        [
+          "cost",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "reportMassNotificationTitle": "Toplu Bildirim Raporu",
   "reportMassNotificationDesc": "Bu ekran, canlı yayınlarda ve ilan detaylarında gönderdiğiniz Toplu Kitle Bildirimlerinin dönüşüm istatistiklerini gösterir.",
   "reportLoadError": "Rapor yüklenemedi: ",
@@ -1946,13 +3010,22 @@
   "analyticsNoAuctions": "Bu yayında ihale açılmamış.",
   "analyticsItemsSold": "Satılan Ürünler",
   "analyticsDuration": "{minutes} dk",
-  "@analyticsDuration": {
-    "placeholders": {
-      "minutes": {
-        "type": "int"
-      }
-    }
-  },
+  "@analyticsDuration": [
+    [
+      "placeholders",
+      [
+        [
+          "minutes",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "proToolStreamHistoryDesc": "Geçmiş canlı yayınlarınızın satış ve izleyici istatistiklerini detaylı inceleyin.",
   "proTabSales": "Performans",
   "proTabMarket": "Piyasa",
@@ -2059,13 +3132,22 @@
   "emailPhoneNote": "📱 Kayıt sırasında telefon numarası girdiniz. Hesabınıza giriş yaptıktan sonra <strong style='color:#f1f5f9'>Profil → Bilgilerim</strong> ekranından telefonunuzu doğrulayabilirsiniz.",
   "emailResetBody": "Hesabınızın şifresini sıfırlamak için bir istekte bulunuldu. İşlemi tamamlamak için aşağıdaki kodu kullanın:",
   "emailIgnoreIfNotYou": "Bu isteği siz yapmadıysanız, e-postayı güvenle görmezden gelebilirsiniz.",
-  "@emailPhoneAdded": {
-    "placeholders": {
-      "phone": {
-        "type": "String"
-      }
-    }
-  },
+  "@emailPhoneAdded": [
+    [
+      "placeholders",
+      [
+        [
+          "phone",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "emailWelcomeHeroTitle": "Hoş geldin, {first_name}! 🎉",
   "emailWelcomeHeroSub": "Canlı açık artırma dünyasına adım attın.<br>Harika fırsatlar seni bekliyor.",
   "emailWelcomeIntro": "Merhaba <strong style=\"color:#f1f5f9\">{full_name}</strong>,",
@@ -2083,46 +3165,91 @@
   "emailWelcomeCopyright": "© 2026 teqlif · Bu e-postayı almak istemiyorsanız hesap ayarlarınızdan bildirim tercihlerinizi güncelleyebilirsiniz.",
   "emailResetGreeting": "Merhaba <strong>{full_name}</strong>,",
   "emailResetFooter": "Sorularınız için: <a href='mailto:destek@teqlif.com' style='color:#0d9488;text-decoration:none'>destek@teqlif.com</a>",
-  "@emailWelcomeHeroTitle": {
-    "placeholders": {
-      "first_name": {
-        "type": "String"
-      }
-    }
-  },
-  "@emailWelcomeIntro": {
-    "placeholders": {
-      "full_name": {
-        "type": "String"
-      }
-    }
-  },
-  "@emailResetGreeting": {
-    "placeholders": {
-      "full_name": {
-        "type": "String"
-      }
-    }
-  },
+  "@emailWelcomeHeroTitle": [
+    [
+      "placeholders",
+      [
+        [
+          "first_name",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
+  "@emailWelcomeIntro": [
+    [
+      "placeholders",
+      [
+        [
+          "full_name",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
+  "@emailResetGreeting": [
+    [
+      "placeholders",
+      [
+        [
+          "full_name",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "fieldVerifyCode": "Doğrulama Kodu",
   "authVerifyCodeSentMsg": "Yeni doğrulama kodu {email} adresine gönderildi.",
   "authVerifyCodeSentDesc": "{email} adresine 6 haneli doğrulama kodu gönderdik.",
   "authEnterCodeTitle": "Kodunu gir",
   "authVerifyCodeResent": "Yeni doğrulama kodu gönderildi.",
-  "@authVerifyCodeSentMsg": {
-    "placeholders": {
-      "email": {
-        "type": "String"
-      }
-    }
-  },
-  "@authVerifyCodeSentDesc": {
-    "placeholders": {
-      "email": {
-        "type": "String"
-      }
-    }
-  },
+  "@authVerifyCodeSentMsg": [
+    [
+      "placeholders",
+      [
+        [
+          "email",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
+  "@authVerifyCodeSentDesc": [
+    [
+      "placeholders",
+      [
+        [
+          "email",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "authResendCode": "Kodu tekrar gönder",
   "authResendCodeIn": "Yeni kod için:",
   "validPasswordEmpty": "Şifre boş olamaz",
@@ -2189,29 +3316,56 @@
   "timeJustNow": "Az önce",
   "timeNow": "şimdi",
   "timeMinAgo": "{n}d önce",
-  "@timeMinAgo": {
-    "placeholders": {
-      "n": {
-        "type": "int"
-      }
-    }
-  },
+  "@timeMinAgo": [
+    [
+      "placeholders",
+      [
+        [
+          "n",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "timeHoursAgo": "{n}s önce",
-  "@timeHoursAgo": {
-    "placeholders": {
-      "n": {
-        "type": "int"
-      }
-    }
-  },
+  "@timeHoursAgo": [
+    [
+      "placeholders",
+      [
+        [
+          "n",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "timeDaysAgo": "{n}g önce",
-  "@timeDaysAgo": {
-    "placeholders": {
-      "n": {
-        "type": "int"
-      }
-    }
-  },
+  "@timeDaysAgo": [
+    [
+      "placeholders",
+      [
+        [
+          "n",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "radarExpensive": "Pahalı",
   "radarAffordable": "Uygun fiyatlı",
   "radarExpensivePrice": "Pahalı fiyatlı",
@@ -2224,32 +3378,65 @@
   "btnViewNotificationReport": "Bildirim Raporunu Gör",
   "btnSendMassNotification": "Toplu Kitle Bildirimi Gönder",
   "massNotifCooldownHours": "{hours}s {min}dk sonra gönderilebilir",
-  "@massNotifCooldownHours": {
-    "placeholders": {
-      "hours": {
-        "type": "int"
-      },
-      "min": {
-        "type": "int"
-      }
-    }
-  },
+  "@massNotifCooldownHours": [
+    [
+      "placeholders",
+      [
+        [
+          "hours",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ],
+        [
+          "min",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "massNotifCooldownMinutes": "{min}dk sonra gönderilebilir",
-  "@massNotifCooldownMinutes": {
-    "placeholders": {
-      "min": {
-        "type": "int"
-      }
-    }
-  },
+  "@massNotifCooldownMinutes": [
+    [
+      "placeholders",
+      [
+        [
+          "min",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "massNotifCooldownSeconds": "{sec}sn sonra gönderilebilir",
-  "@massNotifCooldownSeconds": {
-    "placeholders": {
-      "sec": {
-        "type": "int"
-      }
-    }
-  },
+  "@massNotifCooldownSeconds": [
+    [
+      "placeholders",
+      [
+        [
+          "sec",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "massNotifPerListingInfo": "Her ilan için 24 saatte bir toplu bildirim gönderilebilir.",
   "massNotifUnavailableListingNotActive": "İlan pasif olduğu için bu özellik kullanılamaz.",
   "btnShare": "Paylaş",
@@ -2262,27 +3449,57 @@
   "apiMsgReferralSavedVerify": "Davet kodunuz kaydedildi! Ödül kazanmak için lütfen E-posta ve Telefon doğrulamanızı tamamlayın.",
   "notifReferralTitle": "Davet Ödülü!",
   "notifReferralBody": "Bir arkadaşınız ({username}) kodunuzu kullandı ve doğrulamasını tamamladı! {bonus} teqlik kazandınız.",
-  "@notifReferralBody": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      },
-      "bonus": {
-        "type": "int"
-      }
-    }
-  },
+  "@notifReferralBody": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ],
+        [
+          "bonus",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "apiMsgReferralSuccess": "Doğrulamalar tamamlandı! {referrer_username} sizi davet etti. Hesabınıza {your_bonus} teqlik eklendi.",
-  "@apiMsgReferralSuccess": {
-    "placeholders": {
-      "referrer_username": {
-        "type": "String"
-      },
-      "your_bonus": {
-        "type": "int"
-      }
-    }
-  },
+  "@apiMsgReferralSuccess": [
+    [
+      "placeholders",
+      [
+        [
+          "referrer_username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ],
+        [
+          "your_bonus",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "proTipPriceDownTitle": "Fiyat Ayarı Önerisi",
   "proTipPriceDownBody": "\"{title}\" piyasa ortalamasının %{diff} üzerinde. Fiyatı {avg} ₺ civarına çekersen satış hızlanabilir.",
   "proTipPriceUpTitle": "Fiyat Artırma Fırsatı",
@@ -2296,158 +3513,332 @@
   "proTipAllGoodTitle": "Her Şey Yolunda",
   "proTipAllGoodBody": "İlan ve satış verilerin sağlıklı görünüyor. Daha fazla veri biriktiğinde özel öneriler burada belirecek.",
   "notifNewBid": "@{username} teklif verdi",
-  "@notifNewBid": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifNewBid": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifNewBidBody": "{item} — {price}",
-  "@notifNewBidBody": {
-    "placeholders": {
-      "item": {
-        "type": "String"
-      },
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifNewBidBody": [
+    [
+      "placeholders",
+      [
+        [
+          "item",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ],
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifNewBidBodyNoItem": "{price}",
-  "@notifNewBidBodyNoItem": {
-    "placeholders": {
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifNewBidBodyNoItem": [
+    [
+      "placeholders",
+      [
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifOutbid": "Teklifiniz geçildi!",
   "notifOutbidBody": "{item} — yeni teklif: {price}",
-  "@notifOutbidBody": {
-    "placeholders": {
-      "item": {
-        "type": "String"
-      },
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifOutbidBody": [
+    [
+      "placeholders",
+      [
+        [
+          "item",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ],
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifOutbidBodyNoItem": "Yeni teklif: {price}",
-  "@notifOutbidBodyNoItem": {
-    "placeholders": {
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifOutbidBodyNoItem": [
+    [
+      "placeholders",
+      [
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifAuctionWon": "🏆 Teklifiniz kabul edildi!",
   "notifAuctionWonBody": "{item} — {price}",
-  "@notifAuctionWonBody": {
-    "placeholders": {
-      "item": {
-        "type": "String"
-      },
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifAuctionWonBody": [
+    [
+      "placeholders",
+      [
+        [
+          "item",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ],
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifBuyItNow": "🛒 Hemen Al tamamlandı!",
   "notifBuyItNowBody": "{item} — {price}",
-  "@notifBuyItNowBody": {
-    "placeholders": {
-      "item": {
-        "type": "String"
-      },
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifBuyItNowBody": [
+    [
+      "placeholders",
+      [
+        [
+          "item",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ],
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifAuctionEnded": "Artırma sona erdi",
   "notifAuctionEndedBody": "{item} — kazanan fiyat: {price}",
-  "@notifAuctionEndedBody": {
-    "placeholders": {
-      "item": {
-        "type": "String"
-      },
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifAuctionEndedBody": [
+    [
+      "placeholders",
+      [
+        [
+          "item",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ],
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifAuctionEndedBodyNoItem": "Kazanan fiyat: {price}",
-  "@notifAuctionEndedBodyNoItem": {
-    "placeholders": {
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifAuctionEndedBodyNoItem": [
+    [
+      "placeholders",
+      [
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifAuctionCancelled": "Artırma iptal edildi",
   "notifAuctionCancelledBody": "{item} — teklif kabul edilmedi",
-  "@notifAuctionCancelledBody": {
-    "placeholders": {
-      "item": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifAuctionCancelledBody": [
+    [
+      "placeholders",
+      [
+        [
+          "item",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifAuctionCancelledBodyNoItem": "Teklif kabul edilmedi",
   "notifRecordingAvailableTitle": "Canlı Yayın Tekrarın Hazır 🎬",
   "notifRecordingAvailableBody": "Yayın tekrarını izle, satış ve izleyici istatistiklerini gör.",
   "notifRecordingUpsellTitle": "Yayın Kaydın Hazır 🎬",
   "notifRecordingUpsellBody": "PRO'ya geç ve yayın tekrarına 24 saat boyunca eriş.",
   "notifStreamStarted": "@{username} canlı yayın açtı",
-  "@notifStreamStarted": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifStreamStarted": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifFollow": "@{username} seni takip etmeye başladı",
-  "@notifFollow": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifFollow": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifStoryLiked": "@{username} hikayeni beğendi",
-  "@notifStoryLiked": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifStoryLiked": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifMessage": "@{username} size mesaj gönderdi",
-  "@notifMessage": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifMessage": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifMsgRequestAccepted": "@{username} mesaj isteğinizi kabul etti",
-  "@notifMsgRequestAccepted": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifMsgRequestAccepted": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "msgReqBannerReceiver": "{username} sana mesaj gönderdi.",
-  "@msgReqBannerReceiver": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@msgReqBannerReceiver": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "msgReqBannerInitiator": "Mesaj isteğin iletildi, henüz kabul edilmedi.",
   "msgReqBannerAccept": "Kabul Et",
   "msgReqBannerDecline": "Reddet",
@@ -2456,102 +3847,204 @@
   "notifMessageVideo": "🎬 Video",
   "notifMessageFile": "📎 Dosya",
   "notifNewListing": "@{username} yeni ilan ekledi",
-  "@notifNewListing": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifNewListing": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifListingDeactivated": "İlanınız Pasife Alındı",
   "notifListingDeactivatedBodySingle": "\"{title}\" adlı ilanınız 30 günlük süreyi doldurdu ve pasife alındı.",
-  "@notifListingDeactivatedBodySingle": {
-    "placeholders": {
-      "title": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifListingDeactivatedBodySingle": [
+    [
+      "placeholders",
+      [
+        [
+          "title",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifListingDeactivatedBodyMultiple": "{count} ilanınız 30 günlük süreyi doldurdu ve pasife alındı.",
-  "@notifListingDeactivatedBodyMultiple": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@notifListingDeactivatedBodyMultiple": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifListingDeleted": "İlanınız Silindi",
   "notifListingDeletedBodySingle": "\"{title}\" adlı ilanınız sistemden kaldırıldı. Yeniden yayınlamak için yeni ilan oluşturabilirsiniz.",
-  "@notifListingDeletedBodySingle": {
-    "placeholders": {
-      "title": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifListingDeletedBodySingle": [
+    [
+      "placeholders",
+      [
+        [
+          "title",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifListingDeletedBodyMultiple": "{count} ilanınız sistemden kaldırıldı. Yeniden yayınlamak için yeni ilan oluşturabilirsiniz.",
-  "@notifListingDeletedBodyMultiple": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@notifListingDeletedBodyMultiple": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifListingRemoved": "İlanınız kaldırıldı",
   "notifListingRemovedBody": "İlanınız topluluk kurallarına aykırı görsel içerik barındırdığı için yayından kaldırıldı.",
   "notifSearchAlert": "Arama alarmı: yeni ilan",
   "notifSearchAlertBody": "{category} kategorisinde yeni ürün eklendi",
-  "@notifSearchAlertBody": {
-    "placeholders": {
-      "category": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifSearchAlertBody": [
+    [
+      "placeholders",
+      [
+        [
+          "category",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifSmartAuctionAlert": "Tam sana göre bir yayın başladı! 🎯",
   "notifPriceDrop": "Fiyat düştü! 🔥",
   "notifPriceDropBody": "{item} — artık {price}",
-  "@notifPriceDropBody": {
-    "placeholders": {
-      "item": {
-        "type": "String"
-      },
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifPriceDropBody": [
+    [
+      "placeholders",
+      [
+        [
+          "item",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ],
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifBudgetMatch": "Bütçene uygun yeni ilan! 💡",
   "notifBudgetMatchBody": "{item} — {price}",
-  "@notifBudgetMatchBody": {
-    "placeholders": {
-      "item": {
-        "type": "String"
-      },
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifBudgetMatchBody": [
+    [
+      "placeholders",
+      [
+        [
+          "item",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ],
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifRetargetTitle": "Seni Bekleyen İlan",
   "notifChurnAirdropSeller": "İlanlarınız sizi bekliyor! 🛍️",
   "notifChurnBodySeller": "Hesabına {amount} teqlik hediye yükledik. Yeni ilan aç, alıcılarla buluş!",
-  "@notifChurnBodySeller": {
-    "placeholders": {
-      "amount": {
-        "type": "int"
-      }
-    }
-  },
+  "@notifChurnBodySeller": [
+    [
+      "placeholders",
+      [
+        [
+          "amount",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifChurnAirdropBuyer": "Seni özledik! 🎁",
   "notifChurnBodyBuyer": "Hesabına {amount} teqlik hediye yükledik, hemen canlı yayınlara göz at ve harca!",
-  "@notifChurnBodyBuyer": {
-    "placeholders": {
-      "amount": {
-        "type": "int"
-      }
-    }
-  },
+  "@notifChurnBodyBuyer": [
+    [
+      "placeholders",
+      [
+        [
+          "amount",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "cat_electronics": "Elektronik",
   "cat_fashion": "Giyim & Moda",
   "cat_home": "Ev & Yaşam",
@@ -2594,30 +4087,57 @@
   "editProfileUsername": "Kullanıcı Adı",
   "editProfileFillAll": "Tüm alanları doldurun",
   "aiAdviceSimilarCount": "{count} benzer ürün satış verisi analiz edildi",
-  "@aiAdviceSimilarCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@aiAdviceSimilarCount": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "aiAdviceSameCategory": "{count} aynı kategori",
-  "@aiAdviceSameCategory": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@aiAdviceSameCategory": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "aiAdviceCityBased": "şehir bazlı",
   "aiAdviceMarketClose": "Ortalama piyasa kapanışı: {price} ₺.",
-  "@aiAdviceMarketClose": {
-    "placeholders": {
-      "price": {
-        "type": "String"
-      }
-    }
-  },
+  "@aiAdviceMarketClose": [
+    [
+      "placeholders",
+      [
+        [
+          "price",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "aiAdviceBimodal": "Bu ürün grubunda iki farklı piyasa fiyatı (Bimodal) tespit edildi. Ürününüzün varyasyonuna veya garantisine göre fiyat farklılaşabilir.",
   "aiAdviceNoData": "Henüz yeterli benzer ürün verisi bulunamadı. Platforma eklendikçe tahminler daha isabetli hale gelecek. Piyasa araştırması yaparak fiyatınızı belirleyebilirsiniz.",
   "proToolDemandTrendsTitle": "Kategori Talep Trendi",
@@ -2630,13 +4150,22 @@
   "demandTrendsSupplyGapLabel": "Arz Açığı",
   "demandTrendsSupplyGapHint": "Kullanıcılar arıyor ama yeterli ilan yok",
   "demandTrendsChangeLabel": "%{pct} değişim (8 hafta)",
-  "@demandTrendsChangeLabel": {
-    "placeholders": {
-      "pct": {
-        "type": "String"
-      }
-    }
-  },
+  "@demandTrendsChangeLabel": [
+    [
+      "placeholders",
+      [
+        [
+          "pct",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "demandTrendsEmptyLabel": "Henüz yeterli arama verisi yok.",
   "trustScoreLabel": "Güven Skoru",
   "trustScoreHint": "0–100 arası platform güvenilirlik puanı. Açık artırma tamamlama oranı, kazanma geçmişi, ilan kalitesi, hesap yaşı ve teklif tutarlılığından hesaplanır. Her gece güncellenir.",
@@ -2646,13 +4175,22 @@
   "influenceRankLabel": "Influencer Skoru",
   "influenceRankHint": "Platformdaki takipçi ağına göre hesaplanan influencer skoru. Skor ne kadar yüksekse, etki alanın o kadar geniş demektir. Haftalık güncellenir.",
   "influenceRankValue": "#{rank}. sıra",
-  "@influenceRankValue": {
-    "placeholders": {
-      "rank": {
-        "type": "int"
-      }
-    }
-  },
+  "@influenceRankValue": [
+    [
+      "placeholders",
+      [
+        [
+          "rank",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "radarNoActiveListing": "Aktif ilanın bulunamadı.",
   "radarNeedActiveListing": "Rakip radarı için en az 1 aktif ilana ihtiyaç var.",
   "radarNoPriceSet": "Bu ilana fiyat girilmemiş.",
@@ -2662,22 +4200,40 @@
   "radarActiveListings": "aktif ilan",
   "radarDaysAvg": "gün (ortalama)",
   "radarDayRange": "Aralık: {min} – {max} gün",
-  "@radarDayRange": {
-    "placeholders": {
-      "min": {},
-      "max": {}
-    }
-  },
+  "@radarDayRange": [
+    [
+      "placeholders",
+      [
+        [
+          "min",
+          []
+        ],
+        [
+          "max",
+          []
+        ]
+      ]
+    ]
+  ],
   "radarAverage": "ortalama",
   "radarSweetSpotLabel": "En çok satılan fiyat aralığı",
   "radarPriceSensitivity": "Fiyat Hassasiyeti",
   "radarDaySaleStat": "{days} gün ({count} satış)",
-  "@radarDaySaleStat": {
-    "placeholders": {
-      "days": {},
-      "count": {}
-    }
-  },
+  "@radarDaySaleStat": [
+    [
+      "placeholders",
+      [
+        [
+          "days",
+          []
+        ],
+        [
+          "count",
+          []
+        ]
+      ]
+    ]
+  ],
   "proNotEnoughStreamData": "Henüz yeterli yayın verisi yok (min. 2 yayın gerekli).",
   "saleTypeBuyNow": "Hemen Al",
   "saleTypeBid": "Teklif",
@@ -2693,13 +4249,22 @@
   "notifQuietHoursDesc": "Bu saatler arası bildirimleri ertele, sabah göster",
   "quickAuctionBtn": "Hızlı",
   "quickAuctionItem": "Ürün {count}",
-  "@quickAuctionItem": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@quickAuctionItem": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "quickAuctionStarted": "Açık artırma başlatıldı",
   "quickSaleSheetTitle": "Hızlı Direkt Satış",
   "quickSaleStarted": "Satış başlatıldı",
@@ -2724,67 +4289,130 @@
   "errBidOutbid": "Gönderirken başka bir teklif geçti. Güncel fiyatı kontrol edin.",
   "btnRemovePin": "✕ Kaldır",
   "blastSent": "🎯 {count} kişiye bildirim gönderildi!",
-  "@blastSent": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@blastSent": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "blastStarted": "🎯 Bildirim kampanyası başlatıldı!",
   "blastError": "Bildirim gönderilemedi.",
   "blastSending": "Gönderiliyor…",
   "hostRemoveFromStageBtn": "✕ Sahneden Al",
   "hostViewersTitle": "👁 İzleyiciler ({count})",
-  "@hostViewersTitle": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@hostViewersTitle": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "auctionGroupFallback": "Açık Artırma",
   "hostMuteSuccess": "@{username} susturuldu",
-  "@hostMuteSuccess": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@hostMuteSuccess": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "hostUnmuteSuccess": "Susturma kaldırıldı",
   "hostPromoteSuccess": "@{username} moderatör yapıldı",
-  "@hostPromoteSuccess": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@hostPromoteSuccess": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "hostDemoteSuccess": "@{username} moderatörlükten alındı",
-  "@hostDemoteSuccess": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@hostDemoteSuccess": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "hostKickSuccess": "@{username} yayından atıldı",
-  "@hostKickSuccess": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@hostKickSuccess": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "whaleInRoom": "{tier} Alıcı Odada",
-  "@whaleInRoom": {
-    "placeholders": {
-      "tier": {
-        "type": "String"
-      }
-    }
-  },
+  "@whaleInRoom": [
+    [
+      "placeholders",
+      [
+        [
+          "tier",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "whaleShowBestItems": "Kaliteli ürünleri çıkarma vakti!",
   "badgePassive": "Pasif",
   "hesitatedSectionTitle": "Geri Bak",
@@ -2795,32 +4423,59 @@
   "hesitatedDismissed": "İlan listenizden kaldırıldı",
   "searchSmartResultsLabel": "Akıllı Sonuçlar",
   "searchShowAllAccounts": "Tüm hesapları gör ({count})",
-  "@searchShowAllAccounts": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@searchShowAllAccounts": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "explorePersonalizedHint": "Birkaç ilan incele,\nSana Özel içerik hazırlanıyor!",
   "personalizedGridExhausted": "Tüm öneriler görüntülendi · Yenilemek için sayfayı aşağı çekin",
   "joinLiveStreamBanner": "Canlı Yayına Katıl →",
   "audienceCountPeople": "{count} Kişi",
-  "@audienceCountPeople": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@audienceCountPeople": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "audienceFreeSlots": "-{count} Kişi",
-  "@audienceFreeSlots": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@audienceFreeSlots": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "defaultUserFallback": "Kullanıcı",
   "noResultsFound": "Sonuç bulunamadı",
   "removeFromFavoritesTooltip": "Favoriden Çıkar",
@@ -2853,13 +4508,22 @@
   "callSpeaker": "Hoparlör",
   "callIncomingTitle": "Gelen Arama",
   "callIncomingBody": "@{username} arıyor",
-  "@callIncomingBody": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@callIncomingBody": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "callReturnToActive": "Aramaya dönmek için dokunun",
   "callNotifAccept": "Cevapla",
   "callNotifDecline": "Reddet",
@@ -2868,27 +4532,51 @@
   "callChat": "Sohbet",
   "callAddPerson": "Ekle",
   "notifCallMissed": "Cevapsız Arama: @{username}",
-  "@notifCallMissed": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@notifCallMissed": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "notifCallMissedBody": "Size ulaşmaya çalıştı.",
   "callNotifTitle": "@{username} sizi arıyor",
-  "@callNotifTitle": {
-    "description": "Incoming call push notification title",
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
+  "@callNotifTitle": [
+    [
+      "description",
+      "Incoming call push notification title"
+    ],
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "callNotifBody": "Gelen Sesli Arama",
-  "@callNotifBody": {
-    "description": "Incoming call push notification body"
-  },
+  "@callNotifBody": [
+    [
+      "description",
+      "Incoming call push notification body"
+    ]
+  ],
   "privateAccount": "Gizli Hesap",
   "privateAccountDesc": "Hesabınız gizliyken sizi sadece onayladığınız kişiler takip edebilir.",
   "followRequests": "Takip İstekleri",
@@ -2899,17 +4587,29 @@
   "thisAccountIsPrivate": "Bu hesap gizli",
   "thisAccountIsPrivateDesc": "İlanlarını görmek için bu hesabı takip et.",
   "notifFollowRequestTitle": "@{username} seni takip etmek istiyor",
-  "@notifFollowRequestTitle": {
-    "placeholders": {
-      "username": {}
-    }
-  },
+  "@notifFollowRequestTitle": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          []
+        ]
+      ]
+    ]
+  ],
   "notifFollowAcceptedTitle": "@{username} takip isteğini onayladı",
-  "@notifFollowAcceptedTitle": {
-    "placeholders": {
-      "username": {}
-    }
-  },
+  "@notifFollowAcceptedTitle": [
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          []
+        ]
+      ]
+    ]
+  ],
   "errFollowSelf": "Kendinizi takip edemezsiniz",
   "errUserNotFound": "Kullanıcı bulunamadı",
   "errAlreadyFollowing": "Zaten takip ediyorsunuz veya istek gönderilmiş",
@@ -2956,125 +4656,248 @@
   "callHistoryOutgoing": "Giden",
   "callHistoryEmpty": "Henüz arama yok",
   "callHistoryDurationShort": "{mm}:{ss}",
-  "@callHistoryDurationShort": {
-    "placeholders": {
-      "mm": {
-        "type": "String"
-      },
-      "ss": {
-        "type": "String"
-      }
-    }
-  },
+  "@callHistoryDurationShort": [
+    [
+      "placeholders",
+      [
+        [
+          "mm",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ],
+        [
+          "ss",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "callCameraSwitch": "Kamerayı Çevir",
   "callCameraOn": "Kamera Açık",
   "callCameraOff": "Kamera Kapalı",
   "callVideoStarted": "{name} kamerasını açtı",
-  "@callVideoStarted": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
+  "@callVideoStarted": [
+    [
+      "placeholders",
+      [
+        [
+          "name",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "callVideoStopped": "{name} kamerasını kapattı",
-  "@callVideoStopped": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
+  "@callVideoStopped": [
+    [
+      "placeholders",
+      [
+        [
+          "name",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "callInviteTitle": "Aramaya Davet Et",
   "callInviteButton": "Davet Gönder",
   "callSearchFollowing": "Takip ettiklerini ara...",
   "callAlreadyInCall": "Zaten aramada",
   "callInvitePending": "Davet gönderildi",
   "callInviteSent": "{name} davet gönderildi",
-  "@callInviteSent": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
+  "@callInviteSent": [
+    [
+      "placeholders",
+      [
+        [
+          "name",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "callInviteRejected": "{name} daveti reddetti",
-  "@callInviteRejected": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
+  "@callInviteRejected": [
+    [
+      "placeholders",
+      [
+        [
+          "name",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "callInviteTimeout": "{name} yanıt vermedi",
-  "@callInviteTimeout": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
+  "@callInviteTimeout": [
+    [
+      "placeholders",
+      [
+        [
+          "name",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "callParticipantJoined": "{name} aramaya katıldı",
-  "@callParticipantJoined": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
+  "@callParticipantJoined": [
+    [
+      "placeholders",
+      [
+        [
+          "name",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "callParticipantLeft": "{name} aramadan ayrıldı",
-  "@callParticipantLeft": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
+  "@callParticipantLeft": [
+    [
+      "placeholders",
+      [
+        [
+          "name",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "callParticipantRemovedSelf": "Aramadan çıkarıldınız",
   "callParticipantRemovedOther": "{name} aramadan çıkarıldı",
-  "@callParticipantRemovedOther": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
+  "@callParticipantRemovedOther": [
+    [
+      "placeholders",
+      [
+        [
+          "name",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "callGroupInviteTitle": "Aktif Aramaya Davet",
   "callGroupInviteFrom": "{inviter} seni aramaya çağırıyor",
-  "@callGroupInviteFrom": {
-    "placeholders": {
-      "inviter": {
-        "type": "String"
-      }
-    }
-  },
+  "@callGroupInviteFrom": [
+    [
+      "placeholders",
+      [
+        [
+          "inviter",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "callJoinButton": "Katıl",
   "callDeclineInviteButton": "Reddet",
   "callParticipantCount": "{count} Katılımcı",
-  "@callParticipantCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@callParticipantCount": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "callMaxParticipantsReached": "Arama kapasitesi dolu (maks {max})",
-  "@callMaxParticipantsReached": {
-    "placeholders": {
-      "max": {
-        "type": "int"
-      }
-    }
-  },
+  "@callMaxParticipantsReached": [
+    [
+      "placeholders",
+      [
+        [
+          "max",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "callRemoveParticipantTitle": "Aramadan Çıkar",
   "callRemoveParticipantConfirm": "{name} kişisini aramadan çıkarmak istiyor musunuz?",
-  "@callRemoveParticipantConfirm": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
+  "@callRemoveParticipantConfirm": [
+    [
+      "placeholders",
+      [
+        [
+          "name",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "callRemoveParticipantButton": "Çıkar",
   "callCurrentParticipants": "Şu an aramada",
   "callHistoryToday": "Bugün",
@@ -3091,7 +4914,7 @@
   "aiDescButton": "Yapay Zeka ile Açıklama Yaz",
   "aiDescGenerating": "Yapay Zeka metni yazıyor...",
   "aiDescFallbackNotice": "Birincil yapay zeka meşgul, yedek model kullanılıyor.",
-  "@aiDescFallbackNotice": {},
+  "@aiDescFallbackNotice": [],
   "aiDescError": "Açıklama oluşturulamadı. Tekrar deneyin.",
   "aiDescStreamError": "Bağlantı koptu, tekrar deneyin.",
   "aiDescUnavailable": "Yapay Zeka açıklama servisi şu an aktif değil.",
@@ -3110,21 +4933,39 @@
   "uploadErrorAuthExpired": "Oturum süreniz doldu, lütfen tekrar giriş yapın.",
   "uploadErrorGeneric": "Medya yüklenemedi, lütfen tekrar deneyin.",
   "apiErrorInsufficientFundsPro": "Bu ayki ücretsiz yapay zeka limitinizi doldurdunuz. Devam etmek için hesabınızda en az {cost} teqlik bulunmalıdır.",
-  "@apiErrorInsufficientFundsPro": {
-    "placeholders": {
-      "cost": {
-        "type": "int"
-      }
-    }
-  },
+  "@apiErrorInsufficientFundsPro": [
+    [
+      "placeholders",
+      [
+        [
+          "cost",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "apiErrorInsufficientFundsStd": "Yetersiz teqlik bakiyesi. Bu işlem için hesabınızda en az {cost} teqlik bulunmalıdır.",
-  "@apiErrorInsufficientFundsStd": {
-    "placeholders": {
-      "cost": {
-        "type": "int"
-      }
-    }
-  },
+  "@apiErrorInsufficientFundsStd": [
+    [
+      "placeholders",
+      [
+        [
+          "cost",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "apiErrorAiServiceBusy": "Yapay zeka servisi şu anda meşgul. Lütfen tekrar deneyin.",
   "apiErrorAiServiceTimeout": "Yapay zeka servisi zaman aşımına uğradı.",
   "errorServerBusy": "Sunucu şu an meşgul, lütfen daha sonra tekrar deneyin.",
@@ -4316,19 +6157,37 @@
   "micToggleFailed": "Mikrofon değiştirilemedi",
   "cameraToggleFailed": "Kamera değiştirilemedi",
   "notifRatingUpdatedTitle": "@{username} değerlendirmesini güncelledi",
-  "@notifRatingUpdatedTitle": {
-    "description": "Bir değerlendirme güncellendiğinde gönderilen bildirim başlığı",
-    "placeholders": {
-      "username": {}
-    }
-  },
+  "@notifRatingUpdatedTitle": [
+    [
+      "description",
+      "Bir değerlendirme güncellendiğinde gönderilen bildirim başlığı"
+    ],
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          []
+        ]
+      ]
+    ]
+  ],
   "notifRatingReplyTitle": "@{username} değerlendirmene yanıt verdi",
-  "@notifRatingReplyTitle": {
-    "description": "Bir değerlendirmeye yanıt verildiğinde gönderilen bildirim başlığı",
-    "placeholders": {
-      "username": {}
-    }
-  },
+  "@notifRatingReplyTitle": [
+    [
+      "description",
+      "Bir değerlendirmeye yanıt verildiğinde gönderilen bildirim başlığı"
+    ],
+    [
+      "placeholders",
+      [
+        [
+          "username",
+          []
+        ]
+      ]
+    ]
+  ],
   "notifSettingsRatingsTitle": "Değerlendirme Bildirimleri",
   "notifSettingsRatingsDesc": "Değerlendirme güncellendiğinde veya yanıtlandığında",
   "extraField_listing_type": "İlan Durumu",
@@ -4360,24 +6219,48 @@
   "directSalePausedLabel": "Satış duraklatıldı",
   "directSaleResumedFeedback": "▶ Satış devam ediyor",
   "directSalePurchaseHostMsg": "✅ @{buyer} ×{qty} satın aldı",
-  "@directSalePurchaseHostMsg": {
-    "placeholders": {
-      "buyer": {
-        "type": "String"
-      },
-      "qty": {
-        "type": "String"
-      }
-    }
-  },
+  "@directSalePurchaseHostMsg": [
+    [
+      "placeholders",
+      [
+        [
+          "buyer",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ],
+        [
+          "qty",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "directSalePurchaseViewerMsg": "@{buyer} satın aldı",
-  "@directSalePurchaseViewerMsg": {
-    "placeholders": {
-      "buyer": {
-        "type": "String"
-      }
-    }
-  },
+  "@directSalePurchaseViewerMsg": [
+    [
+      "placeholders",
+      [
+        [
+          "buyer",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "directSaleSoldOutBanner": "Stok tükendi 🎉",
   "directSaleEndedSoldOut": "Tüm ürünler satıldı! 🎉",
   "directSaleEndedByHost": "Satış sonlandırıldı.",
@@ -4386,13 +6269,22 @@
   "directSaleCancelledOrderKept": "Satış iptal edildi, siparişiniz geçerli.",
   "directSaleCancelledOrderVoided": "Satış iptal edildi, siparişiniz geçersiz sayıldı.",
   "directSaleStockUrgency": "Son {count} adet!",
-  "@directSaleStockUrgency": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@directSaleStockUrgency": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "directSaleFormTitle": "Satış Başlat",
   "directSaleFormProductTitle": "Ürün Adı",
   "directSaleFormPrice": "Fiyat (₺)",
@@ -4412,56 +6304,101 @@
   "directSaleRevenueLabel": "Toplam Gelir",
   "directSaleEndDialogTitle": "Satışı Bitir",
   "directSaleEndDialogBody": "Şimdiye kadar {count} sipariş verildi. Bu siparişler geçerli kalacak.",
-  "@directSaleEndDialogBody": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@directSaleEndDialogBody": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "directSaleEndDialogBodyNoOrders": "Satışı bitirmek istediğinizden emin misiniz?",
   "directSaleCancelDialogTitle": "Satışı İptal Et",
   "directSaleCancelDialogBody": "Bu ana kadar {count} sipariş verildi. Mevcut siparişler ne olsun?",
-  "@directSaleCancelDialogBody": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@directSaleCancelDialogBody": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "directSaleCancelDialogBodyNoOrders": "Satışı iptal etmek istediğinizden emin misiniz?",
   "directSaleCancelVoidOrders": "Siparişleri İptal Et",
   "directSaleCancelKeepOrders": "Siparişleri Geçerli Tut",
   "directSaleSummaryTitle": "Satış Tamamlandı",
   "directSaleSummarySold": "{count} adet satıldı",
-  "@directSaleSummarySold": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@directSaleSummarySold": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "directSaleSummaryRevenue": "Toplam: {amount}",
-  "@directSaleSummaryRevenue": {
-    "placeholders": {
-      "amount": {
-        "type": "String"
-      }
-    }
-  },
+  "@directSaleSummaryRevenue": [
+    [
+      "placeholders",
+      [
+        [
+          "amount",
+          [
+            [
+              "type",
+              "String"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "directSaleNewSaleBtn": "Yeni Satış Başlat",
   "directSaleBuyBtn": "Hemen Al",
   "directSaleBuySheetTitle": "Satın Al",
   "directSaleBuySheetQuantity": "Adet",
   "directSaleBuySheetTotal": "Toplam",
   "directSaleBuySheetPreviousBadge": "✓ {count} adet aldın",
-  "@directSaleBuySheetPreviousBadge": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@directSaleBuySheetPreviousBadge": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "directSaleBuySheetConfirm": "Satın Al",
   "directSaleProofDialogTitle": "Satışa Başlıyorsunuz",
   "directSaleProofDialogBody": "Satışa başlamadan önce ürünü kameraya gösterin ve onay fotoğrafını çekin.",
@@ -4473,21 +6410,39 @@
   "directSaleOrdersTitle": "Alıcılar",
   "directSaleOrderCancelled": "İptal edildi",
   "directSaleOrderQuantity": "{count} adet",
-  "@directSaleOrderQuantity": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@directSaleOrderQuantity": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "directSaleBuyerCount": "{count} alıcı",
-  "@directSaleBuyerCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "@directSaleBuyerCount": [
+    [
+      "placeholders",
+      [
+        [
+          "count",
+          [
+            [
+              "type",
+              "int"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
   "directSaleSaleStatusLabel": "Satış Durumu",
   "directSaleOrderCompleted": "Tamamlandı",
   "directSaleQuantityLabel": "Adet",
@@ -4612,5 +6567,31 @@
   "recordingTabSalesGifts": "Satış & Hediye",
   "recordingTabParticipants": "Katılımcılar",
   "recordingSearchAuctions": "Müzayede ara...",
-  "recordingSearchParticipants": "İzleyici ara..."
+  "recordingSearchParticipants": "İzleyici ara...",
+  "boostDialogPaidBadgeStandard": "Standart üyelerde aylık ücretsiz boost hakkı bulunmaz",
+  "aiDescConfirmStandardTitle": "5 TEQlik Harcanacak",
+  "aiDescConfirmStandardBody": "Yapay Zeka ile açıklama oluşturmak 5 TEQlik düşecektir. Devam etmek istiyor musunuz?",
+  "aiDescConfirmProExhaustedTitle": "Aylık Krediniz Doldu",
+  "aiDescConfirmProExhaustedBody": "Bu ayki ücretsiz hakkınızı kullandınız. Devam etmek için 5 TEQlik düşecektir.",
+  "aiDescConfirmAction": "Devam Et",
+  "aiDescCostBadge": "teqlik",
+  "creditGateBlastTitle": "Toplu Bildirim Gönder",
+  "creditGateBoostTitle": "İlanı Öne Çıkar",
+  "creditGateAiDescTitle": "Yapay Zeka Açıklama",
+  "creditGateReactivationTitle": "İlanı Yeniden Yayınla",
+  "creditGateFreeRemaining": "Bu dönem {remaining} / {total} ücretsiz hakkın var",
+  "@creditGateFreeRemaining": [["placeholders", [["remaining", [["type", "int"]]], ["total", [["type", "int"]]]]]],
+  "creditGateWithinWindow": "30 gün penceresi — bu işlem ücretsiz",
+  "creditGateStandardPaid": "Standart üyelerde ücretsiz hak bulunmaz",
+  "creditGateProExhausted": "Bu dönem {total} ücretsiz hakkının tamamını kullandın",
+  "@creditGateProExhausted": [["placeholders", [["total", [["type", "int"]]]]]],
+  "creditGateCostLabel": "Maliyet",
+  "creditGateFree": "Ücretsiz",
+  "creditGateCostValue": "{cost} teqlik",
+  "@creditGateCostValue": [["placeholders", [["cost", [["type", "int"]]]]]],
+  "creditGateBalanceLabel": "Bakiyeniz",
+  "creditGateBalanceValue": "{balance} teqlik",
+  "@creditGateBalanceValue": [["placeholders", [["balance", [["type", "int"]]]]]],
+  "creditGateInsufficientBalance": "Yetersiz bakiye. Devam etmek için teqlik yükleyin.",
+  "creditGateConfirm": "Onayla ve Devam Et"
 }

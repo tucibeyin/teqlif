@@ -21,6 +21,7 @@ from app.database import get_db, get_uow
 from app.core.uow import SqlAlchemyUnitOfWork
 from app.core.exceptions import InsufficientFundsException, NotFoundException, ConflictException
 from app.services import credit_service
+from app.services.credit_service import CreditFeature
 from app.models.ad_campaign import AdCampaign
 from app.models.listing import Listing
 from app.models.teqlik_transaction import TeqlikTransaction
@@ -58,15 +59,15 @@ async def create_campaign(
     - Redis bütçe engine'ine yüklenir (anında aktif hale gelir).
     """
     # Aylık boost kredi kontrolü (PRO: 3 ücretsiz; standart: 0 ücretsiz → her seferinde 50 TEQlik)
-    boost_limit = credit_service.free_limit("boost", current_user.user_type == 'pro')
-    boost_used = await credit_service.get_used("boost", current_user.id, current_user.premium_since)
+    boost_limit = credit_service.free_limit(CreditFeature.BOOST, current_user.user_type)
+    boost_used = await credit_service.get_used(CreditFeature.BOOST, current_user.id, current_user.premium_since)
 
     # Aylık ücretsiz hak kaldı mı?
     is_free = boost_used < boost_limit
 
     # Ücretli modda: TEQlik bakiyesi yeterli mi?
     if not is_free:
-        if current_user.teqlik_balance < credit_service.cost_teqlik("boost"):
+        if current_user.teqlik_balance < credit_service.cost_teqlik(CreditFeature.BOOST):
             raise InsufficientFundsException(code="INSUFFICIENT_FUNDS_BOOST")
 
     # İlanın bu kullanıcıya ait olduğunu doğrula
@@ -103,7 +104,7 @@ async def create_campaign(
     # TEQlik düşme: yalnızca ücretli modda
     teqlik_cost = 0
     if not is_free:
-        teqlik_cost = credit_service.cost_teqlik("boost")
+        teqlik_cost = credit_service.cost_teqlik(CreditFeature.BOOST)
         deduct = await db.execute(
             sql_text(
                 "UPDATE users SET teqlik_balance = teqlik_balance - :cost "
@@ -140,7 +141,7 @@ async def create_campaign(
 
     # Boost kredi sayacını artır (ücretsiz hak kullanıldıysa)
     if is_free:
-        await credit_service.increment("boost", current_user.id, current_user.premium_since)
+        await credit_service.increment(CreditFeature.BOOST, current_user.id, current_user.premium_since)
 
     # Redis'e anında yükle — cron'u beklemeye gerek yok
     try:
@@ -167,8 +168,8 @@ async def create_campaign(
 @router.get("/boost-credits")
 async def boost_credits(current_user: User = Depends(get_current_user)):
     """Kullanıcının bu ayki boost kredi durumunu döndürür."""
-    limit = credit_service.free_limit("boost", current_user.user_type == 'pro')
-    used  = await credit_service.get_used("boost", current_user.id, current_user.premium_since)
+    limit = credit_service.free_limit(CreditFeature.BOOST, current_user.user_type)
+    used  = await credit_service.get_used(CreditFeature.BOOST, current_user.id, current_user.premium_since)
     renewal_date: str | None = None
     if current_user.premium_since:
         renewal_date = credit_service.next_billing_date(current_user.premium_since).isoformat()
@@ -176,6 +177,7 @@ async def boost_credits(current_user: User = Depends(get_current_user)):
         "used": used,
         "limit": limit,
         "remaining": max(0, limit - used),
+        "cost_teqlik": credit_service.cost_teqlik(CreditFeature.BOOST),
         "is_pro": current_user.user_type == 'pro',
         "renewal_date": renewal_date,
     }

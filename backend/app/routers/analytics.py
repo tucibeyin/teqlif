@@ -22,6 +22,7 @@ from app.utils.auth import decode_token, get_current_user, invalidate_user_sessi
 from app.utils.redis_client import get_redis
 from app.core.exceptions import AppException, InsufficientFundsException, ServiceException, ForbiddenException, NotFoundException
 from app.services import credit_service
+from app.services.credit_service import CreditFeature
 from app.database_clickhouse import get_clickhouse_client
 from app.models.market_index import ExchangeRates
 from app.models.ad_campaign import AdCampaign
@@ -507,13 +508,14 @@ async def reactivation_credits(
     db: AsyncSession = Depends(get_db),
 ):
     """PRO kullanıcının bu ayki reaktivasyon kredi durumunu döndürür."""
-    reactivation_cost = credit_service.cost_teqlik("reactivation")
+    reactivation_cost = credit_service.cost_teqlik(CreditFeature.REACTIVATION)
     if current_user.user_type != 'pro':
         return {
             "used": 0,
             "limit": 0,
             "remaining": 0,
             "free_remaining": 0,
+            "cost_teqlik": reactivation_cost,
             "user_type": "standard",
             "renewal_date": None,
             "cost": reactivation_cost,
@@ -521,8 +523,8 @@ async def reactivation_credits(
             "can_afford": current_user.teqlik_balance >= reactivation_cost,
             "within_window_count": 0,
         }
-    used      = await credit_service.get_used("reactivation", current_user.id, current_user.premium_since)
-    limit     = credit_service.free_limit("reactivation", is_premium=True)
+    used      = await credit_service.get_used(CreditFeature.REACTIVATION, current_user.id, current_user.premium_since)
+    limit     = credit_service.free_limit(CreditFeature.REACTIVATION, current_user.user_type)
     remaining = max(0, limit - used)
     is_free   = remaining > 0
     cost      = 0 if is_free else reactivation_cost
@@ -549,6 +551,7 @@ async def reactivation_credits(
         "limit": limit,
         "remaining": remaining,
         "free_remaining": remaining,
+        "cost_teqlik": reactivation_cost,
         "user_type": "pro",
         "renewal_date": renewal_date,
         "cost": cost,

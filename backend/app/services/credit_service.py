@@ -7,10 +7,23 @@ Router'lar kendi limit/Redis kodlarını tutmaz; yalnızca bu modülü kullanır
 from __future__ import annotations
 
 import calendar
+import logging
 from datetime import datetime, date, timezone
-from typing import Literal
+from enum import Enum
 
-FeatureName = Literal["blast", "boost", "ai_desc", "reactivation"]
+logger = logging.getLogger(__name__)
+
+
+class CreditFeature(str, Enum):
+    """Kredi takibi yapılan özellikler. str mixin ile dict key ve Redis prefix olarak kullanılabilir."""
+    BLAST        = "blast"
+    BOOST        = "boost"
+    AI_DESC      = "ai_desc"
+    REACTIVATION = "reactivation"
+
+
+# Hangi user_type değerleri "premium" sayılır — tek değişim noktası.
+_PREMIUM_TYPES: frozenset[str] = frozenset({"pro"})
 
 # ── Özellik Tablosu ────────────────────────────────────────────────────────────
 # free_standard    : Normal kullanıcının aylık ücretsiz hakkı
@@ -19,7 +32,7 @@ FeatureName = Literal["blast", "boost", "ai_desc", "reactivation"]
 # per_op_cap_*     : Tek işlemde maks kişi sayısı (yalnızca blast için)
 
 _FEATURES: dict[str, dict] = {
-    "blast": {
+    CreditFeature.BLAST: {
         "key_prefix":          "blast_credits",
         "free_standard":       3,
         "free_pro":            6,
@@ -27,19 +40,19 @@ _FEATURES: dict[str, dict] = {
         "per_op_cap_standard": 5,
         "per_op_cap_pro":      10,
     },
-    "boost": {
+    CreditFeature.BOOST: {
         "key_prefix":    "boost_credits",
         "free_standard": 0,
         "free_pro":      3,
         "cost_teqlik":     50,
     },
-    "ai_desc": {
+    CreditFeature.AI_DESC: {
         "key_prefix":    "ai_desc_credits",
         "free_standard": 0,
         "free_pro":      6,
         "cost_teqlik":     5,
     },
-    "reactivation": {
+    CreditFeature.REACTIVATION: {
         "key_prefix":    "reactivation_credits",
         "free_standard": 0,
         "free_pro":      3,
@@ -48,23 +61,23 @@ _FEATURES: dict[str, dict] = {
 }
 
 
-def free_limit(feature: FeatureName, is_premium: bool) -> int:
+def free_limit(feature: CreditFeature, user_type: str) -> int:
     """Kullanıcı tipine göre aylık ücretsiz hak sayısı."""
     cfg = _FEATURES[feature]
-    return cfg["free_pro"] if is_premium else cfg["free_standard"]
+    return cfg["free_pro"] if user_type in _PREMIUM_TYPES else cfg["free_standard"]
 
 
-def cost_teqlik(feature: FeatureName) -> int:
+def cost_teqlik(feature: CreditFeature) -> int:
     """Ücretli kullanım başına teqlik maliyeti."""
     return _FEATURES[feature]["cost_teqlik"]
 
 
-def per_op_cap(feature: FeatureName, is_premium: bool) -> int | None:
+def per_op_cap(feature: CreditFeature, user_type: str) -> int | None:
     """Tek işlemde maks kullanım sayısı (yalnızca blast için tanımlı)."""
     cfg = _FEATURES[feature]
     if "per_op_cap_pro" not in cfg:
         return None
-    return cfg["per_op_cap_pro"] if is_premium else cfg["per_op_cap_standard"]
+    return cfg["per_op_cap_pro"] if user_type in _PREMIUM_TYPES else cfg["per_op_cap_standard"]
 
 
 # ── Fatura Dönemi Hesabı ───────────────────────────────────────────────────────
@@ -93,7 +106,7 @@ def next_billing_date(premium_since: datetime) -> date:
 
 # ── Redis Sayaç Yardımcıları ──────────────────────────────────────────────────
 
-def redis_key(feature: FeatureName, user_id: int, premium_since: datetime | None) -> str:
+def redis_key(feature: CreditFeature, user_id: int, premium_since: datetime | None) -> str:
     prefix = _FEATURES[feature]["key_prefix"]
     if premium_since:
         period = billing_period_start(premium_since)
@@ -102,19 +115,31 @@ def redis_key(feature: FeatureName, user_id: int, premium_since: datetime | None
     return f"{prefix}:{user_id}:{now.strftime('%Y-%m')}"
 
 
-async def get_used(feature: FeatureName, user_id: int, premium_since: datetime | None) -> int:
-    """Bu dönemde kullanılan kredi sayısını Redis'ten okur."""
+async def get_used(feature: CreditFeature, user_id: int, premium_since: datetime | None) -> int:
+    """Bu dönemde kullanılan kredi sayısını Redis'ten okur.
+
+    Redis erişilemezse 0 döner (fail-open / Availability > Consistency tercihi).
+    Bunun anlamı: Redis kesintisinde PRO kullanıcılar mevcut dönem kullanımını
+    sıfırlanmış gibi görür ve ücretsiz haklarını tekrar kullanabilir.
+    Kabul: kısa Redis kesintileri TEQlik bakiyesini etkilemez, yalnızca ücretsiz
+    sayaç geçici olarak atlatılabilir. Bu risk iş birimi tarafından onaylanmıştır.
+    """
     try:
         from app.utils.redis_client import get_redis
         redis = await get_redis()
         val = await redis.get(redis_key(feature, user_id, premium_since))
         return int(val) if val else 0
-    except Exception:
+    except Exception as exc:
+        logger.warning(
+            "[CreditService] Redis erişilemedi (get_used) — fail-open: 0 dönülüyor. "
+            "feature=%s user_id=%s hata=%s",
+            feature, user_id, exc,
+        )
         return 0
 
 
 async def increment(
-    feature: FeatureName,
+    feature: CreditFeature,
     user_id: int,
     premium_since: datetime | None,
     count: int = 1,
@@ -141,5 +166,10 @@ async def increment(
             ttl = max(60, int((end_dt - now).total_seconds()) + 1)
             await redis.expire(key, ttl)
         return new_val
-    except Exception:
+    except Exception as exc:
+        logger.warning(
+            "[CreditService] Redis erişilemedi (increment) — fail-open: 0 dönülüyor. "
+            "feature=%s user_id=%s count=%s hata=%s",
+            feature, user_id, count, exc,
+        )
         return 0

@@ -1,5 +1,7 @@
 import '../ui_library/components/overlays/teq_snackbar.dart';
 import '../ui_library/components/overlays/teq_toast.dart';
+import '../ui_library/components/overlays/credit_gate_sheet.dart';
+import '../models/credit_gate_data.dart';
 import '../services/localization_service.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -2984,59 +2986,26 @@ class _MyListingsScreenState extends ConsumerState<_MyListingsScreen> {
         if (confirm != true) return;
       }
     } else {
-      // Pasif → Aktif
-      if (!withinWindow) {
-        String subtitle;
-        if (isPremium && remaining > 0) {
-          subtitle = loc.t('listingReactivateFreeCredit', {'remaining': remaining.toString()});
-        } else if (isPremium) {
-          subtitle = loc.t('listingReactivatePaidPro', {'cost': cost.toString()});
-        } else {
-          subtitle = loc.t('listingReactivatePaidNormal', {'cost': cost.toString(), 'balance': balance.toString()});
-        }
-
-        if (!canAfford) {
-          await showDialog<void>(
-            context: context,
-            builder: (_) => AlertDialog(
-              title: Text(loc.t('listingReactivateTitle')),
-              content: Text(loc.t('listingReactivateInsufficientBalance')),
-              actions: [
-                TeqButton.text(
-                  text: loc.t('btnDismiss'),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ],
-            ),
-          );
-          return;
-        }
-
-        String extraHint = '';
-        if (!isPremium) extraHint = '\n\n${loc.t('listingReactivateProUpsell')}';
-
-        final confirm = await showDialog<bool>(
-          context: context,
-          builder: (_) => AlertDialog(
-            title: Text(loc.t('listingReactivateTitle')),
-            content: Text(subtitle + extraHint),
-            actions: [
-              TeqButton.text(
-                text: loc.t('btnDismiss'),
-                onPressed: () => Navigator.pop(context, false),
-              ),
-              TeqButton.text(
-                text: loc.t('listingReactivateConfirm'),
-                customColor: const Color(0xFF6366F1),
-                onPressed: () => Navigator.pop(context, true),
-              ),
-            ],
-          ),
+      // Pasif → Aktif (reactivation)
+      final result = await CreditGateSheet.show(
+        context: context,
+        ref: ref,
+        feature: CreditFeature.reactivation,
+        listingId: id,
+      );
+      if (!mounted) return;
+      if (result.success) {
+        await _load();
+      } else if (result.errorKey != null) {
+        TeqSnackBar.show(
+          message: loc.t(result.errorKey!),
+          type: TeqSnackBarType.error,
         );
-        if (confirm != true) return;
       }
+      return;
     }
 
+    // Aktif → Pasif yolu buraya ulaşır
     final token = await StorageService.getToken();
     if (token == null) return;
     try {
@@ -3047,7 +3016,10 @@ class _MyListingsScreenState extends ConsumerState<_MyListingsScreen> {
       if (resp.statusCode == 200) {
         await _load();
       } else if (resp.statusCode == 402 && mounted) {
-        TeqSnackBar.show(message: ref.read(localizationProvider).t('listingReactivateInsufficientBalance'), type: TeqSnackBarType.info);
+        TeqSnackBar.show(
+          message: ref.read(localizationProvider).t('listingReactivateInsufficientBalance'),
+          type: TeqSnackBarType.info,
+        );
       }
     } catch (e) {
       LoggerService.instance.warning(
