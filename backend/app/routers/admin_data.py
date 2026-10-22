@@ -215,6 +215,7 @@ async def toggle_pro(
     else:
         user.plan_type = None
     await db.commit()
+    await invalidate_user_session_cache(user_id)
     status = "PRO granted" if user.is_premium else "PRO removed"
     logger.info("[ADMIN] %s → %s | admin=%s", user.username, status, admin.email)
     return {"user_id": user_id, "username": user.username, "is_premium": user.is_premium, "plan_type": user.plan_type}
