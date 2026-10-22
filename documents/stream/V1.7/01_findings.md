@@ -669,7 +669,7 @@ class FailoverStreamCommand:
                 raise BadRequestException(code="NODE_STILL_HEALTHY")
 
             rl_key = f"teqlif:stream:failover_rl:{stream_id}"
-            if await self.redis.exists(rl_key):
+            if not await self.redis.set(rl_key, "1", nx=True, ex=300):
                 raise BadRequestException(code="FAILOVER_RATE_LIMITED")
 
             new_node = await orchestrator.allocate_node(
@@ -693,9 +693,6 @@ class FailoverStreamCommand:
             stream.livekit_url    = new_node["livekit_url"]
             stream.room_name      = new_room_name
             await self.uow.session.flush()
-
-            # Başarılı failover sonrası 5dk rate limit kilidi ve eski node grace period iptal sinyali
-            await self.redis.set(rl_key, "1", ex=300)
             await self.redis.set(f"live:host_reconnect:{stream_id}", str(time.time()), ex=300)
 
         await self.redis.publish("teqlif:recording:stream_started", json.dumps({
@@ -714,35 +711,6 @@ class FailoverStreamCommand:
             room_name=new_room_name,
             category=stream.category,
         )
-```
-
-#### Flutter — `_tryFailover()` (host_stream_view_model.dart)
-
-```dart
-// scheduleReconnect() içinde — onNavigateHome?.call() yerine:
-if (_reconnectAttempts >= _kMaxReconnectAttempts) {
-  _tryFailover();
-  return;
-}
-
-Future<void> _tryFailover() async {
-  try {
-    final newToken = await _stream.failoverStream(_token!.streamId);
-    _token = newToken;
-    _reconnectAttempts = 0;
-    _reconnectTimer = Timer(Duration.zero, _reconnect);
-  } on AppException catch (e) {
-    if (e.code == 'NODE_STILL_HEALTHY') {
-      // Node anlık glitch — normal reconnect'e sıfırla
-      _reconnectAttempts = 0;
-      scheduleReconnect();
-      return;
-    }
-    onNavigateHome?.call();
-  } catch (_) {
-    onNavigateHome?.call();
-  }
-}
 ```
 
 `stream_service.dart`'a:
@@ -885,7 +853,7 @@ Concat işi node1 üzerindeki ARQ worker'a (`stream_concat_task`) devredilir. He
 
 ```python
 # backend/app/tasks/stream_concat_task.py (ARQ worker, node1)
-async def stream_concat_task(ctx, stream_id: int):
+async def _do_concat(ctx: dict, stream_id: int):
     """Her iki part available olduğunda tetiklenir."""
     recs = await db.fetch(
         "SELECT id, minio_key, part_number, host_id FROM stream_recordings "
@@ -978,7 +946,7 @@ async def _probe(path: Path) -> dict:
         ),
     }
 
-async def _concat_or_reencode(work_dir: Path, recs, stream_id: int):
+async def _concat_or_reencode(work_dir: Path, recs, stream_id: int, host_id: int):
     p1 = work_dir / "part1.mp4"
     p2 = work_dir / "part2.mp4"
     out = work_dir / "output.mp4"
