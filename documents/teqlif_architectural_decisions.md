@@ -4,7 +4,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Ekim 2026 — §39 ClickHouse V1.1 optimizasyonları (commit 6ae7d490)
+**Son güncelleme:** Ekim 2026 — §40 Merkezi CreditGate sistemi + API kontrat senkronizasyonu (commit b0071cea)
 
 ---
 
@@ -33,6 +33,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 29. [Stream Recording V1.6 — Dinamik Encode Parallelism](#29-stream-recording-v16--dinamik-encode-parallelism-commit-14e8bd1b-847d991a)
 30. [teqlif-agent İzleme Düzeltmeleri — Redis/Backup/Cleaner/PG Replikasyon](#30-teqlif-agent-i̇zleme-düzeltmeleri--redisbackupcleaner-pg-replikasyon-commit-daa72d2b-dd206266-28836f45-9c6ecf18-ef2dcadc)
 31. [MinIO ILM Acil Freni + Off-site Sync Altyapısı](#31-minio-ilm-acil-freni--off-site-sync-altyapısı)
+40. [Merkezi CreditGate Sistemi — Tek Execution Noktası](#40-merkezi-creditgate-sistemi--tek-execution-noktası-commit-b0071cea)
 
 ---
 
@@ -2782,3 +2783,85 @@ Co-host viewer'dan publisher'a geçişte LiveKit `ParticipantNotFound` (relay ro
 | `mobile/lib/screens/live/viewmodels/host_stream_view_model.dart` | `NODE_UNAVAILABLE` → `_doFailover` |
 | `mobile/lib/screens/live/viewmodels/swipe_live_view_model.dart` | `acceptAndUpgradeCoHost` (MVVM ihlali giderildi) |
 | `backend/alembic/versions/zzzzzu_v17_stream_multi_node.py` | Migration |
+
+---
+
+## 40. Merkezi CreditGate Sistemi — Tek Execution Noktası (commit `b0071cea`)
+
+### Problem
+
+Boost, Blast, AI Açıklama ve Reaktivasyon özelliklerinin kredi/TEQlik mantığı; `listing_detail_screen.dart`, `create_listing_screen.dart` ve `profile_screen.dart` içinde dağınık HTTP çağrıları, ayrı `AlertDialog` widget'ları ve tekrarlanan bakiye/limit hesapları olarak bulunuyordu. Bir maliyet veya limit değişikliği 3 ekranda ayrı ayrı güncelleme gerektiriyordu.
+
+### Karar
+
+Tüm kredili feature'lar için **tek bir onay kapısı (CreditGate)** mimarisi kuruldu:
+- Backend: `credit_service.py` tüm limit/maliyet/Redis mantığının tek kaynağı
+- Mobile: `CreditGateService` tüm feature execution'ların tek noktası
+- Ekranlar yalnızca `CreditGateSheet.show(feature:, listingId:)` çağırır
+
+### Mimari
+
+```
+Ekranlar (listing_detail / create_listing / profile)
+    │  CreditGateSheet.show(feature: CreditFeature.boost, listingId: id)
+    ▼
+CreditGateSheet (ConsumerStatefulWidget)
+    │  initState → notifier.loadData(feature, listingId, service)
+    │  confirm   → notifier.confirm(() => service.execute(feature, ...))
+    ▼
+CreditGateNotifier (AutoDisposeNotifier<CreditGateState>)
+    │  isLoadingData / loadError / data / isConfirming / selectedCount
+    │  freeUsed / paidCount / teqlikCost  ← blast maliyet hesabı burada
+    ▼
+CreditGateService
+    │  fetchData(feature)     → analytics_service.fetchCreditGateData()
+    │  execute(feature, ...)  → feature'a özgü endpoint
+    │    boost        → POST /ads/campaigns
+    │    blast        → analytics.sendMassNotificationForListing()
+    │    reactivation → PATCH /listings/{id}/toggle
+    │    aiDesc       → CreditGateResult.success()  (server-side deduction)
+    ▼
+CreditGateResult { success, errorKey, payload }
+```
+
+### Backend Kontrat
+
+Her credit endpoint (`/ads/boost-credits`, `/leads/blast-credits`,
+`/listings/ai-desc-credits`, `/analytics/reactivation-credits`) artık
+`cost_teqlik` alanını döndürür. `/leads/blast-credits` hem `per_op_cap`
+hem `per_blast_cap` (geriye dönük uyumluluk) döndürür.
+
+### Güvenlik Düzeltmeleri
+
+| Kod | Sorun | Düzeltme |
+|-----|-------|----------|
+| A-01 | `ai_desc` kredi düşürme exception'ı yutuluyordu (sessiz bakiye kaçağı) | `raise` eklendi — düşürme başarısızsa 500, açıklama teslim edilmez |
+| A-02 | Standart kullanıcı `increment()` çağrılmıyordu — Redis'te iz yok | Tüm user type'lar için `increment()` çağrısı, abuse detection mümkün |
+| A-03 | `get_used()` / `increment()` Redis hatası sessiz `return 0` | `logger.warning` + docstring'de fail-open kararı belgelendi |
+
+### aiDesc Kasıtlı Asimetrisi
+
+`CreditGateService.execute(aiDesc)` `CreditGateResult.success()` döner — execution ekranda yapılır.
+Kredi düşümü generate endpoint'inde server-side gerçekleştiği ve `aiDescProvider` state machine'i
+(streaming, typing animasyonu) generate'i yönettiği için bu kasıtlı bir trade-off'tur.
+
+### Etkilenen Dosyalar
+
+| Dosya | Değişiklik |
+|-------|-----------|
+| `backend/app/services/credit_service.py` | CreditFeature enum, _PREMIUM_TYPES, tüm limit/maliyet/Redis mantığı |
+| `backend/app/routers/ads.py` | cost_teqlik eklendi, CreditFeature enum |
+| `backend/app/routers/leads.py` | cost_teqlik + per_op_cap eklendi |
+| `backend/app/routers/listings.py` | cost_teqlik eklendi, ai_desc A-01 fix |
+| `backend/app/routers/analytics.py` | cost_teqlik eklendi |
+| `backend/app/use_cases/listings/commands/toggle_listing.py` | CreditFeature enum |
+| `backend/app/use_cases/listings/queries/get_reactivation_cost.py` | CreditFeature enum |
+| `mobile/lib/models/credit_gate_data.dart` | CreditFeature, CreditGateData, CreditGateResult, fallbackCostTeqlik |
+| `mobile/lib/services/credit_gate_service.dart` | Yeni — 4 feature execution |
+| `mobile/lib/screens/viewmodels/credit_gate_view_model.dart` | Yeni — CreditGateState + CreditGateNotifier |
+| `mobile/lib/ui_library/components/overlays/credit_gate_sheet.dart` | Yeni imza; dahili loading + blast selector |
+| `mobile/lib/screens/listing_detail_screen.dart` | _boostListing + _sendMassNotification → yeni API; _MassNotificationDialog silindi |
+| `mobile/lib/screens/profile_screen.dart` | reactivation → CreditGateSheet.show |
+| `mobile/lib/screens/create_listing_screen.dart` | ai_desc gate → CreditGateSheet.show |
+| `mobile/lib/services/analytics_service.dart` | fetchCreditGateData + fallbackCostTeqlik |
+| `documents/language/app_*.arb` | creditGate* key'leri (5 dil) |
