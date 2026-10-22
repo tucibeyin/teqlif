@@ -10,24 +10,27 @@
 
 ### 1.1 Platform Karşılaştırma Tablosu
 
-| Platform | Birim | Kullanıcı Öder | Oluşturucu Alır | Platform Payı | Kullanım Amacı |
-|----------|-------|---------------|----------------|--------------|----------------|
-| **TikTok Coin** | 1 Coin | **₺0,50** (TR, 2024–25 aktif) | ~₺0,25 (Diamond) | ~%50 | Yayıncıya hediye gönderme |
-| **Twitch Bits** | 1 Bit | $0,014 (~₺0,45) | $0,01 (~₺0,32) | ~%29 | Yayıncıya destek |
-| **YouTube Super Chat/Thanks** | Sabit tier | $2–$500 (TRY eşdeğeri) | Gelirin %70'i | %30 | Video/yayın anında destek |
-| **Instagram Stars** | 1 Star | ~$0,020 | $0,01 | ~%50 | İçerik üretici desteği |
-| **Snapchat Tokens** | — | — | — | — | **10 Şubat 2025'te kapatıldı** |
-| **TEQlik (planlanan)** | 1 TEQlik | **₺1,43** (%30) / **₺1,18** (%15) | ₺1,00 (net) | %30 veya %15 (Apple) | İlan güçlendirme, AI, Blast |
+| Platform | Birim | iOS Fiyatı | Web Fiyatı | Platform Payı | Kullanım Amacı |
+|----------|-------|-----------|-----------|--------------|----------------|
+| **TikTok Coin** | 1 Coin | **₺0,88** (App Store) | **₺0,50–0,57** | ~%50 gifting + store cut | Yayıncıya hediye |
+| **Twitch Bits** | 1 Bit | TRY yok | $0,014 | ~%29 | Yayıncıya destek |
+| **YouTube Super Chat** | Sabit tier | $2–$500 TRY eşd. | $2–$500 | %30 | Yayın anında destek |
+| **Instagram Stars** | 1 Star | TR'de yok | ~$0,020 | ~%50 | İçerik üretici |
+| **Twitter/X Tips** | — | %0 (ext. işlemci) | %0 | **%0 X kesmez** | Doğrudan yaratıcı |
+| **Snapchat Tokens** | — | — | — | — | **Şubat 2025'te kapatıldı** |
+| **TEQlik (planlanan)** | 1 TEQLik | **₺1,43** (%30) / **₺1,18** (%15) | — | %30 veya %15 (Apple) | İlan güçlendirme |
 
-> **Not — TikTok Coins:** ₺0,50/coin sabit birim fiyat; ancak TikTok yayıncıya yalnızca %50 aktarıyor (Diamond sistemi). TEQlik'ten 3× daha ucuz görünse de kullanım amacı farklı — yayıncı tipping, ilan güçlendirme değil.
+> **TikTok iOS vs Web:** App Store'da ₺0,88/coin, web'de ₺0,50/coin. Fark = Apple'ın %30'u + TikTok margin koruması. Bu, TEQlik ekranında "web'den al" ibaresi kullanılamayacağını doğruluyor (Kural 3.1.1 ihlali).
 >
-> **Not — Instagram Stars:** Türkiye'de henüz aktif değil; yalnızca ABD ve seçili ülkelerde.
+> **Instagram Stars:** Türkiye'de henüz aktif değil; yalnızca ABD ve seçili ülkelerde mevcut.
 >
-> **Not — Facebook Stars:** Meta 2021'de Stars satışını kendi web mağazasına taşıdı; Apple/Google %30'dan kaçınmak için. Bu, TEQlik'ten farklı iş modeli — burada kullanıcı kendi ilanına yatırım yapıyor.
+> **Twitter/X:** Harici ödeme işlemcisi (PayPal, Venmo); X %0 komisyon alıyor ancak iOS App Store üzerinden alım zorunlu olmadığından Apple da kesmiyor. Sanal para birimi yok.
+>
+> **Meta stratejisi:** Stars satışını kasıtlı olarak kendi web mağazasına taşıdı; Apple/Google %30'dan kaçınmak için. Teqlif'in bu opsiyonu yok — TEQlik dijital özellik kilidini açtığı için Apple Kural 3.1.1 kesinlikle geçerli.
 
 ### 1.2 Piyasa Okuma
 
-- **TikTok Coin** ₺0,50/coin — platform yayıncıya %50 aktarıyor, %50'sini kendisi alıyor. Amaç yaratıcı tipping, ilan yönetimi değil.
+- **TikTok Coin** iOS'ta ₺0,88/coin, web'de ₺0,50/coin — App Store ek maliyeti net görünüyor. Platform yayıncıya %50 aktarıyor. Amaç yaratıcı tipping, ilan güçlendirme değil.
 - **Snapchat Tokens** Şubat 2025'te tamamen kapatıldı — sanal para stratejisi başarısız oldu.
 - **Twitch Bits** en şeffaf model: kullanıcıya maliyet, yaratıcıya gelir açıkça yayımlıyor. %29 platform payı Apple ile neredeyse aynı.
 - **YouTube/Meta:** %30 komisyon modeli — Google Play / Apple Pay üzerinden veya doğrudan web ödeme.
