@@ -21,6 +21,38 @@ const int _kMaxReconnectAttempts = 7;
 const int _kTrackPollIntervalMs = 100;
 const int _kTrackPollMaxAttempts = 50;
 
+RoomOptions _roomOptionsForProfile(String profile) {
+  // PRO:     720p (1700k) + 540p (800k) + 360p (450k)  — main=720p
+  // standard: 540p (800k) + 360p (450k) + 240p h240_43 — main=540p
+  final isPro = profile == 'pro';
+  return RoomOptions(
+    adaptiveStream: true,
+    dynacast: true,
+    defaultVideoPublishOptions: VideoPublishOptions(
+      simulcast: true,
+      backupVideoCodec: const BackupVideoCodec(codec: 'vp9'),
+      videoSimulcastLayers: isPro
+          ? const [VideoParametersPresets.h360_169, VideoParametersPresets.h540_169]
+          : const [VideoParametersPresets.h240_43, VideoParametersPresets.h360_169],
+      videoEncoding: VideoEncoding(
+        maxBitrate: isPro ? 1700000 : 800000,
+        maxFramerate: 30,
+      ),
+      // flutter_webrtc Android toUpperCase() Türkçe locale bug: i→İ. balanced güvenli.
+      degradationPreference: DegradationPreference.balanced,
+    ),
+    defaultAudioPublishOptions: const AudioPublishOptions(audioBitrate: 64000),
+  );
+}
+
+CameraCaptureOptions _cameraOptionsForProfile(String profile) {
+  return CameraCaptureOptions(
+    params: profile == 'pro'
+        ? VideoParametersPresets.h720_169
+        : VideoParametersPresets.h540_169,
+  );
+}
+
 /// Bağlantı fail olduğunda retry edilmemesi gereken dahili istisna.
 class _ConfirmLiveFailure implements Exception {
   final Object cause;
@@ -139,22 +171,7 @@ class HostStreamViewModel extends ChangeNotifier {
     TranslationPack loc,
   ) async {
     final newRoom = Room(
-      roomOptions: const RoomOptions(
-        adaptiveStream: true,
-        dynacast: true,
-        defaultVideoPublishOptions: VideoPublishOptions(
-          simulcast: true,
-          backupVideoCodec: BackupVideoCodec(codec: 'vp9'),
-          videoSimulcastLayers: [
-            VideoParametersPresets.h360_169,
-            VideoParametersPresets.h540_169,
-          ],
-          videoEncoding: VideoEncoding(maxBitrate: 1700000, maxFramerate: 30),
-          // flutter_webrtc Android toUpperCase() Türkçe locale bug: i→İ. balanced güvenli.
-          degradationPreference: DegradationPreference.balanced,
-        ),
-        defaultAudioPublishOptions: AudioPublishOptions(audioBitrate: 64000),
-      ),
+      roomOptions: _roomOptionsForProfile(token.videoQualityProfile),
     );
     _setupRoomListeners(newRoom, token.streamId);
 
@@ -171,7 +188,7 @@ class HostStreamViewModel extends ChangeNotifier {
     try {
       await newRoom.localParticipant?.setCameraEnabled(
         true,
-        cameraCaptureOptions: const CameraCaptureOptions(params: VideoParametersPresets.h720_169),
+        cameraCaptureOptions: _cameraOptionsForProfile(token.videoQualityProfile),
       );
       await newRoom.localParticipant?.setMicrophoneEnabled(
         true,
@@ -337,21 +354,7 @@ class HostStreamViewModel extends ChangeNotifier {
       try { await oldRoom?.disconnect(); } catch (_) {}
 
       final newRoom = Room(
-        roomOptions: const RoomOptions(
-          adaptiveStream: true,
-          dynacast: true,
-          defaultVideoPublishOptions: VideoPublishOptions(
-            simulcast: true,
-            backupVideoCodec: BackupVideoCodec(codec: 'vp9'),
-            videoSimulcastLayers: [
-              VideoParametersPresets.h360_169,
-              VideoParametersPresets.h540_169,
-            ],
-            videoEncoding: VideoEncoding(maxBitrate: 1700000, maxFramerate: 30),
-            degradationPreference: DegradationPreference.balanced,
-          ),
-          defaultAudioPublishOptions: AudioPublishOptions(audioBitrate: 64000),
-        ),
+        roomOptions: _roomOptionsForProfile(newToken.videoQualityProfile),
       );
       _setupRoomListeners(newRoom, newToken.streamId);
       await newRoom.connect(newToken.livekitUrl, newToken.token);
@@ -359,7 +362,7 @@ class HostStreamViewModel extends ChangeNotifier {
 
       await newRoom.localParticipant?.setCameraEnabled(
         true,
-        cameraCaptureOptions: const CameraCaptureOptions(params: VideoParametersPresets.h720_169),
+        cameraCaptureOptions: _cameraOptionsForProfile(newToken.videoQualityProfile),
       );
       await newRoom.localParticipant?.setMicrophoneEnabled(
         true,
@@ -407,7 +410,7 @@ class HostStreamViewModel extends ChangeNotifier {
       await room?.localParticipant?.setCameraEnabled(
         target,
         cameraCaptureOptions: target
-            ? const CameraCaptureOptions(params: VideoParametersPresets.h720_169)
+            ? _cameraOptionsForProfile(_token?.videoQualityProfile ?? 'standard')
             : null,
       );
       if (target) {
@@ -483,7 +486,7 @@ class HostStreamViewModel extends ChangeNotifier {
       await Future<void>.delayed(const Duration(milliseconds: 300));
       await room!.localParticipant?.setCameraEnabled(
         true,
-        cameraCaptureOptions: const CameraCaptureOptions(params: VideoParametersPresets.h720_169),
+        cameraCaptureOptions: _cameraOptionsForProfile(_token?.videoQualityProfile ?? 'standard'),
       );
       LocalVideoTrack? fresh;
       for (final pub in room?.localParticipant?.videoTrackPublications ?? []) {

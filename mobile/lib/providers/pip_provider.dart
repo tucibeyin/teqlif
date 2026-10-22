@@ -29,6 +29,7 @@ class PipProvider extends ChangeNotifier {
     _hostUsername = hostUsername;
     _room = room;
     _track = track;
+    _setRemoteVideoQuality(room, VideoQuality.LOW);
     notifyListeners();
   }
 
@@ -36,6 +37,9 @@ class PipProvider extends ChangeNotifier {
     debugPrint('[${DateTime.now().toString()}] [EVENT: PIP_DEBUG] disablePip called. disconnectRoom: $disconnectRoom');
     if (disconnectRoom) {
       _room?.disconnect();
+    } else if (_room != null) {
+      // Tam ekrana genişletme — kalite sınırını kaldır
+      _setRemoteVideoQuality(_room!, VideoQuality.HIGH);
     }
     _isActive = false;
     _currentStreamId = null;
@@ -44,6 +48,14 @@ class PipProvider extends ChangeNotifier {
     _room = null;
     _track = null;
     notifyListeners();
+  }
+
+  void _setRemoteVideoQuality(Room room, VideoQuality quality) {
+    for (final participant in room.remoteParticipants.values) {
+      for (final pub in participant.videoTrackPublications.values) {
+        pub.setVideoQuality(quality).ignore();
+      }
+    }
   }
 }
 

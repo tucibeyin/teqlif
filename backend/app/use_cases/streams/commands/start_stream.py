@@ -100,12 +100,14 @@ class StartStreamCommand:
         except Exception as exc:
             logger.warning("[StartStreamCommand] room_to_stream mapping yazılamadı: %s", exc)
 
-        logger.info("[StartStreamCommand] Başarılı | stream_id=%s node=%s", new_stream.id, node.get("node_id"))
-        
+        quality_profile = "pro" if user.is_premium else "standard"
+        logger.info("[StartStreamCommand] Başarılı | stream_id=%s node=%s quality=%s", new_stream.id, node.get("node_id"), quality_profile)
+
         return {
             "stream_id": new_stream.id,
             "room_name": room_name,
             "livekit_url": node["livekit_url"],  # DB'ye yazılan node ile aynı
             "token": token,
             "category": category if category else "other",
+            "video_quality_profile": quality_profile,
         }

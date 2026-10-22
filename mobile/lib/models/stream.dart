@@ -88,6 +88,7 @@ class StreamTokenOut {
   final String livekitUrl;
   final String token;
   final String category;
+  final String videoQualityProfile;  // "pro" | "standard"
 
   StreamTokenOut({
     required this.streamId,
@@ -95,6 +96,7 @@ class StreamTokenOut {
     required this.livekitUrl,
     required this.token,
     required this.category,
+    this.videoQualityProfile = 'standard',
   });
 
   factory StreamTokenOut.fromJson(Map<String, dynamic> json) => StreamTokenOut(
@@ -103,6 +105,7 @@ class StreamTokenOut {
         livekitUrl: json['livekit_url'],
         token: json['token'],
         category: json['category'] ?? 'other',
+        videoQualityProfile: json['video_quality_profile'] ?? 'standard',
       );
 }
 

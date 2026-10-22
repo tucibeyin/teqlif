@@ -57,6 +57,7 @@ class StreamTokenOut(BaseModel):
     livekit_url: str
     token: str
     category: str
+    video_quality_profile: str = "standard"  # "pro" | "standard"
 
 
 class JoinTokenOut(BaseModel):
