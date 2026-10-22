@@ -2962,18 +2962,16 @@ class _MyListingsScreenState extends ConsumerState<_MyListingsScreen> {
     final status = ListingStatusExtension.fromJson(listing);
     final isActive = status == ListingStatus.active;
 
-    final costData = await ref.read(listingServiceProvider).getReactivationCost(id);
-    if (!mounted) return;
-
-    final isPremium = costData?['user_type'] == 'pro';
-    final remaining = costData?['free_remaining'] as int? ?? 0;
-    final cost = costData?['cost'] as int? ?? 10;
-    final balance = costData?['balance'] as int? ?? 0;
-    final canAfford = costData?['can_afford'] as bool? ?? false;
-    final withinWindow = costData?['within_window'] as bool? ?? false;
-
     if (isActive) {
       // Aktif → Pasif
+      final costData = await ref.read(listingServiceProvider).getReactivationCost(id);
+      if (!mounted) return;
+
+      final isPremium = costData?['user_type'] == 'pro';
+      final remaining = costData?['free_remaining'] as int? ?? 0;
+      final cost = costData?['cost'] as int? ?? 10;
+      final withinWindow = costData?['within_window'] as bool? ?? false;
+
       if (!withinWindow) {
         final hintText = (isPremium && remaining > 0)
             ? loc.t('listingDeactivateFreeCreditHint')

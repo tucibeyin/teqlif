@@ -39,6 +39,7 @@ import '../ui_library/components/buttons/teq_button.dart';
 import '../core/media_constants.dart';
 import '../services/media_compressor.dart';
 import '../providers/compression_progress_provider.dart';
+import '../core/event_bus.dart';
 import '../providers/ai_desc_provider.dart';
 
 class CreateListingScreen extends ConsumerStatefulWidget {
@@ -599,6 +600,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
       if (next.status == AiDescStatus.done && prev?.status == AiDescStatus.loading) {
         if (next.teqlikSpent > 0) {
           _loadAiDescCredits();
+          eventBus.fire(const CreditsChangedEvent());
           TeqSnackBar.show(
             message: loc.t('teqlikSpent', {'count': next.teqlikSpent.toString()}),
             type: TeqSnackBarType.success,

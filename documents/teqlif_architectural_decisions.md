@@ -54,7 +54,7 @@ Deploy pipeline ARB'ı okuyup DB'ye upsert eder.
 ### Mimari
 
 ```
-ARB dosyaları (4 dil, git'te)
+ARB dosyaları (5 dil, git'te)
         │  [deploy: python3 scripts/sync_translations.py]
         ▼
 translations(key, lang, value)   — PostgreSQL
@@ -876,7 +876,7 @@ Bir ekranı refactor ederken sırayla bu adımları uygula.
 ### 4.4 Son Kontroller
 
 - [ ] `dart analyze` → 0 error, 0 warning
-- [ ] Cihazda 4 dil test: TR / EN / AR / RU
+- [ ] Cihazda 5 dil test: TR / EN / AR / RU / DE
 - [ ] Error senaryosu test: network hatası veya API hatası → Toast görünmeli
 - [ ] `Result<T>` kullanan servis çağrıları varsa: `Err(:final error)` → `handleError(error, loc)`
 

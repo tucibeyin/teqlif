@@ -35,7 +35,7 @@ def build_listing_snapshot(listing: Listing) -> dict:
         "user_id": listing.user_id,
         "title": listing.title,
         "description": listing.description,
-        "price": listing.price,
+        "price": float(listing.price) if listing.price is not None else None,
         "category": listing.category,
         "subcategory": listing.subcategory,
         "brand": listing.brand,
@@ -52,7 +52,7 @@ def build_listing_snapshot(listing: Listing) -> dict:
         "deactivated_at": _serialize_datetime(listing.deactivated_at),
         "expires_at": _serialize_datetime(listing.expires_at),
         "is_highlight": listing.is_highlight,
-        "buy_it_now_price": listing.buy_it_now_price,
+        "buy_it_now_price": float(listing.buy_it_now_price) if listing.buy_it_now_price is not None else None,
     }
 
 
