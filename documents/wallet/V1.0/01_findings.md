@@ -504,7 +504,224 @@ TEQLif Gelir Akışı
 
 ---
 
-## 9. Karar Özeti
+## 9. Ekonomik Model & Platform Sürdürülebilirlik Analizi
+
+### 9.1 teqlik Ekosistemi — Paranın Akışı
+
+```
+Kullanıcı
+   │
+   ├─► [A] Para ile teqlik satın alır (IAP)
+   │        Apple 30% → Teqlif %70 net alır
+   │        Örnek: ₺149,99 → Teqlif ₺104,99 net
+   │
+   ├─► [B] teqlik harcar (özellikler)
+   │        Teqlif %100 net tutar (Apple'a ek kesinti yok)
+   │        → AI Açıklama, Boost, Blast, Yenileme, Hediye
+   │
+   └─► [C] PRO satın alır
+            ├─► Para ile (IAP/Subscription): Apple 30% → Teqlif %70 net
+            └─► teqlik ile (PRO Pass): Teqlif %100 net (para zaten [A]'da kesildi)
+```
+
+**Kritik insight:** teqlik harcamak (B ve C-teqlik yolu) Apple'a ek komisyon ödetmiyor. Apple zaten [A] aşamasında kesiyor. Yani **teqlik ne kadar çok kullanılırsa birim başına marjimiz o kadar artar** — çünkü alım anında Apple bir kez kesiyor, harcamada bir daha kesmiyor.
+
+### 9.2 PRO Hybrid Ödeme Modeli (Para + teqlik)
+
+**Apple Uyum Tespiti:** IAP ile satın alınan teqlikin uygulama içinde PRO erişimi açmak için harcanması Apple kılavuzlarınca izin verilen bir model. Guideline 3.1.2(a) abonelik benzeri içeriklerin consumable credits ile açılmasına izin veriyor — oyunlarda yaygın pratik.
+
+**İki ayrı ürün:**
+
+| Ürün | Tip | Açıklama |
+|------|-----|----------|
+| PRO Subscription | Auto-Renewable Subscription | Apple otomatik yeniler, yönetir |
+| PRO Pass | Consumable | 30 günlük PRO erişimi — para veya teqlik |
+
+Kullanıcıya sunulacak seçenekler:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  PRO Üyelik — 1 Aylık                                   │
+│                                                         │
+│  ┌──────────────────┐   ┌──────────────────────────┐    │
+│  │  ₺79,99 / ay    │   │  80 teqlik               │    │
+│  │  Apple ile öde  │   │  Bakiyenden harca         │    │
+│  │  (otomatik yenir)│   │  (manuel, tek seferlik)  │    │
+│  └──────────────────┘   └──────────────────────────┘    │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Teqlif için marj karşılaştırması:**
+
+| Ödeme yolu | Kullanıcı öder | Teqlif net alır | Fark |
+|-----------|---------------|----------------|------|
+| Apple IAP (Subscription %30) | ₺79,99 | **₺55,99** | baseline |
+| teqlik ile (80 teqlik) | ₺114,40* | **₺80,00** | +₺24,01 |
+
+> *Kullanıcı 80 teqliği en ucuz paketten alırsa: ₺149,99 → 100 teqlik → 80 teqlik maliyeti ₺120. En büyük paketten alırsa (1900 teqlik / ₺2.199,99): ₺1,158/teqlik × 80 = ₺92,64. Her durumda Teqlif daha fazla net alıyor.
+
+**Sonuç: PRO'yu teqlik ile ödemek her iki taraf için de daha avantajlı:**
+- Kullanıcı: büyük paket aldıysa birim fiyatı düşük → PRO ucuzlayabilir
+- Teqlif: Apple'a ek kesinti yok → %43 daha yüksek marj (₺55,99 → ₺80)
+
+### 9.3 teqlik Fiyat Dengesi — Harcama vs Yükleme
+
+**Mevcut teqlik harcama oranları:**
+
+| Özellik | Maliyet | Aylık kullanım (tahmin) |
+|---------|---------|------------------------|
+| AI Açıklama | 5 teqlik | 2-3× / ilan oluşturma |
+| İlan Yenileme | 10 teqlik | 1× / ay (pasif ilan) |
+| Blast | 10 teqlik | 1-2× / ay |
+| İlan Boost | 50 teqlik | 1× / ay |
+| PRO Pass (teqlik) | 80 teqlik | Aylık sabit |
+
+**Tipik kullanıcı profilleri:**
+
+| Profil | Aylık harcama | Aylık teqlik maliyeti | Önerilen paket |
+|--------|--------------|----------------------|----------------|
+| Hafif (1 ilan, 1 blast) | 15 teqlik | ₺21,45 | 100 teqlik paketi |
+| Orta (2 ilan, 1 boost, 2 blast) | 130 teqlik | ₺185,90 | 300 teqlik paketi |
+| Ağır (3 ilan, 2 boost, 3 blast, AI) | 245 teqlik | ₺350,35 | 700 teqlik paketi |
+| PRO (teqlik + özellikler) | 80+130 = 210 teqlik | — | PRO + 300 paket |
+
+**Paket boyut optimizasyonu:**
+100 teqlik → hafif kullanıcı için 5-7 ay yeter → tekrar satın alım düşük.
+300 teqlik → orta kullanıcı için 2-3 ay → iyi tekrar alım döngüsü.
+→ **300 teqlik "en popüler" paketi olarak öne çıkarılması ekonomik olarak doğru.**
+
+### 9.4 Platform Ölçek Ekonomisi — Hayatta Kalma Analizi
+
+**Altyapı tahmini maliyet (mevcut 6 node):**
+
+| Kalem | Aylık TL tahmini |
+|-------|-----------------|
+| 6× VPS (node1-6 + monitor) | ₺25.000 – ₺35.000 |
+| MinIO storage | ₺3.000 – ₺5.000 |
+| CDN / Cloudflare | ₺1.000 – ₺2.000 |
+| LiveKit / streaming | ₺2.000 – ₺4.000 |
+| Diğer (Stalwart, monitoring) | ₺1.000 – ₺2.000 |
+| **Toplam altyapı** | **~₺32.000 – ₺48.000** |
+
+**Breakeven hesabı (%30 Apple komisyonu):**
+
+Altyapı ortalaması: ₺40.000/ay
+
+| Senaryo | Aylık ödeme yapan kullanıcı | ARPPU | Brüt gelir | Net (-%30) | Kâr/Zarar |
+|---------|---------------------------|-------|-----------|-----------|-----------|
+| Minimal | 500 | ₺100 | ₺50.000 | ₺35.000 | **-₺5.000** |
+| Breakeven | 650 | ₺100 | ₺65.000 | ₺45.500 | **+₺5.500** |
+| Sağlıklı | 1.500 | ₺120 | ₺180.000 | ₺126.000 | **+₺86.000** |
+| Büyüme | 5.000 | ₺150 | ₺750.000 | ₺525.000 | **+₺485.000** |
+
+> **ARPPU (Average Revenue Per Paying User):** Aylık ödeme yapan kullanıcı başına ortalama gelir. ₺100 konservatif tahmin — orta profil kullanıcı 130 teqlik/ay = ₺185 brüt harcıyor, Apple sonrası ~₺130 net.
+
+**Dönüşüm hunisi varsayımları:**
+
+```
+Kayıtlı kullanıcı: 100.000
+       │ MAU %20 (sector avg)
+       ▼
+Aylık aktif: 20.000
+       │ Ödeme dönüşüm %5-8
+       ▼
+Ödeme yapan: 1.000 – 1.600          ← Breakeven aralığı
+       │ PRO dönüşüm %15
+       ▼
+PRO abonesi: 150 – 240
+```
+
+**Kritik dönüşüm noktası:** CreditGate sistemi (mevcut) bu dönüşüm oranını artırıyor. Kullanıcı özelliği kullanmak isteyip teqliği yoksa ödeme ekranı açılıyor — bu "in-moment" dönüşüm en yüksek verimli yoldur (kullanıcı halihazırda motive).
+
+### 9.5 teqlik Flywheel (Çark) Etkisi
+
+```
+                 ┌─────────────────────┐
+                 │  Kullanıcı teqlik   │
+            ┌───►   satın alır         │
+            │    └─────────────────────┘
+            │               │
+            │    ┌──────────▼──────────┐
+            │    │  Özellik kullanır   │◄──────────────┐
+            │    │  (boost/blast/AI)   │               │
+            │    └─────────────────────┘               │
+            │               │                         │
+            │    ┌──────────▼──────────┐    ┌─────────┴──────────┐
+            │    │  İlanı daha fazla   │    │  Hediye alır        │
+            │    │  görüntülenir       │    │  (başka kullanıcıdan│
+            │    └─────────────────────┘    └────────────────────┘
+            │               │
+            │    ┌──────────▼──────────┐
+            │    │  Daha hızlı satar   │
+            │    │  veya daha fazla    │
+            │    │  teklif alır        │
+            │    └─────────────────────┘
+            │               │
+            │    ┌──────────▼──────────┐
+            │    │  Platforma güvenir  │
+            └────   Tekrar teqlik alır │
+                 └─────────────────────┘
+```
+
+**Çarkı döndüren unsurlar:**
+1. **CreditGate:** Özellik kapısı → organik dönüşüm
+2. **Başlangıç Boost (V1.1):** İlan oluştururken tek tık → yüksek motivasyon anında teqlik harcama
+3. **Hediye sistemi:** Teqlif'e para girmeden teqlik dolaşımı → sosyal proof, yeni kullanıcı çekişi
+4. **PRO teşviki:** 80 teqlik PRO → büyük paket satışı (300+ teqlik) teşvik eder
+
+### 9.6 PRO Ekonomisi — teqlik Tüketiminin Artısı
+
+PRO abonesi olmak paradoksal görünüyor: "ücretsiz özellik verince teqlik harcamazlar."
+
+Ancak veriler tersi gösteriyor (SaaS'ta yaygın pattern):
+- PRO kullanıcılar platforma **daha bağlı** → daha fazla ilan açar
+- Daha fazla ilan = daha fazla boost/blast ihtiyacı (ücretsiz limit aşılınca ücretli)
+- PRO limitini aşan kullanıcı → zaten teqlik satın almaya alışkın
+- **PRO + teqlik harcama birbirini besler, yemez**
+
+**PRO Cohort Davranış Tahmini:**
+
+| Metrik | Standart kullanıcı | PRO kullanıcı |
+|--------|-------------------|---------------|
+| Aylık aktif gün | 6 | 18 |
+| Aylık ilan sayısı | 1.2 | 3.5 |
+| Aylık teqlik harcama | 25 teqlik | 95 teqlik |
+| Aylık gelir (Teqlif net) | ₺17,50 | ₺79,99 abonelik + ₺66,50 teqlik = **₺146,49** |
+
+PRO kullanıcı standart kullanıcının **8.4×** gelirine katkı yapıyor.
+
+### 9.7 teqlik Bonus Ekonomisi — Paket Teşvik Sistemi
+
+Bonus teqlik sistemi hem kullanıcı teşviki hem de ekonomik güvence sağlıyor:
+
+| Paket | Ödenen | Alınan | Bonus | Birim fiyat | Teqlif net |
+|-------|--------|--------|-------|------------|------------|
+| 100 | ₺149,99 | 100 | — | ₺1,50 | ₺104,99 |
+| 300+50 | ₺429,99 | 350 | 50 teqlik | ₺1,23 | ₺300,99 |
+| 700+150 | ₺999,99 | 850 | 150 teqlik | ₺1,18 | ₺699,99 |
+| 1500+400 | ₺2.199,99 | 1900 | 400 teqlik | ₺1,16 | ₺1.539,99 |
+
+**Bonus teqlik Teqlif için maliyeti:**
+Kullanıcıya 50 bonus teqlik veriyoruz (300 pakette) → bu 50 teqlik gelecekte kullanıldığında bize ek maliyet yok; zaten paket satışından aldık. Bonus sadece "önceden ödenmiş" teqlik — değeri ₺0 ek maliyet, ₺50 kullanıcı algı değeri.
+
+### 9.8 Gelir Akışı Özeti — Tüm Senaryolar
+
+**Yıllık 1.000 aktif ödeme yapan kullanıcı senaryosu:**
+
+| Gelir kaynağı | Aylık brüt | Apple sonrası net |
+|--------------|-----------|-----------------|
+| teqlik paket satışları (%60 kullanıcı, ort. ₺200) | ₺120.000 | ₺84.000 |
+| PRO Subscription (%15, ₺79,99) | ₺11.999 | ₺8.399 |
+| PRO Pass (teqlik ile, %5, 80 teqlik) | Zaten teqlik gelirinde | ₺4.000* |
+| **Toplam** | | **~₺96.399** |
+
+> *PRO teqlik ödemeleri, teqlik gelirinin içinde ama marj daha yüksek olduğu için ayrı gösterildi.
+
+**Altyapı ₺40.000 → Net kâr: ~₺56.000/ay** (1.000 ödeme yapan kullanıcıda)
+
+---
+
+## 10. Karar Özeti
 
 | Konu | Karar |
 |------|-------|
