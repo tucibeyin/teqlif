@@ -138,6 +138,8 @@ class UpdateListingCommand:
                     files_to_delete.append(old_video[len("/uploads/"):])
 
             listing.updated_at = datetime.now(timezone.utc)
+            from app.services.feed.listing_cache_service import build_listing_snapshot
+            _listing_snapshot = build_listing_snapshot(listing)
 
         # ── DB commit'ten sonra MinIO temizliği ────────────────────────────────
         for key in files_to_delete:
@@ -154,17 +156,13 @@ class UpdateListingCommand:
             pass
 
         try:
-            from app.services.feed.listing_cache_service import cache_listing, push_to_recent_feed_cache, remove_from_recent_feed_cache
-            from app.models.enums import ListingStatus
+            from app.services.feed.listing_cache_service import cache_listing_snapshot, push_to_recent_feed_cache, remove_from_recent_feed_cache
             import asyncio
-            # listing objesi DB commit'inden sonra detached olabileceğinden, burada UoW session dışındayız.
-            # Ancak verilerini önceden değiştirdiğimiz için primitive property'leri hala okuyabiliriz (lazy loading hariç).
-            # Listing objesinde relationship fetch etmiyoruz, dolayısıyla çalışması gerekir.
-            asyncio.create_task(cache_listing(listing))
-            if listing.status == ListingStatus.ACTIVE:
-                asyncio.create_task(push_to_recent_feed_cache(listing))
+            asyncio.create_task(cache_listing_snapshot(_listing_snapshot))
+            if _listing_snapshot.get('status') == 'active':
+                asyncio.create_task(push_to_recent_feed_cache(_listing_snapshot['id']))
             else:
-                asyncio.create_task(remove_from_recent_feed_cache(listing.id))
+                asyncio.create_task(remove_from_recent_feed_cache(_listing_snapshot['id']))
         except Exception as e:
             logger.error(f"[UpdateListingCommand] cache_listing hatası: {e}")
 

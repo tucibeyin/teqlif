@@ -101,9 +101,11 @@ class ToggleListingCommand:
 
         try:
             if reactivating:
-                from app.services.feed.listing_cache_service import cache_listing, push_to_recent_feed_cache
-                asyncio.create_task(cache_listing(listing))
-                asyncio.create_task(push_to_recent_feed_cache(listing))
+                from app.services.feed.listing_cache_service import build_listing_snapshot, cache_listing_snapshot, push_to_recent_feed_cache
+                snapshot = build_listing_snapshot(listing)
+                listing_id_for_feed = listing.id
+                asyncio.create_task(cache_listing_snapshot(snapshot))
+                asyncio.create_task(push_to_recent_feed_cache(listing_id_for_feed))
             else:
                 from app.utils.listing_cleanup import cleanup_listing_redis
                 asyncio.create_task(cleanup_listing_redis(listing_id))

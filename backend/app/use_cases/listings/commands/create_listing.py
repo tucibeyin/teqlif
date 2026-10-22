@@ -105,11 +105,14 @@ class CreateListingCommand:
         )
         
         try:
-            from app.services.feed.listing_cache_service import cache_listing, push_to_recent_feed_cache
+            from app.services.feed.listing_cache_service import build_listing_snapshot, cache_listing_snapshot, push_to_recent_feed_cache
             import asyncio
-            asyncio.create_task(cache_listing(new_listing))
-            if new_listing.status == ListingStatus.ACTIVE:
-                asyncio.create_task(push_to_recent_feed_cache(new_listing))
+            snapshot = build_listing_snapshot(new_listing)
+            new_listing_id = new_listing.id
+            new_listing_active = new_listing.status == ListingStatus.ACTIVE
+            asyncio.create_task(cache_listing_snapshot(snapshot))
+            if new_listing_active:
+                asyncio.create_task(push_to_recent_feed_cache(new_listing_id))
         except Exception as e:
             logger.error(f"[CreateListingCommand] cache_listing hatası: {e}")
 
