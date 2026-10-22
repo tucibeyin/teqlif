@@ -1,7 +1,7 @@
 # Pro Insight Kredi Sayaçları — Mimari ve Algoritmik Analiz
 
 **Tarih:** Temmuz 2026  
-**Kapsam:** 5 PRO özelliğin uçtan uca DB · API · ML/AI · ClickHouse · Flutter · UX tutarlılık analizi  
+**Kapsam:** 4 PRO özelliğin uçtan uca DB · API · ML/AI · ClickHouse · Flutter · UX tutarlılık analizi  
 **Bağlantılı:** `findings.md`, `pro_insight_architecture.md`, `architectural_decisions.md`
 
 ---
@@ -11,13 +11,12 @@
 1. [Sistem Haritası](#1-sistem-haritası)
 2. [Toplu Kitle Bildirimi (blast)](#2-toplu-kitle-bildirimi-blast)
 3. [Öne Çıkarılmış İlan (boost)](#3-öne-çıkarılmış-ilan-boost)
-4. [Yapay Zeka Danışmanı (ai_price)](#4-yapay-zeka-danışmanı-ai_price)
-5. [AI Açıklama Yazarı (ai_desc)](#5-ai-açıklama-yazarı-ai_desc)
-6. [Reaktivasyon (reactivation)](#6-reaktivasyon-reactivation)
-7. [Ortak Kredi Sistemi Analizi](#7-ortak-kredi-sistemi-analizi)
-8. [Cross-Feature Tutarlılık Sorunları](#8-cross-feature-tutarlılık-sorunları)
-9. [Clean Architecture Uyumluluk Denetimi](#9-clean-architecture-uyumluluk-denetimi)
-10. [Bulgular Özeti](#10-bulgular-özeti)
+4. [AI Açıklama Yazarı (ai_desc)](#4-ai-açıklama-yazarı-ai_desc)
+5. [Reaktivasyon (reactivation)](#5-reaktivasyon-reactivation)
+6. [Ortak Kredi Sistemi Analizi](#6-ortak-kredi-sistemi-analizi)
+7. [Cross-Feature Tutarlılık Sorunları](#7-cross-feature-tutarlılık-sorunları)
+8. [Clean Architecture Uyumluluk Denetimi](#8-clean-architecture-uyumluluk-denetimi)
+9. [Bulgular Özeti](#9-bulgular-özeti)
 
 ---
 
@@ -26,17 +25,17 @@
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                     Pro Hub Ekranı                          │
-│          (5 kredi sayacı — görüntü + tetikleyici)           │
-└──────┬──────────┬──────────┬──────────┬──────────┬──────────┘
-       │          │          │          │          │
-    blast       boost    ai_price   ai_desc  reactivation
-       │          │          │          │          │
- ┌─────▼──┐  ┌───▼────┐  ┌──▼─────┐ ┌──▼─────┐ ┌──▼──────┐
- │leads.py│  │ads.py  │  │analyt. │ │listing.│ │use_case │
- │listing.│  │        │  │.py     │ │.py     │ │toggle   │
- └─────┬──┘  └───┬────┘  └──┬─────┘ └──┬─────┘ └──┬──────┘
-       │          │          │           │           │
-       └──────────┴──────────┴───────────┴───────────┘
+│          (4 kredi sayacı — görüntü + tetikleyici)           │
+└──────┬──────────┬──────────┬──────────┬──────────┘
+       │          │          │          │
+    blast       boost    ai_desc  reactivation
+       │          │          │          │
+ ┌─────▼──┐  ┌───▼────┐  ┌──▼─────┐ ┌──▼──────┐
+ │leads.py│  │ads.py  │  │listing.│ │use_case │
+ │listing.│  │        │  │.py     │ │toggle   │
+ └─────┬──┘  └───┬────┘  └──┬─────┘ └──┬──────┘
+       │          │          │           │
+       └──────────┴──────────┴───────────┘
                              │
               credit_service.py (Redis sayaçları)
                     + TuciTransaction (PG)
@@ -177,70 +176,7 @@ API yanıtı gelene kadar kullanıcı 5/ay kazandığını sanıyor, gerçekte 3
 
 ---
 
-## 4. Yapay Zeka Danışmanı (ai_price)
-
-### 4.1 Flutter UI
-
-**Trigger — İlan oluşturma / düzenleme:**
-- `create_listing_screen.dart:242` → `_fetchAiPriceEstimate()`
-- `edit_listing_screen.dart:157` → aynı metot
-
-**Pro Hub sayacı:**
-- `pro_hub_screen.dart:92` → `AnalyticsService.getAiPriceCredits()`
-- `defaultPremiumLimit: 20, defaultFreeLimit: 0` ← **YANLIŞ fallback** (gerçek: 6/ay)
-
-### 4.2 Backend — Fiyat Tahmin Pipeline (`analytics.py:476`)
-
-```
-POST /api/analytics/price-estimate
- 1. Limit kontrolü: PRO=6/ay, standart=0
-    → aşılmış + teqlik yetersizse 402
- 2. title+desc+category → MD5 hash → Redis embedding cache
-    → miss: ARQ worker'a generate_embedding_task
-    → max 15 sn bekle
- 3. NER: ner_service.extract_ner() → marka/model/durum
- 4. Döviz kuru: PG exchange_rates → usd_try
- 5. pgvector cosine: listings.embedding <=> input_embedding
-    → filtreler: kategori, durum, aktivite, fiyat aralığı
-    → top 150 → ağırlıklı puanlama → final top 30
- 6. IQR outlier temizleme (≥10 nokta varsa)
- 7. KDE: scipy.stats.gaussian_kde → bimodal tespiti
- 8. Güven seviyesi: low/medium/high
- 9. credit_service.increment("ai_price", ...)
-    → ücretliyse TuciTransaction("spend_ai")
-```
-
-### 4.3 ML Bileşenleri
-
-| Bileşen | Model/Teknoloji | Konum |
-|---------|----------------|-------|
-| Embedding | sentence-transformers/all-MiniLM-L6-v2 | `ml_service.py:28` |
-| Vektör arama | pgvector (<=> cosine) | PostgreSQL |
-| NER | `ner_service.extract_ner()` | yerel Python |
-| İstatistik | IQR + scipy KDE | `analytics.py:720` |
-| Döviz | PG `exchange_rates` | statik tablo |
-| ClickHouse | **kullanılmıyor** | — |
-
-### 4.4 Tespit Edilen Sorunlar
-
-**F-AIPRICE-01 (Kritik) — Pro Hub fallback `defaultPremiumLimit: 20` ama gerçek limit 6/ay:**
-- Kullanıcı Pro Hub'da kredi doluncaya kadar sayacı 20 bazında okuyor.
-- `item.data` gelince güncelleniyor ama ağ yokken 20 gösterir → beklenti yönetimi bozuk.
-
-**F-AIPRICE-02 (Yüksek) — `TuciTransaction` type ayrımı yok:**
-- `ai_price` ve `ai_desc` her ikisi de `"spend_ai"` type ile yazılıyor.
-- Kullanıcı teqlik geçmişinde hangi özelliği kullandığını göremez.
-
-**F-AIPRICE-03 (Orta) — ARQ worker bekleme timeout: 15 sn:**
-- Embedding henüz generate edilmemişse (yeni ilan başlığı) kullanıcı 15 sn'ye kadar bekleyebilir.
-- Timeout'ta embedding cache'siz işlem devam ediyor mu, yoksa hata mı fırlatılıyor? UX belirsiz.
-
-**F-AIPRICE-04 (Düşük) — `generate_embedding_task` başarısız olursa kredi tüketiliyor mu?**
-- Pipeline uç durum: embedding üretimi başarısız → fiyat tahmini kalitesiz verilere döner → `credit_service.increment()` yine de çağrılıyor mu? Kod sırası bunu risk altında bırakıyor.
-
----
-
-## 5. AI Açıklama Yazarı (ai_desc)
+## 4. AI Açıklama Yazarı (ai_desc)
 
 ### 5.1 Flutter UI
 
@@ -288,8 +224,8 @@ POST /api/listings/generate-description
 - Kullanıcı ücretsiz metni aldı ama kredi düşmedi → kota aşımı.
 - Tersine: `increment()` başarılı ama `done` eventi ulaşmadan client bağlantıyı keserse Flutter "kullanım sayıldı mı?" bilemez.
 
-**F-AIDESC-02 (Yüksek) — `TuciTransaction` type = `"spend_ai"` (ai_price ile çakışıyor):**
-- Kullanıcı teqlik harcamasını kaynak özelliğe göre ayırt edemiyor.
+**F-AIDESC-02 — `TuciTransaction` type ayrımı (✅ Tamamlandı):**
+- `spend_ai_desc` olarak güncellendi.
 
 **F-AIDESC-03 (Orta) — Groq kota dolunca Gemini'ye geçiş sessiz:**
 - LLM fallback mantığı son kullanıcıya yansıtılmıyor.
@@ -300,7 +236,7 @@ POST /api/listings/generate-description
 
 ---
 
-## 6. Reaktivasyon (reactivation)
+## 5. Reaktivasyon (reactivation)
 
 ### 6.1 Flutter UI
 
@@ -349,7 +285,7 @@ PATCH /api/listings/{id}/toggle
 - Reaktive edilen eski ilan, ertesi gün Pro Insights'ta "yeni" gibi davranabilir.
 
 **F-REACT-02 (Yüksek) — Pro Hub fallback `defaultPremiumLimit: 5`, gerçek: 3/ay:**
-- Yukarıda boost ve ai_price ile aynı sorun.
+- Yukarıda boost ile aynı sorun.
 
 **F-REACT-03 (Orta) — 30 gün penceresi ile aylık PRO limiti çakışması:**
 - PRO kullanıcı, ayda 3 ücretsiz reaktivasyon hakkına sahip.
@@ -363,7 +299,7 @@ PATCH /api/listings/{id}/toggle
 
 ---
 
-## 7. Ortak Kredi Sistemi Analizi
+## 6. Ortak Kredi Sistemi Analizi
 
 ### 7.1 credit_service.py — Gerçek Limit Tablosu
 
@@ -371,7 +307,6 @@ PATCH /api/listings/{id}/toggle
 |---------|-----------------|----------|-----|------|-------|
 | blast | `blast_credits` | 3/ay | 6/ay | 10/kişi | premium_since bazlı |
 | boost | `boost_credits` | 0 | 3/ay | 50 | premium_since bazlı |
-| ai_price | `ai_price_credits` | 0 | 6/ay | 5 | premium_since bazlı |
 | ai_desc | `ai_desc_credits` | 0 | 6/ay | 5 | premium_since bazlı |
 | reactivation | `reactivation_credits` | 0 | 3/ay | 10 | premium_since bazlı |
 
@@ -381,7 +316,6 @@ PATCH /api/listings/{id}/toggle
 |---------|----------------------------|-----------------|------|
 | blast | 6 | 6 | ✅ |
 | boost | **5** | **3** | ❌ |
-| ai_price | **20** | **6** | ❌ |
 | ai_desc | 6 | 6 | ✅ |
 | reactivation | **5** | **3** | ❌ |
 
@@ -412,13 +346,12 @@ def billing_period_start(premium_since: datetime) -> date:
 | blast (leads) | belirsiz / eksik | ❌ Kayıt yok olabilir |
 | blast (listing) | `"spend_mass_notification"` | ✅ |
 | boost | `"spend_boost"` | ✅ |
-| ai_price | `"spend_ai"` | ⚠️ ai_desc ile aynı |
-| ai_desc | `"spend_ai"` | ⚠️ ai_price ile aynı |
+| ai_desc | `"spend_ai_desc"` | ✅ |
 | reactivation | `"spend_reactivation"` | ✅ |
 
 ---
 
-## 8. Cross-Feature Tutarlılık Sorunları
+## 7. Cross-Feature Tutarlılık Sorunları
 
 ### 8.1 Veri Akışı Tutarsızlıkları
 
@@ -460,7 +393,7 @@ Blast gönderildi → kullanıcı tıkladı → listing_detail açıldı
 
 ---
 
-## 9. Clean Architecture Uyumluluk Denetimi
+## 8. Clean Architecture Uyumluluk Denetimi
 
 `architectural_decisions.md` ve Clean Architecture prensiplerine göre değerlendirme:
 
@@ -468,17 +401,16 @@ Blast gönderildi → kullanıcı tıkladı → listing_detail açıldı
 |---------|----------|------------|---------------|------|
 | blast | ❌ leads.py inline | ❌ doğrudan DB | ⚠️ kısmi | Düşük |
 | boost | ❌ ads.py inline | ❌ doğrudan DB | ⚠️ kısmi | Düşük |
-| ai_price | ❌ analytics.py inline | ❌ doğrudan DB | ✅ iyi | Düşük |
 | ai_desc | ❌ listings.py inline | ❌ doğrudan DB | ✅ iyi | Düşük |
 | reactivation | ✅ ToggleListingCommand | ✅ kısmi UoW | ✅ iyi | **Yüksek** |
 
 **Reaktivasyon** tek istisna: `GetReactivationCostQuery` ve `ToggleListingCommand` use case katmanında, unit test yazılabilir durumda.
 
-Diğer 4 özellik: iş mantığı (limit kontrolü, kitle seçimi, push gönderme, kredi düşümü) doğrudan router'da. Değişime kapalı, teste kapalı.
+Diğer 3 özellik: iş mantığı (limit kontrolü, kitle seçimi, push gönderme, kredi düşümü) doğrudan router'da. Değişime kapalı, teste kapalı.
 
 ---
 
-## 10. Bulgular Özeti
+## 9. Bulgular Özeti
 
 | ID | Özellik | Açıklama | Önem |
 |----|---------|----------|------|
@@ -487,26 +419,20 @@ Diğer 4 özellik: iş mantığı (limit kontrolü, kitle seçimi, push gönderm
 | F-BOOST-01 | boost | Pro Hub fallback 5, gerçek limit 3 | Kritik |
 | F-BOOST-02 | boost | `is_boosted` DB alanı yok, JOIN gerekiyor | Orta |
 | F-BOOST-03 | boost | Pasife alınan boosted ilan → Redis'te gecikme | Düşük |
-| F-AIPRICE-01 | ai_price | Pro Hub fallback 20, gerçek limit 6 | Kritik |
-| F-AIPRICE-02 | ai_price | `spend_ai` type — ai_desc ile çakışıyor | Yüksek |
-| F-AIPRICE-03 | ai_price | ARQ timeout UX belirsizliği | Orta |
-| F-AIPRICE-04 | ai_price | Embedding başarısız → kredi tüketimi risk | Orta |
 | F-AIDESC-01 | ai_desc | SSE sonrası kredi → bağlantı kopunca tüketilmiyor | Kritik |
-| F-AIDESC-02 | ai_desc | `spend_ai` type — ai_price ile çakışıyor | Yüksek |
+| F-AIDESC-02 | ai_desc | `spend_ai` type ayrımı düzeltildi (spend_ai_desc) | ✅ Tamamlandı |
 | F-AIDESC-03 | ai_desc | LLM fallback (Groq→Gemini) kullanıcıya şeffaf değil | Orta |
 | F-REACT-01 | reactivation | `created_at` sıfırlanması → Insights'ta yapay veri | Yüksek |
 | F-REACT-02 | reactivation | Pro Hub fallback 5, gerçek limit 3 | Kritik |
 | F-REACT-03 | reactivation | 30 gün penceresi ve aylık limit etkileşimi şeffaf değil | Orta |
-| F-CROSS-01 | hepsi | 3 özellikte Pro Hub fallback limitleri gerçekle uyuşmuyor | Kritik |
-| F-CROSS-02 | hepsi | ai_price + ai_desc aynı TuciTransaction type → raporlama kör | Yüksek |
+| F-CROSS-01 | hepsi | 2 özellikte Pro Hub fallback limitleri gerçekle uyuşmuyor | Kritik |
 | F-CROSS-03 | blast+react | Reaktivasyon → Blast hedef kitlesi → Funnel event döngüsü | Orta |
 | F-ARCH-01 | hepsi | 4/5 özellikte iş mantığı router'da (CA ihlali) | Yüksek |
 
 ### Acil Düzeltmeler (Kritik)
 
-1. **Pro Hub fallback değerlerini credit_service.py ile senkronize et** — boost:3, ai_price:6, reactivation:3
+1. **Pro Hub fallback değerlerini credit_service.py ile senkronize et** — boost:3, reactivation:3
 2. **F-AIDESC-01** — ai_desc'te krediyi stream BAŞLAMADAN düş (ya da idempotent token mekanizması kur)
-3. **F-AIPRICE-02 / F-AIDESC-02** — TuciTransaction type'ı `"spend_ai_price"` ve `"spend_ai_desc"` olarak ayır
 
 ### Önerilen İyileştirme Sırası
 

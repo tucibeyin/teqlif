@@ -9,14 +9,14 @@
 
 | ID | Başlık | Kaynak | Öncelik | Durum | Tarih |
 |----|--------|--------|---------|-------|-------|
-| T-CNT-01 | Pro Hub fallback limitleri düzelt (boost:3, ai_price:6, react:3) | F-CROSS-01 | Kritik | ✅ Tamamlandı | 31 Tem 2026 |
-| T-CNT-02 | TuciTransaction type ayrıştır: spend_ai_price / spend_ai_desc | F-AIPRICE-02, F-AIDESC-02 | Yüksek | ✅ Tamamlandı | 31 Tem 2026 |
+| T-CNT-01 | Pro Hub fallback limitleri düzelt (boost:3, react:3) | F-CROSS-01 | Kritik | ✅ Tamamlandı | 31 Tem 2026 |
+| T-CNT-02 | TuciTransaction type ayrıştır: spend_ai_desc | F-AIDESC-02 | Yüksek | ✅ Tamamlandı | 31 Tem 2026 |
 | T-CNT-03 | SSE krediyi ilk chunk'ta say (bağlantı kopma koruması) | F-AIDESC-01 | Kritik | ✅ Tamamlandı | 31 Tem 2026 |
 | T-CNT-04 | Lead blast'a 24 saatlik cooldown ekle | F-BLAST-02 | Orta | ✅ Tamamlandı | 31 Tem 2026 |
 | T-CNT-05 | listings.py blast TuciTransaction type düzelt (spend_lead_gen → spend_blast) | F-BLAST-01 | Yüksek | ✅ Tamamlandı | 31 Tem 2026 |
 | T-CNT-06 | Reaktivasyon → created_at sıfırlanmasını Insights sorgularında ele al | F-REACT-01 | Yüksek | ✅ Tamamlandı | 31 Tem 2026 |
 | T-CNT-07 | boost: is_boosted hot_leads API + Flutter badge | F-BOOST-02 | Orta | ✅ Tamamlandı | 31 Tem 2026 |
-| T-CNT-08 | ai_price embed başarısız → kredi tüketme, hata döndür | F-AIPRICE-04 | Orta | ✅ Tamamlandı | 31 Tem 2026 |
+| T-CNT-08 | ai_price özelliği kaldırıldı (N/A) | — | — | 🗑️ Silindi | Eki 2026 |
 | T-CNT-09 | LLM fallback (Groq→Gemini) Flutter'a bildirilsin | F-AIDESC-03 | Düşük | ✅ Tamamlandı | 31 Tem 2026 |
 | T-CNT-10 | 30 gün reaktivasyon penceresini Pro Hub sayacında göster | F-REACT-03 | Düşük | ✅ Tamamlandı | 31 Tem 2026 |
 
@@ -32,15 +32,11 @@
 |---------|------|------|
 | boost `defaultPremiumLimit` | 5 | 3 |
 | boost `defaultFreeLimit` | 1 | 0 |
-| ai_price `defaultPremiumLimit` | 20 | 6 |
 | reactivation `defaultPremiumLimit` | 5 | 3 |
 
 ---
 
 ### T-CNT-02 — TuciTransaction Type Ayrıştırma ✅ Tamamlandı
-
-**analytics.py** — ai_price işlemleri:
-- `"spend_ai"` → `"spend_ai_price"`
 
 **listings.py** — ai_desc işlemleri:
 - `"spend_ai"` → `"spend_ai_desc"` (2 yer)
@@ -106,16 +102,9 @@ CREATE INDEX CONCURRENTLY IF NOT EXISTS ix_listings_reactivated_at
 
 ---
 
-### T-CNT-08 — AI Price Embed Başarısız → Kredi Tüketme ✅ Tamamlandı
+### T-CNT-08 — AI Price Embed (🗑️ Silindi)
 
-**Dosya:** [backend/app/routers/analytics.py](../../../../backend/app/routers/analytics.py#L528)
-
-ARQ job tamamlandıktan sonra embedding boyutu doğrulanıyor:
-```python
-if not embedding or len(embedding) < 64:
-    raise ServiceException(code="AI_SERVICE_EMBEDDING_INVALID")
-```
-Geçersiz embedding Redis'e yazılmıyor, kredi tüketilmiyor.
+**Not:** `ai_price` özelliği Ekim 2026'da tüm sistemden kaldırıldı. Bu task artık geçerli değil.
 
 ---
 
