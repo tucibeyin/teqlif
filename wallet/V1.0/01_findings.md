@@ -342,7 +342,135 @@ Apple bir satın alımı geri alabilir (`REFUND` App Store Server Notification).
 
 ---
 
-## 8. Karar Özeti
+## 8. TEQLik Ekosistem Haritası & Genişleme Alanları
+
+### 8.1 Mevcut TEQLik Kullanım Alanları
+
+| Alan | Ekran | Maliyet | Durum |
+|------|-------|---------|-------|
+| AI Açıklama | İlan Ver (create_listing_screen) | 5 TEQLik | ✅ Aktif |
+| İlan Yenileme | İlan Detay + Profil toggle | 10 TEQLik | ✅ Aktif |
+| Blast / Kitle Bildirimi | İlan Detay | 10 TEQLik | ✅ Aktif |
+| İlan Boost (Öne Çıkarma) | İlan Detay | 50 TEQLik | ✅ Aktif |
+
+### 8.2 Hediye (Gift) Sistemi — Endüstri Analizi
+
+**Konsept:** Kullanıcı A, kullanıcı B'ye TEQLik gönderir (örn. "Çok beğendim, boost yap" hediyesi).
+
+**Endüstri pratikleri:**
+- **OfferUp "Props":** Satıcıya beğeni/saygı gönderme — ancak parasal değer taşımıyor, sembolik
+- **Etsy Gift Cards:** Harici hediye kartı sistemi; in-app transfer yok
+- **Depop / Vinted:** Kullanıcılar arası para transferi yok; ödeme yalnızca satış üzerinden
+- **Facebook Marketplace:** Kullanıcı arası transfer yok
+
+**Risk analizi:**
+- ✅ Sosyal etkileşimi artırır, elde tutma (retention) yükseltir
+- ❌ Sahte hesap döngüsü riski: kullanıcı A kendi B hesabına gönderir, iade gibi kullanır
+- ❌ Apple perspektifi: Kullanıcılar arası transferable virtual currency → App Review ek dikkat gerektirir
+- ❌ Para transferi regülasyonu riski (BDDK, MASAK) — Türkiye'de sanal para transferi düzenleyici belirsizlik
+
+**Karar önerisi — V1.0 dışında tut.** Hediye sistemi regülasyon riski ve sahte kullanım karmaşıklığı nedeniyle ilk versiyona eklenmemeli. V2.0 roadmap'e alınabilir, ancak hukuki değerlendirme şart.
+
+### 8.3 İlan Ver Ekranında Ek TEQLik Noktaları
+
+**Mevcut:** AI Açıklama (5 TEQLik) — create_listing_screen'de aktif.
+
+**Endüstri pratiklerinden:**
+- **Sahibinden.com:** İlan oluşturma sırasında "Öne Çıkar" seçeneği (kredi gerektirir)
+- **OLX:** "Urgent" / "Top Ad" eklenebilir paketler, ilan oluştururken ödeme
+- **Wallapop:** Oluşturma sırasında highlight opsiyonu
+
+**Potansiyel ekleme — İlan Ver'de "Başlangıç Boost" seçeneği:**
+```
+İlanını Oluştur → Özet Ekranı
+  ┌─────────────────────────────────────┐
+  │  ✨ İlanını hemen öne çıkar         │
+  │  50 TEQLik ile ilk 24 saat vitrin  │
+  │  [Ekle]          [Geç]             │
+  └─────────────────────────────────────┘
+```
+→ Dönüşüm oranı yüksek (kullanıcı motivasyonun en yüksek olduğu an)
+→ V1.1 için öncelikli özellik
+
+### 8.4 PRO Üyelik — Endüstri Analizi & Apple IAP Tipi
+
+**Kritik fark — IAP Ürün Tipi:**
+
+| Ürün Tipi | Kullanım | Apple Komisyonu |
+|-----------|---------|----------------|
+| Consumable | TEQLik paketleri | **%30 her zaman** (SBP: %15) |
+| Auto-Renewable Subscription | PRO üyelik | **%30 yıl 1 → %15 yıl 2+** |
+
+> Auto-Renewable Subscription, abonelik 1 yılı geçince Apple otomatik olarak %15'e geçiyor. Consumable için bu indirim yok. PRO üyelik için subscription modeli hem Apple açısından daha avantajlı hem de iş modeli açısından öngörülebilir gelir sağlıyor.
+
+**Endüstri PRO Fiyatları (Marketplace / Classified Apps):**
+
+| Platform | 1 Ay | Yıllık | Özellikler |
+|---------|------|--------|-----------|
+| MoxMarket (NZ) | $5 NZD | — | 2 boost/ay, düşük komisyon |
+| Moonsted (Global) | $10.99 USD | $79.99 USD | Priority listing, boost |
+| OLX Pro (global) | ~$15 USD | ~$120 USD | İlan önceliği, rozet |
+| Sahibinden Pro | Belirsiz | — | Emlak/Galeri odaklı |
+
+**Türkiye referans abonelik fiyatları (App Store 2025):**
+
+| Servis | Aylık |
+|--------|-------|
+| Spotify | ~₺39,99 |
+| YouTube Premium | ~₺49,99 |
+| LinkedIn Career | ~₺249,99 |
+
+**Önerilen PRO Paket Yapısı:**
+
+| Plan | App Store Fiyatı | Net Gelir (%30) | Avantajlar |
+|------|-----------------|----------------|-----------|
+| 1 Ay | **₺99,99** | ₺69,99 | — |
+| 3 Ay | **₺269,99** | ₺188,99 | %10 indirim |
+| 6 Ay | **₺499,99** | ₺349,99 | %17 indirim |
+| 12 Ay | **₺899,99** | ₺629,99 | %25 indirim |
+
+**PRO Üye Avantajları (Öneri):**
+
+| Özellik | Standart | PRO |
+|---------|---------|-----|
+| Aktif ilan yenileme (aylık) | 1 ücretsiz | 5 ücretsiz |
+| Blast / Kitle Bildirimi | Ücretli | 3/ay ücretsiz |
+| Profil rozeti | — | ✓ Doğrulanmış rozet |
+| İlan sıralaması | Normal | Aynı kategoride +öncelik |
+| İstatistik / Analytics | Temel | Detaylı (görüntülenme, tıklama) |
+| Müşteri desteği | Standart | Öncelikli |
+
+> **App Store Connect'te iki ayrı ürün grubu gerekiyor:** Consumable grubu (TEQLik paketleri) + Auto-Renewable Subscription grubu (PRO planlar). Her grup ayrı Apple onayından geçiyor.
+
+### 8.5 Tüm Gelir Akışı Haritası (V1.0 + V2.0)
+
+```
+TEQLif Gelir Akışı
+├── Consumable IAP (TEQLik paketleri)
+│    ├── 100 TEQLik — ₺149,99
+│    ├── 300 TEQLik +50 bonus — ₺429,99  
+│    ├── 700 TEQLik +150 bonus — ₺999,99
+│    └── 1500 TEQLik +400 bonus — ₺2.199,99
+│
+├── Auto-Renewable Subscription (PRO)         ← V2.0
+│    ├── 1 Ay — ₺99,99
+│    ├── 3 Ay — ₺269,99
+│    ├── 6 Ay — ₺499,99
+│    └── 12 Ay — ₺899,99
+│
+├── TEQLik Harcama Noktaları
+│    ├── AI Açıklama (5 TEQLik) — create_listing_screen ✅
+│    ├── İlan Yenileme (10 TEQLik) ✅
+│    ├── Blast / Kitle Bildirimi (10 TEQLik) ✅
+│    ├── İlan Boost (50 TEQLik) ✅
+│    └── Başlangıç Boost (ilan oluşturulurken, 50 TEQLik) ← V1.1
+│
+└── Hediye Sistemi (kullanıcılar arası)       ← V3.0 (hukuki değerlendirme şart)
+```
+
+---
+
+## 9. Karar Özeti
 
 | Konu | Karar |
 |------|-------|
@@ -350,8 +478,12 @@ Apple bir satın alımı geri alabilir (`REFUND` App Store Server Notification).
 | Başlangıç paketi fiyatı (%30) | **₺149,99 → 100 TEQLik** |
 | Başlangıç paketi fiyatı (%15) | **₺119,99 → 100 TEQLik** |
 | Efektif TEQLik/TL oranı | ₺1,43 (%30) veya ₺1,18 (%15) |
-| IAP ürün tipi | Consumable |
+| TEQLik IAP ürün tipi | **Consumable** |
+| PRO üyelik IAP ürün tipi | **Auto-Renewable Subscription** (V2.0) |
 | Backend doğrulama | App Store Server API v2 JWS |
 | Refund politikası V1.0 | Log kaydı, bakiye değişimi yok |
 | Android | V1.0 kapsamı dışı |
 | Tab yapısı | Tab 1: Mağaza, Tab 2: İşlem Geçmişi |
+| Hediye sistemi | V3.0 — hukuki değerlendirme şart |
+| Başlangıç Boost (İlan Ver'de) | V1.1 — yüksek öncelik |
+| PRO planlar | V2.0 — aylık ₺99,99 / 3 ay ₺269,99 / 6 ay ₺499,99 / 12 ay ₺899,99 |
