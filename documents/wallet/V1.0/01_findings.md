@@ -55,15 +55,21 @@
 
 Hedef: **1 teqlik = 1 TL net gelir** (Apple komisyonu kullanıcıya yansıtılıyor)
 
-**%30 komisyon ile:**
-```
-Kullanıcı fiyatı = Net hedef / (1 - 0.30) = 1 TL / 0.70 = 1.4286 TL/teqlik
-```
+> **⚠️ Türkiye KDV Notu:** Apple Türkiye App Store fiyatlarına **%20 KDV dahildir**. Apple KDV'yi devlete remit eder, kalan tutardan komisyon alır. Formül: `Net = Fiyat ÷ 1,20 × (1 − komisyon)`. Bu ek %14,3'lük düzeltme tüm gelir projeksiyonlarına yansıtılmıştır. Önceki hesaplamalar bu kalemi eksik içeriyordu.
 
-**%15 komisyon ile (Small Business):**
+**%30 komisyon ile (KDV %20 dahil):**
 ```
-Kullanıcı fiyatı = 1 TL / 0.85 = 1.176 TL/teqlik
+Net = Fiyat ÷ 1,20 × 0,70
+Fiyat = 1 TL ÷ 0,5833 = 1,714 TL/teqlik  (₺1 net için gerçek hedef)
 ```
+Mevcut fiyatlandırma: ₺149,99 → 100 teqlik → ₺0,875 net/teqlik
+
+**%15 komisyon ile (Small Business, KDV %20 dahil):**
+```
+Net = Fiyat ÷ 1,20 × 0,85
+Fiyat = 1 TL ÷ 0,7083 = 1,412 TL/teqlik  (₺1 net için gerçek hedef)
+```
+Mevcut fiyatlandırma: ₺119,99 → 100 teqlik → ₺0,850 net/teqlik
 
 > **Öneri:** İlk lansman için %15 Small Business Program'a başvur, fiyatları buna göre belirle. Eğer programa girilemezse %30 hesabı geçerli.
 
@@ -71,21 +77,27 @@ Kullanıcı fiyatı = 1 TL / 0.85 = 1.176 TL/teqlik
 
 #### %30 Komisyon Senaryosu (Konservatif / Garantili)
 
-| Paket | teqlik | Bonus | Toplam | App Store Fiyatı | Net Gelir | Efektif TL/teqlik |
-|-------|--------|-------|--------|-----------------|-----------|-------------------|
-| Başlangıç | 100 | — | 100 | **₺149,99** | ₺104,99 | ₺1,50 |
-| Popüler 🔥 | 300 | +50 | 350 | **₺429,99** | ₺300,99 | ₺1,00 |
-| Avantaj 💎 | 700 | +150 | 850 | **₺999,99** | ₺699,99 | ₺0,82 |
-| Mega | 1500 | +400 | 1900 | **₺2.199,99** | ₺1.539,99 | ₺0,81 |
+| Paket | teqlik | Bonus | Toplam | App Store Fiyatı | Net Gelir (KDV+%30)¹ | Efektif TL/teqlik² |
+|-------|--------|-------|--------|-----------------|----------------------|--------------------|
+| Başlangıç | 100 | — | 100 | **₺149,99** | **₺87,49** | ₺1,50 |
+| Popüler 🔥 | 300 | +50 | 350 | **₺429,99** | **₺250,83** | ₺1,23 |
+| Avantaj 💎 | 700 | +150 | 850 | **₺999,99** | **₺583,33** | ₺1,18 |
+| Mega | 1500 | +400 | 1900 | **₺2.199,99** | **₺1.283,33** | ₺1,16 |
+
+> ¹ Net = Fiyat ÷ 1,20 × 0,70 (KDV %20 ve Apple %30 sonrası)
+> ² Efektif TL/teqlik = App Store Fiyatı ÷ Toplam teqlik — kullanıcının ödediği birim maliyet
 
 #### %15 Komisyon Senaryosu (Small Business — Önerilen)
 
-| Paket | teqlik | Bonus | Toplam | App Store Fiyatı | Net Gelir | Efektif TL/teqlik |
-|-------|--------|-------|--------|-----------------|-----------|-------------------|
-| Başlangıç | 100 | — | 100 | **₺119,99** | ₺101,99 | ₺1,02 |
-| Popüler 🔥 | 300 | +50 | 350 | **₺349,99** | ₺297,49 | ₺0,85 |
-| Avantaj 💎 | 700 | +150 | 850 | **₺829,99** | ₺705,49 | ₺0,83 |
-| Mega | 1500 | +400 | 1900 | **₺1.749,99** | ₺1.487,49 | ₺0,78 |
+| Paket | teqlik | Bonus | Toplam | App Store Fiyatı | Net Gelir (KDV+%15)¹ | Efektif TL/teqlik² |
+|-------|--------|-------|--------|-----------------|----------------------|--------------------|
+| Başlangıç | 100 | — | 100 | **₺119,99** | **₺84,99** | ₺1,20 |
+| Popüler 🔥 | 300 | +50 | 350 | **₺349,99** | **₺247,91** | ₺1,00 |
+| Avantaj 💎 | 700 | +150 | 850 | **₺829,99** | **₺587,91** | ₺0,98 |
+| Mega | 1500 | +400 | 1900 | **₺1.749,99** | **₺1.239,58** | ₺0,92 |
+
+> ¹ Net = Fiyat ÷ 1,20 × 0,85 (KDV %20 ve SBP %15 sonrası)
+> ² Efektif TL/teqlik = App Store Fiyatı ÷ Toplam teqlik — kullanıcının ödediği birim maliyet
 
 > **App Store Fiyat Tier'ları:** Apple'ın TRY tier listesi 2023 yeniden yapılandırması sonrası ~900 seçeneğe genişledi. ₺119,99 / ₺149,99 / ₺349,99 / ₺429,99 / ₺829,99 / ₺999,99 / ₺1.749,99 / ₺2.199,99 tier'larının App Store Connect → Pricing'den doğrulanması gerekiyor. Tam liste ancak App Store Connect'te görülüyor.
 
@@ -206,12 +218,25 @@ ALTER TABLE teqlik_transactions ADD COLUMN apple_transaction_id VARCHAR(64) UNIQ
 ```
 Aynı `transaction_id` ile ikinci istek → HTTP 409 dönmeli, bakiye yüklenmemeli.
 
-**Refund / Revocation:**
-Apple bir satın alımı geri alabilir (`REFUND` App Store Server Notification). Bu geldiğinde politika kararı gerekiyor:
-- Seçenek A: Bakiyeden düş (kullanıcı kızabilir)
-- Seçenek B: Hesabı askıya al
-- Seçenek C: Görmezden gel (Apple'ın para iadesi zaten gerçekleşti)
-→ **V1.0 için:** Seçenek C + log kaydı. Refund webhook'u ileriye ertelenebilir.
+**Refund / Revocation — ⚠️ V1.0 ZORUNLU:**
+Apple bir satın alımı geri alabilir (`REFUND` App Store Server Notification). "Görmezden gel" politikası aktif bir açık yaratır: kullanıcı büyük paket alır, tüm özellikleri hemen harcar (boost, blast), ardından Apple'dan iade alır. Teqlif para iadesi yapar ama harcanan teqlik geri dönmez. Türkiye mobil gaming'de "refund çetesi" belgelenmiş bir risktir.
+
+**Politika (V1.0 zorunlu):**
+- `REFUND` event → apple_transaction_id ile işlemi bul
+- Bakiyeden düş (iade edilen teqlik miktarı kadar)
+- Bakiye < 0 olursa: `pending_refund` flag + insan incelemesi tetikle
+- Tüm refund olayları `refund_log` tablosuna yaz
+
+**Refund webhook akışı:**
+```
+Apple → POST /api/wallet/apple-notifications
+  eventType: "REFUND"
+  → apple_transaction_id ile TeqlikTransaction'ı bul
+  → teqlik_balance -= iade_miktarı  (atomik)
+  → bakiye < 0 ise: users.pending_refund = true
+  → RefundLog kaydı oluştur
+  → 200 OK döndür (Apple retry yapar 4xx'te)
+```
 
 ### 4.3 Mevcut Backend Durumu
 
@@ -308,6 +333,7 @@ Apple bir satın alımı geri alabilir (`REFUND` App Store Server Notification).
 | 2 | Apple Small Business Program'a başvur | **Kullanıcı** | Evet (fiyat etkiler) |
 | 3 | `apple_transaction_id UNIQUE` migration | Backend | Evet |
 | 4 | Backend `POST /api/wallet/apple-verify` + JWS doğrulama | Backend | Evet |
+| 4b | Backend `POST /api/wallet/apple-notifications` + Refund webhook | Backend | **Evet** |
 | 5 | Sandbox test ortamı konfigürasyonu | Backend | Evet |
 | 6 | `in_app_purchase` Flutter paketi ekle | Mobile | Evet |
 | 7 | `IAPService` + `purchaseStream` dinleyici | Mobile | Evet |
@@ -512,15 +538,15 @@ TEQLif Gelir Akışı
 Kullanıcı
    │
    ├─► [A] Para ile teqlik satın alır (IAP)
-   │        Apple 30% → Teqlif %70 net alır
-   │        Örnek: ₺149,99 → Teqlif ₺104,99 net
+   │        Apple %30 + KDV %20 → Teqlif %58,3 net alır
+   │        Örnek: ₺149,99 ÷ 1,20 × 0,70 = Teqlif ₺87,49 net
    │
    ├─► [B] teqlik harcar (özellikler)
    │        Teqlif %100 net tutar (Apple'a ek kesinti yok)
    │        → AI Açıklama, Boost, Blast, Yenileme, Hediye
    │
    └─► [C] PRO satın alır
-            ├─► Para ile (IAP/Subscription): Apple 30% → Teqlif %70 net
+            ├─► Para ile (IAP/Subscription): KDV+%30 → Teqlif %58,3 net
             └─► teqlik ile (PRO Pass): Teqlif %100 net (para zaten [A]'da kesildi)
 ```
 
@@ -544,7 +570,7 @@ Kullanıcıya sunulacak seçenekler:
 │  PRO Üyelik — 1 Aylık                                   │
 │                                                         │
 │  ┌──────────────────┐   ┌──────────────────────────┐    │
-│  │  ₺79,99 / ay    │   │  80 teqlik               │    │
+│  │  ₺79,99 / ay    │   │  56 teqlik               │    │
 │  │  Apple ile öde  │   │  Bakiyenden harca         │    │
 │  │  (otomatik yenir)│   │  (manuel, tek seferlik)  │    │
 │  └──────────────────┘   └──────────────────────────┘    │
@@ -555,14 +581,14 @@ Kullanıcıya sunulacak seçenekler:
 
 | Ödeme yolu | Kullanıcı öder | Teqlif net alır | Fark |
 |-----------|---------------|----------------|------|
-| Apple IAP (Subscription %30) | ₺79,99 | **₺55,99** | baseline |
-| teqlik ile (80 teqlik) | ₺114,40* | **₺80,00** | +₺24,01 |
+| Apple IAP (Subscription %30, KDV-düzeltmeli) | ₺79,99 | **₺46,66** | baseline |
+| teqlik ile (56 teqlik) | ₺64,96–₺84,00* | **₺49,00** | +₺2,34 |
 
-> *Kullanıcı 80 teqliği en ucuz paketten alırsa: ₺149,99 → 100 teqlik → 80 teqlik maliyeti ₺120. En büyük paketten alırsa (1900 teqlik / ₺2.199,99): ₺1,158/teqlik × 80 = ₺92,64. Her durumda Teqlif daha fazla net alıyor.
+> *56 teqlik: mega paketten (₺1,16/teqlik): 56×₺1,16=₺64,96; başlangıç paketten (₺1,50/teqlik): 56×₺1,50=₺84,00. Teqlif net = 56 × ₺0,875 (100-paket KDV-düzeltmeli) ≈ ₺49,00.
 
-**Sonuç: PRO'yu teqlik ile ödemek her iki taraf için de daha avantajlı:**
-- Kullanıcı: büyük paket aldıysa birim fiyatı düşük → PRO ucuzlayabilir
-- Teqlif: Apple'a ek kesinti yok → %43 daha yüksek marj (₺55,99 → ₺80)
+**Sonuç: PRO'yu teqlik ile ödemek her iki taraf için avantajlıdır:**
+- Kullanıcı: büyük paket aldıysa (700+ veya 1900 teqlik) PRO maliyeti ₺65–₺70 → ₺79,99 cash'dan net ucuz
+- Teqlif: Apple'a ek kesinti yok → subscription'a göre %5 daha fazla net (₺49 vs ₺46,66). Küçük fark ama PRO hacminde kümülatif anlamlı.
 
 ### 9.3 teqlik Fiyat Dengesi — Harcama vs Yükleme
 
@@ -574,7 +600,7 @@ Kullanıcıya sunulacak seçenekler:
 | İlan Yenileme | 10 teqlik | 1× / ay (pasif ilan) |
 | Blast | 10 teqlik | 1-2× / ay |
 | İlan Boost | 50 teqlik | 1× / ay |
-| PRO Pass (teqlik) | 80 teqlik | Aylık sabit |
+| PRO Pass (teqlik) | 56 teqlik | Aylık sabit |
 
 **Tipik kullanıcı profilleri:**
 
@@ -583,7 +609,7 @@ Kullanıcıya sunulacak seçenekler:
 | Hafif (1 ilan, 1 blast) | 15 teqlik | ₺21,45 | 100 teqlik paketi |
 | Orta (2 ilan, 1 boost, 2 blast) | 130 teqlik | ₺185,90 | 300 teqlik paketi |
 | Ağır (3 ilan, 2 boost, 3 blast, AI) | 245 teqlik | ₺350,35 | 700 teqlik paketi |
-| PRO (teqlik + özellikler) | 80+130 = 210 teqlik | — | PRO + 300 paket |
+| PRO (teqlik + özellikler) | 56+130 = 186 teqlik | — | PRO + 300 paket |
 
 **Paket boyut optimizasyonu:**
 100 teqlik → hafif kullanıcı için 5-7 ay yeter → tekrar satın alım düşük.
@@ -607,14 +633,16 @@ Kullanıcıya sunulacak seçenekler:
 
 Altyapı ortalaması: ₺40.000/ay
 
-| Senaryo | Aylık ödeme yapan kullanıcı | ARPPU | Brüt gelir | Net (-%30) | Kâr/Zarar |
-|---------|---------------------------|-------|-----------|-----------|-----------|
-| Minimal | 500 | ₺100 | ₺50.000 | ₺35.000 | **-₺5.000** |
-| Breakeven | 650 | ₺100 | ₺65.000 | ₺45.500 | **+₺5.500** |
-| Sağlıklı | 1.500 | ₺120 | ₺180.000 | ₺126.000 | **+₺86.000** |
-| Büyüme | 5.000 | ₺150 | ₺750.000 | ₺525.000 | **+₺485.000** |
+| Senaryo | Aylık ödeme yapan kullanıcı | ARPPU | Brüt gelir | Net (KDV+%30)¹ | Kâr/Zarar |
+|---------|---------------------------|-------|-----------|----------------|-----------|
+| Minimal | 500 | ₺100 | ₺50.000 | ₺29.165 | **-₺10.835** |
+| **Breakeven** | **686** | ₺100 | ₺68.600 | **₺40.016** | **≈₺0** |
+| Sağlıklı | 1.500 | ₺120 | ₺180.000 | ₺105.000 | **+₺65.000** |
+| Büyüme | 5.000 | ₺150 | ₺750.000 | ₺437.500 | **+₺397.500** |
 
-> **ARPPU (Average Revenue Per Paying User):** Aylık ödeme yapan kullanıcı başına ortalama gelir. ₺100 konservatif tahmin — orta profil kullanıcı 130 teqlik/ay = ₺185 brüt harcıyor, Apple sonrası ~₺130 net.
+> ¹ Net = Brüt ÷ 1,20 × 0,70 (Türkiye KDV %20 + Apple %30 sonrası)
+>
+> **ARPPU:** ₺100 brüt konservatif tahmin. Orta profil kullanıcı 130 teqlik/ay için brüt ₺185 → KDV+%30 sonrası Teqlif net ~₺108. Breakeven eşiği önceki analizde 650 kullanıcı olarak hesaplandı; KDV düzeltmesiyle **686'ya yükseld**i (5,5% fark).
 
 **Dönüşüm hunisi varsayımları:**
 
@@ -667,7 +695,7 @@ PRO abonesi: 150 – 240
 1. **CreditGate:** Özellik kapısı → organik dönüşüm
 2. **Başlangıç Boost (V1.1):** İlan oluştururken tek tık → yüksek motivasyon anında teqlik harcama
 3. **Hediye sistemi:** Teqlif'e para girmeden teqlik dolaşımı → sosyal proof, yeni kullanıcı çekişi
-4. **PRO teşviki:** 80 teqlik PRO → büyük paket satışı (300+ teqlik) teşvik eder
+4. **PRO teşviki:** 56 teqlik PRO Pass → büyük paket (300+ teqlik) almayı teşvik eder — mega pakette efektif PRO maliyeti ₺64,96
 
 ### 9.6 PRO Ekonomisi — teqlik Tüketiminin Artısı
 
@@ -686,20 +714,22 @@ Ancak veriler tersi gösteriyor (SaaS'ta yaygın pattern):
 | Aylık aktif gün | 6 | 18 |
 | Aylık ilan sayısı | 1.2 | 3.5 |
 | Aylık teqlik harcama | 25 teqlik | 95 teqlik |
-| Aylık gelir (Teqlif net) | ₺17,50 | ₺79,99 abonelik + ₺66,50 teqlik = **₺146,49** |
+| Aylık gelir (Teqlif net, KDV+%30) | ₺14,58 | ₺46,66 abonelik + ₺55,41 teqlik = **₺102,07** |
 
-PRO kullanıcı standart kullanıcının **8.4×** gelirine katkı yapıyor.
+PRO kullanıcı standart kullanıcının **~7×** gelirine katkı yapıyor.
 
 ### 9.7 teqlik Bonus Ekonomisi — Paket Teşvik Sistemi
 
 Bonus teqlik sistemi hem kullanıcı teşviki hem de ekonomik güvence sağlıyor:
 
-| Paket | Ödenen | Alınan | Bonus | Birim fiyat | Teqlif net |
-|-------|--------|--------|-------|------------|------------|
-| 100 | ₺149,99 | 100 | — | ₺1,50 | ₺104,99 |
-| 300+50 | ₺429,99 | 350 | 50 teqlik | ₺1,23 | ₺300,99 |
-| 700+150 | ₺999,99 | 850 | 150 teqlik | ₺1,18 | ₺699,99 |
-| 1500+400 | ₺2.199,99 | 1900 | 400 teqlik | ₺1,16 | ₺1.539,99 |
+| Paket | Ödenen | Alınan | Bonus | Birim fiyat* | Teqlif net (KDV+%30) |
+|-------|--------|--------|-------|-------------|---------------------|
+| 100 | ₺149,99 | 100 | — | ₺1,50 | **₺87,49** |
+| 300+50 | ₺429,99 | 350 | 50 teqlik | ₺1,23 | **₺250,83** |
+| 700+150 | ₺999,99 | 850 | 150 teqlik | ₺1,18 | **₺583,33** |
+| 1500+400 | ₺2.199,99 | 1900 | 400 teqlik | ₺1,16 | **₺1.283,33** |
+
+> *Birim fiyat = kullanıcının ödediği birim maliyet (App Store fiyatı ÷ toplam teqlik)
 
 **Bonus teqlik Teqlif için maliyeti:**
 Kullanıcıya 50 bonus teqlik veriyoruz (300 pakette) → bu 50 teqlik gelecekte kullanıldığında bize ek maliyet yok; zaten paket satışından aldık. Bonus sadece "önceden ödenmiş" teqlik — değeri ₺0 ek maliyet, ₺50 kullanıcı algı değeri.
@@ -710,14 +740,16 @@ Kullanıcıya 50 bonus teqlik veriyoruz (300 pakette) → bu 50 teqlik gelecekte
 
 | Gelir kaynağı | Aylık brüt | Apple sonrası net |
 |--------------|-----------|-----------------|
-| teqlik paket satışları (%60 kullanıcı, ort. ₺200) | ₺120.000 | ₺84.000 |
-| PRO Subscription (%15, ₺79,99) | ₺11.999 | ₺8.399 |
-| PRO Pass (teqlik ile, %5, 80 teqlik) | Zaten teqlik gelirinde | ₺4.000* |
-| **Toplam** | | **~₺96.399** |
+| teqlik paket satışları (%60 kullanıcı, ort. ₺200) | ₺120.000 | **₺70.000** |
+| PRO Subscription (%15, ₺79,99) | ₺11.999 | **₺7.000** |
+| PRO Pass (teqlik ile, %5, 56 teqlik) | Zaten teqlik gelirinde | **₺2.450*** |
+| **Toplam** | | **~₺79.450** |
 
-> *PRO teqlik ödemeleri, teqlik gelirinin içinde ama marj daha yüksek olduğu için ayrı gösterildi.
+> *56 teqlik × 50 kullanıcı × ₺0,875 net/teqlik = ₺2.450 (teqlik gelirinin marj-üstü kısmı; zaten ₺70.000'e dahil — ayrı gösterildi)
+>
+> **KDV düzeltmesi etkisi:** Önceki projeksiyon ₺96.399 net gösteriyordu (%30 kesinti varsayımıyla). KDV %20 dahil edilince ₺79.450'ye geriledi — ₺16.949 fark (%17,5). Bu fark tüm finansal planlama dökümanlarına yansıtılmalı.
 
-**Altyapı ₺40.000 → Net kâr: ~₺56.000/ay** (1.000 ödeme yapan kullanıcıda)
+**Altyapı ₺40.000 → Net kâr: ~₺39.450/ay** (1.000 ödeme yapan kullanıcıda)
 
 ---
 
@@ -732,10 +764,11 @@ Kullanıcıya 50 bonus teqlik veriyoruz (300 pakette) → bu 50 teqlik gelecekte
 | teqlik IAP ürün tipi | **Consumable** |
 | PRO üyelik IAP ürün tipi | **Auto-Renewable Subscription** (V2.0) |
 | Backend doğrulama | App Store Server API v2 JWS |
-| Refund politikası V1.0 | Log kaydı, bakiye değişimi yok |
+| Refund politikası V1.0 | **REFUND webhook zorunlu** — bakiyeden düş + pending_refund flag |
 | Android | V1.0 kapsamı dışı |
 | Tab yapısı | Tab 1: Mağaza, Tab 2: İşlem Geçmişi |
 | Hediye sistemi | V1.1/V2.0 — planlı, hukuki görüş önerilir |
 | Başlangıç Boost (İlan Ver'de) | V1.1 — yüksek öncelik |
 | PRO anchor fiyatı | **₺79,99/ay** (₺99,99 değil — teqlik eşdeğeri ₺100, başabaş kabul edilemez) |
+| PRO Pass fiyatı (teqlik) | **56 teqlik** — büyük pakette ₺64,96 efektif maliyet vs ₺79,99 cash |
 | PRO planlar | V2.0 — 1ay ₺79,99 / 3ay ₺214,99 / 6ay ₺389,99 / 12ay ₺679,99 |
