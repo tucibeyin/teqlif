@@ -1065,7 +1065,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
           email: data['email'] as String,
           username: data['username'] as String,
           fullName: data['full_name'] as String,
-          isPremium: data['user_type'] == 'pro',
+          userType: data['user_type'] as String? ?? 'standard',
           planType: data['plan_type'] as String?,
           onboardingCompleted: data['onboarding_completed'] == true,
           isVerified: data['is_verified'] == true,
@@ -2492,7 +2492,7 @@ class _EditProfileScreenState extends ConsumerState<_EditProfileScreen> {
         email: updatedUser['email'] as String,
         username: updatedUser['username'] as String,
         fullName: updatedUser['full_name'] as String,
-        isPremium: updatedUser['user_type'] == 'pro',
+        userType: updatedUser['user_type'] as String? ?? 'standard',
         onboardingCompleted:
             updatedUser['onboarding_completed'] as bool? ?? false,
         isVerified: updatedUser['is_verified'] as bool? ?? false,
@@ -2599,7 +2599,7 @@ class _EditProfileScreenState extends ConsumerState<_EditProfileScreen> {
         email: updatedUser['email'] as String,
         username: updatedUser['username'] as String,
         fullName: updatedUser['full_name'] as String,
-        isPremium: updatedUser['user_type'] == 'pro',
+        userType: updatedUser['user_type'] as String? ?? 'standard',
         onboardingCompleted:
             updatedUser['onboarding_completed'] as bool? ?? false,
         isVerified: updatedUser['is_verified'] as bool? ?? false,

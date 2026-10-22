@@ -35,7 +35,7 @@ class CategoryOnboardingViewModel extends AutoDisposeAsyncNotifier<void> {
             email: oldInfo['email'] as String,
             username: oldInfo['username'] as String,
             fullName: oldInfo['full_name'] as String,
-            isPremium: oldInfo['user_type'] == 'pro',
+            userType: oldInfo['user_type'] as String? ?? 'standard',
             onboardingCompleted: true,
           );
         }

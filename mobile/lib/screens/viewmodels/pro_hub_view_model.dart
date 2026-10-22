@@ -71,7 +71,7 @@ class ProHubViewModel extends AutoDisposeFamilyNotifier<ProHubState, bool> {
     try {
       final user = await ref.read(authServiceProvider).me();
       if (user.isPremium != state.isPremium || user.planType != state.planType) {
-        state = state.copyWith(userType: user.userType, planType: user.planType);
+        state = state.copyWith(isPremium: user.isPremium, planType: user.planType);
       }
       await StorageService.saveUserInfo(
         id: user.id,
