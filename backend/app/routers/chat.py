@@ -82,7 +82,7 @@ async def _check_whale_status(
     try:
         cutoff = datetime.now(timezone.utc) - timedelta(days=_WHALE_LOOKBACK_DAYS)
         async with AsyncSessionLocal() as db:
-            host_row = await db.execute(select(User.is_premium).where(User.id == host_id))
+            host_row = await db.execute(select(User.user_type).where(User.id == host_id))
             if not host_row.scalar_one_or_none():
                 return  # Balina radarı yalnızca Pro host'lara gönderilir
 

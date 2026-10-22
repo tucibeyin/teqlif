@@ -100,7 +100,7 @@ class StartStreamCommand:
         except Exception as exc:
             logger.warning("[StartStreamCommand] room_to_stream mapping yazılamadı: %s", exc)
 
-        quality_profile = "pro" if user.is_premium else "standard"
+        quality_profile = "pro" if user.user_type == 'pro' else "standard"
         logger.info("[StartStreamCommand] Başarılı | stream_id=%s node=%s quality=%s", new_stream.id, node.get("node_id"), quality_profile)
 
         return {

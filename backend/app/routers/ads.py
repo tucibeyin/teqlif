@@ -59,7 +59,7 @@ async def create_campaign(
     - Redis bütçe engine'ine yüklenir (anında aktif hale gelir).
     """
     # Aylık boost kredi kontrolü
-    boost_limit = credit_service.free_limit("boost", current_user.is_premium)
+    boost_limit = credit_service.free_limit("boost", current_user.user_type == 'pro')
     if boost_limit == 0:
         raise ForbiddenException(code="PRO_REQUIRED")
     boost_used = await credit_service.get_used("boost", current_user.id, current_user.premium_since)
@@ -170,7 +170,7 @@ async def create_campaign(
 @router.get("/boost-credits")
 async def boost_credits(current_user: User = Depends(get_current_user)):
     """Kullanıcının bu ayki boost kredi durumunu döndürür."""
-    limit = credit_service.free_limit("boost", current_user.is_premium)
+    limit = credit_service.free_limit("boost", current_user.user_type == 'pro')
     used  = await credit_service.get_used("boost", current_user.id, current_user.premium_since)
     renewal_date: str | None = None
     if current_user.premium_since:
@@ -179,7 +179,7 @@ async def boost_credits(current_user: User = Depends(get_current_user)):
         "used": used,
         "limit": limit,
         "remaining": max(0, limit - used),
-        "is_pro": current_user.is_premium,
+        "is_pro": current_user.user_type == 'pro',
         "renewal_date": renewal_date,
     }
 

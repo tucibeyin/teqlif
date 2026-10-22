@@ -174,7 +174,7 @@ class SplashViewModel extends AsyncNotifier<SplashState> {
         email: user.email,
         username: user.username,
         fullName: user.fullName,
-        isPremium: user.isPremium,
+        userType: user.userType,
         onboardingCompleted: user.onboardingCompleted,
         isVerified: user.isVerified,
         phoneVerified: user.phoneVerified,

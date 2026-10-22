@@ -197,7 +197,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
           email: user.email,
           username: user.username,
           fullName: user.fullName,
-          isPremium: user.isPremium,
+          userType: user.userType,
           onboardingCompleted: user.onboardingCompleted,
           isVerified: user.isVerified,
           phoneVerified: user.phoneVerified,
@@ -342,7 +342,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     final costData = await ref.read(listingServiceProvider).getReactivationCost(id);
     if (!mounted || !context.mounted) return;
 
-    final isPremium = costData?['is_premium'] as bool? ?? false;
+    final isPremium = costData?['user_type'] == 'pro';
     final remaining = costData?['free_remaining'] as int? ?? 0;
     final cost = costData?['cost'] as int? ?? 10;
     final balance = costData?['balance'] as int? ?? 0;
@@ -1578,7 +1578,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                                   : null,
                             );
                           }),
-                          if (user['is_premium'] == true)
+                          if (user['user_type'] == 'pro')
                             Positioned(
                               bottom: 0,
                               right: 0,

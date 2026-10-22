@@ -100,8 +100,7 @@ async def _create_user_and_send_code(
         referral_code=None,
         pending_referred_by=data.referred_by.strip().upper() if data.referred_by else None,
         age_confirmed_at=now if data.age_confirmed else None,
-        is_premium=True,
-        plan_type='monthly',
+        user_type='standard',
         cross_border_consent_given=data.cross_border_consent,
         cross_border_consent_at=now if data.cross_border_consent else None,
         cross_border_consent_version="v1" if data.cross_border_consent else None,
@@ -1594,7 +1593,7 @@ async def delete_account(
     current_user.voip_token              = None
     current_user.preference_embedding    = None
     current_user.max_budget              = None
-    current_user.is_premium              = False
+    current_user.user_type               = 'standard'
     current_user.plan_type               = None
     current_user.referral_code           = None
     current_user.pending_referred_by     = None

@@ -30,7 +30,7 @@ class GetUserProfileQuery:
             "avatar_url": target.profile_image_url,
             "profile_image_url": target.profile_image_url,
             "profile_image_thumb_url": target.profile_image_thumb_url,
-            "is_premium": target.is_premium,
+            "user_type": target.user_type,
             "is_private": target.is_private,
             "is_verified": target.is_verified,
             "phone_verified": target.phone_verified,

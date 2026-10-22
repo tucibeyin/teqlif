@@ -497,8 +497,8 @@ async def audience_estimate(
     if listing.status != ListingStatus.ACTIVE:
         raise ListingNotActiveException()
 
-    cap   = credit_service.per_op_cap("blast", current_user.is_premium)
-    limit = credit_service.free_limit("blast", current_user.is_premium)
+    cap   = credit_service.per_op_cap("blast", current_user.user_type == 'pro')
+    limit = credit_service.free_limit("blast", current_user.user_type == 'pro')
     used  = await credit_service.get_used("blast", current_user.id, current_user.premium_since)
     credits_remaining = max(0, limit - used)
 
@@ -692,8 +692,8 @@ class GenerateDescriptionRequest(BaseModel):
 @router.get("/ai-desc-credits")
 async def ai_desc_credits(current_user: User = Depends(get_current_user)):
     """PRO kullanıcının bu ayki AI açıklama yazarı kredi durumunu döndürür."""
-    if not current_user.is_premium:
-        return {"used": 0, "limit": 0, "remaining": 0, "is_premium": False, "renewal_date": None}
+    if current_user.user_type != 'pro':
+        return {"used": 0, "limit": 0, "remaining": 0, "user_type": "standard", "renewal_date": None}
     used  = await credit_service.get_used("ai_desc", current_user.id, current_user.premium_since)
     limit = credit_service.free_limit("ai_desc", is_premium=True)
     remaining = max(0, limit - used)
@@ -704,7 +704,7 @@ async def ai_desc_credits(current_user: User = Depends(get_current_user)):
         "used": used,
         "limit": limit,
         "remaining": remaining,
-        "is_premium": True,
+        "user_type": "pro",
         "renewal_date": renewal_date,
     }
 
@@ -729,7 +729,7 @@ async def generate_description(
     # ── TEQlik / PRO kredi ön kontrolü ──────────────────────────────────────────
     _ai_desc_cost  = credit_service.cost_teqlik("ai_desc")
     _ai_desc_limit = credit_service.free_limit("ai_desc", is_premium=True)
-    if current_user.is_premium:
+    if current_user.user_type == 'pro':
         ai_used = await credit_service.get_used("ai_desc", current_user.id, current_user.premium_since)
         if ai_used >= _ai_desc_limit and current_user.teqlik_balance < _ai_desc_cost:
             raise InsufficientFundsException(code="MONTHLY_LIMIT_INSUFFICIENT_FUNDS")
@@ -754,7 +754,7 @@ async def generate_description(
     # ── Kredi düş (başarılı yanıt sonrası) ───────────────────────────────────
     teqlik_spent = 0
     try:
-        if current_user.is_premium:
+        if current_user.user_type == 'pro':
             ai_used_new = await credit_service.increment("ai_desc", current_user.id, current_user.premium_since)
             if ai_used_new > _ai_desc_limit:
                 await db.execute(
@@ -818,8 +818,8 @@ async def send_mass_notification(
     if listing.status != ListingStatus.ACTIVE:
         raise ListingNotActiveException()
 
-    cap   = credit_service.per_op_cap("blast", current_user.is_premium)
-    limit = credit_service.free_limit("blast", current_user.is_premium)
+    cap   = credit_service.per_op_cap("blast", current_user.user_type == 'pro')
+    limit = credit_service.free_limit("blast", current_user.user_type == 'pro')
     used  = await credit_service.get_used("blast", current_user.id, current_user.premium_since)
     credits_remaining = max(0, limit - used)
 

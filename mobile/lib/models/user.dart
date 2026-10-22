@@ -11,8 +11,11 @@ class User {
   final bool phoneVerified;
   final String? profileImageUrl;
   final String? profileImageThumbUrl;
-  final bool isPremium;
+  final String userType;
   final String? planType;
+
+  bool get isPremium => userType == 'pro';
+  bool get isPro => userType == 'pro';
   final bool onboardingCompleted;
   final String? websiteUrl;
   final String? instagramUrl;
@@ -35,7 +38,7 @@ class User {
     this.phoneVerified = false,
     this.profileImageUrl,
     this.profileImageThumbUrl,
-    this.isPremium = false,
+    this.userType = 'standard',
     this.planType,
     this.onboardingCompleted = false,
     this.websiteUrl,
@@ -61,7 +64,7 @@ class User {
       phoneVerified: json['phone_verified'] as bool? ?? false,
       profileImageUrl: json['profile_image_url'] as String?,
       profileImageThumbUrl: json['profile_image_thumb_url'] as String?,
-      isPremium: json['is_premium'] as bool? ?? false,
+      userType: json['user_type'] as String? ?? 'standard',
       planType: json['plan_type'] as String?,
       onboardingCompleted: json['onboarding_completed'] as bool? ?? false,
       websiteUrl: json['website_url'] as String?,

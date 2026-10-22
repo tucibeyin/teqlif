@@ -104,11 +104,11 @@ class SearchListingsQuery:
                         func.similarity(Listing.title, q),
                         func.similarity(Listing.description, q)
                     ).desc(),
-                    User.is_premium.desc(), 
+                    (User.user_type == 'pro').desc(),
                     Listing.created_at.desc()
                 )
             else:
-                q_stmt = q_stmt.order_by(User.is_premium.desc(), Listing.created_at.desc())
+                q_stmt = q_stmt.order_by((User.user_type == 'pro').desc(), Listing.created_at.desc())
 
         if cursor_at and cursor_id and sort_by in (None, "newest"):
             q_stmt = q_stmt.where(

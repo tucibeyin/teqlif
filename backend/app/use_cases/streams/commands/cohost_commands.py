@@ -121,7 +121,7 @@ class AcceptCohostInviteCommand:
                 logger.warning("[COHOST] cohost:joined pub/sub başarısız: %s", exc)
 
             token = make_livekit_token(stream.room_name, current_user, can_publish=True)
-            quality_profile = "pro" if current_user.is_premium else "standard"
+            quality_profile = "pro" if current_user.user_type == 'pro' else "standard"
             return StreamTokenOut(
                 stream_id=stream.id,
                 room_name=stream.room_name,

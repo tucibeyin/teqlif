@@ -84,7 +84,7 @@ class UserOut(BaseModel):
     profile_image_url: Optional[str] = None
     profile_image_thumb_url: Optional[str] = None
     created_at: datetime
-    is_premium: bool = False
+    user_type: str = 'standard'
     plan_type: Optional[str] = None
     bio: Optional[str] = None
     website_url: Optional[str] = None

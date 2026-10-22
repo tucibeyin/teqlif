@@ -14,7 +14,7 @@ class SellerMiniOut(BaseSchema):
     avatar_url: Optional[str] = None
     profile_image_url: Optional[str] = None
     profile_image_thumb_url: Optional[str] = None
-    is_premium: bool = False
+    user_type: str = 'standard'
     is_verified: bool = False
     badge: Optional[str] = None
     trust_score: Optional[float] = None

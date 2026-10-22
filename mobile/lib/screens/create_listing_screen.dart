@@ -189,7 +189,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
       if (!mounted) return;
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body) as Map<String, dynamic>;
-        final isPro = data['is_premium'] == true;
+        final isPro = data['user_type'] == 'pro';
         setState(() => _isPro = isPro);
         if (isPro) {
           _loadAiDescCredits();

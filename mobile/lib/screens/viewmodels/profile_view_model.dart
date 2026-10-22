@@ -187,7 +187,7 @@ class ProfileViewModel extends AutoDisposeAsyncNotifier<ProfileUiState> {
           email: localInfo?['email'] as String? ?? '',
           username: user['username'] as String? ?? username,
           fullName: user['full_name'] as String? ?? '',
-          isPremium: user['is_premium'] == true,
+          isPremium: user['user_type'] == 'pro',
           onboardingCompleted: user['onboarding_completed'] == true,
           isVerified: user['is_verified'] == true,
           phoneVerified: user['phone_verified'] == true,

@@ -163,7 +163,7 @@ async def get_recent_users(
                 "status": u.status.value if hasattr(u.status, 'value') else (u.status if u.status else "active"),
                 "is_active": u.status == UserStatus.ACTIVE,
                 "is_verified": u.is_verified,
-                "is_premium": u.is_premium,
+                "user_type": u.user_type,
                 "plan_type": u.plan_type,
                 "is_shadowbanned": u.is_shadowbanned,
                 "deleted_at": None,
@@ -209,16 +209,14 @@ async def toggle_pro(
     user = await db.get(User, user_id)
     if not user:
         raise NotFoundException(code="USER_NOT_FOUND")
-    user.is_premium = not user.is_premium
-    if user.is_premium:
-        user.plan_type = req.plan_type if req.plan_type else "monthly"
-    else:
-        user.plan_type = None
+    is_now_pro = user.user_type != 'pro'
+    user.user_type = 'pro' if is_now_pro else 'standard'
+    user.plan_type = (req.plan_type if req.plan_type else "monthly") if is_now_pro else None
     await db.commit()
     await invalidate_user_session_cache(user_id)
-    status = "PRO granted" if user.is_premium else "PRO removed"
+    status = "PRO granted" if is_now_pro else "PRO removed"
     logger.info("[ADMIN] %s → %s | admin=%s", user.username, status, admin.email)
-    return {"user_id": user_id, "username": user.username, "is_premium": user.is_premium, "plan_type": user.plan_type}
+    return {"user_id": user_id, "username": user.username, "user_type": user.user_type, "plan_type": user.plan_type}
 
 @router.post("/users/{user_id}/shadowban")
 async def toggle_shadowban(

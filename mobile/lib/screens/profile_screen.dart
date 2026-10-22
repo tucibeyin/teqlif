@@ -364,7 +364,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 ),
                               ),
                             ),
-                            if (user?['is_premium'] == true)
+                            if (user?['user_type'] == 'pro')
                               Positioned(
                                 bottom: 0,
                                 right: 0,
@@ -925,7 +925,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
   void initState() {
     super.initState();
     // widget.user'dan ön değer al (anlık gösterim için)
-    _isPremium = widget.user?['is_premium'] == true;
+    _isPremium = widget.user?['user_type'] == 'pro';
     _isPrivate = widget.user?['is_private'] == true;
     _displayedLang = ref.read(localeProvider).languageCode;
     _loadBiometricState();
@@ -1039,7 +1039,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
     final info = await StorageService.getUserInfo();
     if (mounted && info != null) {
       setState(() {
-        _isPremium = info['is_premium'] == true;
+        _isPremium = info['user_type'] == 'pro';
         _isPrivate = info['is_private'] == true;
       });
     }
@@ -1065,7 +1065,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
           email: data['email'] as String,
           username: data['username'] as String,
           fullName: data['full_name'] as String,
-          isPremium: data['is_premium'] == true,
+          isPremium: data['user_type'] == 'pro',
           planType: data['plan_type'] as String?,
           onboardingCompleted: data['onboarding_completed'] == true,
           isVerified: data['is_verified'] == true,
@@ -1712,7 +1712,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                     context,
                     MaterialPageRoute(
                       builder: (_) => ProHubScreen(
-                        isPremium: freshInfo?['is_premium'] == true,
+                        isPremium: freshInfo?['user_type'] == 'pro',
                       ),
                     ),
                   );
@@ -2492,7 +2492,7 @@ class _EditProfileScreenState extends ConsumerState<_EditProfileScreen> {
         email: updatedUser['email'] as String,
         username: updatedUser['username'] as String,
         fullName: updatedUser['full_name'] as String,
-        isPremium: updatedUser['is_premium'] as bool? ?? false,
+        isPremium: updatedUser['user_type'] == 'pro',
         onboardingCompleted:
             updatedUser['onboarding_completed'] as bool? ?? false,
         isVerified: updatedUser['is_verified'] as bool? ?? false,
@@ -2599,7 +2599,7 @@ class _EditProfileScreenState extends ConsumerState<_EditProfileScreen> {
         email: updatedUser['email'] as String,
         username: updatedUser['username'] as String,
         fullName: updatedUser['full_name'] as String,
-        isPremium: updatedUser['is_premium'] as bool? ?? false,
+        isPremium: updatedUser['user_type'] == 'pro',
         onboardingCompleted:
             updatedUser['onboarding_completed'] as bool? ?? false,
         isVerified: updatedUser['is_verified'] as bool? ?? false,
@@ -2949,7 +2949,7 @@ class _MyListingsScreenState extends ConsumerState<_MyListingsScreen> {
     final costData = await ref.read(listingServiceProvider).getReactivationCost(id);
     if (!mounted) return;
 
-    final isPremium = costData?['is_premium'] as bool? ?? false;
+    final isPremium = costData?['user_type'] == 'pro';
     final remaining = costData?['free_remaining'] as int? ?? 0;
     final cost = costData?['cost'] as int? ?? 10;
     final balance = costData?['balance'] as int? ?? 0;

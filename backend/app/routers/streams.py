@@ -197,7 +197,7 @@ async def audience_insights(
         }
 
     rows = await db.execute(
-        sql_text("SELECT id, max_budget, is_premium FROM users WHERE id = ANY(:ids) AND status = 'active'"),
+        sql_text("SELECT id, max_budget, user_type FROM users WHERE id = ANY(:ids) AND status = 'active'"),
         {"ids": list(viewer_ids)},
     )
     user_data = rows.fetchall()
@@ -206,7 +206,7 @@ async def audience_insights(
     high_value = sum(1 for b in budgets if b >= 1000)
     medium_value = sum(1 for b in budgets if 250 <= b < 1000)
     low_budget = sum(1 for b in budgets if b < 250)
-    ready_buyers = sum(1 for r in user_data if r.is_premium)
+    ready_buyers = sum(1 for r in user_data if (r.user_type == 'pro'))
 
     pip_count = len(pip_members_raw) if pip_members_raw else 0
     return {
@@ -307,7 +307,7 @@ async def get_stream_recording(
         raise HTTPException(status_code=404, detail={"error": {"code": "STREAM_NOT_FOUND"}})
     if stream.host_id != current_user.id:
         raise HTTPException(status_code=403, detail={"error": {"code": "FORBIDDEN"}})
-    if not current_user.is_premium:
+    if current_user.user_type != 'pro':
         raise HTTPException(status_code=403, detail={"error": {"code": "PRO_REQUIRED"}})
 
     # Concat tamamlanmışsa birleşik kayıt önceliklenir; yoksa en son part döner
@@ -573,7 +573,7 @@ async def get_suggested_streamers(
                 u.full_name,
                 u.profile_image_url,
                 (u.email_verified AND u.phone_verified) AS is_verified,
-                u.is_premium,
+                u.user_type,
                 COUNT(ls.id)                                    AS stream_count,
                 COALESCE(AVG(ls.viewer_count), 0)               AS avg_viewers,
                 COALESCE(fol.follower_count, 0)                 AS follower_count,
@@ -609,13 +609,13 @@ async def get_suggested_streamers(
               )
             {{follow_filter}}
             GROUP BY u.id, u.username, u.full_name, u.profile_image_url,
-                     u.email_verified, u.phone_verified, u.is_premium, fol.follower_count,
+                     u.email_verified, u.phone_verified, u.user_type, fol.follower_count,
                      live_now.is_live, cat_match.cat_affinity_score
             HAVING COUNT(ls.id) >= 1
         )
         SELECT
             id, username, full_name, profile_image_url,
-            is_verified, is_premium, stream_count, avg_viewers, follower_count, is_live,
+            is_verified, user_type, stream_count, avg_viewers, follower_count, is_live,
             -- Kişiselleştirilmiş kompozit skor
             (
                 CASE WHEN is_live THEN 0.35 ELSE 0.0 END
@@ -653,7 +653,7 @@ async def get_suggested_streamers(
             "full_name": row[2],
             "profile_image_url": row[3],
             "is_verified": row[4],
-            "is_premium": row[5],
+            "user_type": row[5],
             "stream_count": int(row[6]),
             "avg_viewers": round(float(row[7]), 1),
             "follower_count": int(row[8]),

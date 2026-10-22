@@ -73,7 +73,7 @@ class FailoverStreamCommand:
 
         user = stream.host
         token = make_livekit_token(new_room, user, can_publish=True)
-        quality_profile = "pro" if user.is_premium else "standard"
+        quality_profile = "pro" if user.user_type == 'pro' else "standard"
         return StreamTokenOut(
             stream_id=stream_id,
             room_name=new_room,

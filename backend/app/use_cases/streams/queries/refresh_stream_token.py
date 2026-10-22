@@ -56,7 +56,7 @@ class RefreshStreamTokenQuery:
                 stream_id, current_user.id, is_publisher,
             )
 
-            quality_profile = "pro" if (is_publisher and current_user.is_premium) else "standard"
+            quality_profile = "pro" if (is_publisher and current_user.user_type == 'pro') else "standard"
             return StreamTokenOut(
                 stream_id=stream.id,
                 room_name=stream.room_name,

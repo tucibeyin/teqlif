@@ -55,7 +55,7 @@ class ToggleListingCommand:
                     is_free = True
                     is_free_due_to_window = True
                 else:
-                    if current_user.is_premium:
+                    if current_user.user_type == 'pro':
                         used = await credit_service.get_used("reactivation", current_user.id, current_user.premium_since)
                         is_free = used < credit_service.free_limit("reactivation", is_premium=True)
 

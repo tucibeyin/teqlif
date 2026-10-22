@@ -503,7 +503,7 @@ async def get_seller_report(
 @router.get("/ai-price-credits")
 async def ai_price_credits(current_user: User = Depends(get_current_user)):
     """PRO kullanıcının bu ayki AI fiyat danışmanı kredi durumunu döndürür. [DURDURULDU]"""
-    return {"used": 0, "limit": 0, "remaining": 0, "is_premium": current_user.is_premium, "renewal_date": None, "feature_disabled": True}
+    return {"used": 0, "limit": 0, "remaining": 0, "user_type": current_user.user_type, "renewal_date": None, "feature_disabled": True}
     used = await credit_service.get_used("ai_price", current_user.id, current_user.premium_since)
     limit = credit_service.free_limit("ai_price", is_premium=True)
     remaining = max(0, limit - used)
@@ -514,7 +514,7 @@ async def ai_price_credits(current_user: User = Depends(get_current_user)):
         "used": used,
         "limit": limit,
         "remaining": remaining,
-        "is_premium": True,
+        "user_type": "pro",
         "renewal_date": renewal_date,
     }
 
@@ -526,13 +526,13 @@ async def reactivation_credits(
 ):
     """PRO kullanıcının bu ayki reaktivasyon kredi durumunu döndürür."""
     reactivation_cost = credit_service.cost_teqlik("reactivation")
-    if not current_user.is_premium:
+    if current_user.user_type != 'pro':
         return {
             "used": 0,
             "limit": 0,
             "remaining": 0,
             "free_remaining": 0,
-            "is_premium": False,
+            "user_type": "standard",
             "renewal_date": None,
             "cost": reactivation_cost,
             "balance": current_user.teqlik_balance,
@@ -567,7 +567,7 @@ async def reactivation_credits(
         "limit": limit,
         "remaining": remaining,
         "free_remaining": remaining,
-        "is_premium": True,
+        "user_type": "pro",
         "renewal_date": renewal_date,
         "cost": cost,
         "balance": current_user.teqlik_balance,
@@ -611,7 +611,7 @@ async def price_estimate(
     # Not: Limit düşümü işlemin sonunda atomik olarak yapılacak.
     _ai_price_cost  = credit_service.cost_teqlik("ai_price")
     _ai_price_limit = credit_service.free_limit("ai_price", is_premium=True)
-    if current_user.is_premium:
+    if current_user.user_type == 'pro':
         ai_used = await credit_service.get_used("ai_price", current_user.id, current_user.premium_since)
         if ai_used >= _ai_price_limit and current_user.teqlik_balance < _ai_price_cost:
             raise InsufficientFundsException(code="MONTHLY_LIMIT_INSUFFICIENT_FUNDS")
@@ -886,7 +886,7 @@ async def price_estimate(
     teqlik_spent = 0
     ref_id   = body.exclude_listing_id if body.exclude_listing_id else None
     ref_type = "listing" if body.exclude_listing_id else None
-    if current_user.is_premium:
+    if current_user.user_type == 'pro':
         ai_used_new = await credit_service.increment("ai_price", current_user.id, current_user.premium_since)
         if ai_used_new > _ai_price_limit:
             deduct = await db.execute(
@@ -1114,7 +1114,7 @@ async def pro_insights(
     from datetime import datetime as _dt, timedelta as _td
     from app.use_cases.analytics.pro_insights_use_case import ProInsightsUseCase
 
-    if not current_user.is_premium:
+    if current_user.user_type != 'pro':
         raise ForbiddenException(code="PRO_REQUIRED")
 
     uid = current_user.id
@@ -1439,7 +1439,7 @@ async def my_feed_stats(
     Pro satıcıya özel feed performans istatistikleri.
     Kullanıcının kendi ilanlarının impression/click/skip/CTR/dwell verilerini döndürür.
     """
-    if not current_user.is_premium:
+    if current_user.user_type != 'pro':
         raise ForbiddenException(code="PRO_REQUIRED")
 
     # Kullanıcının aktif ilan ID'lerini al
@@ -1609,7 +1609,7 @@ async def video_roi(
     Pro: Kullanıcının video ilanları ile fotoğraf ilanlarının CTR karşılaştırması.
     content_type='video' vs 'photo' segmentinde impression/click/CTR ayrımı.
     """
-    if not current_user.is_premium:
+    if current_user.user_type != 'pro':
         raise ForbiddenException(code="PRO_REQUIRED")
 
     _vroi_redis = None
@@ -1728,7 +1728,7 @@ async def gallery_stats(
     user_events tablosundaki listing_photo_swipe olayları kullanılır;
     duration_seconds alanı max_page_reached değerini taşır.
     """
-    if not current_user.is_premium:
+    if current_user.user_type != 'pro':
         raise ForbiddenException(code="PRO_REQUIRED")
 
     _gs_redis = None
@@ -1829,7 +1829,7 @@ async def video_performance(
     user_events tablosundaki listing_video_watch olayları kullanılır;
     duration_seconds alanı watch_pct (0.0–1.0) değerini taşır.
     """
-    if not current_user.is_premium:
+    if current_user.user_type != 'pro':
         raise ForbiddenException(code="PRO_REQUIRED")
 
     _vp_redis = None
@@ -1918,7 +1918,7 @@ async def demand_radar(
     Pro: Platform genelindeki arama trendleri.
     En çok aranan kelimeler ve kategori bazlı arama hacmi.
     """
-    if not current_user.is_premium:
+    if current_user.user_type != 'pro':
         raise ForbiddenException(code="PRO_REQUIRED")
 
     try:
@@ -2024,7 +2024,7 @@ async def get_pro_metrics(
     PRO kullanıcılar için gelişmiş metrikler (T-1).
     Gece batch'te precompute edilir, node1 Redis'ten servis edilir — CH'a dokunmaz.
     """
-    if not current_user.is_premium:
+    if current_user.user_type != 'pro':
         raise ForbiddenException(code="PRO_REQUIRED")
 
     uid = current_user.id
@@ -2064,7 +2064,7 @@ async def competitor_radar(
     PRO: Kullanıcının ilanını pgvector ile benzer aktif ilanlarla karşılaştırır.
     Fiyat dağılımı, rakip sayısı ve pozisyon sinyali döner.
     """
-    if not current_user.is_premium:
+    if current_user.user_type != 'pro':
         raise ForbiddenException(code="PRO_REQUIRED")
 
     # ── Cache Check ──────────────────────────────────────────────────────────
@@ -2319,7 +2319,7 @@ async def demand_trends(
     PRO: Son N haftanın search_events verisinden kategori bazlı talep trendi.
     Döner: kategori, haftalık arama sayısı, trend yönü, momentum, arz açığı oranı.
     """
-    if not current_user.is_premium:
+    if current_user.user_type != 'pro':
         raise ForbiddenException(code="PRO_REQUIRED")
 
     try:

@@ -4046,7 +4046,7 @@ async def precompute_premium_user_analytics_task(ctx: dict) -> None:
 
         async with AsyncSessionLocal() as db:
             premium_rows = (await db.execute(
-                _select(_User.id, _User.locale).where(_User.is_premium == True)  # noqa: E712
+                _select(_User.id, _User.locale).where(_User.user_type == 'pro')  # noqa: E712
             )).all()
 
         if not premium_rows:

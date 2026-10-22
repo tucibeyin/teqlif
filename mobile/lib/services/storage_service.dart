@@ -129,7 +129,7 @@ class StorageService {
     required String email,
     required String username,
     required String fullName,
-    required bool isPremium,
+    required String userType,
     String? planType,
     bool? onboardingCompleted,
     bool? isVerified,
@@ -141,7 +141,7 @@ class StorageService {
       _secureStorage.write(key: _userEmailKey, value: email),
       _secureStorage.write(key: _userNameKey, value: username),
       _secureStorage.write(key: _userFullNameKey, value: fullName),
-      _secureStorage.write(key: _userPremiumKey, value: isPremium.toString()),
+      _secureStorage.write(key: _userPremiumKey, value: userType),
     ];
     if (planType != null) {
       futures.add(_secureStorage.write(key: _userPlanTypeKey, value: planType));
@@ -167,7 +167,7 @@ class StorageService {
     final email = await _secureStorage.read(key: _userEmailKey);
     final username = await _secureStorage.read(key: _userNameKey);
     final fullName = await _secureStorage.read(key: _userFullNameKey);
-    final isPremium = await _secureStorage.read(key: _userPremiumKey);
+    final userType = await _secureStorage.read(key: _userPremiumKey);
     final planType = await _secureStorage.read(key: _userPlanTypeKey);
     final onboardingCompleted = await _secureStorage.read(key: _userOnboardingKey);
     final isVerified = await _secureStorage.read(key: _userIsVerifiedKey);
@@ -178,7 +178,7 @@ class StorageService {
       'email': email ?? '',
       'username': username ?? '',
       'full_name': fullName ?? '',
-      'is_premium': isPremium == 'true',
+      'user_type': userType ?? 'standard',
       'plan_type': planType,
       'onboarding_completed': onboardingCompleted == 'true',
       'is_verified': isVerified == 'true',

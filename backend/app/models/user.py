@@ -39,7 +39,7 @@ class User(Base):
     preference_embedding: Mapped[Optional[Any]] = mapped_column(Vector(384), nullable=True)
     # 90. yüzdelik fiyat tavanı — ClickHouse'daki son 7 gün etkileşim verisinden hesaplanır
     max_budget: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2), nullable=True)
-    is_premium: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, server_default="false")
+    user_type: Mapped[str] = mapped_column(String(20), nullable=False, default='standard', server_default="'standard'")
     plan_type: Mapped[str | None] = mapped_column(String(20), nullable=True, default=None)
     premium_since: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
     teqlik_balance: Mapped[int] = mapped_column(Integer, default=500, nullable=False, server_default="500")

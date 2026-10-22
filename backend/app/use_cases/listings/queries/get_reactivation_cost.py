@@ -23,7 +23,7 @@ class GetReactivationCostQuery:
 
         reactivation_cost = credit_service.cost_teqlik("reactivation")
 
-        if current_user.is_premium:
+        if current_user.user_type == 'pro':
             used = await credit_service.get_used("reactivation", current_user.id, current_user.premium_since)
             free_limit = credit_service.free_limit("reactivation", is_premium=True)
             remaining = max(0, free_limit - used)
@@ -41,7 +41,7 @@ class GetReactivationCostQuery:
         can_afford = is_free or current_user.teqlik_balance >= reactivation_cost
 
         return {
-            "is_premium": current_user.is_premium,
+            "user_type": current_user.user_type,
             "free_remaining": remaining,
             "free_limit": free_limit,
             "cost": cost,

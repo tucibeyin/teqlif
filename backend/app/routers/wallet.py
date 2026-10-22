@@ -202,7 +202,7 @@ async def send_gift(
         raise BadRequestException()
 
     # Platform komisyonu: Pro yayıncı %95, Standart %70 alır
-    commission_rate = 0.95 if receiver.is_premium else 0.70
+    commission_rate = 0.95 if receiver.user_type == 'pro' else 0.70
     host_share = int(body.cost * commission_rate)
 
     # 1) Atomik bakiye düşüşü — tek SQL ile kontrol + güncelleme.

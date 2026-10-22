@@ -806,7 +806,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
     final rawImg = _user?['profile_image_url'] as String?;
     final isLive = (_user?['is_live'] as bool?) ?? false;
     final streamId = _user?['active_stream_id'] as int?;
-    final isPremium = (_user?['is_premium'] as bool?) ?? false;
+    final isPremium = _user?['user_type'] == 'pro';
 
     Widget avatarWidget = CircleAvatar(
       radius: 44,

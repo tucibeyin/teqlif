@@ -97,8 +97,8 @@ async def audience_size(
     else:
         reachable = 0
 
-    cap   = credit_service.per_op_cap("blast", current_user.is_premium)
-    limit = credit_service.free_limit("blast", current_user.is_premium)
+    cap   = credit_service.per_op_cap("blast", current_user.user_type == 'pro')
+    limit = credit_service.free_limit("blast", current_user.user_type == 'pro')
     used  = await credit_service.get_used("blast", current_user.id, current_user.premium_since)
     credits_remaining = max(0, limit - used)
 
@@ -125,8 +125,8 @@ async def blast_credits(
     current_user: User = Depends(get_current_user),
 ):
     """Kullanıcının bu ayki blast kredi durumunu döndürür."""
-    limit = credit_service.free_limit("blast", current_user.is_premium)
-    cap   = credit_service.per_op_cap("blast", current_user.is_premium)
+    limit = credit_service.free_limit("blast", current_user.user_type == 'pro')
+    cap   = credit_service.per_op_cap("blast", current_user.user_type == 'pro')
     used  = await credit_service.get_used("blast", current_user.id, current_user.premium_since)
     renewal_date: str | None = None
     if current_user.premium_since:
@@ -135,7 +135,7 @@ async def blast_credits(
         "used":          used,
         "limit":         limit,
         "remaining":     max(0, limit - used),
-        "is_premium":    current_user.is_premium,
+        "user_type": current_user.user_type,
         "per_blast_cap": cap,
         "teqlik_balance":  current_user.teqlik_balance,
         "renewal_date":  renewal_date,
@@ -181,8 +181,8 @@ async def send_blast(
     if _last_lead_blast is not None:
         raise CooldownException()
 
-    cap   = credit_service.per_op_cap("blast", current_user.is_premium)
-    limit = credit_service.free_limit("blast", current_user.is_premium)
+    cap   = credit_service.per_op_cap("blast", current_user.user_type == 'pro')
+    limit = credit_service.free_limit("blast", current_user.user_type == 'pro')
     used  = await credit_service.get_used("blast", current_user.id, current_user.premium_since)
     credits_remaining = max(0, limit - used)
 
@@ -397,7 +397,7 @@ async def retargeting_audience(
     PRO: İlanı görüntüleyen ama satın almayan kullanıcı sayısını döner.
     ClickHouse feed_analytics + user_events tablosundan çekilir.
     """
-    if not current_user.is_premium:
+    if current_user.user_type != 'pro':
         raise ForbiddenException(code="PRO_REQUIRED")
 
     listing = await db.scalar(
@@ -501,7 +501,7 @@ async def send_retargeting(
     PRO: İlanı görüntüleyen ama satın almayan kullanıcılara kişiselleştirilmiş bildirim gönderir.
     1 TEQlik per kişi (blast kredi sayımına dahil edilmez — ayrı bir işlem).
     """
-    if not current_user.is_premium:
+    if current_user.user_type != 'pro':
         raise ForbiddenException(code="PRO_REQUIRED")
 
     listing = await db.scalar(

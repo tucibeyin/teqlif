@@ -183,7 +183,7 @@ async def get_suggested_sellers(
             u.profile_image_url,
             u.bio,
             (u.email_verified AND u.phone_verified) AS is_verified,
-            u.is_premium,
+            u.user_type,
             COUNT(l.id)                                     AS listing_count,
             {cat_score_expr}                                AS cat_match,
             COALESCE(fol.follower_count, 0)                 AS follower_count
@@ -202,7 +202,7 @@ async def get_suggested_sellers(
               SELECT blocker_id FROM user_blocks WHERE blocked_id = :uid
           )
         {{follow_filter}}
-        GROUP BY u.id, u.username, u.full_name, u.profile_image_url, u.bio, u.email_verified, u.phone_verified, u.is_premium, fol.follower_count
+        GROUP BY u.id, u.username, u.full_name, u.profile_image_url, u.bio, u.email_verified, u.phone_verified, u.user_type, fol.follower_count
         HAVING COUNT(l.id) >= 1
         ORDER BY ({order_expr}) DESC
         LIMIT :lim
@@ -260,7 +260,7 @@ async def get_suggested_sellers(
             "profile_image_url": row[3],
             "bio": row[4],
             "is_verified": row[5],
-            "is_premium": row[6],
+            "user_type": row[6],
             "listing_count": row[7],
             "follower_count": row[9],
         }
