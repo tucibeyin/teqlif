@@ -227,6 +227,16 @@ Telegram alarm kuralları:
 - `relay_active == 1` iken `source_tx + target_tx > 3200 Mbps` → **CRITICAL: Media cluster capacity warning**
 - `relay_restart_count > 2` → **WARNING: Stream relay flapping**
 
+### Co-Host & Sahne Daveti Karma Kullanımı (Mixed Usage)
+
+Teqlif mobil istemcisinde izleyiciler canlı yayına co-host (eş yayıncı) olarak katılabilir (`AcceptCohostInviteCommand`). Relay devredeyken (yayın 800+ izleyiciye ulaştığında) bu akış şu kurallarla çalışır:
+
+1. **Yayıncı Rolü Kuralı**: Co-host bir **Publisher**'dır. LiveKit clustering gereği tüm yayıncılar (host ve co-host) fiziksel olarak **Source Node (`source_room`)** üzerinde bulunmak zorundadır; relay odasına (`room_relay_*`) yayın yapılamaz.
+2. **Relay'den Source'a Geçiş (Backend)**: Bir izleyici `relay_node` üzerinden bağlıyken daveti kabul ederse, `cohost_commands.py` içindeki `UpdateParticipantRequest` LiveKit source odasında katılımcıyı bulamadığında (`ParticipantNotFound`) işlemi düşürmez; doğrudan `source_node` (`stream.livekit_url`) ve `stream.room_name` için `can_publish=True` token'ı üretir.
+3. **Flutter İstemci Geçişi (`upgradeToCoHost`)**: Gelen yeni token'ın `livekit_url` veya `room_name` değeri mevcut bağlı oturumdan farklıysa (izleyici relay odasındaysa), istemci mevcut relay odasının bağlantısını keser (`session.room?.disconnect()`), ardından `stream.livekit_url` üzerindeki ana odaya bağlanır ve kamerasını/mikrofonunu açar.
+4. **Relay Bot Çift Yayıncı Taşıması (`livekit_relay.py`)**: `livekit_relay.py`, `source_room` içindeki hem host (`host_id`) hem de co-host track'lerine subscribe olur. Co-host video/ses track'ini de relay odasına ileterek relay'deki izleyicilerin co-host'u (`session.coHostVideoTrack`) kesintisiz görmesini sağlar.
+5. **Failover Anında Co-Host Davranışı**: Node çökmesi durumunda failover önceliği host'tadır. Co-host oturumu `RoomDisconnectedEvent` alır ve `refresh_stream_token` ile yeni node'a (`_p2`) otomatik olarak izleyici (`can_publish=False`) modunda bağlanır; host dilerse sahneye yeniden davet edebilir.
+
 ### Değişmeyen Şeyler
 
 - Chat ve bid WebSocket — LiveKit'ten bağımsız, etkilenmez
@@ -880,8 +890,9 @@ async def _do_concat(ctx: dict, stream_id: int):
     if not await ctx["redis"].set(lock_key, "1", ex=1800, nx=True):
         return  # başka bir worker bu stream'i zaten işliyor
 
-    work_dir = Path(f"/tmp/concat_{stream_id}")
-    work_dir.mkdir(exist_ok=True)
+    # NVMe disk alanı kullanılır (in-memory /tmp tmpfs RAM tükenmesini önlemek için)
+    work_dir = Path(f"/var/tmp/teqlif-concat_{stream_id}")
+    work_dir.mkdir(parents=True, exist_ok=True)
     try:
         for rec in recs:
             local = work_dir / f"part{rec['part_number']}.mp4"
@@ -990,12 +1001,13 @@ async def _concat_or_reencode(work_dir: Path, recs, stream_id: int, host_id: int
     )
 
     if compatible:
-        cmd = ["ffmpeg", "-f", "concat", "-safe", "0", "-i", str(parts_file),
+        cmd = ["ffmpeg", "-threads", "2", "-f", "concat", "-safe", "0", "-i", str(parts_file),
                "-c", "copy", str(out)]
     else:
-        # Re-encode: çözünürlük/codec mismatch'i gider
+        # Re-encode: çözünürlük/codec mismatch'i gider. Node1 Xeon CPU'sunu boğmamak
+        # için -threads 2 ve ionice -c 3 nice -n 10 ile sınırlandırılır.
         cmd = ["ionice", "-c", "3", "nice", "-n", "10",
-               "ffmpeg", "-f", "concat", "-safe", "0", "-i", str(parts_file),
+               "ffmpeg", "-threads", "2", "-f", "concat", "-safe", "0", "-i", str(parts_file),
                "-vf", "scale=1280:720", "-r", "30",
                "-c:v", "libx264", "-preset", "fast", "-crf", "23",
                "-c:a", "aac", "-ar", "44100", str(out)]
@@ -1007,7 +1019,7 @@ async def _concat_or_reencode(work_dir: Path, recs, stream_id: int, host_id: int
     # MinIO yükleme ve temizlik aşağıda
 ```
 
-Re-encode yolu `ionice -c 3 nice -n 10` ile düşük öncelikte çalışır — node1'deki normal ARQ görevlerini etkilemez.
+Re-encode yolu `ionice -c 3 nice -n 10` ile düşük öncelikte ve `-threads 2` ile CPU sınırlı çalışır — node1'deki normal ARQ ve veritabanı işlemlerini etkilemez.
 
 #### MinIO Storage Hijyeni (Concat Sonrası Part Temizliği)
 
@@ -1049,6 +1061,19 @@ logger.info("Part'lar temizlendi ve birleşik kayıt kaydedildi: stream_id=%d", 
 ```
 
 `stream_recordings` tablosuna `merged_and_purged` durumu eklenir. Bu durumdaki satırlar izleme panolarında gizlenir — yalnızca `is_concat_result=true` satırı UI'a gösterilir.
+
+#### Bakım Penceresi (02:00–05:00 UTC) & Node2 Yedekleme Senkronizasyonu
+
+1. **Transfer Penceresi ile Concat Uyumu**: `cluster.yaml` gereği node3 ve node4 üzerindeki kayıtlar `transfer_window_start_utc: 2` (02:00 UTC = 05:00 TR) ile MinIO'ya aktarılır. Çok parçalı yayınların `stream_concat_task` tetiklemesi de doğal olarak parçalar MinIO'ya ulaştıktan sonra (02:00–05:00 UTC penceresinde) çalışır.
+2. **Node 1 Donanım Koruması (Xeon 6c/12t, 32GB RAM, NVMe RAID-1)**:
+   - Gece 02:00–05:00 UTC penceresinde Node 1 üzerinde `sync_pg_to_clickhouse_task` (01:50), `compute_analytics_cache_task` (02:30), `pg_dump` (03:00), `redis_backup` (03:40) ve `populate_foryou_feed_task` (03:55) gibi kritik batch işler çalışır.
+   - `stream_concat_task` FFmpeg işlemine `-threads 2` kısıtı verilerek CPU tüketimi en fazla 2 çekirdekle sınırlanır; kalan 10 mantıksal çekirdek PostgreSQL, Redis ve API servislerine rezerve kalır.
+   - İndirilen ve birleştirilen parçalar tmpfs bellek kullanımını önlemek için doğrudan NVMe disk üzerindeki `/var/tmp/teqlif-concat_{stream_id}` dizininde işlenir.
+3. **Node 2 Yedekleme Senkronizasyonu (`minio_backup.sh`)**:
+   - Node 2 (OVH Saarbrücken) üzerindeki `minio_backup` görevi **05:30 UTC**'de (`schedule.yaml`) başlar — transfer ve birleştirme penceresi kapandıktan 30 dakika sonradır.
+   - Birleşen dosya MinIO'da hazır olduğunda `minio_backup.sh` dosyayı Node 2'ye kopyalar ve ardından `confirm_recordings()` fonksiyonu `status='available'` olan birleşik kayda `node2_confirmed_at = NOW()` damgasını vurur.
+   - Parça dosyaları (`merged_and_purged`) `minio.remove_object` ile silindiğinden Node 2 yedek diskinde (HDD) gereksiz çöp alan kaplamaz.
+   - `notify_new_recordings_task` görevi 05:00 ve 06:00 UTC'de çalışarak yayıncıya bildirim gönderir.
 
 ---
 
