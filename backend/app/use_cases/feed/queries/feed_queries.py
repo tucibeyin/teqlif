@@ -342,7 +342,7 @@ class FeedQueries:
         }
         if max_budget is not None:
             budget_clause = "AND (l.price IS NULL OR l.price <= :price_ceiling)"
-            params["price_ceiling"] = max_budget * 1.2
+            params["price_ceiling"] = float(max_budget) * 1.2
 
         # pgvector / FAISS desteği — embedding varsa pool + scoring terimi eklenir
         pgvec_pool_sql = ""
@@ -791,7 +791,7 @@ class FeedQueries:
         }
         if user.max_budget is not None:
             budget_clause = "AND (l.price IS NULL OR l.price <= :price_ceiling)"
-            params["price_ceiling"] = user.max_budget * 1.2
+            params["price_ceiling"] = float(user.max_budget) * 1.2
 
         # Item2Vec benzer ilanlar — kullanıcının son görüntülemelerinden
         # NOT: item_id kolonu user_interactions'da, analytics_events'te değil
