@@ -6665,5 +6665,5 @@
   "creditGateBalanceValue": "{balance} teqlik",
   "@creditGateBalanceValue": [["placeholders", [["balance", [["type", "int"]]]]]],
   "creditGateInsufficientBalance": "Insufficient balance. Top up teqlik to continue.",
-  "creditGateConfirm": "Confirm & Continue"
+  "creditGateConfirm": "Confirm"
 }

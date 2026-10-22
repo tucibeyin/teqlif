@@ -6593,5 +6593,5 @@
   "creditGateBalanceValue": "{balance} teqlik",
   "@creditGateBalanceValue": [["placeholders", [["balance", [["type", "int"]]]]]],
   "creditGateInsufficientBalance": "Yetersiz bakiye. Devam etmek için teqlik yükleyin.",
-  "creditGateConfirm": "Onayla ve Devam Et"
+  "creditGateConfirm": "Onayla"
 }

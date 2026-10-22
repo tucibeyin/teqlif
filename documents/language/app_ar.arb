@@ -6593,5 +6593,5 @@
   "creditGateBalanceValue": "{balance} teqlik",
   "@creditGateBalanceValue": [["placeholders", [["balance", [["type", "int"]]]]]],
   "creditGateInsufficientBalance": "رصيد غير كافٍ. أضف teqlik للمتابعة.",
-  "creditGateConfirm": "تأكيد والمتابعة"
+  "creditGateConfirm": "تأكيد"
 }
