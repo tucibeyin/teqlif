@@ -36,9 +36,10 @@ async def expire_recordings_task(ctx: dict) -> None:
 async def notify_new_recordings_task(ctx: dict) -> None:
     """Yeni available olan kayıtlar için host'a bir kez push bildirimi gönderir.
 
+    PRO host     → "recording_available"  bildirim + expires_at = NOW() + 24h (kullanıcı penceresi)
+    Standart host → "recording_upsell"    bildirim + expires_at = NOW() + 14 days (hukuki arşiv)
+
     host_notified_at IS NULL → henüz bildirim gönderilmemiş.
-    Bildirim gönderildikten sonra host_notified_at = NOW() set edilir.
-    2 saatlik lookback: agent gecikmeli yazarsa da yakalanır.
     """
     try:
         from app.database import AsyncSessionLocal
@@ -47,9 +48,10 @@ async def notify_new_recordings_task(ctx: dict) -> None:
 
         async with AsyncSessionLocal() as session:
             rows = (await session.execute(text("""
-                SELECT sr.id, sr.stream_id, ls.host_id
+                SELECT sr.id, sr.stream_id, ls.host_id, u.user_type
                 FROM stream_recordings sr
                 JOIN live_streams ls ON ls.id = sr.stream_id
+                JOIN users u         ON u.id  = ls.host_id
                 WHERE sr.status = 'available'
                   AND sr.host_notified_at IS NULL
                   AND sr.available_at > NOW() - INTERVAL '6 hours'
@@ -58,11 +60,11 @@ async def notify_new_recordings_task(ctx: dict) -> None:
         if not rows:
             return
 
-        for rec_id, stream_id, host_id in rows:
+        for rec_id, stream_id, host_id, user_type in rows:
+            is_pro = user_type == 'pro'
             try:
-                await push_notification(
-                    user_id=host_id,
-                    notif={
+                if is_pro:
+                    notif = {
                         "type": "recording_available",
                         "i18n": {
                             "title_key": "notifRecordingAvailableTitle",
@@ -70,22 +72,31 @@ async def notify_new_recordings_task(ctx: dict) -> None:
                         },
                         "stream_id":    str(stream_id),
                         "recording_id": str(rec_id),
-                    },
-                )
+                    }
+                else:
+                    notif = {
+                        "type": "recording_upsell",
+                        "i18n": {
+                            "title_key": "notifRecordingUpsellTitle",
+                            "body_key":  "notifRecordingUpsellBody",
+                        },
+                        "stream_id": str(stream_id),
+                    }
+                await push_notification(user_id=host_id, notif=notif)
             except Exception as exc:
                 logger.warning(
                     "notify_new_recordings_task: bildirim hatası | rec_id=%d host_id=%d | %s",
                     rec_id, host_id, exc,
                 )
 
-            # Başarılı veya başarısız — tekrar denememe (idempotent)
-            # expires_at bildirim anından 24 saat sonraya çekilir:
-            # transfer geceyarısı olsa bile kullanıcı tam 24 saat alır.
+            # PRO: 24 saat kullanıcı erişim penceresi
+            # Standart: 14 gün hukuki/sistem arşiv süresi (erişim PRO_REQUIRED ile engellidir)
+            expires_interval = "24 hours" if is_pro else "14 days"
             async with AsyncSessionLocal() as session:
-                await session.execute(text("""
+                await session.execute(text(f"""
                     UPDATE stream_recordings
                     SET host_notified_at = NOW(),
-                        expires_at       = NOW() + INTERVAL '24 hours',
+                        expires_at       = NOW() + INTERVAL '{expires_interval}',
                         updated_at       = NOW()
                     WHERE id = :id
                 """), {"id": rec_id})

@@ -2402,6 +2402,8 @@
   "notifAuctionCancelledBodyNoItem": "No bid was accepted",
   "notifRecordingAvailableTitle": "Your Live Stream Replay Is Ready 🎬",
   "notifRecordingAvailableBody": "Watch your replay and review your sales stats.",
+  "notifRecordingUpsellTitle": "Your Stream Recording Is Ready 🎬",
+  "notifRecordingUpsellBody": "Upgrade to PRO and access your replay for 24 hours.",
   "notifStreamStarted": "@{username} started a live stream",
   "@notifStreamStarted": {
     "placeholders": {

@@ -337,6 +337,14 @@ class _MainScreenState extends ConsumerState<MainScreen> with WidgetsBindingObse
                 );
               });
               break;
+            case MainNavigationEvent.toProHub:
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ProHubScreen(isPremium: false, scrollToLiveSection: true),
+                ),
+              );
+              break;
             case MainNavigationEvent.none:
               break;
           }

@@ -2385,6 +2385,8 @@
   "notifAuctionCancelledBodyNoItem": "لم يُقبل أي عرض",
   "notifRecordingAvailableTitle": "تسجيل البث المباشر جاهز 🎬",
   "notifRecordingAvailableBody": "شاهد التسجيل وراجع إحصاءات المبيعات.",
+  "notifRecordingUpsellTitle": "تسجيل بثك جاهز 🎬",
+  "notifRecordingUpsellBody": "انتقل إلى PRO واحصل على وصول لمدة 24 ساعة.",
   "notifStreamStarted": "بدأ @{username} بثاً مباشراً",
   "@notifStreamStarted": {
     "placeholders": {
