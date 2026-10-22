@@ -2726,3 +2726,59 @@ WHERE item_id IN ({ids}) AND day >= today() - 30
 | `backend/app/worker.py` | compute_seller_badges 2 sorgu → 1 + Python quantile |
 | `backend/app/use_cases/analytics/pro_insights_use_case.py` | funnel → MV |
 | `backend/app/use_cases/analytics/hot_leads_use_case.py` | heat score sorgusu → MV (maxState eklendi) |
+
+---
+
+## 32. Stream V1.7 — Multi-Node Fan-Out, Relay, Failover, Concat (commit `4b10cac6`)
+
+### Sorun
+
+Tek LiveKit node tüm izleyicilere video dağıtıyordu. Ağ çıkışı (net_tx_mbps) dar boğaz oluşturuyordu. Node çöktüğünde host ve izleyiciler yayını kaybediyordu.
+
+### Kararlar
+
+**1. On-Demand Relay (Kural 1)**  
+Source node `net_tx_mbps > 800` eşiğini 15s boyunca aşarsa `live:relay:needed:{room}` Redis key yazar → relay node aynı room'u başka bir LiveKit node'dan yayınlar (`{room}_relay_{relay_node_id}`). İlk video frame sonrası `live:relay:ready:{room}` yazar (TTL=30s, 10s heartbeat). `resolve_stream_endpoint()` izleyicileri bu relay'e yönlendirir.
+
+**2. Failover (Kural 3)**  
+Source node çöküp `edge:metrics:{node_id}` Redis key'i kaybolursa `RefreshStreamTokenQuery` `NODE_UNAVAILABLE` (503) döner. Flutter host `_doFailover()` çalıştırır: `failoverStream()` → yeni node + yeni room `{base}_p{N}` → kamera/mikrofon ile yeniden bağlanır.
+
+**3. Co-host Relay**  
+Co-host viewer'dan publisher'a geçişte LiveKit `ParticipantNotFound` (relay room) hatasını `AcceptCohostInviteCommand` yakalar → source token döner → Flutter relay→source reconnect yapar. `live:cohost:joined/left:{stream_id}` pub/sub ile RelayManager co-host için ayrı relay subprocess başlatır.
+
+**4. Dağıtık Concat (Kural 2)**  
+`stream_concat_task` ARQ cron (2dk) tüm node'larda çalışır. `nx=True` Redis kilit ile yalnızca bir node parçaları birleştirir. `is_concat_result=True` kayıt birleşik dosyayı işaret eder.
+
+### DB Değişiklikleri (`zzzzzu_v17_stream_multi_node`)
+
+- `live_streams.source_node_id VARCHAR(50)` — kaynak LiveKit node
+- `stream_recordings.is_concat_result BOOLEAN DEFAULT FALSE` — N-parçalı birleşik kayıt
+- `stream_recordings.part_number SMALLINT` — failover sırası
+- `GRANT DELETE ON stream_recordings TO teqlif_agent`
+
+### Etkilenen Dosyalar
+
+| Dosya | Değişiklik |
+|-------|-----------|
+| `backend/app/services/edge_orchestrator.py` | `is_node_healthy`, `allocate_node(exclude_node_id)`, `resolve_stream_endpoint` |
+| `backend/app/use_cases/streams/commands/start_stream.py` | `source_node_id` kaydediliyor |
+| `backend/app/use_cases/streams/commands/join_stream.py` | Relay routing |
+| `backend/app/use_cases/streams/commands/lifecycle_commands.py` | `source_node_id` pub/sub payload'a eklendi |
+| `backend/app/use_cases/streams/commands/cohost_commands.py` | `ParticipantNotFound` relay geçişi; cohost joined/left pub/sub |
+| `backend/app/use_cases/streams/commands/failover_stream.py` | Yeni — node seçimi + `{base}_p{N}` room |
+| `backend/app/use_cases/streams/queries/refresh_stream_token.py` | Yeni — `NodeUnavailableException` node sağlık kontrolü |
+| `backend/app/tasks/stream_concat_task.py` | Yeni — ARQ cron, nx=True dağıtık kilit |
+| `backend/app/routers/streams.py` | `GET /{id}/token` → RefreshStreamTokenQuery; `POST /{id}/failover` |
+| `backend/app/routers/webhooks.py` | `_relay_` oda adları filtreleniyor |
+| `backend/app/worker.py` | `stream_concat_task` cron kaydı |
+| `backend/app/core/exceptions.py` | `NodeUnavailableException` (503) |
+| `deploy/scale/V2.1/teqlif-agent/livekit_relay.py` | Yeni — source→relay subprocess, H3 HIGH kalite, Redis heartbeat |
+| `deploy/scale/V2.1/teqlif-agent/modules/relay.py` | Yeni — RelayManager, tx izleme, devre kesici, co-host subprocess, H6 warmup |
+| `deploy/scale/V2.1/teqlif-agent/livekit_subscriber.py` | `--host-identity` ile host ayrılınca dur |
+| `deploy/scale/V2.1/teqlif-agent/modules/recorder.py` | `--host-identity` subprocess'e iletiliyor; `_sync_recordings` `source_node_id` dahil |
+| `deploy/scale/V2.1/teqlif-agent/agent.py` | `RelayManager` modül yükleniyor |
+| `mobile/lib/services/stream_service.dart` | `failoverStream`, `refreshStreamToken` |
+| `mobile/lib/services/stream_connection_manager.dart` | `upgradeToCoHost` relay→source reconnect |
+| `mobile/lib/screens/live/viewmodels/host_stream_view_model.dart` | `NODE_UNAVAILABLE` → `_doFailover` |
+| `mobile/lib/screens/live/viewmodels/swipe_live_view_model.dart` | `acceptAndUpgradeCoHost` (MVVM ihlali giderildi) |
+| `backend/alembic/versions/zzzzzu_v17_stream_multi_node.py` | Migration |
