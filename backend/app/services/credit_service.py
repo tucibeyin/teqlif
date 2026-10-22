@@ -10,7 +10,7 @@ import calendar
 from datetime import datetime, date, timezone
 from typing import Literal
 
-FeatureName = Literal["blast", "boost", "ai_price", "ai_desc", "reactivation"]
+FeatureName = Literal["blast", "boost", "ai_desc", "reactivation"]
 
 # ── Özellik Tablosu ────────────────────────────────────────────────────────────
 # free_standard    : Normal kullanıcının aylık ücretsiz hakkı
@@ -32,12 +32,6 @@ _FEATURES: dict[str, dict] = {
         "free_standard": 0,
         "free_pro":      3,
         "cost_teqlik":     50,
-    },
-    "ai_price": {
-        "key_prefix":    "ai_price_credits",
-        "free_standard": 0,
-        "free_pro":      6,
-        "cost_teqlik":     5,
     },
     "ai_desc": {
         "key_prefix":    "ai_desc_credits",

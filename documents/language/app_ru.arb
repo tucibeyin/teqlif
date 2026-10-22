@@ -1325,7 +1325,6 @@
   "walletTxnSpendBoostPaid": "Платное продвижение",
   "walletTxnSpendReactivation": "Повторная публикация объявления",
   "walletTxnSpendBlast": "Массовая рассылка",
-  "walletTxnSpendAiPrice": "Анализ цен ИИ",
   "walletTxnStreamGiftReceived": "Получен подарок в эфире",
   "walletTxnDailyLogin": "Ежедневная награда за вход",
   "walletSeeAllTxns": "Показать все {n} транзакции",
@@ -1794,7 +1793,6 @@
   "btnDeleteConfirm": "Удалить",
   "favoritesEmpty": "Избранных пока нет",
   "createNeedTitle": "Пожалуйста, сначала введите название объявления.",
-  "aiPriceError": "Не удалось получить оценку стоимости. Пожалуйста, попробуйте еще раз.",
   "teqlikSpent": "{count} teqlik потрачено.",
   "videoTooLong": "Продолжительность видео не может превышать {max} секунд ({actual}s).",
   "createPickCamera": "Запись с помощью камеры (макс. {sec}s)",
@@ -1895,8 +1893,6 @@
   "faqIconRetargeting": "Повторный контакт: отправляйте напоминания или сообщения о скидках непосредственно заинтересованным покупателям.",
   "proToolHotDemandTitle": "Уведомление массовой аудитории",
   "proToolHotDemandDesc": "Свяжитесь напрямую с потенциальными покупателями, заинтересованными в вашем объявлении.",
-  "proToolAiPriceTitle": "Анализ цен с помощью ИИ",
-  "proToolAiPriceDesc": "Узнайте рыночную стоимость своей продукции за считанные секунды с помощью искусственного интеллекта.",
   "proToolStreamAnalyticsTitle": "Потоковая аналитика",
   "proToolStreamAnalyticsDesc": "Подробно проанализируйте данные о просмотрах прямых трансляций и подарках.",
   "faqIconNameVerified": "Подтвержденный аккаунт ([ICON_VERIFIED])",
@@ -2593,21 +2589,9 @@
   "proBestStreamRec": "Вы показываете лучшие результаты в {day} в {hours} с коэффициентом конверсии {rate}%.",
   "tabReports": "Отчеты",
   "badgeSponsored": "Реклама",
-  "aiPriceTitle": "Оценка цены с ИИ",
-  "aiPriceSimilar": "Проанализировано {count} похожих товаров",
-  "@aiPriceSimilar": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "confidenceHigh": "● Высокая уверенность",
   "confidenceMedium": "● Средняя уверенность",
   "confidenceLow": "● Низкая уверенность",
-  "aiPriceApply": "Применить рекомендованную цену",
-  "aiPriceAnalyzing": "Анализируем…",
-  "aiPriceButton": "Определить цену с помощью ИИ",
   "aiCreditsLeftSuffix": "осталось",
   "editProfileFullName": "Полное имя",
   "editProfileUsername": "Имя пользователя",
@@ -4378,14 +4362,20 @@
   "directSalePurchaseHostMsg": "✅ @{buyer} ×{qty} купил(а)",
   "@directSalePurchaseHostMsg": {
     "placeholders": {
-      "buyer": { "type": "String" },
-      "qty": { "type": "String" }
+      "buyer": {
+        "type": "String"
+      },
+      "qty": {
+        "type": "String"
+      }
     }
   },
   "directSalePurchaseViewerMsg": "@{buyer} купил(а)",
   "@directSalePurchaseViewerMsg": {
     "placeholders": {
-      "buyer": { "type": "String" }
+      "buyer": {
+        "type": "String"
+      }
     }
   },
   "directSaleSoldOutBanner": "Распродано 🎉",

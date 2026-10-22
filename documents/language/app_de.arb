@@ -741,7 +741,6 @@
   "walletTxnSpendBoostPaid": "Bezahlter Anzeigen-Boost",
   "walletTxnSpendReactivation": "Anzeigen-Reaktivierung",
   "walletTxnSpendBlast": "Blast-Benachrichtigung",
-  "walletTxnSpendAiPrice": "KI-Preisanalyse",
   "walletTxnStreamGiftReceived": "Stream-Geschenk erhalten",
   "walletTxnDailyLogin": "Tägliche Anmeldebelohnung",
   "walletSeeAllTxns": "Alle {n} Transaktionen ansehen",
@@ -1701,7 +1700,6 @@
   "btnDeleteConfirm": "Löschen",
   "favoritesEmpty": "Noch keine Favoriten",
   "createNeedTitle": "Bitte gib zuerst den Anzeigentitel ein.",
-  "aiPriceError": "Preisschätzung konnte nicht abgerufen werden. Bitte versuche es erneut.",
   "teqlikSpent": "{count} teqlik ausgegeben.",
   "@teqlikSpent": {
     "placeholders": {
@@ -1871,8 +1869,6 @@
   "faqIconRetargeting": "Re-Engagement: Sende Erinnerungen oder Rabattnachrichten direkt an interessierte Käufer.",
   "proToolHotDemandTitle": "Massen-Zuschauerbenachrichtigung",
   "proToolHotDemandDesc": "Erreiche potenzielle Käufer, die sich für deine Anzeige interessieren, direkt.",
-  "proToolAiPriceTitle": "KI-Preisanalyse",
-  "proToolAiPriceDesc": "Ermittle den Marktwert deines Produkts in Sekunden mit KI.",
   "proToolStreamAnalyticsTitle": "Stream-Analysen",
   "proToolStreamAnalyticsDesc": "Analysiere deine Live-Stream-Zuschauer- und Geschenkdaten im Detail.",
   "faqIconNameVerified": "Verifiziertes Konto ([ICON_VERIFIED])",
@@ -2626,21 +2622,9 @@
   "@badgeSponsored": {
     "description": "Badge label for sponsored listing"
   },
-  "aiPriceTitle": "KI-Preisschätzung",
-  "aiPriceSimilar": "{count} ähnliche Produkte analysiert",
-  "@aiPriceSimilar": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "confidenceHigh": "● Hohes Vertrauen",
   "confidenceMedium": "● Mittleres Vertrauen",
   "confidenceLow": "● Geringes Vertrauen",
-  "aiPriceApply": "Vorgeschlagenen Preis anwenden",
-  "aiPriceAnalyzing": "Analysiere...",
-  "aiPriceButton": "Preis mit KI festlegen",
   "aiCreditsLeftSuffix": "Credits verbleibend",
   "editProfileFullName": "Vollständiger Name",
   "editProfileUsername": "Benutzername",
@@ -4414,14 +4398,20 @@
   "directSalePurchaseHostMsg": "✅ @{buyer} ×{qty} gekauft",
   "@directSalePurchaseHostMsg": {
     "placeholders": {
-      "buyer": { "type": "String" },
-      "qty": { "type": "String" }
+      "buyer": {
+        "type": "String"
+      },
+      "qty": {
+        "type": "String"
+      }
     }
   },
   "directSalePurchaseViewerMsg": "@{buyer} hat gekauft",
   "@directSalePurchaseViewerMsg": {
     "placeholders": {
-      "buyer": { "type": "String" }
+      "buyer": {
+        "type": "String"
+      }
     }
   },
   "directSaleSoldOutBanner": "Ausverkauft 🎉",

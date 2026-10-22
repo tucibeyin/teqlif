@@ -3942,7 +3942,6 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
     'spend_boost_paid': loc.t('walletTxnSpendBoostPaid'),
     'spend_reactivation': loc.t('walletTxnSpendReactivation'),
     'spend_blast': loc.t('walletTxnSpendBlast'),
-    'spend_ai_price': loc.t('walletTxnSpendAiPrice'),
     'stream_gift_received': loc.t('walletTxnStreamGiftReceived'),
     'daily_login': loc.t('walletTxnDailyLogin'),
     'web_topup': loc.t('walletTxnWebTopup'),

@@ -741,7 +741,6 @@
   "walletTxnSpendBoostPaid": "Öne çıkarma (ücretli)",
   "walletTxnSpendReactivation": "İlan yeniden yayına alma",
   "walletTxnSpendBlast": "Anlık Yayın Bildirimi",
-  "walletTxnSpendAiPrice": "AI fiyat analizi",
   "walletTxnStreamGiftReceived": "Yayın hediyesi alındı",
   "walletTxnDailyLogin": "Günlük giriş ödülü",
   "walletSeeAllTxns": "Tümünü gör ({n} işlem)",
@@ -1701,7 +1700,6 @@
   "btnDeleteConfirm": "Sil",
   "favoritesEmpty": "Henüz favori ilan yok",
   "createNeedTitle": "Önce ilan başlığını giriniz.",
-  "aiPriceError": "Fiyat tahmini alınamadı. Lütfen tekrar deneyin.",
   "teqlikSpent": "{count} teqlik harcandı.",
   "@teqlikSpent": {
     "placeholders": {
@@ -1871,8 +1869,6 @@
   "faqIconRetargeting": "Yeniden Ulaşma: İlgili alıcılara doğrudan hatırlatma veya indirim mesajı gönderimi.",
   "proToolHotDemandTitle": "Toplu Kitle Bildirimi",
   "proToolHotDemandDesc": "İlanınızla ilgilenebilecek potansiyel alıcılara doğrudan ulaşın.",
-  "proToolAiPriceTitle": "Yapay Zeka Fiyat Analizi",
-  "proToolAiPriceDesc": "Ürününüzün piyasa değerini AI ile saniyeler içinde öğrenin.",
   "proToolStreamAnalyticsTitle": "Yayın Analizi",
   "proToolStreamAnalyticsDesc": "Yayınlarınızdaki anlık izleyici ve hediye verilerini detaylı inceleyin.",
   "faqIconNameVerified": "Onaylı Hesap",
@@ -2590,21 +2586,9 @@
   "proBestStreamRec": "{day} {hours} saatlerinde %{rate} dönüşüm oranıyla en iyi performansı gösteriyorsunuz.",
   "tabReports": "Raporlar",
   "badgeSponsored": "Sponsorlu",
-  "aiPriceTitle": "Yapay Zeka Fiyat Tahmini",
-  "aiPriceSimilar": "{count} benzer ürün analiz edildi",
-  "@aiPriceSimilar": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "confidenceHigh": "● Yüksek güven",
   "confidenceMedium": "● Orta güven",
   "confidenceLow": "● Düşük güven",
-  "aiPriceApply": "Önerilen Fiyatı Uygula",
-  "aiPriceAnalyzing": "Analiz ediliyor…",
-  "aiPriceButton": "Yapay Zeka ile Fiyat Belirle",
   "aiCreditsLeftSuffix": "hak kaldı",
   "editProfileFullName": "Ad Soyad",
   "editProfileUsername": "Kullanıcı Adı",
@@ -4378,14 +4362,20 @@
   "directSalePurchaseHostMsg": "✅ @{buyer} ×{qty} satın aldı",
   "@directSalePurchaseHostMsg": {
     "placeholders": {
-      "buyer": { "type": "String" },
-      "qty": { "type": "String" }
+      "buyer": {
+        "type": "String"
+      },
+      "qty": {
+        "type": "String"
+      }
     }
   },
   "directSalePurchaseViewerMsg": "@{buyer} satın aldı",
   "@directSalePurchaseViewerMsg": {
     "placeholders": {
-      "buyer": { "type": "String" }
+      "buyer": {
+        "type": "String"
+      }
     }
   },
   "directSaleSoldOutBanner": "Stok tükendi 🎉",

@@ -150,50 +150,6 @@ class AnalyticsService {
     return null;
   }
 
-  /// Yapay Zeka fiyatlama tahmini → `POST /api/analytics/price-estimate`
-  /// Throws [AiInsufficientTeqlikException] on HTTP 402 (INSUFFICIENT_FUNDS).
-  /// Returns null on other errors.
-  Future<Map<String, dynamic>?> getPriceEstimate({
-    required String title,
-    required String description,
-    required String category,
-    String subcategory = '',
-    String city = '',
-    String condition = '',
-    Map<String, dynamic>? extraFields,
-    int? excludeListingId,
-  }) async {
-    try {
-      final token = await StorageService.getToken();
-      if (token == null) return null;
-      final headers = await _api.buildApiHeaders(token, json: true);
-      return await _api.call(
-        () => http.post(
-          Uri.parse('${_api.config.baseUrl}/analytics/price-estimate'),
-          headers: headers,
-          body: jsonEncode({
-            'title': title,
-            'description': description,
-            'category': category,
-            if (subcategory.isNotEmpty) 'subcategory': subcategory,
-            'city': city,
-            if (condition.isNotEmpty) 'condition': condition,
-            if (extraFields != null && extraFields.isNotEmpty)
-              'extra_fields': extraFields,
-            if (excludeListingId != null && excludeListingId > 0)
-              'exclude_listing_id': excludeListingId,
-          }),
-        ),
-      );
-    } on AppException catch (e) {
-      if (e.code == 'INSUFFICIENT_FUNDS') {
-        throw AiInsufficientTeqlikException(e.message);
-      }
-      debugPrint('[AnalyticsService] getPriceEstimate hata: ${e.message}');
-    }
-    return null;
-  }
-
   /// Pro satıcı kapsamlı analitik — SWR stream (cache → network).
   /// Önce Hive cache'den anlık emit, sonra `/api/analytics/pro-insights`'tan taze veri.
   Stream<ProInsightsData> getProInsights({
@@ -273,19 +229,6 @@ class AnalyticsService {
       if (token == null) return null;
       final resp = await http.get(
         Uri.parse('${_api.config.baseUrl}/ads/boost-credits'),
-        headers: {'Authorization': 'Bearer $token'},
-      );
-      if (resp.statusCode == 200) return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
-    } catch (_) {}
-    return null;
-  }
-
-  Future<Map<String, dynamic>?> getAiPriceCredits() async {
-    try {
-      final token = await StorageService.getToken();
-      if (token == null) return null;
-      final resp = await http.get(
-        Uri.parse('${_api.config.baseUrl}/analytics/ai-price-credits'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (resp.statusCode == 200) return await compute(jsonDecode, resp.body) as Map<String, dynamic>;

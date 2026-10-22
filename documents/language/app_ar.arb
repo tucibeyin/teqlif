@@ -744,7 +744,6 @@
   "walletTxnSpendBoostPaid": "تعزيز مدفوع للإعلان",
   "walletTxnSpendReactivation": "إعادة تفعيل الإعلان",
   "walletTxnSpendBlast": "إشعار بث فوري",
-  "walletTxnSpendAiPrice": "تحليل الأسعار بالذكاء الاصطناعي",
   "walletTxnStreamGiftReceived": "هدية بث مستلمة",
   "walletTxnDailyLogin": "مكافأة الدخول اليومي",
   "walletSeeAllTxns": "عرض جميع {n} معاملة",
@@ -1704,7 +1703,6 @@
   "btnDeleteConfirm": "حذف",
   "favoritesEmpty": "لا توجد مفضلات بعد",
   "createNeedTitle": "يرجى إدخال عنوان الإعلان أولاً.",
-  "aiPriceError": "تعذّر الحصول على تقدير السعر. حاول مرة أخرى.",
   "teqlikSpent": "تم إنفاق {count} teqlik.",
   "@teqlikSpent": {
     "placeholders": {
@@ -1874,8 +1872,6 @@
   "faqIconRetargeting": "التواصل مع المهتمين: إرسال تذكيرات أو رسائل خصم للمشترين المهتمين.",
   "proToolHotDemandTitle": "الطلب الساخن (Lead Gen)",
   "proToolHotDemandDesc": "تواصل مباشرة مع المشترين المحتملين المهتمين بقائمتك.",
-  "proToolAiPriceTitle": "تحليل السعر بالذكاء الاصطناعي",
-  "proToolAiPriceDesc": "اكتشف القيمة السوقية لمنتجك في ثوانٍ باستخدام الذكاء الاصطناعي.",
   "proToolStreamAnalyticsTitle": "تحليلات البث",
   "proToolStreamAnalyticsDesc": "قم بتحليل بيانات مشاهدة البث المباشر والهدايا بالتفصيل.",
   "faqIconNameVerified": "حساب موثق ([ICON_VERIFIED])",
@@ -2573,21 +2569,9 @@
   "proBestStreamRec": "أداؤك هو الأفضل يوم {day} الساعة {hours} بمعدل تحويل {rate}%.",
   "tabReports": "التقارير",
   "badgeSponsored": "ممولة",
-  "aiPriceTitle": "تقدير السعر بالذكاء الاصطناعي",
-  "aiPriceSimilar": "تم تحليل {count} منتج مشابه",
-  "@aiPriceSimilar": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "confidenceHigh": "● ثقة عالية",
   "confidenceMedium": "● ثقة متوسطة",
   "confidenceLow": "● ثقة منخفضة",
-  "aiPriceApply": "تطبيق السعر المقترح",
-  "aiPriceAnalyzing": "جارٍ التحليل…",
-  "aiPriceButton": "تحديد السعر بالذكاء الاصطناعي",
   "aiCreditsLeftSuffix": "رصيد متبقٍ",
   "editProfileFullName": "الاسم الكامل",
   "editProfileUsername": "اسم المستخدم",
@@ -4378,14 +4362,20 @@
   "directSalePurchaseHostMsg": "✅ @{buyer} ×{qty} purchased",
   "@directSalePurchaseHostMsg": {
     "placeholders": {
-      "buyer": { "type": "String" },
-      "qty": { "type": "String" }
+      "buyer": {
+        "type": "String"
+      },
+      "qty": {
+        "type": "String"
+      }
     }
   },
   "directSalePurchaseViewerMsg": "@{buyer} purchased",
   "@directSalePurchaseViewerMsg": {
     "placeholders": {
-      "buyer": { "type": "String" }
+      "buyer": {
+        "type": "String"
+      }
     }
   },
   "directSaleSoldOutBanner": "Sold out 🎉",

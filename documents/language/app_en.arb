@@ -741,7 +741,6 @@
   "walletTxnSpendBoostPaid": "Paid listing boost",
   "walletTxnSpendReactivation": "Listing reactivation",
   "walletTxnSpendBlast": "Blast notification",
-  "walletTxnSpendAiPrice": "AI price analysis",
   "walletTxnStreamGiftReceived": "Stream gift received",
   "walletTxnDailyLogin": "Daily login reward",
   "walletSeeAllTxns": "See all {n} transactions",
@@ -1701,7 +1700,6 @@
   "btnDeleteConfirm": "Delete",
   "favoritesEmpty": "No favorites yet",
   "createNeedTitle": "Please enter the listing title first.",
-  "aiPriceError": "Could not get price estimate. Please try again.",
   "teqlikSpent": "{count} teqlik spent.",
   "@teqlikSpent": {
     "placeholders": {
@@ -1871,8 +1869,6 @@
   "faqIconRetargeting": "Re-engagement: Send reminders or discount messages directly to interested buyers.",
   "proToolHotDemandTitle": "Mass Audience Notification",
   "proToolHotDemandDesc": "Reach out directly to potential buyers interested in your listing.",
-  "proToolAiPriceTitle": "AI Price Analysis",
-  "proToolAiPriceDesc": "Find out your products market value in seconds with AI.",
   "proToolStreamAnalyticsTitle": "Stream Analytics",
   "proToolStreamAnalyticsDesc": "Analyze your live stream viewership and gift data in detail.",
   "faqIconNameVerified": "Verified Account ([ICON_VERIFIED])",
@@ -2626,21 +2622,9 @@
   "@badgeSponsored": {
     "description": "Badge label for sponsored listing"
   },
-  "aiPriceTitle": "AI Price Estimate",
-  "aiPriceSimilar": "{count} similar products analyzed",
-  "@aiPriceSimilar": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "confidenceHigh": "● High confidence",
   "confidenceMedium": "● Medium confidence",
   "confidenceLow": "● Low confidence",
-  "aiPriceApply": "Apply Suggested Price",
-  "aiPriceAnalyzing": "Analyzing…",
-  "aiPriceButton": "Set Price with AI",
   "aiCreditsLeftSuffix": "credits left",
   "editProfileFullName": "Full Name",
   "editProfileUsername": "Username",
@@ -4414,14 +4398,20 @@
   "directSalePurchaseHostMsg": "✅ @{buyer} ×{qty} purchased",
   "@directSalePurchaseHostMsg": {
     "placeholders": {
-      "buyer": { "type": "String" },
-      "qty": { "type": "String" }
+      "buyer": {
+        "type": "String"
+      },
+      "qty": {
+        "type": "String"
+      }
     }
   },
   "directSalePurchaseViewerMsg": "@{buyer} purchased",
   "@directSalePurchaseViewerMsg": {
     "placeholders": {
-      "buyer": { "type": "String" }
+      "buyer": {
+        "type": "String"
+      }
     }
   },
   "directSaleSoldOutBanner": "Sold out 🎉",

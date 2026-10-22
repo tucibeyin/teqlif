@@ -19,7 +19,7 @@ from sqlalchemy import text as sql_text
 from app.models.enums import ListingStatus
 from app.database import get_db, get_uow
 from app.core.uow import SqlAlchemyUnitOfWork
-from app.core.exceptions import ForbiddenException, InsufficientFundsException, NotFoundException, ConflictException
+from app.core.exceptions import InsufficientFundsException, NotFoundException, ConflictException
 from app.services import credit_service
 from app.models.ad_campaign import AdCampaign
 from app.models.listing import Listing
@@ -52,16 +52,13 @@ async def create_campaign(
     Satıcı kendi ilanı için reklam kampanyası başlatır.
 
     - Pro kullanıcılar ayda 3 boost hakkına sahiptir (ücretsiz).
-    - Aylık hak biterse TEQlik bakiyesinden 50 TEQlik düşürülerek boost yapılır.
-    - Ücretsiz hesaplar boost yapamaz.
+    - Aylık hak biterse veya standart kullanıcılar TEQlik bakiyesinden 50 TEQlik öder.
     - İlanın sahibi olduğu doğrulanır.
     - AdCampaign kaydı oluşturulur (status='active').
     - Redis bütçe engine'ine yüklenir (anında aktif hale gelir).
     """
-    # Aylık boost kredi kontrolü
+    # Aylık boost kredi kontrolü (PRO: 3 ücretsiz; standart: 0 ücretsiz → her seferinde 50 TEQlik)
     boost_limit = credit_service.free_limit("boost", current_user.user_type == 'pro')
-    if boost_limit == 0:
-        raise ForbiddenException(code="PRO_REQUIRED")
     boost_used = await credit_service.get_used("boost", current_user.id, current_user.premium_since)
 
     # Aylık ücretsiz hak kaldı mı?
