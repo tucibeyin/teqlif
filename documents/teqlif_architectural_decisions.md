@@ -4,7 +4,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Ekim 2026 — §40 Merkezi CreditGate sistemi + API kontrat senkronizasyonu (commit b0071cea)
+**Son güncelleme:** Ekim 2026 — §41 CreditGate fetchCreditGateData hata düzeltmesi (commit 2798f516)
 
 ---
 
@@ -2865,3 +2865,29 @@ Kredi düşümü generate endpoint'inde server-side gerçekleştiği ve `aiDescP
 | `mobile/lib/screens/create_listing_screen.dart` | ai_desc gate → CreditGateSheet.show |
 | `mobile/lib/services/analytics_service.dart` | fetchCreditGateData + fallbackCostTeqlik |
 | `documents/language/app_*.arb` | creditGate* key'leri (5 dil) |
+
+---
+
+## 41. CreditGate `fetchCreditGateData` Hata Düzeltmesi (`2798f516`)
+
+### Problem
+
+Tüm CreditGate feature'ları (boost, blast, aiDesc, reactivation) açılışta "Bir hata oluştu" gösteriyordu. `CreditGateSheet` loading aşamasında `fetchCreditGateData` null döndürüyordu.
+
+**Kök neden 1 (Flutter):** `analytics_service.dart:646` — `/users/me` çağrısı backend'de `/api/users/{username}` route'una eşleşiyordu (`username="me"`). Bu kullanıcı adında kayıt yok → USER_NOT_FOUND 404 → `fetchCreditGateData` null → `loadError: 'errorGeneric'`.
+
+**Kök neden 2 (Backend):** `UserOut` şemasında `wallet_balance` alanı yoktu. `/api/auth/me` doğru endpoint olsa bile TEQlik bakiyesi dönmediğinden `teqlikBalance` her zaman 0 görünüyor, `canAfford` = false → ücretli boost/blast mümkün olmuyordu.
+
+### Karar
+
+1. **Flutter:** `/users/me` → `/auth/me` (tek satır) — authenticated kullanıcı endpoint'i.
+2. **Backend `UserOut`:** `wallet_balance: int = Field(default=0, validation_alias='teqlik_balance')` eklendi — ORM alanı `teqlik_balance`, JSON key `wallet_balance`.
+
+**Kapsam:** `UserOut` yalnızca auth endpoint'lerinde (`/api/auth/me`, `/api/auth/me` PATCH, login token response) kullanılıyor. Public profil endpoint'i farklı response döndürüyor — başka kullanıcının bakiyesi sızmıyor.
+
+### Etkilenen Dosyalar
+
+| Dosya | Değişiklik |
+|-------|-----------|
+| `mobile/lib/services/analytics_service.dart:646` | `/users/me` → `/auth/me` |
+| `backend/app/schemas/user.py` | `UserOut`'a `wallet_balance` eklendi |
