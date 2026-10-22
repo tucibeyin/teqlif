@@ -52,7 +52,7 @@ class PipProvider extends ChangeNotifier {
 
   void _setRemoteVideoQuality(Room room, VideoQuality quality) {
     for (final participant in room.remoteParticipants.values) {
-      for (final pub in participant.videoTrackPublications.values) {
+      for (final pub in participant.videoTrackPublications) {
         pub.setVideoQuality(quality).ignore();
       }
     }
