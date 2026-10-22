@@ -80,11 +80,14 @@ class ProfileScreen extends ConsumerStatefulWidget {
 
 class ProfileScreenState extends ConsumerState<ProfileScreen> {
   final _websiteGuard = OnceGuard(); // Çift tıklama engeli
+  StreamSubscription<CreditsChangedEvent>? _creditsSub;
 
   @override
   void initState() {
     super.initState();
-    // Load is handled inside build of view model automatically
+    _creditsSub = eventBus.on<CreditsChangedEvent>().listen((_) {
+      _loadWallet(bypassCache: true);
+    });
   }
 
   void refresh({bool bypassCache = false}) {
@@ -93,6 +96,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   @override
   void dispose() {
+    _creditsSub?.cancel();
     super.dispose();
   }
 

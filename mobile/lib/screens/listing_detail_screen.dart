@@ -755,6 +755,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
       TeqSnackBar.show(message: _formatCooldown(secs), type: TeqSnackBarType.warning);
     } else if (result.success) {
       ref.read(cacheServiceProvider).clearData('user_wallet_data');
+      eventBus.fire(const CreditsChangedEvent());
       notifier.startCooldown(86400);
       TeqSnackBar.show(message: loc.t('audienceMassSendSuccess'), type: TeqSnackBarType.success);
     } else if (result.errorKey != null) {
@@ -789,6 +790,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     if (result.success) {
       final wasFree = result.payload?['is_free'] == true;
       ref.read(cacheServiceProvider).clearData('user_wallet_data');
+      if (!wasFree) eventBus.fire(const CreditsChangedEvent());
       setState(() {
         _campaignId = result.payload?['id'] as int?;
         widget.listing['campaign_id'] = _campaignId;
