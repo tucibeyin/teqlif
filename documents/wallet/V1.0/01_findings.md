@@ -162,6 +162,33 @@ Her ürün için doldurulacaklar:
 - Banka hesabı ve vergi bilgileri girilmeden Apple ödeme yapmaz
 - **Apple ödeme takvimi**: Net-33 ile Net-45 gün (ayın kapanış dönemine göre değişir). Örnek: Ekim satışları en erken Kasım sonunda hesapta. V1.0'da gerçek banka transferi yapılmadığı için bu gecikme kritiktir — Teqlif, Apple'dan parayı tahsil etmeden kullanıcıya ödeme yapamaz. Seçenek C (Teqlik'e Dönüştür) bu gecikmeyi bypass eder; nakit ön kayıt ise Apple ödemesi alınana kadar listede bekler.
 
+**Adım 6 — PRO Abonelik Grubu Oluştur (Auto-Renewable Subscription)**
+- App Store Connect → uygulamanı seç → **Subscriptions** sekmesi → (+) → **Create Subscription Group**
+- **Grup Adı**: `Teqlif PRO`
+- Grup içinde 4 abonelik planı oluştur: (+) → **Auto-Renewable Subscription**
+
+| Product ID | Display Name (TR) | Süre | Fiyat (%30) | Fiyat (%15/SBP) | İndirim |
+|------------|------------------|------|------------|----------------|---------|
+| `teqlif_pro_1m` | Teqlif PRO — 1 Ay | 1 Month | ₺149,99/ay | ₺119,99/ay | — |
+| `teqlif_pro_3m` | Teqlif PRO — 3 Ay | 3 Months | ₺404,99/3ay | ₺323,99/3ay | %10 |
+| `teqlif_pro_6m` | Teqlif PRO — 6 Ay | 6 Months | ₺764,99/6ay | ₺611,99/6ay | %15 |
+| `teqlif_pro_12m` | Teqlif PRO — 1 Yıl | 1 Year | ₺1.349,99/yıl | ₺1.079,99/yıl | %25 |
+
+Her abonelik planı için doldurulacaklar:
+- **Reference Name**: `teqlif_pro_1m_tr` (dahili ad)
+- **Product ID**: yukarıdaki tablo (Flutter kodu ile birebir eşleşmeli)
+- **Subscription Duration**: ilgili süre seçeneği
+- **Pricing**: tier seç; 3/6/12 aylık planlarda aylık eşdeğer daha düşük olduğu açıkça görülmeli
+- **Localizations**: TR + EN dili için başlık + fayda listesi (HD yayın, %95 hediye payı, gelişmiş analitik, Replay izleme)
+- **Review Information**: "PRO abonelik dijital özellikler sağlar; otomatik yenileme Apple Kimliği ile faturalandırılır"
+- **App Review'dan önce**: EULA (Kullanım Şartları) ve Gizlilik Politikası linklerini ekle
+
+Apple Zorunlulukları (PRO satın alma ekranında zorunlu metin):
+```
+"Abonelik otomatik olarak yenilenir. Apple Kimliği ayarlarınızdan
+istediğiniz zaman iptal edebilirsiniz."
+```
+
 ---
 
 ### 3.1 Zorunlu Kurallar (İhlali = Red)
@@ -173,9 +200,10 @@ Her ürün için doldurulacaklar:
   - "Kredi kartı / havale ile öde"
   - Harici ödeme sitesine herhangi bir link
 
-**Consumable Ürün Tipi:**
-- App Store Connect'te ürün tipi: `Consumable` (Tüketilebilir)
-- Abonelik (`Auto-Renewable Subscription`) veya `Non-Consumable` **değil**
+**IAP Ürün Tipleri:**
+- teqlik paketleri (4 adet): App Store Connect'te `Consumable` (Tüketilebilir)
+- PRO abonelik (4 plan): App Store Connect'te `Auto-Renewable Subscription`
+- `Non-Consumable` tipi kullanılmaz
 
 **Hardcoded Fiyat Yasak:**
 - ARB dosyalarına veya Dart koduna `₺149,99` yazılmaz
@@ -223,7 +251,7 @@ Satın alımlar Apple Kimliği hesabınız üzerinden faturalandırılır.
               ▼                             ▼
 ┌─────────────────────────┐   ┌────────────────────────────────────────┐
 │  [2. İÇ TÜKETİM]        │   │  [3. HEDİYELEŞME]                     │
-│  Boost·Blast·AI·PRO Pass│   │  Canlı mezatta 8 katman hediye         │
+│  Boost·Blast·AI·PRO Sub │   │  Canlı mezatta 8 katman hediye         │
 │  Nakit çıkışı: ₺0        │   │  Gönderen: teqlik_balance -= cost      │
 │  Teqlif marjı: %100     │   │  Alıcı: tl_pending_balance +=          │
 │  (Yeniden [2]'ye döner) │   │    TRUNC(cost×pay_rate×0.50,2)         │
@@ -258,9 +286,10 @@ Satın alımlar Apple Kimliği hesabınız üzerinden faturalandırılır.
                               │ Para ÇIKMAZ     │  │ Gerçek transfer: LTD + banka API     │
                               └─────────────────┘  └──────────────────────────────────────┘
 
-CASHOUT_ENABLED=false: Adım 4-5 arka planda çalışır; Kart 2'de TL bakiyesi,
-  IBAN butonu ve Seçenek C gösterilmez. Yayıncı TL biriktirir, göremez.
-CASHOUT_ENABLED=true (şirket kurulduktan sonra): tüm adımlar + Kart 2 UI aktif.
+cashout_enabled=false (V1.0 başlangıç): Adım 4-5 arka planda çalışır; Kart 2'de TL
+  bakiyesi, IBAN butonu ve Seçenek C gösterilmez. Yayıncı TL biriktirir, göremez.
+cashout_enabled=true (V1.1 — şirket kurulduktan sonra): tüm adımlar + Kart 2 UI aktif.
+  Aktivasyon: redis-cli SET teqlif:config:cashout_enabled 1  (App Store build gerekmez)
 ```
 
 ### 4.1 Flutter Tarafı
@@ -271,19 +300,31 @@ CASHOUT_ENABLED=true (şirket kurulduktan sonra): tüm adımlar + Kart 2 UI akti
 ```
 mobile/lib/
   ├── models/
-  │    └── teqlik_package.dart         // id, teqlikAmount, bonusAmount, isPopular, isBestValue
+  │    ├── teqlik_package.dart         // id, teqlikAmount, bonusAmount, isPopular, isBestValue
+  │    └── pro_subscription_plan.dart  // id, duration, price, discountPercent
   ├── services/
-  │    └── iap_service.dart            // StoreKit bağlantısı, purchaseStream yönetimi
+  │    └── iap_service.dart            // Unified StoreKit listener: purchaseStream hem consumable hem subscription dinler
+  │                                    //   productID.startsWith('teqlik_pack_') → wallet credit
+  │                                    //   productID.startsWith('teqlif_pro_')  → POST /api/wallet/apple-verify
   ├── screens/wallet/
   │    ├── viewmodels/
-  │    │    └── wallet_view_model.dart // Riverpod Notifier: bakiye, paketler, satın alma durumları
-  │    ├── wallet_screen.dart          // Ana Scaffold
+  │    │    └── wallet_view_model.dart // Riverpod Notifier: bakiye, paketler, satın alma durumları, pro_status
+  │    ├── wallet_screen.dart          // Ana Scaffold — Kart 1'de PRO rozeti
   │    └── widgets/
   │         ├── teqlik_package_card.dart
   │         ├── hero_balance_card.dart
   │         ├── teqlik_utility_guide.dart
   │         └── iban_pre_registration_sheet.dart  // Glassmorphism bottom sheet: yasal uyum panosu + IBAN formatter + banka logosu + simülatör + "Sıraya Gir" CTA
+  ├── screens/pro/
+  │    ├── pro_subscription_sheet.dart // Glassmorphism PRO satış bottom sheet:
+  │    │                               //   1/3/6/12 ay seçim kartları, her plan fiyat + tasarruf badge
+  │    │                               //   "Ücretsiz Dene" intro offer (App Store Connect'te tanımlanmışsa)
+  │    │                               //   PRO faydaları listesi, "Satın Alımları Geri Yükle" butonu (zorunlu)
+  │    │                               //   Yasal abonelik metni (otomatik yenileme uyarısı — Apple zorunluluğu)
+  │    └── pro_badge_widget.dart       // Kart 1 + profil fotoğrafı üzerinde PRO rozeti
 ```
+
+> **IAPService birleşik listener:** `purchaseStream` tek noktada dinlenir; `productID` prefix'e göre consumable veya subscription dalına yönlendirilir. Restore Purchases (`restorePurchases()`) çağrısı `purchaseStream`'den geçer; AppStore daha önce satın alınmış abonelikleri tekrar yayınlar — ayrı bir restore endpoint'i yoktur, StoreKit'in yerleşik mekanizması kullanılır.
 
 > **Mevcut durum:** `WalletScreen` hâlâ `profile_screen.dart` içinde — 5000+ satırlık dosya. V1.0 implementasyonunda ayrı modüle çıkarılmalı.
 
@@ -319,6 +360,10 @@ Mobil StoreKit   →  signedTransactionInfo (JWS)  →  POST /api/wallet/apple-v
 
 **JWS Doğrulama — Zorunlu Güvenlik Kontrolleri (`verify_apple_receipt_command.py`):**
 ```python
+VALID_CONSUMABLE_IDS   = {"teqlik_pack_100", "teqlik_pack_250", "teqlik_pack_500", "teqlik_pack_1000"}
+VALID_SUBSCRIPTION_IDS = {"teqlif_pro_1m", "teqlif_pro_3m", "teqlif_pro_6m", "teqlif_pro_12m"}
+VALID_PRODUCT_IDS      = VALID_CONSUMABLE_IDS | VALID_SUBSCRIPTION_IDS
+
 # 1. x5c sertifika zinciri doğrulama (leaf → G3 CA → Apple Root CA)
 # 2. jwt.decode ile JWS doğrulama — leeway=60 zorunlu:
 #    jwt.decode(signed_transaction, cert_chain[0].public_key(),
@@ -328,8 +373,20 @@ Mobil StoreKit   →  signedTransactionInfo (JWS)  →  POST /api/wallet/apple-v
 # 3. Payload hardcoded doğrulama:
 assert payload["environment"] == "Production"          # Sandbox makbuzu prod'a geçemez
 assert payload["bundleId"]    == "com.teqlif.app"      # Başka uygulamanın makbuzu reddedilir
-assert payload["productId"]   in VALID_PRODUCT_IDS     # Sadece bilinen 4 paketin ID'si
+assert payload["productId"]   in VALID_PRODUCT_IDS     # Bilinen consumable + subscription ID'ler
 # Bu kontroller atlansa jailbreak araçlarıyla (LocalIAPStore) bedavadan teqlik yüklenebilir.
+
+# 4. Ürün tipine göre dispatch:
+product_id = payload["productId"]
+if product_id in VALID_CONSUMABLE_IDS:
+    # Consumable → teqlik_balance += amount, TeqlikTransaction kaydı (product_type='consumable')
+    ...
+elif product_id in VALID_SUBSCRIPTION_IDS:
+    # Subscription → user_type='pro', pro_expires_at=expires_date, plan_type=...,
+    #   premium_since=NOW(), apple_original_transaction_id=original_transaction_id
+    #   TeqlikTransaction kaydı (product_type='subscription')
+    #   Daha önce aktif PRO varsa (yenileme) → pro_expires_at güncelle, premium_since dokunma
+    ...
 ```
 
 **Günlük IAP Hız Limiti (Velocity Limit):**
@@ -457,6 +514,26 @@ CREATE INDEX idx_gift_events_payout
   ON gift_events (payout_status, sent_at)
   WHERE payout_status = 'pending';
 
+-- PRO abonelik kolonları (users) — baştan oluşturulur
+ALTER TABLE users
+  ADD COLUMN pro_expires_at               TIMESTAMPTZ NULL,
+  ADD COLUMN pro_grace_until              TIMESTAMPTZ NULL,
+  ADD COLUMN apple_original_transaction_id VARCHAR(64) NULL;
+  -- pro_expires_at: Apple'ın expiresDate değeri; NULL iken kullanıcı standart
+  -- pro_grace_until: Apple billing retry grace period bitişi (maks 6 gün); NULL ise grace yok
+  -- apple_original_transaction_id: abonelik zincirini izlemek için; yenilemede değişmez
+  -- NOT: CHECK (pro_expires_at > NOW()) KONULMAMALI — cron ve webhook çakışırsa deadlock riski;
+  --      süreli kontrol uygulama katmanında yapılır (pro_expires_at IS NULL koşulu).
+
+CREATE INDEX idx_users_pro_status
+  ON users (user_type, pro_expires_at)
+  WHERE user_type = 'pro';
+
+-- teqlik_transactions: ürün tipi ayrımı
+ALTER TABLE teqlik_transactions
+  ADD COLUMN product_type VARCHAR(20) NOT NULL DEFAULT 'consumable';
+  -- 'consumable' (teqlik paketi) | 'subscription' (PRO abonelik)
+
 -- withdrawal_requests: baştan oluşturulur (CASHOUT_ENABLED=false iken kullanılmaz)
 CREATE TABLE withdrawal_requests (
   id                SERIAL PRIMARY KEY,
@@ -472,7 +549,7 @@ CREATE TABLE withdrawal_requests (
   admin_note        TEXT
 );
 
--- ── V1.5 Migration (şirket kurulduktan sonra — hukuki/KYC kolonları) ──────────
+-- ── V1.1 Migration (şirket kurulduktan sonra — hukuki/KYC kolonları) ──────────
 -- ALTER TABLE users
 --   ADD COLUMN monthly_free_withdrawals_used INTEGER NOT NULL DEFAULT 0,
 --   ADD COLUMN rolling_reserve_expires_at    TIMESTAMPTZ,
@@ -541,12 +618,13 @@ Clean Architecture kuralı gereği iş mantığı `wallet.py` router'da değil; 
 ```
 app/use_cases/wallet/
   commands/
-    send_gift_command.py                 ← tl_pending_balance += TRUNC(cost×pay_rate×0.50,2)
-    verify_apple_receipt_command.py      ← JWS doğrulama + x5c zinciri
-    handle_apple_refund_command.py       ← orantılı gift iptali + negatif bakiye
-    request_withdrawal_command.py        ← tl_earnings_balance atomik düşüm
-    cancel_withdrawal_request_command.py ← status='pending' → 'cancelled' + iade
-    convert_to_teqlik_command.py         ← Seçenek C +%10 bonus, atomik SQL
+    send_gift_command.py                       ← tl_pending_balance += TRUNC(cost×pay_rate×0.50,2)
+    verify_apple_receipt_command.py            ← JWS doğrulama + x5c zinciri; consumable/subscription dispatch
+    handle_apple_notification_command.py       ← Apple Notifications V2: DID_RENEW/EXPIRED/GRACE/REFUND
+    handle_apple_refund_command.py             ← orantılı gift iptali + negatif bakiye
+    request_withdrawal_command.py              ← tl_earnings_balance atomik düşüm
+    cancel_withdrawal_request_command.py       ← status='pending' → 'cancelled' + iade
+    convert_to_teqlik_command.py               ← Seçenek C +%10 bonus, atomik SQL
   queries/
     get_wallet_summary_query.py
 ```
@@ -633,7 +711,7 @@ POST /api/wallet/convert-to-teqlik  →  convert_to_teqlik_command.py  (Seçenek
       "⚠️ Dönüştürülen teqlik'ler kalıcı olarak ilan güçlendirme ve mezat harcamaları
        için kullanılır; tekrar nakde çevrilemez veya TL bakiyesine geri döndürülemez."
       [ Anladım, {total} Teqlik'e Dönüştür ]
-  → Para tek yönlü olarak ekosisteme kilitlenir — V1.5'te aktive edilir.
+  → Para tek yönlü olarak ekosisteme kilitlenir — cashout_enabled=true (V1.1) ile aktive edilir.
 ```
 
 **T+14 Holding — ARQ cron görevi (başından itibaren aktif, idempotent):**
@@ -765,6 +843,84 @@ Sonraki yayın kazançları negatif bakiyeyi kapatır (borç mahsubu):
    döngüsüne girer ve aynı iade birden çok kez işlenebilir.
 ```
 
+### 4.2.3 PRO Abonelik Sistemi
+
+**PRO Faydaları (mevcut backend kodu zaten user_type='pro' destekliyor):**
+
+| Fayda | Standart | PRO |
+|-------|----------|-----|
+| Yayın kalitesi | 540p | 720p HD |
+| Hediye gelir payı | %70 | %95 |
+| Replay (VOD) izleme | Yok | Var |
+| Ücretsiz kredit kotaları | Standart | Arttırılmış |
+| Gelişmiş analitik | Temel | Tam |
+| Çekim ücreti (V1.1) | ₺15/işlem | 2× ücretsiz/ay |
+
+**Apple Notifications V2 Webhook (`handle_apple_notification_command.py`):**
+```
+POST /api/wallet/apple-notifications
+  Body: { signedPayload: "<JWS string>" }
+
+  ──── 200 OK hemen döner, ağır iş ARQ kuyruğuna atılır (refund ile aynı pattern) ────
+
+  handle_apple_notification_task (ARQ worker — queue_name="default"):
+
+  x5c sertifika zinciri doğrulaması (signedPayload JWS imzası) → payload parse
+
+  notificationType: DID_RENEW
+    → user.pro_expires_at = new_expires_date  (uzatılır)
+    → user.pro_grace_until = NULL             (grace bitti, ödeme geldi)
+    → user.user_type zaten 'pro', dokunma
+    → push: "PRO üyeliğiniz yenilendi ✓"
+
+  notificationType: DID_RENEW + subtype: BILLING_RETRY
+    → user.pro_grace_until = grace_expires_date  (Apple 6 güne kadar retry eder)
+    → user.user_type = 'pro'  (grace süresince PRO kalır — kesilmez)
+    → push: "Ödeme alınamadı, tekrar deneniyor — üyeliğiniz devam ediyor"
+
+  notificationType: EXPIRED veya subtype: GRACE_PERIOD_EXPIRED
+    → user.user_type = 'standard'
+    → user.pro_expires_at = NULL
+    → user.pro_grace_until = NULL
+    → push: "PRO üyeliğiniz sona erdi"
+
+  notificationType: REVOKE (fraud/chargeback)
+    → user.user_type = 'standard' (anında)
+    → user.pro_expires_at = NULL
+    → refund akışı: teqlik_balance azalt (paketle gelen bonuslar varsa orantılı)
+```
+
+**Gece Cron — check_expired_pro_users_task (03:00 UTC):**
+```python
+# Her gün 03:00 UTC — webhook kaçırma sigortası (network glitch / worker restart)
+# schedule.yaml: batch.check_expired_pro_users, watchdog_m: 60
+async def check_expired_pro_users_task():
+    """
+    pro_expires_at geçmiş ve grace_period'u da bitmiş PRO kullanıcıları standard'a çeker.
+    Apple webhook (EXPIRED) zaten yapar — bu cron webhook kaçırma sigortasıdır.
+    """
+    # UPDATE users
+    # SET user_type = 'standard', pro_expires_at = NULL, pro_grace_until = NULL
+    # WHERE user_type = 'pro'
+    #   AND pro_expires_at < NOW()
+    #   AND (pro_grace_until IS NULL OR pro_grace_until < NOW())
+    await _agent_ok(ctx, "check_expired_pro_users_task")
+```
+
+**Grace Period Mantığı (Billing Retry):**
+- Apple ödeme başarısız olursa kullanıcıya hemen `standard` yapılmaz
+- `pro_grace_until` = Apple'ın DID_RENEW+BILLING_RETRY bildirimindeki `gracePeriodExpiresDate` (maks 6 gün)
+- Grace süresince kullanıcı PRO kalır, `pro_grace_until` dolarsa (cron veya GRACE_PERIOD_EXPIRED webhook) `standard` yapılır
+- Ödeme gelirse DID_RENEW → `pro_grace_until = NULL`, kullanıcı kesintisiz PRO
+
+**plan_type değerleri (users.plan_type mevcut kolon):**
+```
+teqlif_pro_1m  → plan_type = 'monthly'
+teqlif_pro_3m  → plan_type = 'quarterly'
+teqlif_pro_6m  → plan_type = 'biannual'
+teqlif_pro_12m → plan_type = 'annual'
+```
+
 ### 4.4 Güvenlik & Anti-Fraud Mimarisi
 
 **V1.0'da aktif olan güvenlik katmanları:**
@@ -778,12 +934,12 @@ Sonraki yayın kazançları negatif bakiyeyi kapatır (borç mahsubu):
 | Çift talep önlemi | Aktif pending varken yeni talep reddi | Aynı bakiyeye çift talep |
 | Refund → gift iptali | orantılı payout_status='cancelled_refund'; tl_pending_balance azalt; negatif bakiye | IAP iadesi hediye kazancını da iptal eder |
 | Negatif bakiye | CHECK constraint yok; hem tl_earnings_balance hem teqlik_balance eksilir | Apple webhook 500 vermez, retry storm başlamaz |
-| T+14 kilitli bakiye | V1.5: pending bakiye 14 gün çekilemez | Apple iade penceresi sigortası |
+| T+14 kilitli bakiye | pending bakiye 14 gün çekilemez | Apple iade penceresi sigortası |
 | Webhook async | 200 OK hemen döner, signedPayload ARQ kuyruğuna atılır; ağır JWS + DB işlemi worker'da | Apple refund dalgasında Uvicorn thread starvation önlenir |
 | Host row contention | send_gift deterministik kilit sırası: LEAST(sender_id, host_id) önce kilitlenir | Mezat burst'inde deadlock önlenir |
 | Anti-arbitraj kilit | teqlik → TL dönüşümü yoktur (`/convert-teqlik-to-tl` endpoint'i asla olmayacak); teqlik kazancını hediye yoluyla nakde çevirmeye kalkmak %40 kayıp yaratır: ₺500 → 628 tqlk → PRO yayıncıya hediye → ₺298,30 (628 × 0.95 × ₺0.50); Teqlif kâr eder | teqlik tek yönlü kapalı döngü — kasayı korur |
 
-**V1.5'te devreye girecek güvenlik katmanları:**
+**V1.1'de devreye girecek güvenlik katmanları (şirket kuruluşu sonrası):**
 
 **Rolling Reserve — Yeni Yayıncı Kademeli Çekim Kotası:**
 ```
@@ -850,16 +1006,22 @@ Kurumsal banka toplu ödeme API'si (şirket kuruluşu sonrası)
 | `convert_to_teqlik_command.py` (Seçenek C, +%10 bonus) | ❌ Yazılmamış |
 | `get_wallet_summary_query.py` (tl_ balansları dahil) | ❌ Yazılmamış |
 | `handle_apple_refund_command.py` (orantılı gift iptali + negatif bakiye) | ❌ Yazılmamış |
-| `teqlik_transactions` (apple_transaction_id UNIQUE + raw_receipt TEXT) | ❌ Migration yok |
+| `teqlik_transactions` (apple_transaction_id UNIQUE + raw_receipt TEXT + product_type) | ❌ Migration yok |
 | `daily_financial_reconciliation` cron (00:00 UTC, watchdog_m:10) | ❌ Eklenmemiş |
 | `schedule.yaml` T+14 cron (`release_pending_earnings`, watchdog_m:30) | ❌ Eklenmemiş |
+| **PRO Abonelik** | |
+| `users` (pro_expires_at, pro_grace_until, apple_original_transaction_id) | ❌ Migration yok |
+| `verify_apple_receipt_command.py` consumable + subscription dispatch | ❌ Yazılmamış |
+| `handle_apple_notification_command.py` (DID_RENEW/EXPIRED/GRACE/REVOKE) | ❌ Yazılmamış |
+| `schedule.yaml` check_expired_pro_users (03:00 UTC, watchdog_m:60) | ❌ Eklenmemiş |
+| PRO subscription Flutter UI (ProSubscriptionSheet, Restore Purchases) | ❌ Yazılmamış |
 
 **Neden Gerçek Banka Transferi CASHOUT_ENABLED=false Döneminde Yapılmıyor — İki Bağımsız Neden:**
 
 1. **MASAK/Hukuki**: Şirket kuruluşu tamamlanmadan kişisel hesaptan toplu kullanıcı transferi "şüpheli ticari faaliyet" sayılır (banka hesabı bloke riski).
 2. **Apple Net-45 Nakit Akışı**: Apple App Store ödemeleri Net-33 ile Net-45 gün arasında geliştiricinin banka hesabına yatar. Ekim satışları en erken Kasım sonunda gelir. Yayıncı 14. günde çekim talep etseydi, Teqlif henüz Apple'dan tahsil etmemiş parayı kendi cebinden ödemek zorunda kalacaktı — negatif nakit akışı tuzağı. Seçenek C (Teqlik'e Dönüştür) ekosistemi kapatır ve bu gecikmeyi tamamen bypass eder; nakit ön kayıt ise Apple ödemesi geldiğinde işleme alınır.
 
-**CASHOUT_ENABLED=true öncesi tamamlanması gereken hukuki/regülatif bileşenler (§6.3):**
+**CASHOUT_ENABLED=true öncesi tamamlanması gereken hukuki/regülatif bileşenler (V1.1 §6.3):**
 
 | Bileşen | Ön Koşul |
 |---------|----------|
@@ -883,9 +1045,10 @@ Kurumsal banka toplu ödeme API'si (şirket kuruluşu sonrası)
 ├──────────────────────────────────────────────┤
 │  ╔══════════════════════════════════════════╗ │
 │  ║  KART 1: teqlik Bakiyem                 ║ │
-│  ║  • Bakiye: 140 teqlik  [PRO rozeti]     ║ │
+│  ║  • Bakiye: 140 teqlik  [PRO ✦ rozeti]  ║ │
 │  ║  • Bakiye yüklenince sayı yukarı sayar  ║ │
 │  ║  [  teqlik Satın Al  ]                  ║ │
+│  ║  [  PRO'ya Yükselt  ]  (PRO değilse)   ║ │
 │  ║  *(Bu bakiye ASLA nakde çevrilemez)*    ║ │
 │  ╚══════════════════════════════════════════╝ │
 ├──────────────────────────────────────────────┤
@@ -1108,48 +1271,51 @@ Sunucu da aynı formülü uygular; Flutter gösterimi sadece kullanıcı bilgisi
 | 9 | Hero Balance Card animasyonu | Mobile | Hayır |
 | 10 | Konfeti / başarı animasyonu (Lottie) | Mobile | Hayır |
 | 11 | App Store Review öncesi yasal footer kontrolü | QA | Evet |
+| 12 | App Store Connect — Subscription Group "Teqlif PRO" + 4 plan (teqlif_pro_1m/3m/6m/12m); EULA + Gizlilik linki + otomatik yenileme metni ekle | **Kullanıcı** | Evet |
 
 ### 6.2 Yayıncı Hakediş Sistemi — Görevler (Tüm Altyapı Upfront)
 
 | # | Görev | Yapan | Blokör mu? |
 |---|-------|-------|-----------|
-| W1 | Migration: `users` (tl_earnings_balance, tl_pending_balance) + `withdrawal_requests` + `gift_events` (earnings_tl NUMERIC(10,4), payout_status DEFAULT 'pending', released_at) + `teqlik_transactions` (apple_transaction_id VARCHAR(64) UNIQUE, raw_receipt TEXT) | Backend | Evet |
+| W1 | Migration: `users` (tl_earnings_balance, tl_pending_balance, **pro_expires_at TIMESTAMPTZ, pro_grace_until TIMESTAMPTZ, apple_original_transaction_id VARCHAR(64)**) + `withdrawal_requests` + `gift_events` (earnings_tl NUMERIC(10,4), payout_status DEFAULT 'pending', released_at) + `teqlik_transactions` (apple_transaction_id VARCHAR(64) UNIQUE, raw_receipt TEXT, **product_type VARCHAR(20) DEFAULT 'consumable'**) + `idx_users_pro_status` (user_type, pro_expires_at WHERE user_type='pro') | Backend | Evet |
 | W2 | `gift_events` payout index (`idx_gift_events_payout` WHERE payout_status = 'pending') | Backend | Evet |
 | W3 | `use_cases/wallet/commands/` yapısı oluştur | Backend | Evet |
-| W4 | `verify_apple_receipt_command.py`: x5c zincir + `jwt.decode(leeway=60)` (clock skew) + environment/bundleId/productId hardcoded + velocity limit (Redis, ₺5.000/gün/cihaz; Redis çökerse Fail-Closed) + `raw_receipt=signedTransactionInfo` kaydı | Backend | Evet |
+| W4 | `verify_apple_receipt_command.py`: x5c zincir + `jwt.decode(leeway=60)` (clock skew) + environment/bundleId hardcoded + velocity limit (Redis, ₺5.000/gün/cihaz; Redis çökerse Fail-Closed) + `raw_receipt=signedTransactionInfo` kaydı; **productId dispatch**: `teqlik_pack_*` → consumable (teqlik_balance +=), `teqlif_pro_*` → subscription (user_type='pro', pro_expires_at, plan_type, apple_original_transaction_id) | Backend | Evet |
+| W4c | `handle_apple_notification_command.py`: Apple Notifications V2 webhook; ARQ async (200 OK hemen → payload kuyruğa); DID_RENEW → pro_expires_at uzat; DID_RENEW+BILLING_RETRY → pro_grace_until; EXPIRED/GRACE_PERIOD_EXPIRED → standard; REVOKE → standard + refund akışı | Backend | Evet |
 | W5 | `send_gift_command.py`: `tl_pending_balance += TRUNC(cost × pay_rate × 0.50, 2)` + `payout_status='pending'` + earnings_tl NUMERIC(10,4) kaydı + Decimal hassasiyeti + atomik SQL + LEAST(sender,host) kilit sırası + Redis Token Bucket (2/sn) + 8 hediye tipi; **post-commit**: WebSocket broadcast + push notification UoW commit'ten SONRA, transaction bloğu dışında tetiklenir (kilit çakışmasını önler) | Backend | Evet |
 | W6 | `get_wallet_summary_query.py`: teqlik_balance + tl_earnings_balance + tl_pending_balance + **cashout_enabled: bool** döndürür; cashout_enabled Redis'ten okunur (`GET teqlif:config:cashout_enabled`; 0/yoksa false, 1 ise true); Flutter bu flag'i API response'undan okur — statik sabit veya .env değil | Backend | Evet |
 | W7 | `request_withdrawal_command.py`: tl_earnings_balance atomik düşüm (UPDATE WHERE >= amount, 0 satır → 400) + aktif pending yok kontrolü (409) + withdrawal_requests INSERT — aynı transaction | Backend | Hayır |
 | W7b | `convert_to_teqlik_command.py`: Seçenek C (+%10 bonus, atomik SQL) — modal yasal uyarısı zorunlu | Backend | Hayır |
-| W7c | `schedule.yaml`: `release_pending_earnings` (02:15 UTC, watchdog_m:30) + `daily_financial_reconciliation` (00:00 UTC, watchdog_m:10) — 02:15: Pazar 02:00 pg_basebackup çakışması önlenir; `worker.py` `_SCHEDULE_FUNCTIONS` sözlüğüne fonksiyon eklenir + `await _agent_ok(ctx, "release_pending_earnings_task")` son satır zorunlu (eksik → sahte alarm) | Backend | Hayır |
+| W7c | `schedule.yaml`: `release_pending_earnings` (02:15 UTC, watchdog_m:30) + `daily_financial_reconciliation` (00:00 UTC, watchdog_m:10) + **`check_expired_pro_users` (03:00 UTC, watchdog_m:60)** — 02:15: Pazar 02:00 pg_basebackup çakışması önlenir; 03:00: webhook kaçırma sigortası; her fonksiyon `worker.py` `_SCHEDULE_FUNCTIONS` sözlüğüne eklenmeli + `await _agent_ok(ctx, "<task_name>")` son satır zorunlu (eksik → sahte alarm) | Backend | Hayır |
 | W7e | `cancel_withdrawal_request_command.py`: status='pending' → 'cancelled' + atomik bakiye iadesi + 403 yetki / 409 statü kontrolü; `DELETE /api/wallet/withdraw/{id}` | Backend | Hayır |
 | W8 | `handle_apple_refund_command.py`: orantılı gift iptali (payout_status='cancelled_refund', tl_pending_balance azalt) + negatif bakiye + `pending_refund=True`; NO CHECK constraint (webhook retry storm önlemi) | Backend | Evet |
 | W9 | Kart 2 UI: `cashout_enabled` flag `GET /api/wallet/summary` response'undan okunur (statik sabit değil); cashout_enabled==false → "Yayın Başlat" CTA (glassmorphism koyu zümrüt/altın kart); cashout_enabled==true → birincil "⚡ ANINDA KULLAN (+%10 Teqlik'e Dönüştür)", ikincil "🏦 Nakit Transferi İçin IBAN Tanımla"; aktif talep varsa sıra kartı (📋 #Queue-{id}, İptal Et, Teqlik'e Dönüştür); hediye ekranında combo tap sayacı (x2/x5/x10 + burst animasyonu) — **optimistic UI**: sayaç animasyonu anlık güncellenir, backend debit debounced (örn. 300ms); bakiye yetersizse toast ile geri al; **`AppLifecycleState.resumed`**: uygulama arka plandan öne gelince `GET /api/wallet/summary` yeniden çekilir (App Store dönüşünde bakiye güncellenmesi için) | Mobile | Hayır |
 | W10 | IBAN Ön Kayıt Bottom Sheet: tutar çipleri (₺500 Min / ₺1.000 / Tamamı); IBAN TR formatı + banka logosu; Seçenek C simülatörü (₺500 → 571+57 = 628 teqlik, FLOOR anlık); "Bilgilerimi Kaydet ve Sıraya Gir" CTA (Slide to Confirm YOK); MASAK yasal uyarı panosu | Mobile | Hayır |
 | W11 | 5 dil ARB: `giftNameClap`, `giftNameTea`, `giftNameGoldenHammer`, `giftNameRocket`, `giftNameTrophy`, `walletConvertToTeqlik`, `walletIbanPreRegistrationTitle`, `walletIbanRegistrationSuccess`, `walletIbanRejected`, `walletQueueNumber`, `walletPendingEarningsDesc`, `walletStartStreamCta`; **Arapça RTL**: `Directionality.of(context)` ile yön tespiti, gradient yönleri RTL'e göre tersler, `chevron_right`/`chevron_left` dinamik seçilir; **para miktarları**: `NumberFormat.currency(locale: locale.toString(), symbol: '₺')` — string birleştirme (`'₺' + amount`) yasak; **çoğul kurallar**: gün ve teqlik sayıları için ICU plural syntax `{count, plural, =1{# gün} other{# gün}}` | Mobile | Hayır |
 | W12 | Admin panel: bekleyen çekim talepleri + Onayla / Reddet (red → `tl_earnings_balance += amount_tl`) | Backend/Admin | Hayır |
+| W13 | PRO Abonelik UI: `ProSubscriptionSheet` (glassmorphism — 1/3/6/12 ay plan seçim kartları, fiyat + tasarruf badge, PRO fayda listesi); `pro_badge_widget.dart` (Kart 1 + profil); Kart 1 "PRO'ya Yükselt" CTA (PRO değilse); `IAPService` unified purchaseStream (`teqlif_pro_*` prefix → verify endpoint); **"Satın Alımları Geri Yükle"** butonu (`restorePurchases()` — Apple Guideline 3.1.1 zorunlu); otomatik yenileme uyarı metni (Apple zorunluluğu); `AppLifecycleState.resumed` → wallet summary yenile (PRO badge güncelleme) | Mobile | Hayır |
 
-### 6.3 V1.5'e Ertelenen Özellikler (şirket kuruluşu sonrası)
+### 6.3 V1.1'e Ertelenen Özellikler (şirket kuruluşu sonrası)
 
-Aşağıdaki özellikler **şirket kuruluşu tamamlanana kadar** kodlanmaz. Tüm backend use case'leri (W1–W12) ve T+14 cron baştan kurulmuştur; bu liste yalnızca hukuki/regülatif ön koşul gerektiren ek özellikleri içerir. `CASHOUT_ENABLED=true` yapılmadan önce V15-1 ile V15-8 tamamlanmalıdır.
+Aşağıdaki özellikler **şirket kuruluşu tamamlanana kadar** kodlanmaz. Tüm backend use case'leri (W1–W13) ve T+14 cron V1.0'da kurulmuştur; bu liste yalnızca hukuki/regülatif ön koşul gerektiren ek özellikleri içerir. `CASHOUT_ENABLED=true` yapılmadan önce V11-1 ile V11-8 tamamlanmalıdır.
 
 | # | Özellik | Ön koşul | Notlar |
 |---|---------|---------|--------|
-| V15-1 | `CASHOUT_ENABLED=true` aktive et + gerçek banka transfer API entegrasyonu | LTD/şahıs şirketi + kurumsal banka anlaşması | MASAK zorunlu |
-| V15-2 | MERNIS/KYC: TCKN doğrulama (NVİ SOAP API) | Şirket kaydı + API sözleşmesi | `user_kyc` şifreli tablo; AES-256 |
-| V15-3 | Rolling Reserve (ilk 90 gün ₺2.500 limit) | Gerçek transfer başlayınca | `rolling_reserve_expires_at` + `rolling_reserve_limit_tl` migration |
-| V15-4 | `account_frozen` & `is_in_debt` zorunlu takibi | Gerçek transfer başlayınca | 30 gün ödenmeyen borç → hesap dondur |
-| V15-5 | `monthly_free_withdrawals_used` + aylık reset cron | Gerçek transfer + PRO abonelik sistemi | PRO kullanıcıya 2× ücretsiz çekim hakkı |
-| V15-6 | Çekim ücreti (₺15 / işlem) + PRO 2× ücretsiz kota | Gerçek transfer | `withdrawal_requests.fee_tl` + `gross_amount_tl` + `withholding_tax_tl` + `net_amount_tl` migration |
-| V15-7 | IBAN checksum (TR + 24 karakter + mod-97) | V1.5 form | CASHOUT_ENABLED=false döneminde yalnızca format kontrolü yeterli |
-| V15-8 | Admin Maker-Checker (₺2.500+ çift onay, ₺10.000+ 2FA) | Gerçek transfer | Audit log zorunlu |
-| V15-9 | Web mağazası (teqlif.com/cuzdan, %2,5 işlemci ücreti) | Şirket + web ödeme altyapısı | Apple bypass — yalnızca web alımlar |
-| V15-10 | Finansal soğuk arşiv: SHA-256 imzalı CSV/JSONL → `backups/financial_archives/` + `offsite_sync.sh` uzak depo (Hetzner/B2/S3 Glacier) | Gerçek transfer başlayınca | TTK + MASAK 5-10 yıl saklama; WORM |
-| V15-11 | Vergi / Stopaj / Gider Pusulası: Sosyal İçerik Üreticiliği İstisnası belgesi veya Gider Pusulası + stopaj | Şirket + mali müşavir | Beyanname döküm raporu admin panelinde |
+| V11-1 | `CASHOUT_ENABLED=true` aktive et (Redis key → 1) + gerçek banka transfer API entegrasyonu | LTD/şahıs şirketi + kurumsal banka anlaşması | MASAK zorunlu |
+| V11-2 | MERNIS/KYC: TCKN doğrulama (NVİ SOAP API) | Şirket kaydı + API sözleşmesi | `user_kyc` şifreli tablo; AES-256 |
+| V11-3 | Rolling Reserve (ilk 90 gün ₺2.500 limit) | Gerçek transfer başlayınca | `rolling_reserve_expires_at` + `rolling_reserve_limit_tl` migration |
+| V11-4 | `account_frozen` & `is_in_debt` zorunlu takibi | Gerçek transfer başlayınca | 30 gün ödenmeyen borç → hesap dondur |
+| V11-5 | `monthly_free_withdrawals_used` + aylık reset cron | Gerçek transfer (PRO abonelik V1.0'da kurulu) | PRO kullanıcıya 2× ücretsiz çekim hakkı; `reset_monthly_withdrawal_quota` cron ekle |
+| V11-6 | Çekim ücreti (₺15 / işlem) + PRO 2× ücretsiz kota | Gerçek transfer | `withdrawal_requests.fee_tl` + `gross_amount_tl` + `withholding_tax_tl` + `net_amount_tl` migration |
+| V11-7 | IBAN checksum (TR + 24 karakter + mod-97) | V1.1 form | CASHOUT_ENABLED=false döneminde yalnızca format kontrolü yeterli |
+| V11-8 | Admin Maker-Checker (₺2.500+ çift onay, ₺10.000+ 2FA) | Gerçek transfer | Audit log zorunlu |
+| V11-9 | Web mağazası (teqlif.com/cuzdan, %2,5 işlemci ücreti) | Şirket + web ödeme altyapısı | Apple bypass — yalnızca web alımlar |
+| V11-10 | Finansal soğuk arşiv: SHA-256 imzalı CSV/JSONL → `backups/financial_archives/` + `offsite_sync.sh` uzak depo (Hetzner/B2/S3 Glacier) | Gerçek transfer başlayınca | TTK + MASAK 5-10 yıl saklama; WORM |
+| V11-11 | Vergi / Stopaj / Gider Pusulası: Sosyal İçerik Üreticiliği İstisnası belgesi veya Gider Pusulası + stopaj | Şirket + mali müşavir | Beyanname döküm raporu admin panelinde |
 
 ### 6.4 V3.0 Vizyon — teqlik Çift Yönlü Para Birimi (Süper Uygulama)
 
-> Bu vizyon; WeChat Pay, Mercado Pago, Roblox DevEx modelinin Teqlif uyarlamasıdır. V1.0–V1.5 mimarisi (atomik kilitler, NUMERIC(10,4) hassasiyeti, T+14 escrow, çift cüzdan ayrımı) bu vizyona geçişte kodları çöpe atmadan BaaS API'si bağlanarak genişleyecek şekilde tasarlanmıştır.
+> Bu vizyon; WeChat Pay, Mercado Pago, Roblox DevEx modelinin Teqlif uyarlamasıdır. V1.0–V1.1 mimarisi (atomik kilitler, NUMERIC(10,4) hassasiyeti, T+14 escrow, çift cüzdan ayrımı) bu vizyona geçişte kodları çöpe atmadan BaaS API'si bağlanarak genişleyecek şekilde tasarlanmıştır.
 
 **Aşılması gereken 3 duvar:**
 
@@ -1185,7 +1351,7 @@ Aşağıdaki özellikler **şirket kuruluşu tamamlanana kadar** kodlanmaz. Tüm
 FAZ 1 (Şu an — V1.0): Saf teqlik kapalı döngü. Apple StoreKit 2, 8 katmanlı
   hediye, ilan özellikleri. Nakit çıkışı sıfır. Kullanıcı kitlesi büyütülür.
 
-FAZ 2 (Şirket — V1.5/V2.0): LTD kuruluşu. İyzico/PayTR Güvenli Ödeme/Havuz Hesap.
+FAZ 2 (Şirket — V1.1): LTD kuruluşu. İyzico/PayTR Güvenli Ödeme/Havuz Hesap.
   Ürün satışında "Param Güvende" escrow. Kargo onayı → IBAN transferi.
 
 FAZ 3 (Süper-App — V3.0): BaaS ortaklığı (Param/Papara). teqlik çift yönlü:
@@ -1200,7 +1366,7 @@ FAZ 3 (Süper-App — V3.0): BaaS ortaklığı (Param/Papara). teqlik çift yön
 ### 7.1 Analizde Doğru ve Kritik
 
 - Apple Kural 3.1.1 zorunlu IAP uyarısı ✅
-- Consumable ürün tipi ✅
+- Consumable (teqlik paketleri) + Auto-Renewable Subscription (PRO) ürün tipleri ✅
 - Hardcoded fiyat yasağı ✅
 - İptal sessiz olmalı ✅
 - Bekleyen işlem (Unfinished Transaction) uyarısı ✅
@@ -1270,7 +1436,7 @@ Dönüşüm kuru: **1 teqlik hediye = ₺0,50 net nakit** (sabit)
 
 **Hediye Combo Tap (Ardışık Gönderim):** Yoğun anlarda (mezatın son 10 saniyesi gibi) aynı hediye butonuna art arda basıldığında combo sayacı görsel katmanı aktif olur: x2 → x5 → x10 patlamaları, tırmanan pitch ses efekti. Mevcut Token Bucket (burst: 5) bu davranışı zaten kapsar — backend kuralı değişmez, yalnızca Flutter UI katmanında combo counter animasyonu eklenir. Her dokunuş ayrı bir `send_gift` çağrısıdır; sunucu rate limit kuralları aynı kalır.
 
-**PRO yayıncı flywheel:** Standart ve PRO arasındaki oran farkı her hediyede birikir. PRO abonelik bedelini aylık Taç hediyelerinden karşılamak için gereken sayı: ₺79,99 ÷ (₺47,50 − ₺35,00) = **6,4 Taç/ay**. Ayda yalnızca 6–7 Taç alan PRO yayıncının abonelik bedeli otomatik amortize olur. Üstüne 3 ücretsiz Boost (₺225), 6 AI Açıklama (₺45), 720p HD yayın ve 2 ücretsiz çekim hakkı eklenir.
+**PRO yayıncı flywheel:** Standart ve PRO arasındaki oran farkı her hediyede birikir. PRO abonelik bedelini aylık Taç hediyelerinden karşılamak için gereken sayı (%30 komisyon, 1 aylık plan ₺149,99): ₺149,99 ÷ (₺47,50 − ₺35,00) = **12 Taç/ay**. Small Business Program (%15, ₺119,99/ay) senaryosunda: 9,6 Taç/ay. Aylık 10 Taç alan PRO yayıncının abonelik bedeli otomatik amortize olur. Üstüne arttırılmış kredi kotaları, 720p HD yayın ve V1.1'de 2× ücretsiz çekim hakkı eklenir.
 
 **Bakiye yetersiz → PiP akışı** (`swipe_live_screen.dart:945`):
 Kullanıcı hediye atmak isteyip bakiyesi yetmediğinde `_handleLoadBalance()` tetiklenir: yayın PiP moduna alınır, cüzdan ekranı açılır. iOS IAP ile teqlik yükleme geldikten sonra kullanıcı Face ID ile paketi alıp canlı yayına döner — mezatı kaçırmadan satın alma.
@@ -1348,22 +1514,20 @@ PRO faydaları `credit_service.py` kodundan doğrulandı (free_standard vs free_
 | İlan Yenileme | 0/ay | 3/ay | 3 × 10 teqlik × ₺1,50 = **₺45,00** |
 | **Toplam aylık teqlik değeri** | — | — | **240 teqlik → ₺360,00** |
 
-> **Sonuç:** PRO ₺79,99/ay ile kullanıcı **₺360 değerinde özellik** alıyor — %78 tasarruf. Bu, fiyatın çok altında değer (deliberate under-pricing): platformda tutulma oranını artırmak ve PRO'yu "kaçırılmaz fırsat" konumuna taşımak için doğru strateji. **₺79,99 anchor kesinlikle doğru.** Rozet + analitik + öncelik bonuslarla daha da güçleniyor.
+> **Sonuç:** PRO ₺149,99/ay ile kullanıcı **₺360 değerinde ücretsiz kredi + HD yayın + Replay** alıyor — teqlik harcamasına göre %58 tasarruf. Deliberate under-pricing: yüksek retention + organik PRO dönüşümü için. Türkiye'de Spotify ₺39,99, YouTube ₺49,99 — ₺149,99 daha yüksek ama PRO bir iş aracı: satıcı/yayıncı kazancı geri döner.
 
-**Önerilen PRO Paket Yapısı (Revize):**
+**V1.0 PRO Paket Yapısı:**
 
-| Plan | App Store Fiyatı | Aylık maliyet | Net (KDV+%30)¹ | Net (KDV+%15 SBP)¹ | İndirim |
+| Plan | App Store Fiyatı | Aylık eşdeğer | Net (KDV+%30)¹ | Net (KDV+%15 SBP)¹ | İndirim |
 |------|-----------------|--------------|----------------|--------------------|----|
-| 1 Ay | **₺79,99** | ₺79,99 | **₺46,66** | **₺56,66** | — |
-| 3 Ay | **₺214,99** | ₺71,66 | **₺125,41** | **₺152,28** | %10,4 |
-| 6 Ay | **₺389,99** | ₺65,00 | **₺227,49** | **₺276,24** | %18,7 |
-| 12 Ay | **₺679,99** | ₺56,67 | **₺396,66** | **₺481,66** | %29,2 |
+| 1 Ay (teqlif_pro_1m) | **₺149,99** | ₺149,99 | **₺87,49** | **₺106,24** | — |
+| 3 Ay (teqlif_pro_3m) | **₺404,99** | ₺135,00 | **₺236,24** | **₺286,66** | %10 |
+| 6 Ay (teqlif_pro_6m) | **₺764,99** | ₺127,50 | **₺445,82** | **₺541,24** | %15 |
+| 12 Ay (teqlif_pro_12m) | **₺1.349,99** | ₺112,50 | **₺787,49** | **₺956,24** | %25 |
 
 > ¹ Net = Fiyat ÷ 1,20 × (1 − komisyon) — Türkiye KDV %20 dahil
 
-> **Neden ₺79,99 değil ₺99,99:** PRO'nun gerçek aylık teqlik değeri **₺360** (240 teqlik — Boost+AI+Blast+Yenileme). ₺79,99 bu değerin %22'si — kullanıcı için "kaçırılmaz fırsat", Teqlif için ise yüksek retention ve daha fazla organik PRO dönüşümü. Türkiye'de Spotify ₺39,99, YouTube ₺49,99 — ₺79,99 bu anchors'ların biraz üstünde ama PRO bir iş aracı, eğlence değil.
-
-> **Yıllık paket önerisi:** ₺679,99 = aylık ₺56,67 → ₺79,99'a göre %29 indirim. Standart endüstri pratiği yıllık için %25-30 indirim. Bu doğru aralıkta.
+> **Yıllık paket:** ₺1.349,99 = aylık ₺112,50 → ₺149,99'a göre %25 indirim. Standart endüstri pratiği %25-30 → doğru aralıkta.
 
 **PRO Üye Avantajları (`credit_service.py` free_standard vs free_pro'dan doğrulandı):**
 
@@ -1382,7 +1546,7 @@ PRO faydaları `credit_service.py` kodundan doğrulandı (free_standard vs free_
 
 > **App Store Connect'te iki ayrı ürün grubu gerekiyor:** Consumable grubu (teqlik paketleri) + Auto-Renewable Subscription grubu (PRO planlar). Her grup ayrı Apple onayından geçiyor.
 
-### 8.5 Tüm Gelir Akışı Haritası (V1.0 + V1.5 + V2.0)
+### 8.5 Tüm Gelir Akışı Haritası (V1.0 + V1.1+)
 
 ```
 Teqlif Gelir Akışı
@@ -1392,21 +1556,18 @@ Teqlif Gelir Akışı
 │    ├── 700 teqlik +150 bonus — ₺999,99
 │    └── 1500 teqlik +400 bonus — ₺2.199,99
 │
-├── Web Mağazası (teqlif.com/cuzdan)           ← V1.5 — Apple bypass
+├── Auto-Renewable Subscription (PRO)         ← V1.0
+│    ├── 1 Ay — ₺149,99/ay  (teqlif_pro_1m)
+│    ├── 3 Ay — ₺404,99/3ay (teqlif_pro_3m) — %10 tasarruf
+│    ├── 6 Ay — ₺764,99/6ay (teqlif_pro_6m) — %15 tasarruf
+│    └── 12 Ay — ₺1.349,99/yıl (teqlif_pro_12m) — %25 tasarruf
+│
+├── Web Mağazası (teqlif.com/cuzdan)           ← V1.1 — Apple bypass
 │    ├── Aynı 4 paket, yalnızca %2,5 işlemci komisyonu
 │    ├── Apple komisyonu (%15–%30) tamamen sıfır
 │    ├── Kullanıcıya "web'den al" söylenmez (Kural 3.1.1)
 │    │   → Kullanıcı kendi inisiyatifiyle tarayıcıdan gelir
 │    └── iOS IAP margin gap: ₺149,99 → Teqlif net ₺87,49 (IAP) vs ₺146,24 (web)
-│
-├── Auto-Renewable Subscription (PRO)         ← V2.0
-│    ├── 1 Ay — ₺79,99
-│    ├── 3 Ay — ₺214,99
-│    ├── 6 Ay — ₺389,99
-│    └── 12 Ay — ₺679,99
-│
-├── Enterprise PRO Subscription               ← V2.0
-│    └── ₺249,99/ay — %98 pay, ₺0 çekim ücreti, sınırsız replay
 │
 ├── teqlik Harcama Noktaları
 │    ├── AI Açıklama (5 teqlik) — create_listing_screen ✅
@@ -1418,7 +1579,7 @@ Teqlif Gelir Akışı
 ├── Canlı Yayın Hediyesi (send-gift)           ← V1.0 — PRO %95 / Std %70
 │    └── Teqlif net: her Taç hediyesinde ₺40,00–₺52,50
 │
-└── Çekim Ücreti                               ← V1.5
+└── Çekim Ücreti                               ← V1.1
      ├── Standart: ₺15 sabit/işlem (direkt marj)
      └── PRO: 2 ücretsiz/ay → 3. çekimden itibaren ₺15
          (aylık reset ARQ cron — PRO'ya geçiş teşviki)
@@ -1447,11 +1608,11 @@ Teqlif Gelir Akışı
          ├──────────────────────┬──────────────────────┬──────────────────────┐
          │                      │                      │                      │
          ▼                      ▼                      ▼                      ▼
-  [ İlan Özelliği ]     [ Canlı Yayın Hediyesi ]  [ PRO Pass ]         [ IBAN Ön Kayıt ]
-  Boost / AI / Blast     PRO Yayıncıya Taç(100)    56 teqlik ile       Yayıncı ₺500+
+  [ İlan Özelliği ]     [ Canlı Yayın Hediyesi ]  [ PRO Abonelik ]      [ IBAN Ön Kayıt ]
+  Boost / AI / Blast     PRO Yayıncıya Taç(100)    ₺149,99/ay Apple    Yayıncı ₺500+
   • Yayıncı payı: ₺0     • Yayıncıya: ₺47,50       • Nakit çıkış: ₺0  çekim talep eder
-  • Nakit çıkış: ₺0        (T+14 kilitli)           • Teqlif kâr: %100 • Nakit çıkış: ₺0
-  • Teqlif kârı: %100    • Teqlif net: ₺40,00       (sanal jeton eridi)  (Queue listesi)
+  • Nakit çıkış: ₺0        (T+14 kilitli)           • Teqlif net: ₺87,49• Nakit çıkış: ₺0
+  • Teqlif kârı: %100    • Teqlif net: ₺40,00       (MRR + KDV+%30)     (Queue listesi)
                            • Brüt marj: %45,7
 
 ```
@@ -1459,7 +1620,7 @@ Teqlif Gelir Akışı
 **Paranın Üç Kolu — Her Biri Teqlif Lehine:**
 - **Kol 1 (Özellik harcaması):** Kullanıcı Boost/AI/Blast yaparken %100 net marj. Apple harcamadan ek kesinti almaz — alım anında bir kez kesti, bitti.
 - **Kol 2 (Hediye):** Yayıncı T+14 havuzundaki TL'yi büyük ihtimalle Seçenek C ile teqlik'e çevirir (%65+ kullanıcı bu yolu seçer) — Teqlif'ten nakit çıkış sıfır. Nakit çekse bile %30–45 Teqlif payı kasada kalır.
-- **Kol 3 (IBAN Ön Kayıt):** V1.0'da gerçek transfer yok; Apple'dan para gelmeden liste tutulur, V1.5'te transfer başladığında bile çekim ücreti + komisyon farkı kasada kalır.
+- **Kol 3 (IBAN Ön Kayıt):** V1.0'da gerçek transfer yok; Apple'dan para gelmeden liste tutulur, V1.1'de transfer başladığında bile çekim ücreti + komisyon farkı kasada kalır.
 
 ```
 Kullanıcı
@@ -1472,9 +1633,8 @@ Kullanıcı
    │        Teqlif %100 net tutar (Apple'a ek kesinti yok)
    │        → AI Açıklama, Boost, Blast, Yenileme, Hediye
    │
-   └─► [C] PRO satın alır
-            ├─► Para ile (IAP/Subscription): KDV+%30 → Teqlif %58,3 net
-            └─► teqlik ile (PRO Pass): Teqlif %100 net (para zaten [A]'da kesildi)
+   └─► [C] PRO Abonelik (V1.0: yalnızca Apple Auto-Renewable Subscription)
+            → KDV+%30 → Teqlif %58,3 net; MRR sağlar; Apple otomatik yönetir
 ```
 
 **Kritik insight:** teqlik harcamak (B ve C-teqlik yolu) Apple'a ek komisyon ödetmiyor. Apple zaten [A] aşamasında kesiyor. Yani **teqlik ne kadar çok kullanılırsa birim başına marjimiz o kadar artar** — çünkü alım anında Apple bir kez kesiyor, harcamada bir daha kesmiyor.
@@ -1485,43 +1645,46 @@ Kullanıcı
 - **Yayıncı TL kazancı (açık):** Hediyelerden elde edilen TL "emek karşılığı kazanç" — Apple/Google bu çıkışa karışmaz (TikTok, Twitch modeli). BDDK/MASAK: yayıncı "satın aldığı jetonları" değil, "hak ettiği geliri" çekiyor; platform komisyon kesip gönderdiği için bu bir ödeme kuruluşu işlemi değil, istihdam benzeri gelir ödemesi.
 - **Finansal kaldıraç:** Satılan teqlikin özellik harcaması (Boost/Blast/AI) kısmı dormant kalırsa sıfır maliyetli gelir. Hediye kısmı TL'ye dönüşse de Teqlif kasasında net marj kalıyor (her Crown hediyesinde ₺40–₺52,50).
 
-### 9.2 PRO Hybrid Ödeme Modeli (Para + teqlik)
+### 9.2 PRO Abonelik Ekonomisi (V1.0 — Apple Auto-Renewable Subscription)
 
-**Apple Uyum Tespiti:** IAP ile satın alınan teqlikin uygulama içinde PRO erişimi açmak için harcanması Apple kılavuzlarınca izin verilen bir model. Guideline 3.1.2(a) abonelik benzeri içeriklerin consumable credits ile açılmasına izin veriyor — oyunlarda yaygın pratik.
+**V1.0 PRO modeli:** Yalnızca Apple Auto-Renewable Subscription. Teqlik token ile PRO alma V1.1'e ertelendi.
 
-**İki ayrı ürün:**
+**V1.0 PRO fiyatları:**
 
-| Ürün | Tip | Açıklama |
-|------|-----|----------|
-| PRO Subscription | Auto-Renewable Subscription | Apple otomatik yeniler, yönetir |
-| PRO Pass | Consumable | 30 günlük PRO erişimi — para veya teqlik |
+| Plan | Apple fiyatı | Teqlif net (%30, KDV %20) | Aylık eşdeğer net |
+|------|-------------|--------------------------|-------------------|
+| 1 Ay (teqlif_pro_1m) | ₺149,99/ay | **₺87,49** | ₺87,49 |
+| 3 Ay (teqlif_pro_3m) | ₺404,99/3ay | ₺236,24 | **₺78,75** |
+| 6 Ay (teqlif_pro_6m) | ₺764,99/6ay | **₺445,82** | ₺74,30 |
+| 12 Ay (teqlif_pro_12m) | ₺1.349,99/yıl | **₺787,49** | ₺65,62 |
 
-Kullanıcıya sunulacak seçenekler:
+> Small Business Program (%15, KDV %20) senaryosunda 1 aylık Teqlif net: ₺106,24.
+
+**V1.0 ProSubscriptionSheet — kullanıcıya sunulacak görünüm:**
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  PRO Üyelik — 1 Aylık                                   │
+│  Teqlif PRO                                             │
 │                                                         │
-│  ┌──────────────────┐   ┌──────────────────────────┐    │
-│  │  ₺79,99 / ay    │   │  56 teqlik               │    │
-│  │  Apple ile öde  │   │  Bakiyenden harca         │    │
-│  │  (otomatik yenir)│   │  (manuel, tek seferlik)  │    │
-│  └──────────────────┘   └──────────────────────────┘    │
+│  [ 1 AY ]   [ 3 AY -%10 ]   [ 6 AY -%15 ]  [ 1 YIL -%25 EN İYİ ]
+│                                                         │
+│  ₺149,99 / ay                                           │
+│  ✦ 720p HD yayın                                        │
+│  ✦ Hediyelerden %95 pay (Standart: %70)                 │
+│  ✦ Replay (son 14 gün) izleme                           │
+│  ✦ Gelişmiş analitik                                    │
+│                                                         │
+│  [ PRO'ya Geç ]                                         │
+│  Abonelik otomatik yenilenir. Apple Kimliği             │
+│  ayarlarından istediğinizde iptal edebilirsiniz.        │
+│  ─────────────────────────────────────────             │
+│  [ Satın Alımları Geri Yükle ]  (zorunlu)               │
 └─────────────────────────────────────────────────────────┘
 ```
 
-**Teqlif için marj karşılaştırması:**
+**Marj notu:** Subscription geliri consumable'dan farklı değil; Apple aynı KDV+komisyon mekanizmasını uyguluyor. MRR (Monthly Recurring Revenue) avantajı: consumable tek seferlik, subscription öngörülebilir nakit akışı sağlar.
 
-| Ödeme yolu | Kullanıcı öder | Teqlif net alır | Fark |
-|-----------|---------------|----------------|------|
-| Apple IAP (Subscription %30, KDV-düzeltmeli) | ₺79,99 | **₺46,66** | baseline |
-| teqlik ile (56 teqlik) | ₺64,96–₺84,00* | **₺49,00** | +₺2,34 |
-
-> *56 teqlik: mega paketten (₺1,16/teqlik): 56×₺1,16=₺64,96; başlangıç paketten (₺1,50/teqlik): 56×₺1,50=₺84,00. Teqlif net = 56 × ₺0,875 (100-paket KDV-düzeltmeli) ≈ ₺49,00.
-
-**Sonuç: PRO'yu teqlik ile ödemek her iki taraf için avantajlıdır:**
-- Kullanıcı: büyük paket aldıysa (700+ veya 1900 teqlik) PRO maliyeti ₺65–₺70 → ₺79,99 cash'dan net ucuz
-- Teqlif: Apple'a ek kesinti yok → subscription'a göre %5 daha fazla net (₺49 vs ₺46,66). Küçük fark ama PRO hacminde kümülatif anlamlı.
+**V1.1+ için değerlendirilebilir:** teqlik token ile PRO Pass (30 gün erişim için 120 teqlik harcama) — Apple Guideline 3.1.2(a) buna izin veriyor; consumable credits ile abonelik benzeri içerik açmak yaygın oyun pratiği. Bu modelde Teqlif Apple'a ek kesinti vermez (alım anında kesilmişti), kullanıcıya büyük paket alma teşviki verir.
 
 ### 9.3 teqlik Fiyat Dengesi — Harcama vs Yükleme
 
@@ -1533,7 +1696,7 @@ Kullanıcıya sunulacak seçenekler:
 | İlan Yenileme | 10 teqlik | 1× / ay (pasif ilan) |
 | Blast | 10 teqlik | 1-2× / ay |
 | İlan Boost | 50 teqlik | 1× / ay |
-| PRO Pass (teqlik) | 56 teqlik | Aylık sabit |
+| PRO Abonelik | ₺149,99/ay (Apple) | Aylık sabit (Auto-Renewable) |
 
 **Tipik kullanıcı profilleri:**
 
@@ -1542,7 +1705,7 @@ Kullanıcıya sunulacak seçenekler:
 | Hafif (1 ilan, 1 blast) | 15 teqlik | ₺21,45 | 100 teqlik paketi |
 | Orta (2 ilan, 1 boost, 2 blast) | 130 teqlik | ₺185,90 | 300 teqlik paketi |
 | Ağır (3 ilan, 2 boost, 3 blast, AI) | 245 teqlik | ₺350,35 | 700 teqlik paketi |
-| PRO (teqlik + özellikler) | 56+130 = 186 teqlik | — | PRO + 300 paket |
+| PRO (Abonelik + özellikler) | 130 teqlik + ₺149,99/ay | — | PRO sub + 300 paket |
 
 **Paket boyut optimizasyonu:**
 100 teqlik → hafif kullanıcı için 5-7 ay yeter → tekrar satın alım düşük.
@@ -1628,7 +1791,7 @@ PRO abonesi: 150 – 240
 1. **CreditGate:** Özellik kapısı → organik dönüşüm
 2. **Başlangıç Boost (V1.1):** İlan oluştururken tek tık → yüksek motivasyon anında teqlik harcama
 3. **Hediye sistemi:** Teqlif'e para girmeden teqlik dolaşımı → sosyal proof, yeni kullanıcı çekişi
-4. **PRO teşviki:** 56 teqlik PRO Pass → büyük paket (300+ teqlik) almayı teşvik eder — mega pakette efektif PRO maliyeti ₺64,96
+4. **PRO teşviki:** PRO Abonelik aylık ₺149,99 → büyük paket (300+ teqlik) alma motivasyonu sağlar; yıllık plan ₺112,50/ay efektif maliyete iner
 
 ### 9.6 PRO Ekonomisi — teqlik Tüketiminin Artısı
 
@@ -1651,7 +1814,7 @@ Ancak veriler tersi gösteriyor (SaaS'ta yaygın pattern):
 
 PRO kullanıcı standart kullanıcının **~7×** gelirine katkı yapıyor.
 
-> **Enterprise PRO (V2.0):** Düzenli büyük ciro yapan satıcılar ve profesyonel yayıncılar için üst segment plan: **₺249,99/ay**, %98 yayıncı pay oranı, sınırsız replay erişimi, ₺0 çekim ücreti (unlimited), öncelikli müşteri desteği. V1.0'da yalnızca PRO ve Standart olmak üzere iki tier; Enterprise V2.0 kapsamında.
+> **Enterprise PRO (V1.1+):** Düzenli büyük ciro yapan satıcılar ve profesyonel yayıncılar için üst segment plan: **₺249,99/ay**, %98 yayıncı pay oranı, sınırsız replay erişimi, ₺0 çekim ücreti (unlimited), öncelikli müşteri desteği. V1.0'da yalnızca PRO ve Standart olmak üzere iki tier; Enterprise V1.1+ kapsamında.
 
 ### 9.7 teqlik Bonus Ekonomisi — Paket Teşvik Sistemi
 
@@ -1676,15 +1839,12 @@ Kullanıcıya 50 bonus teqlik veriyoruz (300 pakette) → bu 50 teqlik gelecekte
 | Gelir kaynağı | Aylık brüt | Apple sonrası net |
 |--------------|-----------|-----------------|
 | teqlik paket satışları (%60 kullanıcı, ort. ₺200) | ₺120.000 | **₺70.000** |
-| PRO Subscription (%15, ₺79,99) | ₺11.999 | **₺7.000** |
-| PRO Pass (teqlik ile, %5, 56 teqlik) | Zaten teqlik gelirinde | **₺2.450*** |
-| **Toplam** | | **~₺79.450** |
-
-> *56 teqlik × 50 kullanıcı × ₺0,875 net/teqlik = ₺2.450 (teqlik gelirinin marj-üstü kısmı; zaten ₺70.000'e dahil — ayrı gösterildi)
+| PRO Subscription (%15, ₺149,99) | ₺22.499 | **₺13.124** |
+| **Toplam** | | **~₺83.124** |
 >
 > **KDV düzeltmesi etkisi:** Önceki projeksiyon ₺96.399 net gösteriyordu (%30 kesinti varsayımıyla). KDV %20 dahil edilince ₺79.450'ye geriledi — ₺16.949 fark (%17,5). Bu fark tüm finansal planlama dökümanlarına yansıtılmalı.
 
-**Altyapı ₺40.000 → Net kâr: ~₺39.450/ay** (1.000 ödeme yapan kullanıcıda)
+**Altyapı ₺40.000 → Net kâr: ~₺43.124/ay** (1.000 ödeme yapan kullanıcıda)
 
 ### 9.9 Karma Kohort Simülasyonu — 1 Aylık Gerçekçi Ekosistem (1.000 Aktif Kullanıcı)
 
@@ -1695,8 +1855,8 @@ Kullanıcıya 50 bonus teqlik veriyoruz (300 pakette) → bu 50 teqlik gelecekte
 | Küçük Alıcılar | 500 | 100 teqlik (₺149,99) | ₺74.995,00 | ₺12.499,17 | ₺18.748,75 | ₺43.747,08 |
 | Orta Alıcılar | 200 | 350 teqlik (₺429,99) | ₺85.998,00 | ₺14.333,00 | ₺21.499,50 | ₺50.165,50 |
 | Mezat Balinaları | 40 | 1.900 teqlik (₺2.199,99) | ₺87.999,60 | ₺14.666,60 | ₺21.999,90 | ₺51.333,10 |
-| PRO Aboneler | 150 | 1 Ay PRO (₺79,99 IAP) | ₺11.998,50 | ₺1.999,75 | ₺2.999,63 | ₺6.999,12 |
-| **TOPLAM** | **890** | | **₺260.991,10** | **₺43.498,52** | **₺65.247,78** | **₺152.244,80** |
+| PRO Aboneler | 150 | 1 Ay PRO (₺149,99 IAP) | ₺22.498,50 | ₺3.749,75 | ₺5.624,63 | ₺13.124,12 |
+| **TOPLAM** | **890** | | **₺271.491,10** | **₺45.248,52** | **₺67.872,78** | **₺158.369,80** |
 
 **B. İçerideki Harcama & Hakediş Dağılımı (266.000 teqlik):**
 
@@ -1706,27 +1866,26 @@ Kullanıcıya 50 bonus teqlik veriyoruz (300 pakette) → bu 50 teqlik gelecekte
 | AI Açıklama & Blast | 26.000 | ₺0,00 | ₺17.940,00 (%100 net) |
 | Canlı Yayın Hediyeleri (PRO %95) | 100.000 | ₺47.500,00 (T+14 havuzda) | ₺21.500,00 (net komisyon) |
 | Canlı Yayın Hediyeleri (Std %70) | 30.000 | ₺10.500,00 (T+14 havuzda) | ₺10.200,00 (net komisyon) |
-| PRO Pass (teqlik ile alım) | 20.000 | ₺0,00 | ₺13.800,00 (%100 net) |
-| **TOPLAM** | **266.000** | **₺58.000,00** | **₺125.540,00** |
+| **TOPLAM** | **246.000** | **₺58.000,00** | **₺111.740,00** |
 
 **C. Yayıncı Çıkış Kanalları (₺58.000 toplam hakediş):**
 
 | Kanal | Oran | Tutar | Teqlif'ten Nakit Çıkışı |
 |-------|------|-------|------------------------|
 | Seçenek C (Teqlik'e Dönüştür +%10) | %65 | ₺37.700 → 47.392 teqlik | **₺0,00** — para kapalı döngüde kaldı |
-| IBAN Ön Kayıt (#Queue listesi) | %25 | ₺14.500 → sıra listesi | **₺0,00** — V1.5'e kadar bekler |
+| IBAN Ön Kayıt (#Queue listesi) | %25 | ₺14.500 → sıra listesi | **₺0,00** — V1.1'e kadar bekler |
 | T+14 Havuzu (olgunlaşmadı) | %10 | ₺5.800 → henüz serbest değil | **₺0,00** |
 
 **D. 1 Aylık Net Finansal Sonuç:**
 
 | Kalem | Tutar |
 |-------|-------|
-| Apple'dan gelen net tahsilat | +₺152.244,80 |
+| Apple'dan gelen net tahsilat | +₺158.369,80 |
 | Teqlif'ten çıkan gerçek nakit (V1.0) | ₺0,00 |
 | Altyapı VPS giderleri (Node 1–6 + nodeMonitor) | −₺40.000,00 |
-| **Aylık Net Nakit Akışı Kârı** | **+₺112.244,80** |
+| **Aylık Net Nakit Akışı Kârı** | **+₺118.369,80** |
 
-> V1.5'te ₺14.500 Queue sırası ödendiğinde bile aylık net: **+₺97.744,80** — sistemin kendini finanse etmesi için gerekli olan V1.5 banka entegrasyonu maliyetini fazlasıyla karşılar.
+> V1.1'de ₺14.500 Queue sırası ödendiğinde bile aylık net: **+₺103.869,80** — sistemin kendini finanse etmesi için gerekli olan V1.1 banka entegrasyonu maliyetini fazlasıyla karşılar.
 
 ### 9.10 Platform Savunma Matrisi — Tüm Edge Case'ler
 
@@ -1751,11 +1910,11 @@ Kullanıcıya verilen +%10 bonusların veya dönüşüm teşviklerinin Teqlif'e 
 **3. Her İşlemden Komisyon Alır (Katmanlı Marj)**
 - İlan özelliği: %100 Teqlif marjı
 - Hediye: %30–45 Teqlif marjı
-- PRO Pass (teqlik ile): %100 Teqlif marjı (Apple bir kez kesmişti)
-- Çekim (V1.5): ₺15 sabit ücret + Rolling Reserve faiz fırsatı
+- PRO Subscription: %87,49 net / ay (KDV+%30 sonrası — Apple bir kez keser)
+- Çekim (V1.1): ₺15 sabit ücret + Rolling Reserve faiz fırsatı
 
 **4. Hukuki Zırh Tamamdır (V1.0)**
-Şirketleşene kadar dışarıya 1 TL bile kontrolsüz para çıkarmadığı için maliye ve MASAK karşısında temiz: kapalı döngü, beta yazılım testi. V1.5'te şirket + MASAK uyumu ile tam lisanslı operasyon.
+Şirketleşene kadar dışarıya 1 TL bile kontrolsüz para çıkarmadığı için maliye ve MASAK karşısında temiz: kapalı döngü, beta yazılım testi. V1.1'de şirket + MASAK uyumu ile tam lisanslı operasyon.
 
 ### 9.12 V2.1 Altyapı Teknolojileri — Kullanım Karması
 
@@ -1799,7 +1958,7 @@ Katman 4 — daily_financial_reconciliation (Her gün 00:00 UTC, watchdog_m:10)
 | Başlangıç paketi fiyatı (%15) | **₺119,99 → 100 teqlik** | V1.0 |
 | Efektif teqlik/TL oranı | ₺1,43 (%30) veya ₺1,18 (%15) | V1.0 |
 | teqlik IAP ürün tipi | **Consumable** | V1.0 |
-| PRO üyelik IAP ürün tipi | **Auto-Renewable Subscription** | V2.0 |
+| PRO üyelik IAP ürün tipi | **Auto-Renewable Subscription** | V1.0 |
 | Backend doğrulama | App Store Server API v2 JWS | V1.0 |
 | Refund politikası | REFUND webhook zorunlu — bakiyeden düş + orantılı gift iptali + çekim sonrası negatif bakiye (borç mahsubu) + NO CHECK CONSTRAINT | V1.0 |
 | Android | V1.0 kapsamı dışı | — |
@@ -1826,17 +1985,17 @@ Katman 4 — daily_financial_reconciliation (Her gün 00:00 UTC, watchdog_m:10)
 | Kullanıcı çekim iptal hakkı | `cancel_withdrawal_request_command` — status='pending' talebi kullanıcı iptal edebilir; bakiye anında iade, statüsü 'cancelled' | V1.0 |
 | Apple Notifications V2 JWS doğrulama | `signedPayload` Apple x5c sertifika zincirine karşı doğrulanmadan event type'a güvenilmez; leaf cert + G3 CA + Root CA + sertifika süresi zorunlu | V1.0 |
 | Dönüştürme simülatörü | TextFormField değişince anlık FLOOR hesabı: "₺500 → 571 + 57 bonus = 628 teqlik"; Flutter tarafı önizleme, sunucu aynı formülü uygular | V1.0 |
-| Gerçek banka transfer API | Şirket kuruluşu sonrası (LTD zorunlu) | **V1.5** |
-| MERNIS / KYC | İlk gerçek çekim zorunlu; TCKN AES-256 şifreli `user_kyc` tablosunda | **V1.5** |
-| Rolling Reserve | Yeni yayıncı 90 gün max ₺2.500/çekim | **V1.5** |
-| IBAN checksum | TR + 24 karakter + mod-97 doğrulama | **V1.5** |
-| Çekim ücreti | ₺15 sabit — PRO ayda 2 ücretsiz | **V1.5** |
-| Concurrency (withdraw) | Redis SETNX lock:withdraw:{uid} EX 10 + atomik SQL WHERE bakiye | **V1.5** |
-| Borç dondurma | 30 günlük ödenmemiş borçta account_frozen; tüm ilanlar pasif | **V1.5** |
-| Admin Maker-Checker | ₺2.500+ çekimde 2 admin onayı; ₺10.000+ 2FA zorunlu | **V1.5** |
-| Web mağazası (teqlif.com/cuzdan) | %2,5 işlemci komisyonu, Apple bypass | **V1.5** |
+| Gerçek banka transfer API | Şirket kuruluşu sonrası (LTD zorunlu) | **V1.1** |
+| MERNIS / KYC | İlk gerçek çekim zorunlu; TCKN AES-256 şifreli `user_kyc` tablosunda | **V1.1** |
+| Rolling Reserve | Yeni yayıncı 90 gün max ₺2.500/çekim | **V1.1** |
+| IBAN checksum | TR + 24 karakter + mod-97 doğrulama | **V1.1** |
+| Çekim ücreti | ₺15 sabit — PRO ayda 2 ücretsiz | **V1.1** |
+| Concurrency (withdraw) | Redis SETNX lock:withdraw:{uid} EX 10 + atomik SQL WHERE bakiye | **V1.1** |
+| Borç dondurma | 30 günlük ödenmemiş borçta account_frozen; tüm ilanlar pasif | **V1.1** |
+| Admin Maker-Checker | ₺2.500+ çekimde 2 admin onayı; ₺10.000+ 2FA zorunlu | **V1.1** |
+| Web mağazası (teqlif.com/cuzdan) | %2,5 işlemci komisyonu, Apple bypass | **V1.1** |
 | Başlangıç Boost (İlan Ver'de) | İlan oluşturulurken 50 teqlik Boost seçeneği | V1.1 |
-| PRO anchor fiyatı | **₺79,99/ay** (teqlik eşdeğeri: büyük pakette ₺64,96 — cash'dan ucuz) | V2.0 |
-| PRO Pass fiyatı (teqlik) | **56 teqlik** — mega pakette ₺64,96 efektif vs ₺79,99 cash | V2.0 |
-| PRO planlar | 1ay ₺79,99 / 3ay ₺214,99 / 6ay ₺389,99 / 12ay ₺679,99 | V2.0 |
-| Enterprise PRO | ₺249,99/ay, %98 pay, ₺0 çekim, sınırsız replay | V2.0 |
+| PRO anchor fiyatı | **₺149,99/ay** (Subscription Group: Teqlif PRO) | V1.0 |
+| PRO planlar | teqlif_pro_1m ₺149,99 / teqlif_pro_3m ₺404,99 / teqlif_pro_6m ₺764,99 / teqlif_pro_12m ₺1.349,99 | V1.0 |
+| PRO Pass (teqlik ile) | teqlik bazlı PRO Pass | **V1.1** |
+| Enterprise PRO | ₺249,99/ay, %98 pay, ₺0 çekim, sınırsız replay | **V1.1+** |
