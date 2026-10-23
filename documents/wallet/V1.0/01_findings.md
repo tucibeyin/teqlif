@@ -264,11 +264,17 @@ Mobil StoreKit   →  signedTransactionInfo (JWS)  →  POST /api/wallet/apple-v
 
 **JWS Doğrulama — Zorunlu Güvenlik Kontrolleri (`verify_apple_receipt_command.py`):**
 ```python
-# JWS decode edildikten sonra payload'da şunlar HARDCODED doğrulanmalı:
+# 1. x5c sertifika zinciri doğrulama (leaf → G3 CA → Apple Root CA)
+# 2. jwt.decode ile JWS doğrulama — leeway=60 zorunlu:
+#    jwt.decode(signed_transaction, cert_chain[0].public_key(),
+#               algorithms=["ES256"], leeway=60)
+#    leeway=60: NTP clock skew toleransı. Node 1 saati Apple'dan 2-3 sn geri
+#    kalırsa "Token used before issued" hatası üretilir, geçerli IAP reddedilir.
+# 3. Payload hardcoded doğrulama:
 assert payload["environment"] == "Production"          # Sandbox makbuzu prod'a geçemez
 assert payload["bundleId"]    == "com.teqlif.app"      # Başka uygulamanın makbuzu reddedilir
 assert payload["productId"]   in VALID_PRODUCT_IDS     # Sadece bilinen 4 paketin ID'si
-# Bu 3 kontrol atlansa jailbreak araçlarıyla (LocalIAPStore) bedavadan teqlik yüklenebilir.
+# Bu kontroller atlansa jailbreak araçlarıyla (LocalIAPStore) bedavadan teqlik yüklenebilir.
 ```
 
 **Günlük IAP Hız Limiti (Velocity Limit):**
@@ -306,7 +312,18 @@ Apple bir satın alımı geri alabilir (`REFUND` App Store Server Notification).
 Apple → POST /api/wallet/apple-notifications
   Body: { signedPayload: "<JWS string>" }
 
-  ──── ADIM 0: signedPayload JWS Doğrulaması (zorunlu, içeriğe bakmadan önce) ────
+  ──── ADIM 0: Hızlı 200 OK — Ağır İşlemi ARQ Kuyruğuna At ────────────────────
+  x5c sertifika zinciri doğrulaması CPU yoğun, DB işlemi I/O yoğundur.
+  Bu ikisi FastAPI main thread'inde senkron çalışırsa Apple refund dalgasında
+  Uvicorn worker'ları tükenir, normal mobil kullanıcılar 504 alır.
+
+  Endpoint yalnızca şunu yapar:
+    1. signedPayload'u Redis kuyruğuna yaz (< 5ms)
+    2. Apple'a 200 OK döndür (Apple 4xx alırsa 3 gün retry storm başlatır)
+  ARQ worker (handle_apple_refund_task) kuyruktaki payload'u alıp işler.
+  ──────────────────────────────────────────────────────────────────────────────
+
+  ──── ADIM 1: signedPayload JWS Doğrulaması (ARQ worker'da, içeriğe bakmadan önce) ────
   signedPayload kendisi de Apple tarafından imzalı bir JWS'dir.
   İçindeki event type'a güvenmeden önce Apple root sertifikasıyla doğrulanmalı:
 
@@ -317,13 +334,19 @@ Apple → POST /api/wallet/apple-notifications
     # 2. Apple Root CA hash'i hardcoded doğrula (MITM koruması):
     #    SHA-256: 4f5f 4b63 75d8 91ab 4333 1ea9 2b25 5a00 ... (Apple'ın yayımladığı sabit hash)
     # 3. cert_chain[0].not_valid_after > datetime.utcnow() (sertifika süresi)
-    # 4. jwt.decode(signed_payload, cert_chain[0].public_key(), algorithms=["ES256"])
+    # 4. jwt.decode(signed_payload, cert_chain[0].public_key(), algorithms=["ES256"],
+    #              leeway=60)  ← zorunlu: NTP saat kayması (clock skew) toleransı.
+    #    leeway olmadan Node 1 saati Apple'dan 2-3 sn geri kalırsa geçerli fişler
+    #    "Token used before issued" hatasıyla reddedilir, satın alım başarısız olur.
   Bu doğrulama atlanırsa saldırgan sahte POST → gift_events iptal ettirebilir.
   ──────────────────────────────────────────────────────────────────────────────
 
   eventType: "REFUND"
   → apple_transaction_id ile TeqlikTransaction'ı bul (iade_miktarı, orijinal_miktar)
   → teqlik_balance -= iade_miktarı  (atomik)
+  → teqlik_balance negatife düşebilir — users.teqlik_balance üzerinde CHECK (>= 0)
+     constraint'i OLMAMALI (tl_earnings_balance ile aynı kural). Constraint varsa
+     webhook 500 alır → Apple 3 gün boyunca retry storm başlatır.
   → bakiye < 0 ise: users.pending_refund = true
 
   → Orantılı hediye kazancı iptali (anti-fraud):
@@ -416,6 +439,34 @@ Kullanıcı başına sınır (Redis SETNX + TTL):
   Kötü niyet tespiti (burst limit 10×): sender'ı 10 dakika bloke et.
 
 Redis key: rate:gift:{sender_id}  |  TTL: 1 saniye  |  increment > limit → red
+
+Redis Çöküşünde Fail Davranışı (redis.exceptions.ConnectionError):
+  send-gift: Fail-Safe — try/except ile hata yakalanır, işlem atomik DB kontrolüne
+    devredilir (teqlik_balance >= cost WHERE koşulu), yayın kesilmez.
+  IAP hız limiti (rate:iap:{device}): Fail-Closed — Redis bağlantısı yoksa satın
+    alma işlemi reddedilir (429); şüpheli anda para yükletme kabul edilmez.
+```
+
+**Host Row Contention & Deadlock Önleme (Yüksek Yük):**
+```
+Mezatın son 10 saniyesinde 500 izleyici aynı anda yayıncıya hediye yağdırırsa,
+her send_gift işlemi User(host_id) satırına RowExclusiveLock koyar — 500 transaction
+tek satır için kuyruğa girer, p99 latency 50ms → 3.000ms'ye fırlar.
+
+Deadlock önlemi — deterministik kilit sıralaması:
+  Her zaman LEAST(sender_id, host_id) önce, GREATEST sonra kilitlenir.
+  İki yönlü işlem (A→B ve B→A aynı anda) deadlock üretmez.
+
+  # send_gift_command.py içinde:
+  first_id  = min(sender_id, host_id)
+  second_id = max(sender_id, host_id)
+  await conn.execute("SELECT id FROM users WHERE id = $1 FOR UPDATE", first_id)
+  await conn.execute("SELECT id FROM users WHERE id = $1 FOR UPDATE", second_id)
+  # Ardından UPDATE'ler
+
+PgBouncer pool (6432) transaction pooling modunda çalışır; mezat burst'leri için
+max_client_conn ve default_pool_size değerleri V2.1 cluster.yaml'daki Node 1
+donanımına (bare-metal, dedicated CPU) göre önceden ayarlanmış olmalıdır.
 ```
 
 **Güncellenecek Use Case — `app/use_cases/wallet/commands/send_gift_command.py`:**
@@ -536,13 +587,20 @@ async def release_pending_earnings_task():
     """14 günü dolan gift_events.payout_status='pending' → 'released', balance aktar."""
     # BEGIN TRANSACTION
     #
-    # 1. Aktarılacak hediyeleri kilitle ve topla
+    # 1. Aktarılacak hediyeleri kilitle ve topla — CTE zorunlu
+    #    PostgreSQL'de GROUP BY + FOR UPDATE aynı sorguda geçersizdir (aggregate'e satır kilidi uygulanamaz).
+    #    Önce satırlar kilitlenir, ardından kilitlenen satırlar üzerinden toplama yapılır:
+    #
+    #    WITH locked_events AS (
+    #        SELECT id, receiver_id, earnings_tl
+    #        FROM gift_events
+    #        WHERE payout_status = 'pending'
+    #          AND sent_at <= NOW() - INTERVAL '14 days'
+    #        FOR UPDATE SKIP LOCKED
+    #    )
     #    SELECT receiver_id, SUM(earnings_tl) AS total_raw
-    #    FROM gift_events
-    #    WHERE payout_status = 'pending'
-    #      AND sent_at <= NOW() - INTERVAL '14 days'
+    #    FROM locked_events
     #    GROUP BY receiver_id
-    #    FOR UPDATE SKIP LOCKED
     #
     # 2. Kullanıcı bakiyelerini güncelle — TRUNC(total_raw, 2) uygulanır
     #    (gift_events.earnings_tl NUMERIC(10,4); kullanıcıya aktarılırken 2 haneye indirilir)
@@ -623,14 +681,16 @@ Sonraki yayın kazançları negatif bakiyeyi kapatır (borç mahsubu):
 
 | Katman | Mekanizma | Amaç |
 |--------|-----------|-------|
-| IAP güvenliği | JWS environment + bundleId + productId hardcoded | Sandbox / sahte makbuz engeli |
-| IAP hız limiti | Redis velocity ₺5.000/gün/cihaz | Çalıntı kart flood |
-| send-gift hız limiti | Redis Token Bucket 2/sn per user | DB/WS flood |
+| IAP güvenliği | JWS environment + bundleId + productId hardcoded + `leeway=60` (clock skew) | Sandbox / sahte makbuz + NTP kaymasından kaynaklanan geçerli fatura reddi engeli |
+| IAP hız limiti | Redis velocity ₺5.000/gün/cihaz; Redis çökerse Fail-Closed (işlem reddedilir) | Çalıntı kart flood |
+| send-gift hız limiti | Redis Token Bucket 2/sn per user; Redis çökerse Fail-Safe (DB atomik kontrole düşer, yayın kesilmez) | DB/WS flood |
 | Replay koruması | apple_transaction_id UNIQUE | Çift yükleme |
 | Çift talep önlemi | Aktif pending varken yeni talep reddi | Aynı bakiyeye çift talep |
 | Refund → gift iptali | Orantılı payout_status='cancelled_refund' | IAP iadesi hediye kazancını iptal eder |
-| Negatif bakiye | CHECK constraint yok; tl_earnings_balance eksilir | Apple webhook 500 vermez |
+| Negatif bakiye | CHECK constraint yok; hem tl_earnings_balance hem teqlik_balance eksilir | Apple webhook 500 vermez, retry storm başlamaz |
 | T+14 kilitli bakiye | pending bakiye 14 gün çekilemez | Apple iade penceresi sigortası |
+| Webhook async | 200 OK hemen döner, signedPayload ARQ kuyruğuna atılır; ağır JWS + DB işlemi worker'da | Apple refund dalgasında Uvicorn thread starvation önlenir |
+| Host row contention | send_gift deterministik kilit sırası: LEAST(sender_id, host_id) önce kilitlenir | Mezat burst'inde deadlock önlenir |
 
 **V1.5'te devreye girecek güvenlik katmanları:**
 
@@ -965,7 +1025,7 @@ Sunucu da aynı formülü uygular; Flutter gösterimi sadece kullanıcı bilgisi
 | W1 | Migration: users (tl_earnings_balance, tl_pending_balance) + `withdrawal_requests` + `gift_events` (earnings_tl NUMERIC(10,4), payout_status, released_at) + `teqlik_transactions` (apple_transaction_id VARCHAR(64) UNIQUE, raw_receipt TEXT) | Backend | Evet |
 | W2 | `gift_events` payout index (`idx_gift_events_payout`) | Backend | Evet |
 | W3 | `use_cases/wallet/commands/` yapısı oluştur | Backend | Evet |
-| W4 | `verify_apple_receipt_command.py`: x5c zincir + environment/bundleId/productId hardcoded + velocity limit (Redis, ₺5.000/gün/cihaz) + `raw_receipt=signedTransactionInfo` kaydı | Backend | Evet |
+| W4 | `verify_apple_receipt_command.py`: x5c zincir + `jwt.decode(leeway=60)` (clock skew) + environment/bundleId/productId hardcoded + velocity limit (Redis, ₺5.000/gün/cihaz; Redis çökerse Fail-Closed) + `raw_receipt=signedTransactionInfo` kaydı | Backend | Evet |
 | W5 | `send_gift_command.py`: Decimal hassasiyeti + atomik SQL + Redis Token Bucket (2/sn per user) + 8 hediye tipi | Backend | Evet |
 | W6 | `get_wallet_summary_query.py`: teqlik + TL bakiyeleri tek sorguda | Backend | Evet |
 | W7 | `request_withdrawal_command.py`: bakiye atomik düşüm (UPDATE WHERE tl_earnings_balance >= amount, 0 satır → 400) + aktif pending yok kontrolü + withdrawal_requests INSERT — aynı transaction | Backend | Evet |
@@ -1582,7 +1642,7 @@ Kullanıcıya verilen +%10 bonusların veya dönüşüm teşviklerinin Teqlif'e 
 | Yayıncı TL kazanç takibi | Hediyelerden tl_pending_balance birikimi; T+14 cron ile tl_earnings_balance'a aktarım | V1.0 |
 | IBAN çekim modu | **Talep toplama** — bakiye talep anında atomik düşülür; red → iade; onay → zaten düşüldü; gerçek banka transferi yok | V1.0 |
 | Seçenek C (Teqlik'e Dönüştür) | tl_earnings_balance → teqlik +%10 bonus; atomik SQL | V1.0 |
-| T+14 holding süresi | **V1.0 zorunlu** — Apple refund sigortası; idempotent cron + `FOR UPDATE SKIP LOCKED` | V1.0 |
+| T+14 holding süresi | **V1.0 zorunlu** — Apple refund sigortası; idempotent cron + CTE `WITH locked_events AS (... FOR UPDATE SKIP LOCKED) SELECT ... GROUP BY` | V1.0 |
 | Minimum çekim eşiği | **₺500** | V1.0 |
 | TL dönüşüm kuru | **1 teqlik = ₺0,50 net nakit** (sabit V1.0) | V1.0 |
 | earnings_tl veri tipi | `gift_events.earnings_tl` → **NUMERIC(10,4)** (₺0,475 kuruş kaybı önlemi) | V1.0 |
