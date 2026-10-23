@@ -365,9 +365,10 @@ CREATE TABLE withdrawal_requests (
   iban              VARCHAR(34) NOT NULL,
   account_holder    VARCHAR(120) NOT NULL,
   status            VARCHAR(20) NOT NULL DEFAULT 'pending',
-                    -- pending | approved | completed | rejected
+                    -- pending | approved | completed | rejected | cancelled
   created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   processed_at      TIMESTAMPTZ,
+  cancelled_at      TIMESTAMPTZ,
   admin_note        TEXT
 );
 -- V1.5'te eklenecek kolonlar (şimdi eklenmez):
