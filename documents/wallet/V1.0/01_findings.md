@@ -379,46 +379,19 @@ Apple → POST /api/wallet/apple-notifications
 | Blast / Kitle Bildirimi | İlan Detay | 10 teqlik | ✅ Aktif |
 | İlan Boost (Öne Çıkarma) | İlan Detay | 50 teqlik | ✅ Aktif |
 
-### 8.2 Hediye (Gift) Sistemi — Planlı Özellik
+### 8.2 Hediye (Gift) Sistemi — Canlı Yayın
 
-**Temel kural: Doğrudan teqlik transferi yoktur.** Kullanıcılar birbirine "50 teqlik gönder" şeklinde ham miktar iletemez. teqlik yalnızca **hediye mekanizması üzerinden** el değiştirebilir — gönderen bir hediye objesi satın alır, sistem hediyeyi tetikler, alıcı payını alır. Bu tasarım mevcut `send-gift` endpoint'iyle (canlı yayın modeli) birebir örtüşmektedir.
+**Kapsam: Hediyeler yalnızca canlı yayın sırasında gönderilebilir.** Genel kullanıcı-kullanıcı hediyesi veya doğrudan teqlik transferi yoktur ve planlanmamıştır.
 
-**Neden doğrudan transfer yok:**
-- Sahte hesap döngüsü ve kötüye kullanım vektörünü elimine eder
-- Platform her hediye işleminden komisyon alır → gelir kaynağı
-- Apple ve BDDK perspektifinden "ödeme aracı" görünümünden kaçınır
-
-**Konsept:** Kullanıcı A, kullanıcı B'nin ilanında veya profilinde önceden tanımlı bir hediye paketi seçer. Sistem gönderenin bakiyesinden düşer, platform komisyon keser, alıcıya kalan aktarılır.
-
-**Referans model — Mevcut Canlı Yayın Hediyesi (`wallet.py:191`):**
+**Mevcut durum: ✅ Aktif** — `POST /api/wallet/send-gift` (`wallet.py:191`):
 ```
-POST /api/wallet/send-gift
-  gift_name: "Süper Yıldız"
-  cost: 50          ← gönderenden kesilir
-  host_share: 47    ← alıcıya aktarılır (PRO: %95, std: %70)
-  stream_id: 123    ← şu an zorunlu; genel hediyede listing_id/receiver_id olur
+İzleyici → hediye seçer (gift_name + cost) → stream_id ile gönderir
+  Gönderenden: cost teqlik düşülür
+  Yayıncıya:  host_share teqlik eklenir  (PRO yayıncı %95, std %70)
+  Platform:   kalan komisyon tutar
 ```
 
-**Genel Hediye Akışı (V1.1/V2.0):**
-```
-Kullanıcı B'nin profili / ilan detayı
-  [Hediye Gönder 🎁]
-       │
-       ▼
-  Hediye seç: [⭐ Destek 10] [🔥 Boost 50] [💎 Mega 100]
-  "Seçilen: 🔥 Boost Hediye — 50 teqlik"
-       │
-       ▼
-  [Onayla] → bakiye kontrol → platform komisyon → alıcıya aktarım → bildirim
-```
-
-**Komisyon modeli (TBD):** Canlı yayın modeliyle tutarlı — PRO alıcı %95, standart %70; platform farkı tutar.
-
-**Apple IAP perspektifi:** Hediye objesi satın alma modeli, ham transfer modeline göre Apple kılavuzlarıyla daha uyumludur. Platform aracı konumunda kalır.
-
-**BDDK/MASAK notu:** Platform komisyon alarak aracılık ettiği sürece "ödeme aracı" değil platform hizmeti olarak tanımlanır. Sistem açıldığında yine de hukuki görüş önerilir.
-
-**Scope:** V1.1/V2.0 — `send-gift` endpoint'i `stream_id` → `listing_id`/`receiver_id` parametresiyle genişletilerek implement edilebilir; büyük ölçüde yeniden yazım gerektirmez.
+**IAP bağlantısı:** iOS IAP ile teqlik yükleme özelliği geldikten sonra canlı yayındaki hediye cirosu doğrudan büyüyecek — kullanıcılar kolayca bakiye yükleyip hediye atabilecek.
 
 ### 8.3 İlan Ver Ekranında Ek teqlik Noktaları
 
@@ -538,8 +511,7 @@ TEQLif Gelir Akışı
 │    ├── İlan Boost (50 teqlik) ✅
 │    └── Başlangıç Boost (ilan oluşturulurken, 50 teqlik) ← V1.1
 │
-├── Canlı Yayın Hediyesi (send-gift)           ← ✅ V1.0 mevcut — stream_id ile, PRO %95 / std %70
-└── Genel Kullanıcı-Kullanıcı Hediye          ← V1.1/V2.0 — hukuki görüş al
+└── Canlı Yayın Hediyesi (send-gift)           ← ✅ Mevcut — stream_id ile, PRO %95 / std %70
 ```
 
 ---
