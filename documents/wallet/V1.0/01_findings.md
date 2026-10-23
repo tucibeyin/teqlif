@@ -1271,21 +1271,24 @@ Tüm W1–W13 görevleri aşağıdaki ilkelere uygun geliştirilir:
 
 ### 6.1 teqlik IAP (Satın Alma)
 
-| # | Görev | Yapan | Blokör mu? |
-|---|-------|-------|-----------|
-| 1 | App Store Connect — 4 Consumable IAP ürünü kaydet | **Kullanıcı** | Evet |
-| 2 | Apple Small Business Program'a başvur | **Kullanıcı** | Evet (fiyat etkiler) |
-| 3 | `apple_transaction_id UNIQUE` migration | Backend | Evet |
-| 4 | Backend `POST /api/wallet/apple-verify` + JWS doğrulama | Backend | Evet |
-| 4b | Backend `POST /api/wallet/apple-notifications` + Refund webhook | Backend | **Evet** |
-| 5 | Sandbox test ortamı konfigürasyonu | Backend | Evet |
-| 6 | `in_app_purchase` Flutter paketi ekle | Mobile | Evet |
-| 7 | `IAPService` + `purchaseStream` dinleyici | Mobile | Evet |
-| 8 | `WalletScreen` modüle taşı + paket grid UI | Mobile | Hayır |
-| 9 | Hero Balance Card animasyonu | Mobile | Hayır |
-| 10 | Konfeti / başarı animasyonu (Lottie) | Mobile | Hayır |
-| 11 | App Store Review öncesi yasal footer kontrolü | QA | Evet |
-| 12 | App Store Connect — Subscription Group "Teqlif PRO" + 4 plan (teqlif_pro_1m/3m/6m/12m); EULA + Gizlilik linki + otomatik yenileme metni ekle | **Kullanıcı** | Evet |
+| # | Görev | Yapan | Blokör mu? | Durum |
+|---|-------|-------|-----------|-------|
+| 1 | App Store Connect — 4 Consumable IAP ürünü kaydet (teqlik_pack_100/250/500/1000) | **Kullanıcı** | Evet | ✅ Tamamlandı |
+| 2 | Apple Small Business Program'a başvur | **Kullanıcı** | Evet (fiyat etkiler) | ⏭ Türkiye'de mevcut değil — %30 ile devam |
+| 2b | App Store Connect — Tax & Banking + Paid Apps sözleşmesi | **Kullanıcı** | Evet | ✅ Tamamlandı (Akbank, W-8BEN) |
+| 2c | App Store Connect — Sandbox test hesabı oluştur (admin@teqlif.com) | **Kullanıcı** | Evet | ✅ Tamamlandı |
+| 2d | App Store Server Notifications V2 URL'leri tanımla | **Kullanıcı** | Evet | ✅ Tamamlandı (prod + staging) |
+| 3 | `apple_transaction_id UNIQUE` migration | Backend | Evet | ⏳ Bekliyor |
+| 4 | Backend `POST /api/wallet/apple-verify` + JWS doğrulama | Backend | Evet | ⏳ Bekliyor |
+| 4b | Backend `POST /api/wallet/apple-notifications` + Refund webhook | Backend | **Evet** | ⏳ Bekliyor |
+| 5 | Sandbox test ortamı konfigürasyonu | Backend | Evet | ⏳ Bekliyor |
+| 6 | `in_app_purchase` Flutter paketi ekle | Mobile | Evet | ⏳ Bekliyor |
+| 7 | `IAPService` + `purchaseStream` dinleyici | Mobile | Evet | ⏳ Bekliyor |
+| 8 | `WalletScreen` modüle taşı + paket grid UI | Mobile | Hayır | ⏳ Bekliyor |
+| 9 | Hero Balance Card animasyonu | Mobile | Hayır | ⏳ Bekliyor |
+| 10 | Konfeti / başarı animasyonu (Lottie) | Mobile | Hayır | ⏳ Bekliyor |
+| 11 | App Store Review öncesi yasal footer kontrolü | QA | Evet | ⏳ Bekliyor |
+| 12 | App Store Connect — Subscription Group "Teqlif PRO" + 4 plan (teqlif_pro_1m/3m/6m/12m); 4 dil lokalizasyon; Server Notifications V2 | **Kullanıcı** | Evet | ✅ Tamamlandı |
 
 ### 6.2 Yayıncı Hakediş Sistemi — Görevler (Tüm Altyapı Upfront)
 
