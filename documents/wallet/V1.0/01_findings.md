@@ -391,7 +391,20 @@ Apple → POST /api/wallet/apple-notifications
   Platform:   kalan komisyon tutar
 ```
 
-**IAP bağlantısı:** iOS IAP ile teqlik yükleme özelliği geldikten sonra canlı yayındaki hediye cirosu doğrudan büyüyecek — kullanıcılar kolayca bakiye yükleyip hediye atabilecek.
+**Mevcut hediye kalemleri** (`swipe_live_screen.dart:925`):
+
+| Emoji | Kod | Maliyet | TL karşılığı (100-pak) | TL karşılığı (350-pak) |
+|-------|-----|---------|----------------------|----------------------|
+| 🔥 | `fire` | 10 teqlik | ₺15,00 | ₺12,30 |
+| 💎 | `diamond` | 50 teqlik | ₺75,00 | ₺61,50 |
+| 👑 | `crown` | 100 teqlik | ₺150,00 | ₺123,00 |
+
+**PRO yayıncı flywheel:** Bir izleyici 👑 Taç (100 teqlik) attığında PRO yayıncı 95 teqlik alır (standart: 70). Ayda 2 Taç alan PRO yayıncının komisyon avantajı (~50 teqlik) bir aylık PRO abonelik bedelini (%63'ünü) tek başına karşılar — yayıncıları PRO'ya çeken organik teşvik.
+
+**Bakiye yetersiz → PiP akışı** (`swipe_live_screen.dart:945`):
+Kullanıcı hediye atmak isteyip bakiyesi yetmediğinde `_handleLoadBalance()` tetiklenir: yayın PiP moduna alınır, cüzdan ekranı açılır. iOS IAP ile teqlik yükleme geldikten sonra kullanıcı Face ID ile paketi alıp canlı yayına döner — mezatı kaçırmadan satın alma.
+
+**Replay/VOD erişimi:** Canlı yayın kaydına (stream_recordings) erişim **PRO zorunludur** (`streams.py:310`). Standart kullanıcı replay ekranını göremez.
 
 ### 8.3 İlan Ver Ekranında Ek teqlik Noktaları
 
@@ -537,6 +550,11 @@ Kullanıcı
 ```
 
 **Kritik insight:** teqlik harcamak (B ve C-teqlik yolu) Apple'a ek komisyon ödetmiyor. Apple zaten [A] aşamasında kesiyor. Yani **teqlik ne kadar çok kullanılırsa birim başına marjimiz o kadar artar** — çünkü alım anında Apple bir kez kesiyor, harcamada bir daha kesmiyor.
+
+**Kapalı Döngü Ekonomisi (Closed-Loop):** Backend'de nakit çekme / payout endpoint'i yoktur ve planlanmamaktadır. Platforma giren teqlik bir daha dışarı çıkmaz — kullanıcı Boost'a, PRO'ya veya canlı yayın hediyesine harcar. Bu üç sonucu doğuruyor:
+1. **Apple uyumu:** Nakit çıkışı olmayan consumable IAP — Kural 3.1.1 ile %100 uyumlu.
+2. **BDDK/MASAK muafiyeti:** 6493 sayılı Kanun kapsamında nakde çevrilemeyen kapalı devre jeton sistemi "elektronik para" veya "ödeme hizmeti" sayılmaz; lisans gerekmez.
+3. **Finansal kaldıraç:** Satılan teqlikin bir kısmı hiç harcanmayabilir (dormant balance) → sıfır maliyetli gelir.
 
 ### 9.2 PRO Hybrid Ödeme Modeli (Para + teqlik)
 
