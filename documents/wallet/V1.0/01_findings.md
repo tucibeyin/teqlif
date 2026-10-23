@@ -1255,6 +1255,20 @@ Sunucu da aynı formülü uygular; Flutter gösterimi sadece kullanıcı bilgisi
 
 ## 6. Implementasyon Sırası (Öncelik Sıralı)
 
+### 6.0 Uygulama İlkeleri
+
+Tüm W1–W13 görevleri aşağıdaki ilkelere uygun geliştirilir:
+
+| # | İlke | Açıklama |
+|---|------|---------|
+| 1 | **Clean Code** | Tek sorumluluk, anlamlı isimlendirme, yorum yerine okunabilir kod |
+| 2 | **Clean Architecture** | Use case katmanı domain'den bağımsız; router sadece delege eder |
+| 3 | **MVVM** | Flutter tarafında ViewModel (Riverpod Provider/Notifier) — UI'da iş mantığı yok |
+| 4 | **OTA / ARB** | Kullanıcıya gösterilen tüm metinler ARB'ye eklenir; hardcoded string yasak |
+| 5 | **ADR uyumu** | Her karar `documents/teqlif_architectural_decisions.md` ile çelişmez |
+| 6 | **ADR workflow** | Geliştirme ADR §13'teki 10 adımlı workflow'a göre ilerler |
+| 7 | **Commit takibi** | Her görev tamamlandığında bu döküman ilgili commit hash'i ile güncellenir |
+
 ### 6.1 teqlik IAP (Satın Alma)
 
 | # | Görev | Yapan | Blokör mu? |
