@@ -622,6 +622,12 @@ async def release_pending_earnings_task():
     #
     # Cron iki kez çalışsa, yeniden başlasa, yarıda kalsa güvenli:
     # 'released' satırlar WHERE payout_status = 'pending' koşuluna girmez.
+    #
+    # worker.py _SCHEDULE_FUNCTIONS sözlüğüne bu fonksiyon elle eklenmeli.
+    # Fonksiyonun en sonunda watchdog sinyali zorunludur:
+    await _agent_ok(ctx, "release_pending_earnings_task")
+    # teqlif-agent Redis teqlif:agent:job_ok hash'ini bu çağrıyla günceller.
+    # Satır eksik kalırsa watchdog her gün 02:45'te sahte alarm (False Positive) üretir.
 
 # Her ayın 1'i 00:05 UTC — PRO çekim kotasını sıfırla
 # schedule.yaml: batch.reset_monthly_withdrawal_quota, watchdog_m: 60
@@ -648,6 +654,28 @@ async def daily_financial_reconciliation_task():
     Fark != 0.00 TL → Telegram Critical Alert + admin_flags kaydı.
     0 satır sonuç → sessiz başarı (watchdog_m izler; cron çalışmazsa alarm).
     """
+```
+
+**Worker Havuzu İzolasyonu (Bulkhead) — ARQ Kuyruk Seçimi:**
+```
+worker.py'de iki ayrı worker havuzu tanımlıdır:
+  WorkerSettings         → queue_name="default"   (batch işler, ML, temizlikler; timeout 300sn)
+  WorkerSettingsCritical → queue_name="critical"  (anlık bildirimler; timeout 30sn, max_jobs 50)
+
+Cüzdan bildirimleri kuyruk seçimi:
+  handle_apple_refund_command  → queue_name="default"
+    (ağır JWS + DB işlemi; gecikme tolere edilir)
+
+  Withdrawal durum değişimi push bildirimi (approved/rejected/completed) → queue_name="critical"
+    (kullanıcı anlık bilgilendirilmeli; gece 05:30 ML eğitimiyle aynı default kuyruğa atılırsa
+     dakikalarca bloklanabilir)
+
+Dispatch örneği:
+  await arq_pool.enqueue_job(
+      "send_push_notification_task",
+      user_id=uid, title="...", body="...",
+      _queue_name="critical",
+  )
 ```
 
 > **Neden T+14:** Apple chargebackları teorik 120 güne kadar açık olsa da pratikte %99'u 14 gün içinde kapanır. Daha uzun beklemek yayıncı deneyimini bozar. Büyük miktarlarda (>₺5.000 tek hediye) T+30 uygulanabilir (V1.1 iyileştirmesi).
@@ -1030,7 +1058,7 @@ Sunucu da aynı formülü uygular; Flutter gösterimi sadece kullanıcı bilgisi
 | W6 | `get_wallet_summary_query.py`: teqlik + TL bakiyeleri tek sorguda | Backend | Evet |
 | W7 | `request_withdrawal_command.py`: bakiye atomik düşüm (UPDATE WHERE tl_earnings_balance >= amount, 0 satır → 400) + aktif pending yok kontrolü + withdrawal_requests INSERT — aynı transaction | Backend | Evet |
 | W7b | `convert_to_teqlik_command.py`: Seçenek C (+%10 bonus, atomik SQL) | Backend | Evet |
-| W7c | `schedule.yaml`: `release_pending_earnings` (02:15 UTC, watchdog_m:30) + `daily_financial_reconciliation` (00:00 UTC, watchdog_m:10) — 02:15: Pazar 02:00 pg_basebackup çakışması önlenir | Backend | Evet |
+| W7c | `schedule.yaml`: `release_pending_earnings` (02:15 UTC, watchdog_m:30) + `daily_financial_reconciliation` (00:00 UTC, watchdog_m:10) — 02:15: Pazar 02:00 pg_basebackup çakışması önlenir; `worker.py` `_SCHEDULE_FUNCTIONS` sözlüğüne fonksiyon eklenir + `await _agent_ok(ctx, "release_pending_earnings_task")` son satır zorunlu (eksik → sahte alarm) | Backend | Evet |
 | W7e | `cancel_withdrawal_request_command.py`: status='pending' → 'cancelled' + atomik bakiye iadesi + 403 yetki / 409 statü kontrolü; `DELETE /api/wallet/withdraw/{id}` endpoint | Backend | Evet |
 | W8 | `handle_apple_refund_command.py`: orantılı gift iptali + negatif bakiye desteği | Backend | Evet |
 | W9 | Kart 2 UI: kazanç > 0 → birincil neon "⚡ ANINDA KULLAN (+%10 Bonus Teqlik'e Dönüştür)" + ikincil "🏦 Nakit Transferi İçin IBAN Tanımla (Ön Kayıt)"; aktif ön kayıt varsa → sıra kartı (📋 Sıra No: #Queue-{id}, "Kurumsal entegrasyon açılınca bildirim", İptal Et + Teqlik'e Dönüştür); kazanç = 0 → "Yayın Başlat" CTA; glassmorphism koyu zümrüt/altın kart; hediye ekranında combo tap sayacı (x2/x5/x10 + burst animasyonu) | Mobile | Hayır |
@@ -1138,7 +1166,7 @@ Dönüşüm kuru: **1 teqlik hediye = ₺0,50 net nakit** (sabit, V1.0'da kilitl
 **Bakiye yetersiz → PiP akışı** (`swipe_live_screen.dart:945`):
 Kullanıcı hediye atmak isteyip bakiyesi yetmediğinde `_handleLoadBalance()` tetiklenir: yayın PiP moduna alınır, cüzdan ekranı açılır. iOS IAP ile teqlik yükleme geldikten sonra kullanıcı Face ID ile paketi alıp canlı yayına döner — mezatı kaçırmadan satın alma.
 
-**Replay/VOD erişimi:** Canlı yayın kaydına (stream_recordings) erişim **PRO zorunludur** (`streams.py:310`). Standart kullanıcı replay ekranını göremez.
+**Replay/VOD erişimi:** Canlı yayın kaydına (stream_recordings) erişim **PRO zorunludur** (`streams.py:310`). Standart kullanıcı replay ekranını göremez. Erişim süresi `cluster.yaml` disk politikasıyla sınırlıdır: `minio_expiry_days: 2` (Node 1 MinIO'dan 48 saat sonra silinir) + `retention_days: 15` (Node 2 soğuk depoda 15 gün tutulur). PRO kullanıcı son **14 güne** ait yayın kaydını izleyebilir; daha eski kayıtlar 404 döner.
 
 **Yayın kalitesi — `host_stream_view_model.dart:24`:**
 
