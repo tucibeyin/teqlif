@@ -398,17 +398,28 @@ POST /api/wallet/withdraw  →  request_withdrawal_command.py
   — V1.0: TALEP TOPLAMA MODU (gerçek banka transferi yok) —
   Body: { amount_tl, iban, account_holder_name }
   Kurallar:
-    - tl_earnings_balance >= amount_tl  (bakiye kontrolü)
     - amount_tl >= 500  (minimum çekim)
     - Kullanıcının aktif pending talebi yoksa işlem alınır (çift talep önlemi)
       SELECT id FROM withdrawal_requests
-        WHERE user_id = :uid AND status = 'pending' LIMIT 1
+        WHERE user_id = :uid AND status IN ('pending','approved') LIMIT 1
       Varsa: 409 "İncelemede bekleyen bir talebiniz var"
-    - withdrawal_requests INSERT (status='pending') — bakiyeden düşme YOK
+    - Bakiye atomik olarak ANINDA düşülür (double-spend önlemi):
+        UPDATE users
+          SET tl_earnings_balance = tl_earnings_balance - :amount_tl
+          WHERE id = :uid AND tl_earnings_balance >= :amount_tl
+          RETURNING tl_earnings_balance;
+        -- 0 satır dönerse → 400 yetersiz bakiye
+    - withdrawal_requests INSERT (status='pending') — aynı transaction içinde
     - Yanıt mesajı (Seçenek A):
         "Talebiniz başarıyla alındı. Lansman beta dönemi kapsamında ilk çekim
          talepleri güvenlik incelemesinin ardından işleme alınacaktır."
   → 200 OK | 400 yetersiz bakiye / limit | 409 aktif talep var
+
+  Admin Red Akışı (admin panel):
+    UPDATE users SET tl_earnings_balance = tl_earnings_balance + :amount_tl WHERE id = :uid;
+    UPDATE withdrawal_requests SET status='rejected', admin_note=:note, processed_at=NOW()
+      WHERE id = :wid;
+    → Bakiye kullanıcıya anında iade edilir; kullanıcıya bildirim gönderilir.
 
   — Seçenek C: Kazancı Teqlik'e Dönüştür (+%10 Bonus) —
   POST /api/wallet/convert-to-teqlik
@@ -715,14 +726,14 @@ Kurumsal banka toplu ödeme API'si (şirket kuruluşu sonrası)
 | W4 | `verify_apple_receipt_command.py`: x5c zincir + environment/bundleId/productId hardcoded + velocity limit (Redis, ₺5.000/gün/cihaz) | Backend | Evet |
 | W5 | `send_gift_command.py`: Decimal hassasiyeti + atomik SQL + Redis Token Bucket (2/sn per user) + 8 hediye tipi | Backend | Evet |
 | W6 | `get_wallet_summary_query.py`: teqlik + TL bakiyeleri tek sorguda | Backend | Evet |
-| W7 | `request_withdrawal_command.py`: V1.0 talep toplama modu (bakiye >= 500, aktif pending yok, INSERT status='pending', bakiye düşülmez) | Backend | Evet |
+| W7 | `request_withdrawal_command.py`: bakiye atomik düşüm (UPDATE WHERE tl_earnings_balance >= amount, 0 satır → 400) + aktif pending yok kontrolü + withdrawal_requests INSERT — aynı transaction | Backend | Evet |
 | W7b | `convert_to_teqlik_command.py`: Seçenek C (+%10 bonus, atomik SQL) | Backend | Evet |
 | W7c | `schedule.yaml`: `release_pending_earnings` (02:00 UTC, watchdog_m:30) | Backend | Evet |
 | W8 | `handle_apple_refund_command.py`: orantılı gift iptali + negatif bakiye desteği | Backend | Evet |
 | W9 | Cüzdan Kart 2 UI: kazanç > 0 → "Teqlik'e Dönüştür" + "Çekim Talebi"; kazanç = 0 → "Yayın Başlat" CTA | Mobile | Hayır |
 | W10 | Çekim talebi formu (IBAN + ad-soyad; beta güvenlik notu göster) | Mobile | Hayır |
 | W11 | 5 dil ARB: `giftNameClap`, `giftNameTea`, `giftNameGoldenHammer`, `giftNameRocket`, `giftNameTrophy`, `walletConvertToTeqlik`, `walletWithdrawRequestNote`, `walletPendingEarningsDesc` | Mobile | Hayır |
-| W12 | Admin panel: bekleyen çekim talepleri listesi (temel görünüm, V1.0 için yeterli) | Backend/Admin | Hayır |
+| W12 | Admin panel: bekleyen çekim talepleri listesi + Onayla / Reddet butonları (red durumunda bakiye iadesi: `tl_earnings_balance += amount_tl`) | Backend/Admin | Hayır |
 
 ### 6.3 V1.5'e Ertelenen Özellikler
 
@@ -1220,7 +1231,7 @@ Kullanıcıya 50 bonus teqlik veriyoruz (300 pakette) → bu 50 teqlik gelecekte
 | Hediye kalemleri | **8 katman** — clap(1)·tea(5)·fire(10)·diamond(50)·crown(100)·golden_hammer(250)·rocket(500)·trophy(1000) | V1.0 |
 | Animasyon katmanları | Mikro/Std: yüzen ikon · Premium: parlama · VIP: tam ekran Lottie + banner | V1.0 |
 | Yayıncı TL kazanç takibi | Hediyelerden tl_pending_balance birikimi; T+14 cron ile tl_earnings_balance'a aktarım | V1.0 |
-| IBAN çekim modu | **Talep toplama** — bakiye düşülmez, withdrawal_requests INSERT; gerçek transfer yok | V1.0 |
+| IBAN çekim modu | **Talep toplama** — bakiye talep anında atomik düşülür; red → iade; onay → zaten düşüldü; gerçek banka transferi yok | V1.0 |
 | Seçenek C (Teqlik'e Dönüştür) | tl_earnings_balance → teqlik +%10 bonus; atomik SQL | V1.0 |
 | T+14 holding süresi | **V1.0 zorunlu** — Apple refund sigortası; idempotent cron + `FOR UPDATE SKIP LOCKED` | V1.0 |
 | Minimum çekim eşiği | **₺500** | V1.0 |
