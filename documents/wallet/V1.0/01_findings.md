@@ -147,7 +147,8 @@ Her ürün için doldurulacaklar:
 **Adım 3 — App Store Server Notifications V2 Yapılandırması**
 - App Store Connect → uygulamanı seç → **App Information** → **App Store Server Notifications**
 - **Production URL**: `https://api.teqlif.com/api/wallet/store-notifications/apple`
-- **Sandbox URL**: `https://api-staging.teqlif.com/v1/wallet/apple-notifications`
+- **Sandbox URL**: `https://api-staging.teqlif.com/api/wallet/store-notifications/apple`
+- ⚠️ App Store Connect'te eski `/apple-notifications` URL'si varsa güncelle (pre-launch, tek doğru path)
 - **Version**: **Version 2** seç (V1 hatalı/eksik bildirim gönderir)
 - "Send Test Notification" ile doğrula — backend `200 OK` dönmeli
 
@@ -370,7 +371,14 @@ class PurchaseResult:
 class StoreVerifier(ABC):
     @abstractmethod
     async def verify(self, payload: str) -> PurchaseResult:
-        """Platforma özgü doğrulama yapar, PurchaseResult döner."""
+        """Platforma özgü doğrulama yapar, PurchaseResult döner.
+
+        payload sözleşmesi (base.py docstring'ine eklenecek):
+          Apple  → signedTransactionInfo JWS string (tek parametre)
+          Google → JSON string: '{"purchase_token":"...","product_id":"...","package_name":"..."}'
+          Web    → JSON string: platform'a özgü; Verifier implementasyonu parse eder.
+        Platform farklılıkları Verifier içinde kalır; command bunu bilmez.
+        """
         ...
 ```
 
@@ -552,10 +560,14 @@ CREATE INDEX idx_gift_events_payout
 ALTER TABLE users
   ADD COLUMN pro_expires_at               TIMESTAMPTZ NULL,
   ADD COLUMN pro_grace_until              TIMESTAMPTZ NULL,
-  ADD COLUMN store_subscription_id VARCHAR(128) NULL;
+  ADD COLUMN store_subscription_id       VARCHAR(128) NULL,
+  ADD COLUMN store_subscription_platform VARCHAR(20)  NULL;
   -- pro_expires_at: Abonelik bitiş zamanı; NULL iken kullanıcı standart
   -- pro_grace_until: Billing retry grace period bitişi (Apple: maks 6 gün); NULL ise grace yok
   -- store_subscription_id: Abonelik zinciri ID'si — platform bağımsız; yenilemede değişmez
+  -- store_subscription_platform: 'apple' | 'google' | 'web' — hangi mağazadan abone olunduğu;
+  --   Mobil UI'da kullanıcıya doğru iptal/yönetim ekranını göstermek için zorunlu
+  --   (Apple → App Store abonelikler, Google → Play Store abonelikler)
   -- NOT: CHECK (pro_expires_at > NOW()) KONULMAMALI — cron ve webhook çakışırsa deadlock riski;
   --      süreli kontrol uygulama katmanında yapılır (pro_expires_at IS NULL koşulu).
 
@@ -563,10 +575,23 @@ CREATE INDEX idx_users_pro_status
   ON users (user_type, pro_expires_at)
   WHERE user_type = 'pro';
 
--- teqlik_transactions: ürün tipi ayrımı
+-- teqlik_transactions: composite unique (platform çakışma koruması)
+-- Apple ID'si "2000000123456789" ↔ Iyzico ID'si "2000000123456789" çakışabilir;
+-- global UNIQUE yerine platform bazlı bileşik tekil kısıtlama kullanılır.
 ALTER TABLE teqlik_transactions
   ADD COLUMN product_type VARCHAR(20) NOT NULL DEFAULT 'consumable';
   -- 'consumable' (teqlik paketi) | 'subscription' (PRO abonelik)
+
+-- store_transaction_id üzerindeki tekil kısıtlamayı kaldır, bileşik kısıtlama ekle:
+-- (W1 migration'ında ADD COLUMN store_transaction_id'ye UNIQUE koymak yerine
+--  aşağıdaki composite constraint kullanılır)
+ALTER TABLE teqlik_transactions
+  ADD CONSTRAINT uq_store_platform_tx UNIQUE (store_platform, store_transaction_id);
+
+-- Non-store işlemler (airdrop, convert_to_teqlik) için partial index:
+CREATE UNIQUE INDEX uq_store_platform_tx_partial
+  ON teqlik_transactions (store_platform, store_transaction_id)
+  WHERE store_transaction_id IS NOT NULL;
 
 -- withdrawal_requests: baştan oluşturulur (CASHOUT_ENABLED=false iken kullanılmaz)
 CREATE TABLE withdrawal_requests (
@@ -1330,7 +1355,7 @@ Tüm W1–W13 görevleri aşağıdaki ilkelere uygun geliştirilir:
 
 | # | Görev | Yapan | Blokör mu? | Durum |
 |---|-------|-------|-----------|-------|
-| W1 | Migration `zzzzzx_wallet_v10`: `users` (tl_earnings_balance, tl_pending_balance, pro_expires_at, pro_grace_until, **store_subscription_id VARCHAR(128)**) + `withdrawal_requests` + `gift_events` (earnings_tl NUMERIC(10,4), payout_status, released_at) + `teqlik_transactions` (**store_transaction_id VARCHAR(128) UNIQUE, store_platform VARCHAR(20), raw_payload TEXT**, product_type) + `idx_users_pro_status` + `idx_gift_events_payout` | Backend | Evet | ⏳ Bekliyor |
+| W1 | Migration `zzzzzx_wallet_v10`: `users` (tl_earnings_balance, tl_pending_balance, pro_expires_at, pro_grace_until, **store_subscription_id VARCHAR(128)**, **store_subscription_platform VARCHAR(20)**) + `withdrawal_requests` + `gift_events` (earnings_tl NUMERIC(10,4), payout_status, released_at) + `teqlik_transactions` (**store_transaction_id VARCHAR(128), store_platform VARCHAR(20), raw_payload TEXT**, product_type, **UNIQUE(store_platform, store_transaction_id) composite**) + `idx_users_pro_status` + `idx_gift_events_payout` | Backend | Evet | ⏳ Bekliyor |
 | W2 | `idx_gift_events_payout` (W1 migration'ına dahil edildi) | Backend | Evet | ⏳ Bekliyor |
 | W3 | `use_cases/wallet/commands/` + `services/store/` dizin yapısı | Backend | Evet | ⏳ Bekliyor |
 | W4 | **Store Abstraction katmanı** (`services/store/`): `StoreVerifier` ABC + `AppleVerifier` (JWS x5c doğrulama, leeway=60, env/bundleId hardcoded, velocity limit Redis ₺5.000/gün Fail-Closed) + `StoreVerifierFactory`; `verify_purchase_command.py`: `{platform, payload, product_id}` → factory → `PurchaseResult` → productId dispatch: `teqlik_pack_*` → consumable (teqlik_balance +=, store_transaction_id UNIQUE 409), `teqlif_pro_*` → subscription (user_type='pro', pro_expires_at, plan_type, store_subscription_id); `raw_payload` arşivi; router: `POST /api/wallet/purchase/verify` | Backend | Evet | ⏳ Bekliyor |
@@ -1944,7 +1969,7 @@ Kullanıcıya 50 bonus teqlik veriyoruz (300 pakette) → bu 50 teqlik gelecekte
 
 | # | Senaryo | Risk | Savunma Mekanizması | Sonuç |
 |---|---------|------|---------------------|-------|
-| E1 | **Refund Çetesi:** Kullanıcı 1.000 teqlik alır, hediye atar, Apple'dan iade ister | Platform yayıncıya ödedi, Apple parayı geri aldı — çifte zarar | `handle_apple_refund_command.py`: T+14 dolmamış hediyelerde `cancelled_refund`, `tl_pending_balance` düşülür | Yayıncıya haksız para gitmez; Teqlif kasasından 1 kuruş çıkmaz |
+| E1 | **Refund Çetesi:** Kullanıcı 1.000 teqlik alır, hediye atar, Apple'dan iade ister | Platform yayıncıya ödedi, Apple parayı geri aldı — çifte zarar | `handle_store_refund_command.py`: T+14 dolmamış hediyelerde `cancelled_refund`, `tl_pending_balance` düşülür | Yayıncıya haksız para gitmez; Teqlif kasasından 1 kuruş çıkmaz |
 | E2 | **Geç Apple İadesi:** İade 20. günde geldi, bakiye serbest kalmıştı | `tl_earnings_balance` negatife düşer; DB CHECK varsa webhook 500 verir ve sonsuz retry döner | DB'de `CHECK (>= 0)` yasak. `tl_earnings_balance` negatife düşer, `pending_refund = True` bayrağı | Borç mahsubu: sonraki kazançlar eksi bakiyeyi kapatır; webhook asla 500 vermez |
 | E3 | **Apple Net-45 Uçurumu:** Hediye 14. günde serbest, yayıncı nakit istiyor; Apple Teqlif'e 45. günde öder | Teqlif tahsil etmediği parayı cebinden ödemek zorunda — nakit iflası | V1.0 Ön Kayıt modu: nakit çekim hemen yapılmaz; birincil buton Seçenek C (+%10 bonus) | Yayıncı ilan gücüne çevirir; nakit çıkışı sıfırlanır |
 | E4 | **Kullanıcı Sırada Beklerken Vazgeçer:** ₺500 çekim sırasında akşam mezatını kaçırmak istemez | Bakiye kilitli kalırsa müşteri memnuniyetsizliği, churn riski | `cancel_withdrawal_request_command.py` (`DELETE /withdraw/{id}`): tek tıkla iptal, bakiye anında iade | Kullanıcı 628 teqlik'e çevirip mezatta teklif verir; para platformda kalır |
