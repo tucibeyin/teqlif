@@ -621,6 +621,7 @@ Kurumsal banka toplu ödeme API'si (şirket kuruluşu sonrası)
 ├──────────────────────────────────────────────┤
 │  ╔══════════════════════════════════════════╗ │
 │  ║  KART 2: Yayın Kazançlarım  [herkese]   ║ │
+│  ║  (Koyu zümrüt/altın — glassmorphism)    ║ │
 │  ║                                          ║ │
 │  ║  [Kazanç varsa — yayıncı]               ║ │
 │  ║  • Mevcut bakiye: ₺1.450,00             ║ │
@@ -629,8 +630,8 @@ Kurumsal banka toplu ödeme API'si (şirket kuruluşu sonrası)
 │  ║  [ Teqlik'e Dönüştür (+%10 bonus) ]     ║ │
 │  ║  [ Çekim Talebi Oluştur (IBAN)    ]     ║ │
 │  ║                                          ║ │
-│  ║  ⚠️ Çekim talepleri beta güvenlik       ║ │
-│  ║  incelemesi sonrası işleme alınır        ║ │
+│  ║  [Aktif talep varsa — timeline stepper] ║ │
+│  ║  ● Talep Alındı  ○ İnceleme  ○ Onay    ║ │
 │  ║  Min. çekim ₺500 — Kaynak: hediyeler    ║ │
 │  ║                                          ║ │
 │  ║  [Kazanç yoksa — henüz yayın yapmamış]  ║ │
@@ -664,6 +665,14 @@ Kurumsal banka toplu ödeme API'si (şirket kuruluşu sonrası)
 ```
 
 > **Apple uyum notu:** teqlik satın alma Kart 1'de — tamamen IAP üzerinden, Kural 3.1.1 uyumlu. Kart 2 yalnızca izleyicilerden kazanılan geliri gösteriyor; kullanıcı satın aldığı teqliği nakde çeviremiyor. Apple bu modele itiraz etmiyor (TikTok, Twitch aynı ayrımı kullanıyor). Kart 2'nin tüm kullanıcılara gösterilmesi — kazanç yokken "Yayın Başlat" CTA'sıyla — organik büyüme döngüsü yaratır: sıradan alıcı/satıcıyı yayıncıya dönüştürür.
+
+**Kart 2 Görsel Tasarımı:** Kart 1 (enerjik mor/neon — teqlik satın alma enerjisi) ile bilinçli kontrast kurulur. Kart 2 koyu zümrüt yeşili + altın aksanlı glassmorphism/sheen doku kullanır — "kazanılmış para" hissini Kart 1'den ayırt eder ve fintech premium estetiği verir.
+
+**Çekim Talebi Timeline Stepper:** Aktif `withdrawal_requests` kaydı varken Kart 2 "Çekim Talebi Oluştur" butonu yerine 3 adımlı durum göstergesi sunar:
+```
+● Talep Alındı  ──►  ○ Beta İncelemesi  ──►  ○ Onaylandı
+```
+`withdrawal_requests.status` alanı (pending / approved / rejected) bu göstergeyi doğrudan besler; ekstra backend değişikliği gerekmez. Red durumunda: "Talebiniz reddedildi — bakiyeniz iade edildi" mesajı + yeni talep butonu.
 
 ### 5.2 Satın Alma Akışı
 
@@ -732,8 +741,8 @@ Kurumsal banka toplu ödeme API'si (şirket kuruluşu sonrası)
 | W7b | `convert_to_teqlik_command.py`: Seçenek C (+%10 bonus, atomik SQL) | Backend | Evet |
 | W7c | `schedule.yaml`: `release_pending_earnings` (02:00 UTC, watchdog_m:30) | Backend | Evet |
 | W8 | `handle_apple_refund_command.py`: orantılı gift iptali + negatif bakiye desteği | Backend | Evet |
-| W9 | Cüzdan Kart 2 UI: kazanç > 0 → "Teqlik'e Dönüştür" + "Çekim Talebi"; kazanç = 0 → "Yayın Başlat" CTA | Mobile | Hayır |
-| W10 | Çekim talebi formu (IBAN + ad-soyad; beta güvenlik notu göster) | Mobile | Hayır |
+| W9 | Cüzdan Kart 2 UI: kazanç > 0 → "Teqlik'e Dönüştür" + "Çekim Talebi"; aktif talep → timeline stepper (pending/approved/rejected); kazanç = 0 → "Yayın Başlat" CTA; glassmorphism koyu zümrüt/altın kart tasarımı; hediye gönderim ekranında combo tap sayacı (x2/x5/x10 görsel + burst animasyonu) | Mobile | Hayır |
+| W10 | Çekim talebi formu: IBAN alanı otomatik 4'erli TR00 formatlaması + ilk 5 haneden banka logosu tespiti (statik Map) + "IBAN Yapıştır" butonu; ad-soyad; beta güvenlik notu; IBAN uzunluk kontrolü (26 hane) | Mobile | Hayır |
 | W11 | 5 dil ARB: `giftNameClap`, `giftNameTea`, `giftNameGoldenHammer`, `giftNameRocket`, `giftNameTrophy`, `walletConvertToTeqlik`, `walletWithdrawRequestNote`, `walletPendingEarningsDesc` | Mobile | Hayır |
 | W12 | Admin panel: bekleyen çekim talepleri listesi + Onayla / Reddet butonları (red durumunda bakiye iadesi: `tl_earnings_balance += amount_tl`) | Backend/Admin | Hayır |
 
@@ -827,6 +836,8 @@ Dönüşüm kuru: **1 teqlik hediye = ₺0,50 net nakit** (sabit, V1.0'da kilitl
 - **250–1.000 teqlik (VIP):** Tam ekran Lottie animasyonu, ağır haptic, chat üstünde 10 saniye sabit altın banner: *"@kullanıcı yayıncıya Şampiyon Kupası gönderdi!"*
 
 **🔨 Altın Tokmak — Mezat Kültürü:** 250 teqlik'lik bu hediye mezat kapanış anına özgüdür. Ürünü kazanan alıcının "satıldı" coşkusuyla mezatçıya atması platforma özgü bir geleneğe dönüşür.
+
+**Hediye Combo Tap (Ardışık Gönderim):** Yoğun anlarda (mezatın son 10 saniyesi gibi) aynı hediye butonuna art arda basıldığında combo sayacı görsel katmanı aktif olur: x2 → x5 → x10 patlamaları, tırmanan pitch ses efekti. Mevcut Token Bucket (burst: 5) bu davranışı zaten kapsar — backend kuralı değişmez, yalnızca Flutter UI katmanında combo counter animasyonu eklenir. Her dokunuş ayrı bir `send_gift` çağrısıdır; sunucu rate limit kuralları aynı kalır.
 
 **PRO yayıncı flywheel:** Standart ve PRO arasındaki oran farkı her hediyede birikir. PRO abonelik bedelini aylık Taç hediyelerinden karşılamak için gereken sayı: ₺79,99 ÷ (₺47,50 − ₺35,00) = **6,4 Taç/ay**. Ayda yalnızca 6–7 Taç alan PRO yayıncının abonelik bedeli otomatik amortize olur. Üstüne 3 ücretsiz Boost (₺225), 6 AI Açıklama (₺45), 720p HD yayın ve 2 ücretsiz çekim hakkı eklenir.
 
