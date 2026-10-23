@@ -212,7 +212,7 @@ Satın alımlar Apple Kimliği hesabınız üzerinden faturalandırılır.
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────────┐
-│  [1. DOĞUŞ — Minting]                                                            │
+│  [1. DOĞUŞ — Minting]  ★ V1.0 + V1.5                                            │
 │  App Store IAP → JWS doğrulama (leeway=60, bundleId, env=Prod)                  │
 │               → Replay koruması (apple_transaction_id UNIQUE)                    │
 │               → users.teqlik_balance += amount                                   │
@@ -222,40 +222,51 @@ Satın alımlar Apple Kimliği hesabınız üzerinden faturalandırılır.
               ┌──────────────┴──────────────┐
               ▼                             ▼
 ┌─────────────────────────┐   ┌────────────────────────────────────────┐
-│  [2. İÇ TÜKETİM]        │   │  [3. HEDİYELEŞME — Sanal → Hakediş]  │
+│  [2. İÇ TÜKETİM]  ★V1.0 │   │  [3. HEDİYELEŞME]  ★ V1.0 + V1.5    │
 │  Boost·Blast·AI·PRO Pass│   │  Canlı mezatta 8 katman hediye         │
 │  Nakit çıkışı: ₺0        │   │  Gönderen: teqlik_balance -= cost      │
-│  Teqlif marjı: %100     │   │  Alıcı:    tl_pending_balance += share  │
-│  (Yeniden [2]'ye döner) │   │  Kilit: LEAST(sender,host) sırası      │
-└─────────────────────────┘   │  Rate:  Redis Token Bucket 2/sn        │
+│  Teqlif marjı: %100     │   │  ── V1.0: Alıcı teqlik_balance +=      │
+│  (Yeniden [2]'ye döner) │   │     math.ceil(cost×host_rate) teqlik   │
+└─────────────────────────┘   │     payout_status='teqlik_awarded'     │
+                              │  ── V1.5: tl_pending_balance +=        │
+                              │     TRUNC(cost×rate×0.50,2)            │
+                              │     payout_status='pending'            │
+                              │  Kilit: LEAST(sender,host) sırası      │
+                              │  Rate:  Redis Token Bucket 2/sn        │
                               └────────────────┬───────────────────────┘
-                                               ▼
-                              ┌────────────────────────────────────────┐
-                              │  [4. ESCROW — T+14 Bekleme]            │
-                              │  gift_events.payout_status = 'pending' │
-                              │  Apple chargeback sigortası            │
-                              │  14 gün boyunca dokunulamaz            │
-                              └────────────────┬───────────────────────┘
-                                               ▼ 02:15 UTC — CTE Cron
-                              ┌────────────────────────────────────────┐
-                              │  [5. OLGUNLAŞMA — Release]             │
-                              │  WITH locked_events AS (               │
-                              │    ... FOR UPDATE SKIP LOCKED          │
-                              │  ) SELECT ... GROUP BY receiver_id     │
-                              │  tl_pending_balance → tl_earnings_balance│
-                              │  _agent_ok(ctx, "release_pending...")  │
-                              └───────────────┬────────────────────────┘
-                                              │
-                      ┌───────────────────────┴───────────────────────┐
-                      ▼                                               ▼
-┌──────────────────────────────────┐    ┌────────────────────────────────────────┐
-│  [6A. GERİ KAZANIM — Seçenek C]  │    │  [6B. ÇIKIŞ — IBAN Ön Kayıt #Queue]   │
-│  tl_earnings_balance → teqlik    │    │  tl_earnings_balance atomik düşülür    │
-│  +%10 bonus (FLOOR formülü)      │    │  withdrawal_requests status='pending'  │
-│  ₺500 → 571+57 bonus = 628 tqlk  │    │  İptal hakkı: cancel_withdrawal        │
-│  Para dışarı ÇIKMAZ, geri döner  │    │  (bakiye anında iade, status=cancelled)│
-│  Yeniden [2] akışına akar        │    │  Gerçek transfer: V1.5 (şirket sonrası)│
-└──────────────────────────────────┘    └────────────────────────────────────────┘
+                                               │
+               ┌───────────────────────────────┴──────────────────────────────┐
+               │ V1.5 KOLU (şirket kurulduktan sonra)                         │
+               ▼                                                               │
+┌────────────────────────────────────┐                                        │
+│  [4. ESCROW — T+14]  ★ V1.5        │                                        │
+│  gift_events.payout_status='pending'│                                       │
+│  14 gün boyunca dokunulamaz        │                                        │
+└────────────────┬───────────────────┘                                        │
+                 ▼ 02:15 UTC — CTE Cron                                       │
+┌────────────────────────────────────┐                                        │
+│  [5. OLGUNLAŞMA]  ★ V1.5           │                                        │
+│  WITH locked_events AS (           │                                        │
+│    ... FOR UPDATE SKIP LOCKED      │                                        │
+│  ) SELECT ... GROUP BY             │                                        │
+│  tl_pending → tl_earnings_balance  │                                        │
+│  _agent_ok(ctx, "release_pending") │                                        │
+└───────────────┬────────────────────┘                                        │
+                │                                                             │
+         ┌──────┴──────┐                                                      │
+         ▼             ▼                                                      │
+┌─────────────────┐  ┌─────────────────────────────────────────────────┐     │
+│ [6A. Seçenek C] │  │ [6B. ÇIKIŞ — IBAN Çekim]  ★ V1.5               │     │
+│ ★ V1.5          │  │ tl_earnings_balance atomik düşülür              │     │
+│ tl_earnings →   │  │ withdrawal_requests status='pending'           │     │
+│ teqlik +%10     │  │ cancel_withdrawal (anında iade, 'cancelled')    │     │
+│ FLOOR formülü   │  │ Gerçek transfer: LTD + banka API + MASAK        │     │
+│ Para ÇIKMAZ     │  └─────────────────────────────────────────────────┘     │
+└─────────────────┘                                                           │
+                                                                              │
+               └──────────────────────────────────────────────────────────────┘
+                 V1.0: Adım 4-5-6 yoktur. Yayıncı doğrudan teqlik kazanır,
+                 harcayarak [2]'ye döner. T+14 / IBAN / Seçenek C kapalıdır.
 ```
 
 ### 4.1 Flutter Tarafı
@@ -399,39 +410,52 @@ Apple → POST /api/wallet/apple-notifications
      webhook 500 alır → Apple 3 gün boyunca retry storm başlatır.
   → bakiye < 0 ise: users.pending_refund = true
 
-  → Orantılı hediye kazancı iptali (anti-fraud):
+  → V1.0 — Sadece teqlik_balance azaltılır; TL cancellation yok (tl_pending_balance henüz kullanılmıyor):
+       teqlik_balance -= iade_miktarı  (atomik; negatife düşebilir)
+       users.pending_refund = true     (admin incelemesi tetiklenir)
+
+  → V1.5 — Orantılı hediye kazancı iptali da aktive edilir (anti-fraud):
        iade_oranı = iade_miktarı / orijinal_miktar
        iptal_tl   = users.tl_pending_balance × iade_oranı
-       UPDATE gift_events
-         SET payout_status = 'cancelled_refund'
-         WHERE sender_id = kullanıcı
-           AND payout_status = 'pending'
-         ORDER BY sent_at ASC          -- en eskiden başla
-         LIMIT (en fazla iptal_tl'yi karşılayana kadar)
+       UPDATE gift_events SET payout_status = 'cancelled_refund'
+         WHERE sender_id = kullanıcı AND payout_status = 'pending'
+         ORDER BY sent_at ASC LIMIT (iptal_tl'yi karşılayana kadar)
        tl_pending_balance -= iptal_tl  (atomik)
+       IAP transaction → bireysel hediyeler arasında tam iz mümkün değil;
+       orantılı iptal yaklaşık ama yeterli koruma sağlar.
 
-     Not: IAP transaction → bireysel hediyeler arasında tam iz mümkün değil;
-     orantılı iptal yaklaşık ama yeterli koruma sağlar. Sadece 'pending'
-     bakiye etkilenir — zaten released olan kazançlara dokunulmaz.
-
-  → RefundLog kaydı oluştur (iade_miktarı + iptal_tl)
+  → RefundLog kaydı oluştur
   → 200 OK döndür (Apple retry yapar 4xx'te)
 ```
 
-#### 4.2.2 Yayıncı TL Kazanç Sistemi (V1.0)
+#### 4.2.2 Yayıncı Hakediş Sistemi (V1.0 Saf Teqlik / V1.5 TL Kazanç)
 
-**Yeni tablolar (migration gerekli):**
+> **Strateji:** V1.0'da yayıncılar hediyelerden doğrudan **teqlik** kazanır — TL hesabı yok, banka transferi yok, T+14 cron yok. Şema V1.5 için hazırlanır (kolonlar oluşturulur) ama fonksiyonalite kapalı. Şirket kurulduktan sonra tek bir config değişikliğiyle TL kazanç aktive edilir; tüm geçmiş gift_events kayıtları korunur.
+
+**Migration — V1.0 Şema (hazırlık dahil):**
 ```sql
 -- ── V1.0 Migration ────────────────────────────────────────────────────────────
--- users tablosuna ekle
+-- users tablosuna şema hazırlığı (V1.0'da tl_ kolonları kullanılmaz; V1.5'te aktive edilir)
 ALTER TABLE users
   ADD COLUMN tl_earnings_balance  NUMERIC(10,2) NOT NULL DEFAULT 0.00,
   ADD COLUMN tl_pending_balance   NUMERIC(10,2) NOT NULL DEFAULT 0.00;
-  -- ⚠️ tl_earnings_balance'a CHECK (>= 0) KONULMAMALI:
-  -- Apple iadesi geldiğinde bakiye negatife düşebilir (borç mahsubu).
-  -- DB constraint hatası Apple webhook'unun 500 alıp sonsuz retry'a girmesine yol açar.
+  -- ⚠️ CHECK (>= 0) KONULMAMALI (ikisi de):
+  -- Apple iadesi geldiğinde teqlik_balance ve tl_earnings_balance negatife düşebilir.
+  -- DB constraint hatası Apple webhook'unun 500 alıp sonsuz retry storm başlatmasına yol açar.
 
--- Çekim talepleri — V1.0: talep toplama modeli (gerçek transfer V1.5)
+-- gift_events kazanç takip kolonları (V1.0'da earnings_tl sessizce kaydedilir; payout
+-- V1.0: 'teqlik_awarded' — V1.5 T+14 cron bu durumu atlar, yalnızca 'pending' işler)
+ALTER TABLE gift_events
+  ADD COLUMN earnings_tl   NUMERIC(10,4) NOT NULL DEFAULT 0.0000,
+  ADD COLUMN payout_status VARCHAR(20)   NOT NULL DEFAULT 'teqlik_awarded',
+                           -- teqlik_awarded (V1.0) | pending | released | cancelled_refund
+  ADD COLUMN released_at   TIMESTAMPTZ;
+
+CREATE INDEX idx_gift_events_payout
+  ON gift_events (payout_status, sent_at)
+  WHERE payout_status = 'pending';
+
+-- withdrawal_requests şema hazırlığı (V1.0'da boş kalır; V1.5'te fonksiyonel)
 CREATE TABLE withdrawal_requests (
   id                SERIAL PRIMARY KEY,
   user_id           INTEGER NOT NULL REFERENCES users(id),
@@ -445,10 +469,10 @@ CREATE TABLE withdrawal_requests (
   cancelled_at      TIMESTAMPTZ,
   admin_note        TEXT
 );
--- V1.5'te eklenecek kolonlar (şimdi eklenmez):
---   fee_tl NUMERIC(10,2), mernis_name VARCHAR(120), mernis_verified_at TIMESTAMPTZ
+-- V1.5 migration'ında eklenecek: fee_tl, mernis_name, mernis_verified_at
+-- gross_amount_tl, withholding_tax_tl, net_amount_tl (vergi/stopaj)
 
--- ── V1.5 Migration (şimdi yazılmaz, referans) ─────────────────────────────────
+-- ── V1.5 Migration (şirket kurulduktan sonra) ─────────────────────────────────
 -- ALTER TABLE users
 --   ADD COLUMN monthly_free_withdrawals_used INTEGER NOT NULL DEFAULT 0,
 --   ADD COLUMN rolling_reserve_expires_at    TIMESTAMPTZ,
@@ -464,20 +488,6 @@ CREATE TABLE withdrawal_requests (
 --   birth_year SMALLINT NOT NULL,
 --   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 -- );
-
--- gift_events tablosuna kazanç takip kolonları
--- (T+14 cron ve refund iptali için event bazında iz)
--- earnings_tl: NUMERIC(10,4) — 1 teqlik × %95 × ₺0,50 = ₺0,4750; 2 hane ile saklanamaz.
--- Kullanıcı bakiyelerine aktarımda ROUND_DOWN(2) uygulanır (bkz. T+14 cron ve withdraw).
-ALTER TABLE gift_events
-  ADD COLUMN earnings_tl   NUMERIC(10,4) NOT NULL DEFAULT 0.0000,
-  ADD COLUMN payout_status VARCHAR(20)   NOT NULL DEFAULT 'pending',
-                           -- pending | released | cancelled_refund
-  ADD COLUMN released_at   TIMESTAMPTZ;
-
-CREATE INDEX idx_gift_events_payout
-  ON gift_events (payout_status, sent_at)
-  WHERE payout_status = 'pending';
 ```
 
 **Rate Limiting — send-gift (Redis Token Bucket):**
@@ -519,112 +529,114 @@ max_client_conn ve default_pool_size değerleri V2.1 cluster.yaml'daki Node 1
 donanımına (bare-metal, dedicated CPU) göre önceden ayarlanmış olmalıdır.
 ```
 
-**Güncellenecek Use Case — `app/use_cases/wallet/commands/send_gift_command.py`:**
+**Use Case Yapısı — `app/use_cases/wallet/commands/`:**
 
-Clean Architecture kuralı gereği iş mantığı `wallet.py` router'da değil; `app/use_cases/wallet/commands/` altında ayrı command sınıflarında tutulur (mevcut `transfer_teqlik.py` patterniyle aynı). Tüm wallet use case'leri:
+Clean Architecture kuralı gereği iş mantığı `wallet.py` router'da değil; `use_cases/wallet/commands/` altında ayrı command sınıflarında tutulur.
+
 ```
 app/use_cases/wallet/
   commands/
-    send_gift_command.py              ← TL dönüşüm + atomik SQL
-    request_withdrawal_command.py     ← bakiye atomik düşüm + pending insert
-    cancel_withdrawal_request_command.py ← status='pending' → 'cancelled' + bakiye iade
-    convert_to_teqlik_command.py      ← Seçenek C +%10 bonus, atomik SQL
+    ── V1.0 (Saf Teqlik) ──────────────────────────────────────────────
+    send_gift_command.py              ← teqlik → host teqlik (doğrudan)
     verify_apple_receipt_command.py   ← JWS doğrulama + x5c zinciri
-    handle_apple_refund_command.py    ← orantılı gift iptali + negatif bakiye
+    handle_apple_refund_command.py    ← teqlik_balance azalt + negatif bakiye
+    ── V1.5 (şirket kurulduktan sonra) ────────────────────────────────
+    request_withdrawal_command.py     ← tl_earnings_balance atomik düşüm
+    cancel_withdrawal_request_command.py ← status='pending' → 'cancelled' + iade
+    convert_to_teqlik_command.py      ← Seçenek C +%10 bonus, atomik SQL
   queries/
     get_wallet_summary_query.py
 ```
 
+**V1.0 — send_gift akışı (Saf Teqlik):**
 ```
 İzleyici → hediye seçer (gift_name + cost) → stream_id ile gönderir
+
   Gönderenden:   teqlik_balance -= cost                              (atomik ham SQL)
-  Yayıncıya:     tl_pending_balance += ROUND_DOWN(cost × pay_rate × 0,50, 2)  (atomik)
+  Yayıncıya:     teqlik_balance += FLOOR(cost × host_rate)           (atomik; PRO: %95, Std: %70)
   gift_events:   earnings_tl = Decimal(str(cost)) * pay_rate * Decimal("0.50")
-                 → NUMERIC(10,4) olarak kayıt — kuruş kaybı olmadan
+                 → NUMERIC(10,4) sessizce kaydedilir (V1.5 şema hazırlığı)
+                 payout_status = 'teqlik_awarded'   ← V1.5 T+14 cron bu durumu ATLAR
   Platform net:  kalan Teqlif kasasında
 
   Decimal hassasiyeti (zorunlu): Python float yerine Decimal kullan.
-    earnings = Decimal(str(cost)) * Decimal(str(pay_rate)) * Decimal("0.50")
-    earnings_rounded = earnings.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-    tl_pending_balance += earnings_rounded  (ham SQL ile atomik)
+    host_earned = int(Decimal(str(cost)) * Decimal(str(host_rate)))   # FLOOR
+    earnings_tl = Decimal(str(cost)) * pay_rate * Decimal("0.50")     # V1.5 için sessiz kayıt
 ```
-Dönüşüm kuru: **1 teqlik hediye = ₺0,50 net nakit** (V1.0'da sabit kur)
+
+**V1.5 — send_gift akışı (TL Kazanç, şirket kurulduktan sonra aktive edilir):**
+```
+  Yayıncıya:     tl_pending_balance += TRUNC(cost × pay_rate × 0.50, 2)  (atomik)
+                 payout_status = 'pending'   ← T+14 cron bu durumu işler
+  T+14 sonrası: tl_pending_balance → tl_earnings_balance (CTE cron, 02:15 UTC)
+```
+
+Dönüşüm kuru (V1.5 referans): **1 teqlik hediye = ₺0,50 net nakit** (V1.5'te sabit kur)
 
 Geçerli hediye tipleri: `clap`(1) · `tea`(5) · `fire`(10) · `diamond`(50) · `crown`(100) · `golden_hammer`(250) · `rocket`(500) · `trophy`(1000)
 
-| Katman | Hediye | Maliyet | PRO host (%95) | Std host (%70) | Teqlif net (PRO) | Teqlif net (Std) |
-|--------|--------|---------|----------------|----------------|-----------------|-----------------|
-| Mikro | 👏 Alkış | 1 teqlik | ₺0,47 | ₺0,35 | ₺0,40 | ₺0,53 |
-| Mikro | ☕ Çay | 5 teqlik | ₺2,37 | ₺1,75 | ₺2,00 | ₺2,63 |
-| Standart | 🔥 Alev | 10 teqlik | ₺4,75 | ₺3,50 | ₺4,00 | ₺5,25 |
-| Standart | 💎 Elmas | 50 teqlik | ₺23,75 | ₺17,50 | ₺20,00 | ₺26,25 |
-| Premium | 👑 Taç | 100 teqlik | ₺47,50 | ₺35,00 | ₺40,00 | ₺52,50 |
-| Premium | 🔨 Altın Tokmak | 250 teqlik | ₺118,75 | ₺87,50 | ₺100,00 | ₺131,25 |
-| VIP | 🚀 Roket | 500 teqlik | ₺237,50 | ₺175,00 | ₺200,00 | ₺262,50 |
-| VIP | 🏆 Şampiyon Kupası | 1.000 teqlik | ₺475,00 | ₺350,00 | ₺400,00 | ₺525,00 |
+**V1.0 teqlik kazanım formülü:** `host_earned = math.ceil(cost × host_rate)` (CEIL: mikro hediyelerde en az 1 teqlik garantilenir)
+**V1.5 TL kazanım formülü:** `earnings_tl = TRUNC(cost × pay_rate × 0.50, 2)` (T+14 sonrası ödenir)
 
-> Teqlif net = cost × 0,875 (100-pak IAP net/teqlik) − host payı. Mega paketten alındığında (0,675 TL/teqlik) net ₺0,20–₺0,40/teqlik'e iner — tüm senaryolarda Teqlif kârdadır.
+| Katman | Hediye | Maliyet | V1.0 PRO (teqlik) | V1.0 Std (teqlik) | V1.5 PRO (TL pending) | V1.5 Std (TL pending) | Teqlif net (V1.5, PRO) |
+|--------|--------|---------|-------------------|-------------------|----------------------|----------------------|----------------------|
+| Mikro | 👏 Alkış | 1 tqlk | 1 tqlk | 1 tqlk | ₺0,47 | ₺0,35 | ₺0,40 |
+| Mikro | ☕ Çay | 5 tqlk | 5 tqlk | 4 tqlk | ₺2,37 | ₺1,75 | ₺2,00 |
+| Standart | 🔥 Alev | 10 tqlk | 10 tqlk | 7 tqlk | ₺4,75 | ₺3,50 | ₺4,00 |
+| Standart | 💎 Elmas | 50 tqlk | 48 tqlk | 35 tqlk | ₺23,75 | ₺17,50 | ₺20,00 |
+| Premium | 👑 Taç | 100 tqlk | 95 tqlk | 70 tqlk | ₺47,50 | ₺35,00 | ₺40,00 |
+| Premium | 🔨 Altın Tokmak | 250 tqlk | 238 tqlk | 175 tqlk | ₺118,75 | ₺87,50 | ₺100,00 |
+| VIP | 🚀 Roket | 500 tqlk | 475 tqlk | 350 tqlk | ₺237,50 | ₺175,00 | ₺200,00 |
+| VIP | 🏆 Şampiyon Kupası | 1.000 tqlk | 950 tqlk | 700 tqlk | ₺475,00 | ₺350,00 | ₺400,00 |
 
-**Yeni endpointler (router yalnızca delege eder, mantık use case'lerde):**
+> V1.0'da yayıncı teqlik kazanır; platform değeri IAP geliri olarak zaten kasada. V1.5'te TL değerleri 100-pak fiyatı (₺0,875/teqlik) baz alınarak hesaplanır; mega paketten alındığında (₺0,675/teqlik) Teqlif net ₺0,20–₺0,40/teqlik'e iner — tüm senaryolarda Teqlif kârdadır.
+
+**V1.0 Endpointler (Saf Teqlik — aktif olarak implement edilir):**
 ```
 GET  /api/wallet/summary  →  get_wallet_summary_query.py
-  → { teqlik_balance, tl_earnings_balance, tl_pending_balance,
-      free_withdrawals_remaining }   ← 2 - monthly_free_withdrawals_used
+  → { teqlik_balance }   ← V1.0'da yalnızca teqlik bakiyesi; tl_ kolonları şema hazır ama döndürülmez
+```
+
+**V1.5 Endpointler (şirket kurulduktan sonra aktive edilir — şema hazır, fonksiyonel değil):**
+```
+GET  /api/wallet/summary  →  güncellenecek: tl_earnings_balance, tl_pending_balance eklenir
 
 POST /api/wallet/withdraw  →  request_withdrawal_command.py
-  — V1.0: TALEP TOPLAMA MODU (gerçek banka transferi yok) —
   Body: { amount_tl, iban, account_holder_name }
   Kurallar:
     - amount_tl >= 500  (minimum çekim)
-    - Kullanıcının aktif pending talebi yoksa işlem alınır (çift talep önlemi)
-      SELECT id FROM withdrawal_requests
-        WHERE user_id = :uid AND status IN ('pending','approved') LIMIT 1
-      Varsa: 409 "İncelemede bekleyen bir talebiniz var"
-    - Bakiye atomik olarak ANINDA düşülür (double-spend önlemi):
-        UPDATE users
-          SET tl_earnings_balance = tl_earnings_balance - :amount_tl
-          WHERE id = :uid AND tl_earnings_balance >= :amount_tl
-          RETURNING tl_earnings_balance;
-        -- 0 satır dönerse → 400 yetersiz bakiye
-    - withdrawal_requests INSERT (status='pending') — aynı transaction içinde
-    - Yanıt mesajı (Seçenek A):
-        "Talebiniz başarıyla alındı. Lansman beta dönemi kapsamında ilk çekim
-         talepleri güvenlik incelemesinin ardından işleme alınacaktır."
-  → 200 OK | 400 yetersiz bakiye / limit | 409 aktif talep var
+    - Aktif pending talep yoksa kabul edilir (409 "İncelemede bekleyen talebiniz var")
+    - Bakiye atomik düşüm (double-spend önlemi):
+        UPDATE users SET tl_earnings_balance = tl_earnings_balance - :amount_tl
+          WHERE id = :uid AND tl_earnings_balance >= :amount_tl RETURNING tl_earnings_balance;
+        -- 0 satır → 400 yetersiz bakiye
+    - withdrawal_requests INSERT status='pending' — aynı transaction
+  → 200 OK | 400 bakiye yetersiz | 409 aktif talep var
 
-  Admin Red Akışı (admin panel):
+  Admin Red Akışı:
     UPDATE users SET tl_earnings_balance = tl_earnings_balance + :amount_tl WHERE id = :uid;
-    UPDATE withdrawal_requests SET status='rejected', admin_note=:note, processed_at=NOW()
-      WHERE id = :wid;
-    → Bakiye kullanıcıya anında iade edilir; kullanıcıya bildirim gönderilir.
+    UPDATE withdrawal_requests SET status='rejected', admin_note=:note, processed_at=NOW() WHERE id = :wid;
 
 DELETE /api/wallet/withdraw/{request_id}  →  cancel_withdrawal_request_command.py
-  — Kullanıcı Kendi Talebini İptal Edebilir —
-  Kurallar:
-    - withdrawal_request.user_id == current_user.id  (yetki kontrolü)
-    - status == 'pending'  (approved/completed/rejected talep iptal edilemez)
-    - Bakiye iadesi (atomik):
-        UPDATE users SET tl_earnings_balance = tl_earnings_balance + :amount_tl
-        WHERE id = :uid;
-    - withdrawal_requests UPDATE status='cancelled', cancelled_at=NOW()
-    - Kart 2 sıra kartı kaybolur; bakiye anında geri gelir
-    → 200 OK | 403 başkasının talebi | 409 iptal edilemez statü
+  - status == 'pending' kontrolü + yetki kontrolü (403 başkasının talebi)
+  - UPDATE users SET tl_earnings_balance += amount_tl (atomik iade)
+  - UPDATE withdrawal_requests SET status='cancelled', cancelled_at=NOW()
+  → 200 OK | 403 | 409 iptal edilemez statü
 
-  withdrawal_requests.status genişletilmiş: pending | approved | completed | rejected | cancelled
-
-  — Seçenek C: Kazancı Teqlik'e Dönüştür (+%10 Bonus) —
-  POST /api/wallet/convert-to-teqlik
-    Body: { amount_tl }
-    Kurallar:
-      - tl_earnings_balance >= amount_tl
-      - teqlik_amount = FLOOR(amount_tl / 0.875) * 1.10  (100-pak kur + %10 bonus)
-      - tl_earnings_balance -= amount_tl  (atomik)
-      - teqlik_balance += teqlik_amount  (atomik)
-    → Para ekosisteme kilitlenir, gerçek transfer gerekmez.
-    → Yayıncıya motivasyon: "Kazancınla 110 teqlik al, 100 teqlik fiyatına!"
+POST /api/wallet/convert-to-teqlik  →  convert_to_teqlik_command.py  (Seçenek C, +%10 bonus)
+  - tl_earnings_balance >= amount_tl
+  - base = FLOOR(amount_tl / 0.875); total = FLOOR(base × 1.10)
+  - tl_earnings_balance -= amount_tl (atomik); teqlik_balance += total (atomik)
+  - Modal yasal uyarısı (kullanıcı onaylamadan işlem tamamlanmaz):
+      "⚠️ Dönüştürülen teqlik'ler kalıcı olarak ilan güçlendirme ve mezat harcamaları
+       için kullanılır; tekrar nakde çevrilemez veya TL bakiyesine geri döndürülemez."
+      [ Anladım, {total} Teqlik'e Dönüştür ]
+  → Para tek yönlü olarak ekosisteme kilitlenir — V1.5'te aktive edilir.
 ```
 
-**T+14 Holding — ARQ cron görevi (idempotent):**
+**T+14 Holding — ARQ cron görevi (V1.5, idempotent):**
+
+> V1.0'da bu cron çalışmaz. gift_events.payout_status = 'teqlik_awarded' olan kayıtlar WHERE filtresi nedeniyle atlanır. V1.5 lansmanında yeni gönderilen hediyeler payout_status='pending' ile kaydedilir ve bu cron devreye girer.
 
 Her iki cron görevi `worker.py`'ye değil; **`deploy/scale/V2.1/schedule.yaml`** dosyasına `batch` altında eklenir. `schedule_loader.py` bu dosyayı okur, `teqlif-agent/watchdog.py` görevi izler — cron doğrudan koda yazılırsa agent tarafından izlenemez.
 
@@ -764,11 +776,12 @@ Sonraki yayın kazançları negatif bakiyeyi kapatır (borç mahsubu):
 | send-gift hız limiti | Redis Token Bucket 2/sn per user; Redis çökerse Fail-Safe (DB atomik kontrole düşer, yayın kesilmez) | DB/WS flood |
 | Replay koruması | apple_transaction_id UNIQUE | Çift yükleme |
 | Çift talep önlemi | Aktif pending varken yeni talep reddi | Aynı bakiyeye çift talep |
-| Refund → gift iptali | Orantılı payout_status='cancelled_refund' | IAP iadesi hediye kazancını iptal eder |
+| Refund → gift iptali | V1.0: teqlik_balance azalt; V1.5: orantılı payout_status='cancelled_refund' | IAP iadesi V1.5'te hediye kazancını da iptal eder |
 | Negatif bakiye | CHECK constraint yok; hem tl_earnings_balance hem teqlik_balance eksilir | Apple webhook 500 vermez, retry storm başlamaz |
-| T+14 kilitli bakiye | pending bakiye 14 gün çekilemez | Apple iade penceresi sigortası |
+| T+14 kilitli bakiye | V1.5: pending bakiye 14 gün çekilemez | Apple iade penceresi sigortası |
 | Webhook async | 200 OK hemen döner, signedPayload ARQ kuyruğuna atılır; ağır JWS + DB işlemi worker'da | Apple refund dalgasında Uvicorn thread starvation önlenir |
 | Host row contention | send_gift deterministik kilit sırası: LEAST(sender_id, host_id) önce kilitlenir | Mezat burst'inde deadlock önlenir |
+| Anti-arbitraj kilit | teqlik → TL dönüşümü yoktur (`/convert-teqlik-to-tl` endpoint'i asla olmayacak); teqlik kazancını hediye yoluyla nakde çevirmeye kalkmak %40 kayıp yaratır: ₺500 → 628 tqlk → PRO yayıncıya hediye → ₺298,30 (628 × 0.95 × ₺0.50); Teqlif kâr eder | teqlik tek yönlü kapalı döngü — kasayı korur |
 
 **V1.5'te devreye girecek güvenlik katmanları:**
 
@@ -1096,33 +1109,43 @@ Sunucu da aynı formülü uygular; Flutter gösterimi sadece kullanıcı bilgisi
 | 10 | Konfeti / başarı animasyonu (Lottie) | Mobile | Hayır |
 | 11 | App Store Review öncesi yasal footer kontrolü | QA | Evet |
 
-### 6.2 Yayıncı TL Kazanç & Çekim Sistemi — V1.0 Görevleri
+### 6.2 Yayıncı Hakediş Sistemi — V1.0 Görevleri (Saf Teqlik)
 
 | # | Görev | Yapan | Blokör mu? |
 |---|-------|-------|-----------|
-| W1 | Migration: users (tl_earnings_balance, tl_pending_balance) + `withdrawal_requests` + `gift_events` (earnings_tl NUMERIC(10,4), payout_status, released_at) + `teqlik_transactions` (apple_transaction_id VARCHAR(64) UNIQUE, raw_receipt TEXT) | Backend | Evet |
-| W2 | `gift_events` payout index (`idx_gift_events_payout`) | Backend | Evet |
+| W1 | Migration: `users` (tl_earnings_balance, tl_pending_balance — şema hazırlığı, V1.0'da kullanılmaz) + `withdrawal_requests` (şema hazırlığı, boş kalır) + `gift_events` (earnings_tl NUMERIC(10,4), payout_status DEFAULT 'teqlik_awarded', released_at) + `teqlik_transactions` (apple_transaction_id VARCHAR(64) UNIQUE, raw_receipt TEXT) | Backend | Evet |
+| W2 | `gift_events` payout index (`idx_gift_events_payout` WHERE payout_status = 'pending') — V1.5 için şema hazırlığı | Backend | Evet |
 | W3 | `use_cases/wallet/commands/` yapısı oluştur | Backend | Evet |
 | W4 | `verify_apple_receipt_command.py`: x5c zincir + `jwt.decode(leeway=60)` (clock skew) + environment/bundleId/productId hardcoded + velocity limit (Redis, ₺5.000/gün/cihaz; Redis çökerse Fail-Closed) + `raw_receipt=signedTransactionInfo` kaydı | Backend | Evet |
-| W5 | `send_gift_command.py`: Decimal hassasiyeti + atomik SQL + Redis Token Bucket (2/sn per user) + 8 hediye tipi | Backend | Evet |
-| W6 | `get_wallet_summary_query.py`: teqlik + TL bakiyeleri tek sorguda | Backend | Evet |
-| W7 | `request_withdrawal_command.py`: bakiye atomik düşüm (UPDATE WHERE tl_earnings_balance >= amount, 0 satır → 400) + aktif pending yok kontrolü + withdrawal_requests INSERT — aynı transaction | Backend | Evet |
-| W7b | `convert_to_teqlik_command.py`: Seçenek C (+%10 bonus, atomik SQL) | Backend | Evet |
-| W7c | `schedule.yaml`: `release_pending_earnings` (02:15 UTC, watchdog_m:30) + `daily_financial_reconciliation` (00:00 UTC, watchdog_m:10) — 02:15: Pazar 02:00 pg_basebackup çakışması önlenir; `worker.py` `_SCHEDULE_FUNCTIONS` sözlüğüne fonksiyon eklenir + `await _agent_ok(ctx, "release_pending_earnings_task")` son satır zorunlu (eksik → sahte alarm) | Backend | Evet |
-| W7e | `cancel_withdrawal_request_command.py`: status='pending' → 'cancelled' + atomik bakiye iadesi + 403 yetki / 409 statü kontrolü; `DELETE /api/wallet/withdraw/{id}` endpoint | Backend | Evet |
-| W8 | `handle_apple_refund_command.py`: orantılı gift iptali + negatif bakiye desteği | Backend | Evet |
-| W9 | Kart 2 UI: kazanç > 0 → birincil neon "⚡ ANINDA KULLAN (+%10 Bonus Teqlik'e Dönüştür)" + ikincil "🏦 Nakit Transferi İçin IBAN Tanımla (Ön Kayıt)"; aktif ön kayıt varsa → sıra kartı (📋 Sıra No: #Queue-{id}, "Kurumsal entegrasyon açılınca bildirim", İptal Et + Teqlik'e Dönüştür); kazanç = 0 → "Yayın Başlat" CTA; glassmorphism koyu zümrüt/altın kart; hediye ekranında combo tap sayacı (x2/x5/x10 + burst animasyonu) | Mobile | Hayır |
-| W10 | IBAN Ön Kayıt Bottom Sheet: açılışta yasal uyum mesaj panosu (MASAK/kurumsal finans açıklaması); tutar çipleri (₺500 Min / ₺1.000 / Bakiyenin Tamamı); IBAN 4'erli TR00 formatı + sabit TR rozeti + ilk 5 haneden banka logosu (statik Map) + panodan yapıştır; hesap sahibi profil adından önerili; IBAN-isim eşleşme uyarısı; Seçenek C dönüşüm simülatörü (anlık FLOOR hesabı: "₺500 → 571 + 57 bonus = 628 teqlik", TextFormField değişince gerçek zamanlı güncellenir); "Bilgilerimi Kaydet ve Sıraya Gir" CTA (Slide to Confirm YOK); IBAN 26 hane uzunluk kontrolü | Mobile | Hayır |
-| W11 | 5 dil ARB: `giftNameClap`, `giftNameTea`, `giftNameGoldenHammer`, `giftNameRocket`, `giftNameTrophy`, `walletConvertToTeqlik`, `walletIbanPreRegistrationTitle` (Nakit Transferi İçin IBAN Tanımla), `walletIbanRegistrationSuccess`, `walletIbanRejected`, `walletQueueNumber`, `walletPendingEarningsDesc` | Mobile | Hayır |
-| W12 | Admin panel: bekleyen çekim talepleri listesi + Onayla / Reddet butonları (red durumunda bakiye iadesi: `tl_earnings_balance += amount_tl`) | Backend/Admin | Hayır |
+| W5 | `send_gift_command.py`: V1.0 — `teqlik_balance += math.ceil(cost × host_rate)` (host teqlik doğrudan, payout_status='teqlik_awarded') + earnings_tl sessiz kayıt + Decimal hassasiyeti + atomik SQL + LEAST(sender,host) kilit sırası + Redis Token Bucket (2/sn) + 8 hediye tipi | Backend | Evet |
+| W6 | `get_wallet_summary_query.py`: V1.0 — yalnızca teqlik_balance döndürür | Backend | Evet |
+| W8 | `handle_apple_refund_command.py`: V1.0 — `teqlik_balance -= iade_miktarı` + negatif bakiye + `pending_refund=True`; NO CHECK constraint (webhook retry storm önlemi) | Backend | Evet |
+| W9 | Kart 2 UI (V1.0 Saf Teqlik): Kazanılan teqlik gösterimi (hediye toplandıkça artar); kazanç = 0 → "Yayın Başlat" CTA; glassmorphism koyu zümrüt/altın kart; hediye ekranında combo tap sayacı (x2/x5/x10 + burst animasyonu); V1.5 bileşenleri (IBAN sheet, Seçenek C, sıra kartı) bu aşamada kapalıdır | Mobile | Hayır |
+| W11 | 5 dil ARB (V1.0): `giftNameClap`, `giftNameTea`, `giftNameGoldenHammer`, `giftNameRocket`, `giftNameTrophy`, `walletEarnedTeqlik`, `walletStartStreamCta` | Mobile | Hayır |
 
-### 6.3 V1.5'e Ertelenen Özellikler
+### 6.2b Yayıncı Hakediş Sistemi — V1.5 Görevleri (şirket kurulduktan sonra)
 
-Aşağıdaki özellikler **şirket kuruluşu tamamlanana ve gerçek banka transfer akışı hazırlanana kadar** kodlanmaz.
+| # | Görev | Yapan | Önkoşul |
+|---|-------|-------|---------|
+| W5b | `send_gift_command.py` güncelle: payout_status='pending' aktive et; `tl_pending_balance += TRUNC(cost × pay_rate × 0.50, 2)` | Backend | Şirket |
+| W7 | `request_withdrawal_command.py`: tl_earnings_balance atomik düşüm (UPDATE WHERE >= amount, 0 satır → 400) + aktif pending yok kontrolü + withdrawal_requests INSERT — aynı transaction | Backend | Şirket |
+| W7b | `convert_to_teqlik_command.py`: Seçenek C (+%10 bonus, atomik SQL) — modal yasal uyarısı zorunlu | Backend | Şirket |
+| W7c | `schedule.yaml`: `release_pending_earnings` (02:15 UTC, watchdog_m:30) + `daily_financial_reconciliation` (00:00 UTC, watchdog_m:10) — 02:15: Pazar 02:00 pg_basebackup çakışması önlenir; `worker.py` `_SCHEDULE_FUNCTIONS` sözlüğüne fonksiyon eklenir + `await _agent_ok(ctx, "release_pending_earnings_task")` son satır zorunlu (eksik → sahte alarm) | Backend | Şirket |
+| W7e | `cancel_withdrawal_request_command.py`: status='pending' → 'cancelled' + atomik bakiye iadesi + 403 yetki / 409 statü kontrolü; `DELETE /api/wallet/withdraw/{id}` | Backend | Şirket |
+| W8b | `handle_apple_refund_command.py` güncellemesi: V1.5 orantılı gift iptali (payout_status='cancelled_refund', tl_pending_balance azalt) | Backend | Şirket |
+| W9b | Kart 2 UI V1.5: birincil CTA "⚡ ANINDA KULLAN (+%10 Bonus Teqlik'e Dönüştür)"; ikincil "🏦 Nakit Transferi İçin IBAN Tanımla"; aktif ön kayıt varsa sıra kartı (📋 #Queue-{id}, İptal Et, Teqlik'e Dönüştür) | Mobile | Şirket |
+| W10 | IBAN Ön Kayıt Bottom Sheet: tutar çipleri (₺500 Min / ₺1.000 / Tamamı); IBAN TR formatı + banka logosu; Seçenek C simülatörü (₺500 → 571+57 = 628 teqlik, FLOOR anlık); "Bilgilerimi Kaydet ve Sıraya Gir" CTA (Slide to Confirm YOK); MASAK yasal uyarı panosu | Mobile | Şirket |
+| W11b | 5 dil ARB (V1.5): `walletConvertToTeqlik`, `walletIbanPreRegistrationTitle`, `walletIbanRegistrationSuccess`, `walletIbanRejected`, `walletQueueNumber`, `walletPendingEarningsDesc` | Mobile | Şirket |
+| W12 | Admin panel: bekleyen çekim talepleri + Onayla / Reddet (red → `tl_earnings_balance += amount_tl`) | Backend/Admin | Şirket |
+
+### 6.3 V1.5'e Ertelenen Özellikler (şirket kuruluşu sonrası)
+
+Aşağıdaki özellikler **şirket kuruluşu tamamlanana ve gerçek banka transfer akışı hazırlanana kadar** kodlanmaz. Şema hazırlıkları V1.0 migration'ında yapılmıştır (tablolar mevcut, fonksiyonalite kapalı).
 
 | # | Özellik | Ön koşul | Notlar |
 |---|---------|---------|--------|
-| V15-1 | Gerçek banka transfer API entegrasyonu | LTD/şahıs şirketi + kurumsal banka anlaşması | MASAK zorunlu; şahıs olarak büyük tutarlar sorun çıkarır |
+| V15-0 | TL kazanç sistemi aktive et: `send_gift_command` → payout_status='pending'; `get_wallet_summary` → tl_ kolonları dahil | Şirket | V1.0 şeması hazır — tek config değişikliği |
+| V15-1 | Gerçek banka transfer API entegrasyonu | LTD/şahıs şirketi + kurumsal banka anlaşması | MASAK zorunlu |
 | V15-2 | MERNIS/KYC: TCKN doğrulama (NVİ SOAP API) | Şirket kaydı + API sözleşmesi | `user_kyc` şifreli tablo; AES-256 |
 | V15-3 | Rolling Reserve (ilk 90 gün ₺2.500 limit) | Gerçek transfer başlayınca | `rolling_reserve_expires_at` + `rolling_reserve_limit_tl` migration |
 | V15-4 | `account_frozen` & `is_in_debt` zorunlu takibi | Gerçek transfer başlayınca | 30 gün ödenmeyen borç → hesap dondur |
@@ -1130,10 +1153,56 @@ Aşağıdaki özellikler **şirket kuruluşu tamamlanana ve gerçek banka transf
 | V15-6 | Çekim ücreti (₺15 / işlem) + PRO 2× ücretsiz kota | Gerçek transfer | `withdrawal_requests.fee_tl` kolonu V1.5 migration'ında eklenir |
 | V15-7 | IBAN checksum (TR + 24 karakter + mod-97) | V1.5 form | V1.0'da yalnızca uzunluk kontrolü yeterli |
 | V15-8 | Admin Maker-Checker (₺2.500+ çift onay, ₺10.000+ 2FA) | Gerçek transfer | Audit log zorunlu |
-| V15-9 | `request_withdrawal_command.py` tam akış | Tüm V1.5 bileşenleri | V1.0 sürümü komple rewrite edilir |
+| V15-9 | W5b, W7, W7b, W7c, W7e, W8b, W9b, W10, W11b, W12 görevleri (§6.2b) | Tüm V1.5 bileşenleri | Bkz. §6.2b detay |
 | V15-10 | Web mağazası (teqlif.com/cuzdan, %2,5 işlemci ücreti) | Şirket + web ödeme altyapısı | Apple bypass — yalnızca web alımlar |
-| V15-11 | Finansal soğuk arşiv: `teqlik_transactions`, `gift_events`, `withdrawal_requests` SHA-256 imzalı CSV/JSONL dökümü → `backups/financial_archives/` (RETENTION_DAYS=7 döngüsünden muaf) + `offsite_sync.sh` ile uzak depo (Hetzner/B2/S3 Glacier) | Gerçek transfer başlayınca | TTK + MASAK 5-10 yıl saklama zorunluluğu; WORM (Write Once, Read Many) |
-| V15-12 | Vergi / Stopaj / Gider Pusulası: Türkiye'de şirket kurulduktan sonra vergiden muaf olmayan yayıncıya ödeme yapılırken Gelir Vergisi Kanunu gereği iki seçenek — (a) Sosyal İçerik Üreticiliği İstisnası belgesi (yayıncı banka hesabı vergiden muaf onaylıysa kesinti yok), (b) Gider Pusulası düzenleme ve stopaj kesintisi yapıp muhtasar beyanname. withdrawal_requests tablosuna `gross_amount_tl`, `withholding_tax_tl`, `net_amount_tl` kolonları eklenmeli; admin panelinde beyanname döküm raporu. | Şirket kuruluşu + mali müşavir onayı |
+| V15-11 | Finansal soğuk arşiv: SHA-256 imzalı CSV/JSONL → `backups/financial_archives/` + `offsite_sync.sh` uzak depo (Hetzner/B2/S3 Glacier) | Gerçek transfer başlayınca | TTK + MASAK 5-10 yıl saklama; WORM |
+| V15-12 | Vergi / Stopaj / Gider Pusulası: Sosyal İçerik Üreticiliği İstisnası belgesi veya Gider Pusulası + stopaj; `withdrawal_requests.gross_amount_tl`, `withholding_tax_tl`, `net_amount_tl` kolonları | Şirket + mali müşavir | Beyanname döküm raporu admin panelinde |
+
+### 6.4 V3.0 Vizyon — teqlik Çift Yönlü Para Birimi (Süper Uygulama)
+
+> Bu vizyon; WeChat Pay, Mercado Pago, Roblox DevEx modelinin Teqlif uyarlamasıdır. V1.0–V1.5 mimarisi (atomik kilitler, NUMERIC(10,4) hassasiyeti, T+14 escrow, çift cüzdan ayrımı) bu vizyona geçişte kodları çöpe atmadan BaaS API'si bağlanarak genişleyecek şekilde tasarlanmıştır.
+
+**Aşılması gereken 3 duvar:**
+
+| Duvar | Sorun | Çözüm |
+|-------|-------|-------|
+| Apple Kural 3.1.5 | IAP ile alınan teqlik fiziksel ürün satışında kullanılamaz; Apple %30 keser, Teqlif batar | teqlif.com/cuzdan üzerinden web alımı (%2–3 POS komisyonu); uygulama içi fiziksel alımlarda Apple IAP değil doğrudan kart/Masterpass altyapısı |
+| TCMB 6493 E-Para Kanunu | Üçüncü kişiler arası sanal jeton takası + IBAN'a çekim = E-Para İhracı → 100M+ TL sermaye ve TCMB lisansı | Papara, Param, Sipay veya İyzico ile BaaS/White-Label ortaklığı; parayı Teqlif değil lisanslı kuruluş tutar (Escrow/Havuz); Teqlif yalnızca arayüz |
+| AML / MASAK | Çalıntı kartla teqlik al → sahte satış → temiz nakit çek | Satıcı MERNIS + IBAN eşleşmesi zorunlu; kargo teslim onayına T+7/T+14 bloke; rolling reserve |
+
+**2 Katmanlı teqlik Modeli (V3.0):**
+```
+[A] Satın Alınan teqlik (Purchased)
+    • Web/kart ile alınır (%2–3 komisyon)
+    • İlanlarda teklif, ürün satın alma, hediye için harcanır
+    • ASLA doğrudan nakde çevrilemez (Apple engeli + AML)
+
+[B] Kazanılan teqlik (Earned)
+    • Yalnızca başarılı mezat/ürün satışı veya canlı yayın hediyesinden
+    • Kargo → alıcı "Teslim Aldım" → T+14 serbest
+    • %5–10 platform komisyonu ile IBAN'a nakit çekilebilir
+```
+
+**4 Gelir Kanalı (V3.0):**
+```
+1. Giriş-Çıkış Makası (Spread): Alımda ₺1,10/teqlik, nakit çekimde ₺0,90/teqlik → %10 otomatik platform komisyonu
+2. Kasa Rezervi Faizi (Float): Kullanıcıların harcamadığı teqlik TL karşılığı → gecelik repo/faiz geliri
+3. Teklif Teminatı (Bid Collateral): Mezattan cayma → teminat teqlik satıcıya/platforma tazminat
+4. Hızlı Çekim Ücreti: 3 iş günü ücretsiz; FAST anında çekim ₺20 veya %1 ek komisyon
+```
+
+**3 Fazlı Yol Haritası:**
+```
+FAZ 1 (Şu an — V1.0): Saf teqlik kapalı döngü. Apple StoreKit 2, 8 katmanlı
+  hediye, ilan özellikleri. Nakit çıkışı sıfır. Kullanıcı kitlesi büyütülür.
+
+FAZ 2 (Şirket — V1.5/V2.0): LTD kuruluşu. İyzico/PayTR Güvenli Ödeme/Havuz Hesap.
+  Ürün satışında "Param Güvende" escrow. Kargo onayı → IBAN transferi.
+
+FAZ 3 (Süper-App — V3.0): BaaS ortaklığı (Param/Papara). teqlik çift yönlü:
+  Ürün alımında harcanır, tekliflerde teminat olur, satıcı kazandığı teqlik'i
+  %5–10 komisyonla IBAN'a çeker. Türkiye'nin en büyük sosyal ticaret fintech'i.
+```
 
 ---
 
