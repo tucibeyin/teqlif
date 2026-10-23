@@ -418,14 +418,21 @@ Apple → POST /api/wallet/apple-notifications
 
 #### 4.2.2 Yayıncı Hakediş Sistemi
 
-> **Strateji:** Tüm altyapı baştan kurulur — migration, use case'ler, T+14 cron, tüm endpointler. Yayıncı TL hakedişi ilk günden itibaren `gift_events.earnings_tl`'ye kaydedilir; `payout_status='pending'` ile T+14 cronu başından işler. `.env` değişkeni `CASHOUT_ENABLED=false` ile şirket kuruluşuna kadar Kart 2 TL balansı, IBAN butonu ve Seçenek C UI'dan gizlenir; şirket kurulduktan sonra `CASHOUT_ENABLED=true` ile tüm birikmiş hakediş görünür hale gelir. Backend kodu `CASHOUT_ENABLED` değerini okumaz — flag yalnızca Flutter/Dart sabitinde kontrol edilir; backend endpointleri her zaman aktiftir.
+> **Strateji:** Tüm altyapı baştan kurulur — migration, use case'ler, T+14 cron, tüm endpointler. Yayıncı TL hakedişi ilk günden itibaren `gift_events.earnings_tl`'ye kaydedilir; `payout_status='pending'` ile T+14 cronu başından işler. Şirket kuruluşuna kadar `cashout_enabled=false` dönülür; şirket kurulduktan sonra Redis key güncellenerek tüm birikmiş hakediş anında görünür hale gelir — App Store build gerekmez.
 
-**Feature Flag:**
+**Feature Flag (Backend-Driven OTA):**
 ```
-# .env (prod):
-CASHOUT_ENABLED=false   # şirket kurulduktan sonra true
-# CASHOUT_ENABLED=false → Kart 2 TL bakiyesi + IBAN sheet + Seçenek C gizlenir
-# CASHOUT_ENABLED=true  → Kart 2 tam aktif: T+14 birikmiş TL görünür, cashout açık
+# Redis (prod, Node 1):
+SET teqlif:config:cashout_enabled 0   # şirket kurulduktan sonra: SET teqlif:config:cashout_enabled 1
+
+# GET /api/wallet/summary response:
+{ "teqlik_balance": 140, "tl_earnings_balance": 1450.00, "tl_pending_balance": 230.00,
+  "cashout_enabled": false }
+
+# Flutter: summary.cashoutEnabled == false → Kart 2 TL bakiyesi + IBAN sheet + Seçenek C gizlenir
+#           summary.cashoutEnabled == true  → Kart 2 tam aktif, cashout açık
+# Backend: get_wallet_summary_query.py Redis'ten cashout_enabled okur, response'a ekler.
+#          Cashout endpointleri (withdraw, convert) cashout_enabled=false iken 403 döner.
 ```
 
 **Migration — Tek Seferlik (tüm tablo ve kolonlar upfront):**
@@ -557,6 +564,18 @@ app/use_cases/wallet/
   Decimal hassasiyeti (zorunlu): Python float yerine Decimal kullan.
     earnings_tl = TRUNC(Decimal(str(cost)) * pay_rate * Decimal("0.50"), 4)
     tl_pending  = TRUNC(Decimal(str(cost)) * pay_rate * Decimal("0.50"), 2)
+
+  Post-commit domain events (zorunlu kural):
+    WebSocket broadcast (hediye animasyonu) + push notification
+    → `async with uow:` bloğu DIŞINDA, `await uow.commit()` SONRASI tetiklenir.
+    Sebep: Redis pub/sub gecikmesi (ws.send/notify süresi belirsiz) transaction
+    kilidini uzatır; bakiye DB'ye yazılmadan event fırlatılırsa tutarsızlık doğar.
+    Doğru sıra:
+      async with uow:
+          uow.repo.save(gift_event); uow.repo.update_balances(...)
+      await uow.commit()          # kilit serbest
+      await ws_manager.broadcast(room_id, gift_payload)   # lock dışı
+      await push_service.notify(broadcaster_id, payload)  # lock dışı
 ```
 
 Dönüşüm kuru: **1 teqlik hediye = ₺0,50 net nakit** (sabit)
@@ -579,8 +598,10 @@ Geçerli hediye tipleri: `clap`(1) · `tea`(5) · `fire`(10) · `diamond`(50) ·
 **Endpointler (tamamı baştan implemente edilir; CASHOUT_ENABLED yalnızca UI'ı etkiler):**
 ```
 GET  /api/wallet/summary  →  get_wallet_summary_query.py
-  → { teqlik_balance, tl_earnings_balance, tl_pending_balance }
-  Flutter: CASHOUT_ENABLED=false → tl_ değerleri alınır ama Kart 2'de gösterilmez
+  → { teqlik_balance, tl_earnings_balance, tl_pending_balance, cashout_enabled: bool }
+  cashout_enabled: Redis'ten okunur (GET teqlif:config:cashout_enabled); 0/yoksa false, 1 ise true.
+  Flutter: cashout_enabled==false → tl_ değerleri alınır ama Kart 2'de gösterilmez;
+           cashout_enabled==true  → Kart 2 tam aktif, TL bakiyesi + IBAN sheet + Seçenek C gösterilir.
 
 POST /api/wallet/withdraw  →  request_withdrawal_command.py
   Body: { amount_tl, iban, account_holder_name }
@@ -1096,16 +1117,16 @@ Sunucu da aynı formülü uygular; Flutter gösterimi sadece kullanıcı bilgisi
 | W2 | `gift_events` payout index (`idx_gift_events_payout` WHERE payout_status = 'pending') | Backend | Evet |
 | W3 | `use_cases/wallet/commands/` yapısı oluştur | Backend | Evet |
 | W4 | `verify_apple_receipt_command.py`: x5c zincir + `jwt.decode(leeway=60)` (clock skew) + environment/bundleId/productId hardcoded + velocity limit (Redis, ₺5.000/gün/cihaz; Redis çökerse Fail-Closed) + `raw_receipt=signedTransactionInfo` kaydı | Backend | Evet |
-| W5 | `send_gift_command.py`: `tl_pending_balance += TRUNC(cost × pay_rate × 0.50, 2)` + `payout_status='pending'` + earnings_tl NUMERIC(10,4) kaydı + Decimal hassasiyeti + atomik SQL + LEAST(sender,host) kilit sırası + Redis Token Bucket (2/sn) + 8 hediye tipi | Backend | Evet |
-| W6 | `get_wallet_summary_query.py`: teqlik_balance + tl_earnings_balance + tl_pending_balance döndürür; CASHOUT_ENABLED=false → Flutter tl_ değerlerini alır ama Kart 2'de göstermez | Backend | Evet |
+| W5 | `send_gift_command.py`: `tl_pending_balance += TRUNC(cost × pay_rate × 0.50, 2)` + `payout_status='pending'` + earnings_tl NUMERIC(10,4) kaydı + Decimal hassasiyeti + atomik SQL + LEAST(sender,host) kilit sırası + Redis Token Bucket (2/sn) + 8 hediye tipi; **post-commit**: WebSocket broadcast + push notification UoW commit'ten SONRA, transaction bloğu dışında tetiklenir (kilit çakışmasını önler) | Backend | Evet |
+| W6 | `get_wallet_summary_query.py`: teqlik_balance + tl_earnings_balance + tl_pending_balance + **cashout_enabled: bool** döndürür; cashout_enabled Redis'ten okunur (`GET teqlif:config:cashout_enabled`; 0/yoksa false, 1 ise true); Flutter bu flag'i API response'undan okur — statik sabit veya .env değil | Backend | Evet |
 | W7 | `request_withdrawal_command.py`: tl_earnings_balance atomik düşüm (UPDATE WHERE >= amount, 0 satır → 400) + aktif pending yok kontrolü (409) + withdrawal_requests INSERT — aynı transaction | Backend | Hayır |
 | W7b | `convert_to_teqlik_command.py`: Seçenek C (+%10 bonus, atomik SQL) — modal yasal uyarısı zorunlu | Backend | Hayır |
 | W7c | `schedule.yaml`: `release_pending_earnings` (02:15 UTC, watchdog_m:30) + `daily_financial_reconciliation` (00:00 UTC, watchdog_m:10) — 02:15: Pazar 02:00 pg_basebackup çakışması önlenir; `worker.py` `_SCHEDULE_FUNCTIONS` sözlüğüne fonksiyon eklenir + `await _agent_ok(ctx, "release_pending_earnings_task")` son satır zorunlu (eksik → sahte alarm) | Backend | Hayır |
 | W7e | `cancel_withdrawal_request_command.py`: status='pending' → 'cancelled' + atomik bakiye iadesi + 403 yetki / 409 statü kontrolü; `DELETE /api/wallet/withdraw/{id}` | Backend | Hayır |
 | W8 | `handle_apple_refund_command.py`: orantılı gift iptali (payout_status='cancelled_refund', tl_pending_balance azalt) + negatif bakiye + `pending_refund=True`; NO CHECK constraint (webhook retry storm önlemi) | Backend | Evet |
-| W9 | Kart 2 UI: CASHOUT_ENABLED=false → "Yayın Başlat" CTA (glassmorphism koyu zümrüt/altın kart); CASHOUT_ENABLED=true → birincil "⚡ ANINDA KULLAN (+%10 Teqlik'e Dönüştür)", ikincil "🏦 Nakit Transferi İçin IBAN Tanımla"; aktif talep varsa sıra kartı (📋 #Queue-{id}, İptal Et, Teqlik'e Dönüştür); hediye ekranında combo tap sayacı (x2/x5/x10 + burst animasyonu) | Mobile | Hayır |
+| W9 | Kart 2 UI: `cashout_enabled` flag `GET /api/wallet/summary` response'undan okunur (statik sabit değil); cashout_enabled==false → "Yayın Başlat" CTA (glassmorphism koyu zümrüt/altın kart); cashout_enabled==true → birincil "⚡ ANINDA KULLAN (+%10 Teqlik'e Dönüştür)", ikincil "🏦 Nakit Transferi İçin IBAN Tanımla"; aktif talep varsa sıra kartı (📋 #Queue-{id}, İptal Et, Teqlik'e Dönüştür); hediye ekranında combo tap sayacı (x2/x5/x10 + burst animasyonu) — **optimistic UI**: sayaç animasyonu anlık güncellenir, backend debit debounced (örn. 300ms); bakiye yetersizse toast ile geri al; **`AppLifecycleState.resumed`**: uygulama arka plandan öne gelince `GET /api/wallet/summary` yeniden çekilir (App Store dönüşünde bakiye güncellenmesi için) | Mobile | Hayır |
 | W10 | IBAN Ön Kayıt Bottom Sheet: tutar çipleri (₺500 Min / ₺1.000 / Tamamı); IBAN TR formatı + banka logosu; Seçenek C simülatörü (₺500 → 571+57 = 628 teqlik, FLOOR anlık); "Bilgilerimi Kaydet ve Sıraya Gir" CTA (Slide to Confirm YOK); MASAK yasal uyarı panosu | Mobile | Hayır |
-| W11 | 5 dil ARB: `giftNameClap`, `giftNameTea`, `giftNameGoldenHammer`, `giftNameRocket`, `giftNameTrophy`, `walletConvertToTeqlik`, `walletIbanPreRegistrationTitle`, `walletIbanRegistrationSuccess`, `walletIbanRejected`, `walletQueueNumber`, `walletPendingEarningsDesc`, `walletStartStreamCta` | Mobile | Hayır |
+| W11 | 5 dil ARB: `giftNameClap`, `giftNameTea`, `giftNameGoldenHammer`, `giftNameRocket`, `giftNameTrophy`, `walletConvertToTeqlik`, `walletIbanPreRegistrationTitle`, `walletIbanRegistrationSuccess`, `walletIbanRejected`, `walletQueueNumber`, `walletPendingEarningsDesc`, `walletStartStreamCta`; **Arapça RTL**: `Directionality.of(context)` ile yön tespiti, gradient yönleri RTL'e göre tersler, `chevron_right`/`chevron_left` dinamik seçilir; **para miktarları**: `NumberFormat.currency(locale: locale.toString(), symbol: '₺')` — string birleştirme (`'₺' + amount`) yasak; **çoğul kurallar**: gün ve teqlik sayıları için ICU plural syntax `{count, plural, =1{# gün} other{# gün}}` | Mobile | Hayır |
 | W12 | Admin panel: bekleyen çekim talepleri + Onayla / Reddet (red → `tl_earnings_balance += amount_tl`) | Backend/Admin | Hayır |
 
 ### 6.3 V1.5'e Ertelenen Özellikler (şirket kuruluşu sonrası)
