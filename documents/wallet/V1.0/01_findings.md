@@ -652,18 +652,22 @@ Kurumsal banka toplu ödeme API'si (şirket kuruluşu sonrası)
 │  ║  (Koyu zümrüt/altın — glassmorphism)    ║ │
 │  ║                                          ║ │
 │  ║  [Kazanç varsa — yayıncı]               ║ │
-│  ║  • Mevcut bakiye: ₺1.450,00             ║ │
-│  ║  • Bekleyen (T+14): ₺230,00             ║ │
+│  ║  • Çekilebilir Bakiye: ₺1.450,00 🔒     ║ │
+│  ║  • Bekleyen (T+14)  : ₺230,00           ║ │
 │  ║                                          ║ │
-│  ║  [ Teqlik'e Dönüştür (+%10 bonus) ]     ║ │
-│  ║  [ Çekim Talebi Oluştur (IBAN)    ]     ║ │
+│  ║  [BİRİNCİL — neon/göz alıcı buton]     ║ │
+│  ║  ⚡ ANINDA KULLAN                        ║ │
+│  ║    +%10 Bonusla Teqlik'e Dönüştür       ║ │
+│  ║  (₺1.450 ➔ ₺1.595 değerinde ilan gücü) ║ │
 │  ║                                          ║ │
-│  ║  [Aktif talep varsa — timeline stepper] ║ │
-│  ║  🛡️ Ref: #TRX-94812  ₺1.000,00        ║ │
-│  ║  ● Talep Kaydedildi   23 Eki 17:20     ║ │
-│  ║  ◐ Beta Güvenlik Denetimi  İnceleniyor ║ │
-│  ║  ○ Banka Transfer Emri     Bekleniyor  ║ │
-│  ║  Min. çekim ₺500 — Kaynak: hediyeler    ║ │
+│  ║  [İKİNCİL — şeffaf hatlı buton]        ║ │
+│  ║  🏦 Nakit Transferi İçin IBAN Tanımla   ║ │
+│  ║     (Ön Kayıt)                          ║ │
+│  ║                                          ║ │
+│  ║  [IBAN kaydı varsa — sıra durumu]       ║ │
+│  ║  📋 Sıra No: #42 — Ön Kayıt Alındı     ║ │
+│  ║  Kurumsal entegrasyon açılınca bildirim ║ │
+│  ║  [İptal Et]  [Teqlik'e Dönüştür +%10]  ║ │
 │  ║                                          ║ │
 │  ║  [Kazanç yoksa — henüz yayın yapmamış]  ║ │
 │  ║  💡 Yayın aç, izleyicilerden hediye     ║ │
@@ -699,27 +703,38 @@ Kurumsal banka toplu ödeme API'si (şirket kuruluşu sonrası)
 
 **Kart 2 Görsel Tasarımı:** Kart 1 (enerjik mor/neon — teqlik satın alma enerjisi) ile bilinçli kontrast kurulur. Kart 2 koyu zümrüt yeşili + altın aksanlı glassmorphism/sheen doku kullanır — "kazanılmış para" hissini Kart 1'den ayırt eder ve fintech premium estetiği verir.
 
-**Terminoloji Standardı:** Uygulama genelinde "Para Çekme" / "Çekim Talebi" ifadeleri kullanılmaz. Standart terimler:
+**Terminoloji Standardı:** Uygulama genelinde "Para Çekme" / "Çekim" ifadeleri kullanılmaz. Seçenek C birincil CTA'dır; nakit yol ikincil ve "ön kayıt" olarak konumlandırılır.
 
 | Kullanılmayacak | Kullanılacak |
 |-----------------|--------------|
-| Para Çekme | Hakediş Aktarımı |
-| Çekim Talebi | Hakediş Talebi |
-| Bekleyen talep | Güvence Havuzunda |
-| İncelemede | Beta Güvenlik Denetimi |
-| Reddedildi | İnceleme Güncellemesi |
+| Para Çekme | Nakit Transfer Ön Kaydı |
+| Çekim Talebi | IBAN Ön Kaydı |
+| İncelemede / Bekliyor | Sıranızda |
+| Reddedildi | IBAN Güncellemesi Gerekiyor |
+| Beta güvenlik denetimi | Kurumsal finans entegrasyonu |
 
-**Hakediş Aktarımı Akışı (Glassmorphism Bottom Sheet):**
+**Neden bu framing:** V1.0'da şirket kuruluşu henüz tamamlanmamıştır. Kişisel hesaptan kullanıcı IBAN'ına toplu para transferi MASAK kapsamında "şüpheli ticari faaliyet / vergisiz kazanç aktarımı" riski taşır ve banka hesabı bloke edilebilir. Kullanıcıya "3 gün içinde yatacak" gibi bir söz verilmez; süreç başından "kurumsal banka entegrasyonu tamamlandığında" olarak çerçevelenir. Şirketleşip banka API'si alındığında sistemde doğrulanmış IBAN listesi ve sıra numaraları hazır bekler.
 
-"Hakediş Aktarımı" butonuna basıldığında tam ekran modal yerine arka plan hafif karartılmış/bulanıklaştırılmış Bottom Sheet açılır. İçerik yapısı:
+**IBAN Ön Kayıt Akışı (Glassmorphism Bottom Sheet):**
+
+"Nakit Transferi İçin IBAN Tanımla" butonuna basıldığında tam ekran modal yerine arka plan hafif karartılmış/bulanıklaştırılmış Bottom Sheet açılır:
 
 ```
-┌─ Hakediş Aktarımı ────────────────────────────────┐
-│                                                    │
+┌─ 🛡️ Yasal Uyum & Kurumsal Finans Protokolü ───────┐
+│     Resmi Hakediş Transferi — Ön Kayıt             │
+├────────────────────────────────────────────────────┤
+│  "Teqlif, yayıncılarının finansal güvenliğini en   │
+│  üst düzeyde tutmak amacıyla resmi bankacılık,     │
+│  vergi mevzuatı ve MASAK kurallarına tam uyumlu    │
+│  kurumsal ödeme altyapısını hazırlamaktadır.       │
+│  Kazandığınız tüm bakiye sistemimizde kuruşu       │
+│  kuruşuna güvence altındadır ve asla silinmez.     │
+│  IBAN bilgilerinizi şimdiden tanımlayarak          │
+│  Öncelikli Transfer Sırası'na katılabilirsiniz."   │
+├────────────────────────────────────────────────────┤
 │  Çekilebilir Bakiye                                │
 │  ┌──────────────────────────────────────────────┐  │
 │  │  ₺1.450,00  (zümrüt/altın degrade)          │  │
-│  │  Minimum çekim tutarı ₺500                   │  │
 │  └──────────────────────────────────────────────┘  │
 │                                                    │
 │  Tutar                                             │
@@ -734,49 +749,38 @@ Kurumsal banka toplu ödeme API'si (şirket kuruluşu sonrası)
 │  [ Ahmet Yılmaz (profil adından öneri) ]           │
 │  ℹ️ IBAN üzerindeki isim profil adıyla             │
 │     birebir uyuşmalıdır                            │
-│                                                    │
-│  ✨ Beklemek İstemiyor musun?                      │
-│  ┌──────────────────────────────────────────────┐  │
-│  │ Kazancını +%10 Bonusla teqlik'e çevir;       │  │
-│  │ ₺500 yerine ₺550 değerinde teqlik anında     │  │
-│  │ hesabında!                                   │  │
-│  │  [ Hemen Teqlik'e Dönüştür ]                 │  │
-│  └──────────────────────────────────────────────┘  │
-│                                                    │
-│  [ 🔒  ₺1.000 Hakediş Talebini Onayla  ►►►► ]     │
-│  (Slide to Confirm — kaydırarak onayla)            │
+├────────────────────────────────────────────────────┤
+│  ✨ Banka açılışını beklemek istemiyor musunuz?    │
+│  Kazancınızı +%10 Bonusla teqlik'e çevirip         │
+│  ilanlarınızı hemen vitrine taşıyabilirsiniz.      │
+│  [ Şimdi Teqlik'e Dönüştür (+%10) ]               │
+├────────────────────────────────────────────────────┤
+│  [ 📝  Bilgilerimi Kaydet ve Sıraya Gir ]          │
 └────────────────────────────────────────────────────┘
 ```
 
-Slider (`Slide to Confirm`): Kullanıcı başparmağıyla sağa kaydırır → `Haptic.heavy()`. Kazara tıklamayı engeller; işlemin geri alınamaz finansal talimat olduğu hissini verir.
+Bakiye talep anında atomik olarak düşülür (`UPDATE WHERE tl_earnings_balance >= amount`); `withdrawal_requests INSERT (status='pending')` aynı transaction'da.
 
-**Hakediş Talebi Timeline Stepper:** `withdrawal_requests.status` (pending / approved / rejected) göstergeyi doğrudan besler; ekstra backend değişikliği gerekmez. Referans numarası `#TRX-{id}` formatında gösterilir (sıfır dolgu: #TRX-00094).
+**IBAN Kaydı Sonrası Kart 2 Durumu:** `withdrawal_requests.status` (pending / approved / rejected) Kart 2'yi sıra görünümüne dönüştürür. Referans numarası `#Queue-{id}` formatında gösterilir:
 
-Slider onaylandığı anda Kart 2 canlı takip kartına dönüşür:
 ```
-┌─ 🛡️ Hakediş Talebiniz Güvence Altında ───────────┐
-│  Referans No: #TRX-00094  •  Tutar: ₺1.000,00    │
-├───────────────────────────────────────────────────┤
-│  ● Talep Kaydedildi        23 Eki, 17:20          │
-│    Bakiye güvenli havuza alındı                   │
-│                                                   │
-│  ◐ Beta Güvenlik Denetimi  İnceleniyor            │
-│    Yayın & hediye orijinallik kontrolü            │
-│                                                   │
-│  ○ Banka Transfer Emri     Bekleniyor             │
-│    IBAN hesabınıza FAST/EFT ile aktarım           │
-└───────────────────────────────────────────────────┘
+📋 Sıra No: #Queue-00042
+Kurumsal banka entegrasyonumuz açıldığında
+transferiniz sırayla işleme alınacaktır.
+
+[ İptal Et ve Bakiyeyi Geri Al ]
+[ Teqlik'e Dönüştür (+%10) ]
 ```
 
 **Uygulama içi mesaj metinleri:**
 
-Başarı (Snackbar / BottomSheet kapanırken):
-> Başlık: **Talebiniz Başarıyla Oluşturuldu 💎**
-> "₺1.000 tutarındaki hakedişiniz korumalı havuza aktarıldı. Lansman güvenlik politikamız uyarınca uzman ekibimizin onayının ardından IBAN hesabınıza sevk edilecektir. İşlem durumunu cüzdanınızdan anlık takip edebilirsiniz."
+Kayıt başarılı (BottomSheet kapanırken Snackbar):
+> Başlık: **Kaydınız Başarıyla Alındı 📋**
+> "IBAN bilgileriniz güvenle kaydedildi ve Öncelikli Transfer Listesi'ne (#Queue-42) eklendiniz. Kurumsal banka transferleri başladığında bildirim alacaksınız. Dilediğiniz an bu talebi iptal edip bakiyenizi bonuslu teqlik olarak da kullanabilirsiniz."
 
-Red / İade (admin `rejected` ayarladığında push notification + Kart 2 durumu):
-> Başlık: **İnceleme Güncellemesi ⚠️**
-> "Talebiniz güvenlik eşleşmesi nedeniyle tamamlanamadı. ₺1.000 tutarındaki bakiyeniz eksiksiz olarak cüzdanınıza iade edildi. Bilgilerinizi kontrol ederek dilediğiniz zaman yeni talep oluşturabilirsiniz."
+IBAN güncellemesi gerektiğinde (admin `rejected` → bakiye iade → push notification):
+> Başlık: **IBAN Güncellemesi Gerekiyor ℹ️**
+> "Kayıtlı IBAN bilgilerinizde bir uyumsuzluk tespit edildi. ₺1.000 tutarındaki bakiyeniz eksiksiz olarak cüzdanınıza iade edildi. IBAN bilgilerinizi güncelleyerek dilediğiniz zaman yeniden sıraya girebilirsiniz."
 
 ### 5.2 Satın Alma Akışı
 
@@ -845,9 +849,9 @@ Red / İade (admin `rejected` ayarladığında push notification + Kart 2 durumu
 | W7b | `convert_to_teqlik_command.py`: Seçenek C (+%10 bonus, atomik SQL) | Backend | Evet |
 | W7c | `schedule.yaml`: `release_pending_earnings` (02:00 UTC, watchdog_m:30) + `daily_financial_reconciliation` (00:00 UTC, watchdog_m:10) | Backend | Evet |
 | W8 | `handle_apple_refund_command.py`: orantılı gift iptali + negatif bakiye desteği | Backend | Evet |
-| W9 | Kart 2 UI: kazanç > 0 → "Hakediş Aktarımı" + "Teqlik'e Dönüştür"; aktif talep → timeline stepper (#TRX-{id}, 3 adım, status alanından); kazanç = 0 → "Yayın Başlat" CTA; glassmorphism koyu zümrüt/altın kart; hediye ekranında combo tap sayacı (x2/x5/x10 + burst animasyonu) | Mobile | Hayır |
-| W10 | Hakediş Aktarımı Bottom Sheet: hızlı tutar çipleri (₺500 Min / ₺1.000 / Bakiyenin Tamamı); IBAN 4'erli TR00 formatı + sabit TR rozeti + ilk 5 haneden banka logosu (statik Map) + panodan yapıştır; hesap sahibi profil adından önerili; IBAN-isim eşleşme uyarısı; Seçenek C dönüşüm kartı form içinde; Slide to Confirm slider (kaydırarak onayla, Haptic.heavy); IBAN 26 hane uzunluk kontrolü | Mobile | Hayır |
-| W11 | 5 dil ARB: `giftNameClap`, `giftNameTea`, `giftNameGoldenHammer`, `giftNameRocket`, `giftNameTrophy`, `walletConvertToTeqlik`, `walletEarningsTransferTitle` (Hakediş Aktarımı), `walletTransferSuccess`, `walletTransferRejected`, `walletPendingEarningsDesc` | Mobile | Hayır |
+| W9 | Kart 2 UI: kazanç > 0 → birincil neon "⚡ ANINDA KULLAN (+%10 Bonus Teqlik'e Dönüştür)" + ikincil "🏦 Nakit Transferi İçin IBAN Tanımla (Ön Kayıt)"; aktif ön kayıt varsa → sıra kartı (📋 Sıra No: #Queue-{id}, "Kurumsal entegrasyon açılınca bildirim", İptal Et + Teqlik'e Dönüştür); kazanç = 0 → "Yayın Başlat" CTA; glassmorphism koyu zümrüt/altın kart; hediye ekranında combo tap sayacı (x2/x5/x10 + burst animasyonu) | Mobile | Hayır |
+| W10 | IBAN Ön Kayıt Bottom Sheet: açılışta yasal uyum mesaj panosu (MASAK/kurumsal finans açıklaması); tutar çipleri (₺500 Min / ₺1.000 / Bakiyenin Tamamı); IBAN 4'erli TR00 formatı + sabit TR rozeti + ilk 5 haneden banka logosu (statik Map) + panodan yapıştır; hesap sahibi profil adından önerili; IBAN-isim eşleşme uyarısı; Seçenek C dönüşüm kartı ("Şimdi Teqlik'e Dönüştür +%10"); "Bilgilerimi Kaydet ve Sıraya Gir" CTA (Slide to Confirm YOK); IBAN 26 hane uzunluk kontrolü | Mobile | Hayır |
+| W11 | 5 dil ARB: `giftNameClap`, `giftNameTea`, `giftNameGoldenHammer`, `giftNameRocket`, `giftNameTrophy`, `walletConvertToTeqlik`, `walletIbanPreRegistrationTitle` (Nakit Transferi İçin IBAN Tanımla), `walletIbanRegistrationSuccess`, `walletIbanRejected`, `walletQueueNumber`, `walletPendingEarningsDesc` | Mobile | Hayır |
 | W12 | Admin panel: bekleyen çekim talepleri listesi + Onayla / Reddet butonları (red durumunda bakiye iadesi: `tl_earnings_balance += amount_tl`) | Backend/Admin | Hayır |
 
 ### 6.3 V1.5'e Ertelenen Özellikler
