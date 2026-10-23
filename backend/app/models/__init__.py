@@ -37,4 +37,3 @@ from .call import Call, CallParticipant
 from .direct_sale import DirectSale, DirectSaleOrder
 from .message_thread import MessageThread
 from .stream_chat_message import StreamChatMessage
-from .withdrawal_request import WithdrawalRequest
