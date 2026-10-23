@@ -262,16 +262,21 @@ Apple → POST /api/wallet/apple-notifications
 ```sql
 -- users tablosuna ekle
 ALTER TABLE users
-  ADD COLUMN tl_earnings_balance  NUMERIC(10,2) NOT NULL DEFAULT 0.00,
-  ADD COLUMN tl_pending_balance   NUMERIC(10,2) NOT NULL DEFAULT 0.00;
+  ADD COLUMN tl_earnings_balance       NUMERIC(10,2) NOT NULL DEFAULT 0.00,
+  ADD COLUMN tl_pending_balance        NUMERIC(10,2) NOT NULL DEFAULT 0.00,
+  ADD COLUMN monthly_free_withdrawals_used INTEGER NOT NULL DEFAULT 0;
+  -- ⚠️ tl_earnings_balance'a CHECK (>= 0) KONULMAMALI:
+  -- Çekim sonrası Apple iadesi gelirse bakiye negatife düşebilir (borç mahsubu).
+  -- DB constraint hatası Apple webhook'unun 500 alıp sonsuz retry'a girmesine yol açar.
 
 -- Çekim talepleri
 CREATE TABLE withdrawal_requests (
   id                SERIAL PRIMARY KEY,
   user_id           INTEGER NOT NULL REFERENCES users(id),
   amount_tl         NUMERIC(10,2) NOT NULL,
+  fee_tl            NUMERIC(10,2) NOT NULL DEFAULT 0.00,
   iban              VARCHAR(34) NOT NULL,
-  account_holder    VARCHAR(120) NOT NULL,   -- TCKN eşleşmesi için
+  account_holder    VARCHAR(120) NOT NULL,
   status            VARCHAR(20) NOT NULL DEFAULT 'pending',
                     -- pending | approved | completed | rejected
   created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -281,8 +286,10 @@ CREATE TABLE withdrawal_requests (
 
 -- gift_events tablosuna kazanç takip kolonları
 -- (T+14 cron ve refund iptali için event bazında iz)
+-- earnings_tl: NUMERIC(10,4) — 1 teqlik × %95 × ₺0,50 = ₺0,4750; 2 hane ile saklanamaz.
+-- Kullanıcı bakiyelerine aktarımda ROUND_DOWN(2) uygulanır (bkz. T+14 cron ve withdraw).
 ALTER TABLE gift_events
-  ADD COLUMN earnings_tl   NUMERIC(10,2) NOT NULL DEFAULT 0.00,
+  ADD COLUMN earnings_tl   NUMERIC(10,4) NOT NULL DEFAULT 0.0000,
   ADD COLUMN payout_status VARCHAR(20)   NOT NULL DEFAULT 'pending',
                            -- pending | released | cancelled_refund
   ADD COLUMN released_at   TIMESTAMPTZ;
@@ -292,13 +299,32 @@ CREATE INDEX idx_gift_events_payout
   WHERE payout_status = 'pending';
 ```
 
-**Güncellenecek endpoint — send-gift (wallet.py):**
+**Güncellenecek Use Case — `app/use_cases/wallet/commands/send_gift_command.py`:**
+
+Clean Architecture kuralı gereği iş mantığı `wallet.py` router'da değil; `app/use_cases/wallet/commands/` altında ayrı command sınıflarında tutulur (mevcut `transfer_teqlik.py` patterniyle aynı). Tüm wallet use case'leri:
+```
+app/use_cases/wallet/
+  commands/
+    send_gift_command.py          ← TL dönüşüm + atomik SQL
+    request_withdrawal_command.py ← ücret hesabı + credit_service.py
+    verify_apple_receipt_command.py
+    handle_apple_refund_command.py
+  queries/
+    get_wallet_summary_query.py
+```
+
 ```
 İzleyici → hediye seçer (gift_name + cost) → stream_id ile gönderir
-  Gönderenden:   teqlik_balance -= cost                         (atomik)
-  Yayıncıya:     tl_pending_balance += cost × pay_rate × 0,50  (atomik, T+14 kilitli)
-  gift_events:   earnings_tl = cost × pay_rate × 0,50, payout_status='pending'
+  Gönderenden:   teqlik_balance -= cost                              (atomik ham SQL)
+  Yayıncıya:     tl_pending_balance += ROUND_DOWN(cost × pay_rate × 0,50, 2)  (atomik)
+  gift_events:   earnings_tl = Decimal(str(cost)) * pay_rate * Decimal("0.50")
+                 → NUMERIC(10,4) olarak kayıt — kuruş kaybı olmadan
   Platform net:  kalan Teqlif kasasında
+
+  Decimal hassasiyeti (zorunlu): Python float yerine Decimal kullan.
+    earnings = Decimal(str(cost)) * Decimal(str(pay_rate)) * Decimal("0.50")
+    earnings_rounded = earnings.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    tl_pending_balance += earnings_rounded  (ham SQL ile atomik)
 ```
 Dönüşüm kuru: **1 teqlik hediye = ₺0,50 net nakit** (V1.0'da sabit kur)
 
@@ -317,46 +343,51 @@ Geçerli hediye tipleri: `clap`(1) · `tea`(5) · `fire`(10) · `diamond`(50) ·
 
 > Teqlif net = cost × 0,875 (100-pak IAP net/teqlik) − host payı. Mega paketten alındığında (0,675 TL/teqlik) net ₺0,20–₺0,40/teqlik'e iner — tüm senaryolarda Teqlif kârdadır.
 
-**Yeni endpointler:**
+**Yeni endpointler (router yalnızca delege eder, mantık use case'lerde):**
 ```
-GET  /api/wallet/summary
+GET  /api/wallet/summary  →  get_wallet_summary_query.py
   → { teqlik_balance, tl_earnings_balance, tl_pending_balance,
-      free_withdrawals_remaining }   ← PRO: 2/ay, Standart: 0
+      free_withdrawals_remaining }   ← 2 - monthly_free_withdrawals_used
 
-POST /api/wallet/withdraw
+POST /api/wallet/withdraw  →  request_withdrawal_command.py
   Body: { amount_tl, iban, account_holder_name }
-  Kurallar:
-    - tl_earnings_balance >= amount_tl  (pending bakiye sayılmaz)
+  Kurallar (credit_service.py merkezi kontrol — ADR §40):
+    - tl_earnings_balance >= amount_tl  (negatif bakiyede çekim reddedilir)
     - amount_tl >= 500  (minimum çekim)
-    - Çekim ücreti:
-        PRO + free_withdrawals_remaining > 0  →  ₺0  (ücretsiz, sayacı azalt)
-        diğer                                 →  ₺15 sabit işlem ücreti
-    - tl_earnings_balance -= (amount_tl + çekim_ücreti)  (atomik)
-    - withdrawal_requests kaydı oluştur (status=pending)
+    - Çekim ücreti (credit_service.py → can_withdraw_free(user)):
+        PRO + monthly_free_withdrawals_used < 2  →  ₺0  (monthly_free_withdrawals_used += 1)
+        diğer                                    →  ₺15 sabit işlem ücreti
+    - tl_earnings_balance -= (amount_tl + fee_tl)  (atomik ham SQL)
+    - withdrawal_requests kaydı oluştur (status=pending, fee_tl kolonu ile)
   → 200 OK | 400 yetersiz bakiye / limit altı
 ```
 
-> PRO'ya ayda 2 ücretsiz çekim hakkı: her ayın 1'inde `free_withdrawals_remaining` = 2 olarak sıfırlanır (ARQ monthly cron). Standart kullanıcı her çekimde ₺15 öder — bu da PRO'ya geçmeyi teşvik eden ek bir gerekçe olur.
+> PRO'ya ayda 2 ücretsiz çekim: her ayın 1'inde `monthly_free_withdrawals_used` = 0 sıfırlanır (schedule.yaml ARQ cron). Standart kullanıcı her çekimde ₺15 öder.
 
 **T+14 Holding — ARQ cron görevi (idempotent):**
+
+Her iki cron görevi `worker.py`'ye değil; **`deploy/scale/V2.1/schedule.yaml`** dosyasına `batch` altında eklenir. `schedule_loader.py` bu dosyayı okur, `teqlif-agent/watchdog.py` görevi izler — cron doğrudan koda yazılırsa agent tarafından izlenemez.
+
 ```python
 # Her gün 02:00 UTC — pending → released (tam idempotent)
+# schedule.yaml: batch.release_pending_earnings, watchdog_m: 30
 async def release_pending_earnings_task():
     """14 günü dolan gift_events.payout_status='pending' → 'released', balance aktar."""
     # BEGIN TRANSACTION
     #
     # 1. Aktarılacak hediyeleri kilitle ve topla
-    #    SELECT receiver_id, SUM(earnings_tl) AS total
+    #    SELECT receiver_id, SUM(earnings_tl) AS total_raw
     #    FROM gift_events
     #    WHERE payout_status = 'pending'
     #      AND sent_at <= NOW() - INTERVAL '14 days'
     #    GROUP BY receiver_id
     #    FOR UPDATE SKIP LOCKED
     #
-    # 2. Kullanıcı bakiyelerini güncelle
+    # 2. Kullanıcı bakiyelerini güncelle — ROUND_DOWN(total_raw, 2) uygulanır
+    #    (gift_events.earnings_tl NUMERIC(10,4); kullanıcıya aktarılırken 2 haneye indirilir)
     #    UPDATE users SET
-    #      tl_earnings_balance += total,
-    #      tl_pending_balance  -= total
+    #      tl_earnings_balance += ROUND(total_raw, 2),  -- ROUND_DOWN
+    #      tl_pending_balance  -= ROUND(total_raw, 2)
     #    WHERE id = receiver_id
     #
     # 3. Event'leri released olarak işaretle
@@ -370,9 +401,37 @@ async def release_pending_earnings_task():
     #
     # Cron iki kez çalışsa, yeniden başlasa, yarıda kalsa güvenli:
     # 'released' satırlar WHERE payout_status = 'pending' koşuluna girmez.
+
+# Her ayın 1'i 00:05 UTC — PRO çekim kotasını sıfırla
+# schedule.yaml: batch.reset_monthly_withdrawal_quota, watchdog_m: 60
+async def reset_monthly_withdrawal_quota_task():
+    # UPDATE users SET monthly_free_withdrawals_used = 0 WHERE is_pro = true
 ```
 
 > **Neden T+14:** Apple chargebackları teorik 120 güne kadar açık olsa da pratikte %99'u 14 gün içinde kapanır. Daha uzun beklemek yayıncı deneyimini bozar. Büyük miktarlarda (>₺5.000 tek hediye) T+30 uygulanabilir (V1.1 iyileştirmesi).
+
+**Çekim Sonrası Apple İadesi — Negatif Bakiye ve Borç Mahsubu:**
+
+T+14 penceresi chargebackların büyük çoğunluğunu yakalar; ancak Apple iadesi teorik olarak 120 güne kadar açıktır. Para çekildikten sonra iade gelirse:
+
+```
+Apple → REFUND webhook (18. gün, para çekilmişti)
+  → apple_transaction_id ile TeqlikTransaction bul
+  → teqlik_balance -= iade_miktarı  (atomik)
+  → Orantılı gift iptali (payout_status='cancelled_refund', yukarıdaki refund akışı)
+  → İptal edilecek pending bakiye kalmamışsa (para çekilmiş):
+       tl_earnings_balance -= iptal_tl  → bakiye negatife düşebilir
+       users.pending_refund = True      → admin incelemesi tetiklenir
+
+Sonraki yayın kazançları negatif bakiyeyi kapatır (borç mahsubu):
+  tl_earnings_balance 0'ın altındayken T+14 aktarımı durdurmaz — kazançlar
+  negatif bakiyeyi karşılayana kadar tl_earnings_balance'ta birikir,
+  yayıncı çekim talebinde bakiye > 0 ise izin verilir.
+
+⚠️ tl_earnings_balance'a CHECK (tl_earnings_balance >= 0) constraint'i KONULMAMALI:
+   Apple webhook isteği DB constraint hatasıyla 500 dönerse Apple sonsuz retry
+   döngüsüne girer ve aynı iade birden çok kez işlenebilir.
+```
 
 ### 4.3 Mevcut Backend Durumu
 
@@ -386,15 +445,16 @@ async def release_pending_earnings_task():
 | JWS doğrulama kütüphanesi | ❌ Kurulmamış |
 | `apple_transaction_id` unique index | ❌ Migration yok |
 | Sandbox/production config | ❌ Yok |
-| `tl_earnings_balance` + `tl_pending_balance` (users) | ❌ Migration yok |
-| `withdrawal_requests` tablosu | ❌ Migration yok |
-| `gift_events` (`earnings_tl`, `payout_status`, `released_at`) | ❌ Migration yok |
-| `send-gift` → TL kazanca dönüşüm + 8 hediye tipi | ⚠️ Güncellenmeli |
-| Refund webhook → orantılı gift iptali | ⚠️ Güncellenmeli |
-| `GET /api/wallet/summary` (+ `free_withdrawals_remaining`) | ❌ Yazılmamış |
-| `POST /api/wallet/withdraw` (₺15 ücret / PRO 2× ücretsiz) | ❌ Yazılmamış |
-| T+14 ARQ cron görevi (release_pending_earnings — idempotent) | ❌ Yazılmamış |
-| Aylık çekim hakkı sıfırlama ARQ cron (PRO: 2/ay) | ❌ Yazılmamış |
+| `tl_earnings_balance` + `tl_pending_balance` + `monthly_free_withdrawals_used` (users) | ❌ Migration yok |
+| `withdrawal_requests` tablosu (+ `fee_tl` kolonu) | ❌ Migration yok |
+| `gift_events` (`earnings_tl` NUMERIC(10,4), `payout_status`, `released_at`) | ❌ Migration yok |
+| `use_cases/wallet/commands/` + `queries/` use case yapısı | ❌ Yazılmamış |
+| `send_gift_command.py` (Decimal hassasiyeti + atomik SQL) | ❌ Yazılmamış |
+| Refund webhook → orantılı gift iptali + negatif bakiye desteği | ⚠️ Güncellenmeli |
+| `get_wallet_summary_query.py` | ❌ Yazılmamış |
+| `request_withdrawal_command.py` (credit_service.py entegrasyon) | ❌ Yazılmamış |
+| `schedule.yaml` T+14 cron (`release_pending_earnings`, watchdog_m:30) | ❌ Eklenmemiş |
+| `schedule.yaml` aylık kota sıfırlama cron (`reset_monthly_withdrawal_quota`, watchdog_m:60) | ❌ Eklenmemiş |
 
 ---
 
@@ -512,15 +572,18 @@ async def release_pending_earnings_task():
 
 | # | Görev | Yapan | Blokör mu? |
 |---|-------|-------|-----------|
-| W1 | Migration: users (`tl_earnings_balance`, `tl_pending_balance`) + `withdrawal_requests` + `gift_events` (`earnings_tl`, `payout_status`, `released_at`) | Backend | Evet |
+| W1 | Migration: users (`tl_earnings_balance`, `tl_pending_balance`, `monthly_free_withdrawals_used`) + `withdrawal_requests` (+ `fee_tl`) + `gift_events` (`earnings_tl` NUMERIC(10,4), `payout_status`, `released_at`) | Backend | Evet |
 | W2 | `gift_events` payout index (`idx_gift_events_payout`) | Backend | Evet |
-| W3 | `send-gift` endpoint: teqlik → TL dönüşümüne güncelle | Backend | Evet |
-| W4 | `GET /api/wallet/summary` endpoint (teqlik + TL birlikte) | Backend | Evet |
-| W5 | `POST /api/wallet/withdraw` endpoint + bakiye/limit kontrolleri | Backend | Evet |
-| W6 | T+14 ARQ cron görevi (`release_pending_earnings_task`) | Backend | Evet |
-| W7 | Cüzdan Kart 2 UI: kazanç > 0 → çekim formu; kazanç = 0 → "Yayın Başlat" CTA (tüm kullanıcı) | Mobile | Hayır |
-| W8 | Çekim talebi formu (IBAN + ad-soyad) | Mobile | Hayır |
-| W9 | Admin panel: çekim talepleri listesi + manuel onay | Backend/Admin | Hayır |
+| W3 | `use_cases/wallet/commands/` yapısı oluştur (`send_gift`, `request_withdrawal`, `verify_apple_receipt`, `handle_apple_refund`) + `queries/get_wallet_summary` | Backend | Evet |
+| W4 | `send_gift_command.py`: Decimal hassasiyetiyle TL dönüşüm + atomik ham SQL + 8 hediye tipi + animasyon katmanı payload | Backend | Evet |
+| W5 | `get_wallet_summary_query.py`: teqlik + TL bakiyeleri tek sorguda | Backend | Evet |
+| W6 | `request_withdrawal_command.py`: `credit_service.py` entegrasyon, ₺15 ücret / PRO 2× ücretsiz (`monthly_free_withdrawals_used`), ROUND_DOWN, negatif bakiyede red | Backend | Evet |
+| W6b | `schedule.yaml` güncelle: `release_pending_earnings` (02:00 UTC, watchdog_m:30) + `reset_monthly_withdrawal_quota` (ayın 1'i 00:05 UTC, watchdog_m:60) | Backend | Evet |
+| W7 | Refund webhook (`handle_apple_refund_command.py`): orantılı gift iptali + çekim sonrası negatif bakiye desteği + `pending_refund` flag | Backend | Evet |
+| W8 | Cüzdan Kart 2 UI: kazanç > 0 → çekim formu; kazanç = 0 → "Yayın Başlat" CTA (tüm kullanıcı) | Mobile | Hayır |
+| W9 | Çekim talebi formu (IBAN + ad-soyad) | Mobile | Hayır |
+| W10 | 5 dil ARB güncelleme: `giftNameClap`, `giftNameTea`, `giftNameGoldenHammer`, `giftNameRocket`, `giftNameTrophy`, `walletWithdrawFeeNotice`, `walletMinWithdrawError`, `walletPendingEarningsDesc` | Mobile | Hayır |
+| W11 | Admin panel: çekim talepleri listesi + manuel onay + negatif bakiye uyarısı | Backend/Admin | Hayır |
 
 ---
 
@@ -994,7 +1057,7 @@ Kullanıcıya 50 bonus teqlik veriyoruz (300 pakette) → bu 50 teqlik gelecekte
 | teqlik IAP ürün tipi | **Consumable** |
 | PRO üyelik IAP ürün tipi | **Auto-Renewable Subscription** (V2.0) |
 | Backend doğrulama | App Store Server API v2 JWS |
-| Refund politikası V1.0 | **REFUND webhook zorunlu** — bakiyeden düş + pending_refund flag + orantılı gift iptali |
+| Refund politikası V1.0 | **REFUND webhook zorunlu** — bakiyeden düş + orantılı gift iptali + çekim sonrası negatif bakiye (borç mahsubu) + NO CHECK CONSTRAINT |
 | Android | V1.0 kapsamı dışı |
 | Tab yapısı | Tab 1: Mağaza, Tab 2: İşlem Geçmişi |
 | Hediye sistemi (teqlik → TL dönüşüm) | **V1.0 — send-gift güncellenmeli** |
@@ -1004,6 +1067,12 @@ Kullanıcıya 50 bonus teqlik veriyoruz (300 pakette) → bu 50 teqlik gelecekte
 | T+14 holding süresi | **V1.0 zorunlu** — Apple refund sigortası; idempotent cron + `FOR UPDATE SKIP LOCKED` |
 | Minimum çekim eşiği | **₺500** |
 | TL dönüşüm kuru | **1 teqlik = ₺0,50 net nakit** (sabit V1.0) |
+| earnings_tl veri tipi | `gift_events.earnings_tl` → **NUMERIC(10,4)** (₺0,475 kuruş kaybı önlemi) |
+| Yuvarlama kuralı | earnings ledger NUMERIC(10,4); kullanıcı bakiyesine aktarımda ve çekimde ROUND_DOWN(2) |
+| Negatif bakiye | `tl_earnings_balance` negatife düşebilir; CHECK constraint yok; borç mahsubu ile kapanır |
+| Backend mimari | İş mantığı `use_cases/wallet/commands/` + `queries/`; `wallet.py` router sadece delege |
+| Cron yerleşimi | `schedule.yaml`'da tanımlanır (worker.py'ye değil); watchdog_m ile izlenir |
+| i18n ARB (W10) | 5 dil ARB: 5 yeni hediye adı + walletWithdrawFeeNotice + walletMinWithdrawError + walletPendingEarningsDesc |
 | Çekim ücreti | **₺15 sabit** — PRO ayda 2 ücretsiz (aylık ARQ reset); Std her çekimde öder |
 | İletişim stratejisi (hediye oranları) | "Net havuzun %95'i PRO yayıncılara ödenir" — "100 TL'lik hediyenin 95 TL'si" değil |
 | Başlangıç Boost (İlan Ver'de) | V1.1 — yüksek öncelik |
