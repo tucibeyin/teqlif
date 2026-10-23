@@ -77,10 +77,9 @@ class EncoderManager:
 
         rec_cfg = self._cfg.cluster_recording
 
-        # mc alias'ını ilk çalışmada kur
+        # mc alias'ını ilk çalışmada kur; kurulum başarısız olursa bir sonraki döngüde tekrar dene
         if not self._mc_ready:
-            await self._setup_mc_alias(svc_cfg)
-            self._mc_ready = True
+            self._mc_ready = await self._setup_mc_alias(svc_cfg)
 
         await self._run_encodes(dsn, svc_cfg, rec_cfg)
         await self._run_transfers(dsn, svc_cfg, rec_cfg)
@@ -280,26 +279,32 @@ class EncoderManager:
 
     # ── mc alias kurulumu ─────────────────────────────────────────────────────
 
-    async def _setup_mc_alias(self, svc_cfg: dict) -> None:
+    async def _setup_mc_alias(self, svc_cfg: dict) -> bool:
+        """mc alias kurar; başarılıysa True, başarısızsa False döner."""
         alias      = svc_cfg.get("minio_alias", "")
         minio_host = svc_cfg.get("minio_host", "")
         access_key = os.environ.get("MINIO_ACCESS_KEY", "")
         secret_key = os.environ.get("MINIO_SECRET_KEY", "")
         if not all([alias, minio_host, access_key, secret_key]):
             logger.debug("mc alias kurulumu atlandı — eksik config veya env")
-            return
+            return False
         try:
             proc = await asyncio.create_subprocess_exec(
                 "mc", "alias", "set", alias,
                 f"http://{minio_host}", access_key, secret_key,
                 stdout=asyncio.subprocess.DEVNULL,
-                stderr=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.PIPE,
             )
-            await proc.wait()
+            _, stderr_b = await proc.communicate()
             if proc.returncode == 0:
                 logger.info("mc alias kuruldu: %s → %s", alias, minio_host)
+                return True
+            err = (stderr_b or b"").decode(errors="replace").strip()
+            logger.warning("mc alias başarısız (rc=%d): %s", proc.returncode, err[:200])
+            return False
         except Exception as exc:
             logger.warning("mc alias kurma hatası: %s", exc)
+            return False
 
 
 # ── Yardımcılar ───────────────────────────────────────────────────────────────
