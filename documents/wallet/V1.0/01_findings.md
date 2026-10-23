@@ -440,8 +440,6 @@ POST /api/wallet/withdraw  →  request_withdrawal_command.py
     → Yayıncıya motivasyon: "Kazancınla 110 teqlik al, 100 teqlik fiyatına!"
 ```
 
-> **V1.5'te eklenecek (withdraw tam akış):** MERNIS/KYC doğrulama, IBAN checksum, Redis distributed lock, atomik SQL WHERE bakiye düşümü, ₺15 çekim ücreti, PRO 2× ücretsiz kota, Rolling Reserve limiti, banka transfer API entegrasyonu.
-
 **T+14 Holding — ARQ cron görevi (idempotent):**
 
 Her iki cron görevi `worker.py`'ye değil; **`deploy/scale/V2.1/schedule.yaml`** dosyasına `batch` altında eklenir. `schedule_loader.py` bu dosyayı okur, `teqlif-agent/watchdog.py` görevi izler — cron doğrudan koda yazılırsa agent tarafından izlenemez.
@@ -614,20 +612,22 @@ Kurumsal banka toplu ödeme API'si (şirket kuruluşu sonrası)
 | `request_withdrawal_command.py` (talep modu — bakiye kontrolü + pending insert) | ❌ Yazılmamış |
 | `convert_to_teqlik_command.py` (Seçenek C, +%10 bonus) | ❌ Yazılmamış |
 | `get_wallet_summary_query.py` | ❌ Yazılmamış |
-| Refund webhook → orantılı gift iptali + negatif bakiye | ⚠️ Güncellenmeli |
+| `handle_apple_refund_command.py` (orantılı gift iptali + negatif bakiye) | ❌ Yazılmamış |
+| `teqlik_transactions` (apple_transaction_id UNIQUE + raw_receipt TEXT) | ❌ Migration yok |
+| `daily_financial_reconciliation` cron (00:00 UTC, watchdog_m:10) | ❌ Eklenmemiş |
 | `schedule.yaml` T+14 cron (`release_pending_earnings`, watchdog_m:30) | ❌ Eklenmemiş |
 
-**V1.5 kapsamı (şimdi yazılmaz):**
+**V1.5 kapsamı (şirket kuruluşu + gerçek banka transfer akışı hazırlanana kadar kodlanmaz):**
 
-| Bileşen | Not |
-|---------|-----|
-| MERNIS/KYC kolonları + `user_kyc` şifreli tablo | Şirket kuruluşu sonrası |
-| Rolling Reserve kolonları | Gerçek transfer başlayınca |
-| `is_in_debt`, `account_frozen` kolonları | V1.5 migration |
-| `monthly_free_withdrawals_used` + aylık reset cron | Gerçek ücret akışıyla birlikte |
-| `request_withdrawal_command.py` tam akış (MERNIS + lock + atomik düşüm + ücret) | V1.5 rewrite |
-| Admin Maker-Checker paneli | Şirket + banka API sonrası |
-| Banka transfer API entegrasyonu | Şirket kuruluşu zorunlu |
+| Bileşen | Ön Koşul |
+|---------|----------|
+| MERNIS/KYC kolonları + `user_kyc` AES-256 şifreli tablo | Şirket kaydı + NVİ SOAP API sözleşmesi |
+| Rolling Reserve kolonları (`rolling_reserve_expires_at`, `rolling_reserve_limit_tl`) | Gerçek transfer akışı |
+| `is_in_debt`, `account_frozen`, `account_frozen_reason` kolonları | Gerçek transfer akışı |
+| `monthly_free_withdrawals_used` + aylık reset cron | PRO abonelik + gerçek ücret akışı |
+| `request_withdrawal_command.py` tam akış (MERNIS + Redis lock + atomik düşüm + ücret) | V1.5 rewrite — mevcut V1.0 sürümü kaldırılır |
+| Admin Maker-Checker paneli (₺2.500+ çift onay, ₺10.000+ 2FA) | Şirket + banka API |
+| Banka transfer API entegrasyonu | LTD/şahıs şirketi + kurumsal banka anlaşması |
 
 ---
 
