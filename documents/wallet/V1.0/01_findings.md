@@ -454,11 +454,13 @@ async def release_pending_earnings_task():
     #    GROUP BY receiver_id
     #    FOR UPDATE SKIP LOCKED
     #
-    # 2. Kullanıcı bakiyelerini güncelle — ROUND_DOWN(total_raw, 2) uygulanır
+    # 2. Kullanıcı bakiyelerini güncelle — TRUNC(total_raw, 2) uygulanır
     #    (gift_events.earnings_tl NUMERIC(10,4); kullanıcıya aktarılırken 2 haneye indirilir)
+    #    PostgreSQL ROUND(x,2) en yakına yuvarlar — 0.4750 → 0.48 (yanlış).
+    #    TRUNC(x,2) aşağı keser     — 0.4750 → 0.47 (doğru, platform aleyhine kuruş yok).
     #    UPDATE users SET
-    #      tl_earnings_balance += ROUND(total_raw, 2),  -- ROUND_DOWN
-    #      tl_pending_balance  -= ROUND(total_raw, 2)
+    #      tl_earnings_balance += TRUNC(total_raw, 2),
+    #      tl_pending_balance  -= TRUNC(total_raw, 2)
     #    WHERE id = receiver_id
     #
     # 3. Event'leri released olarak işaretle
@@ -974,10 +976,11 @@ Teqlif Gelir Akışı
 ├── Canlı Yayın Hediyesi (send-gift)           ← V1.0 — PRO %95 / Std %70
 │    └── Teqlif net: her Taç hediyesinde ₺40,00–₺52,50
 │
-└── Çekim Ücreti                               ← V1.0
+└── Çekim Ücreti                               ← V1.5
      ├── Standart: ₺15 sabit/işlem (direkt marj)
      └── PRO: 2 ücretsiz/ay → 3. çekimden itibaren ₺15
          (aylık reset ARQ cron — PRO'ya geçiş teşviki)
+         (V1.0'da talep toplama modu — gerçek transfer yok, ücret de yok)
 ```
 
 ---
@@ -1237,7 +1240,7 @@ Kullanıcıya 50 bonus teqlik veriyoruz (300 pakette) → bu 50 teqlik gelecekte
 | Minimum çekim eşiği | **₺500** | V1.0 |
 | TL dönüşüm kuru | **1 teqlik = ₺0,50 net nakit** (sabit V1.0) | V1.0 |
 | earnings_tl veri tipi | `gift_events.earnings_tl` → **NUMERIC(10,4)** (₺0,475 kuruş kaybı önlemi) | V1.0 |
-| Yuvarlama kuralı | earnings ledger NUMERIC(10,4); kullanıcı bakiyesine aktarımda ve çekimde ROUND_DOWN(2) | V1.0 |
+| Yuvarlama kuralı | earnings ledger NUMERIC(10,4); kullanıcı bakiyesine aktarımda `TRUNC(x, 2)` — PostgreSQL `ROUND()` değil (0.4750 → 0.47, platform aleyhine kuruş kaybı yok) | V1.0 |
 | Negatif bakiye | `tl_earnings_balance` negatife düşebilir; CHECK constraint yok; borç mahsubu ile kapanır | V1.0 |
 | Backend mimari | İş mantığı `use_cases/wallet/commands/` + `queries/`; `wallet.py` router sadece delege | V1.0 |
 | Cron yerleşimi | `schedule.yaml`'da tanımlanır (worker.py'ye değil); watchdog_m ile izlenir | V1.0 |
