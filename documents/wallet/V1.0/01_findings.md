@@ -229,10 +229,17 @@ Eşik aşılırsa: 429 → fraud_flag = True → admin incelemesi.
 Teqlik_transactions tablosunda device_id (StoreKit appAccountToken) saklanmalı.
 ```
 
-**Replay Saldırısı Koruması:**
+**Replay Saldırısı Koruması + Ham Fiş Arşivi:**
 ```sql
--- Gerekli migration:
-ALTER TABLE teqlik_transactions ADD COLUMN apple_transaction_id VARCHAR(64) UNIQUE;
+-- Gerekli migration (V1.0 — W1'e dahil):
+ALTER TABLE teqlik_transactions
+  ADD COLUMN apple_transaction_id VARCHAR(64) UNIQUE,
+  ADD COLUMN raw_receipt          TEXT;
+-- apple_transaction_id: aynı transaction_id → HTTP 409, bakiye yüklenmez.
+-- raw_receipt: Apple'ın kriptografik imzalı signedTransactionInfo (JWS string) tam
+--   olarak saklanır. PostgreSQL satırı tek başına Apple dispute veya chargeback
+--   davasında delil sayılmaz; orijinal JWS ile Apple kök sertifikasından bağımsız
+--   doğrulama yapılabilir. 3-5 yıl sonra bile geçerlidir.
 ```
 Aynı `transaction_id` ile ikinci istek → HTTP 409 dönmeli, bakiye yüklenmemeli.
 
@@ -479,6 +486,27 @@ async def release_pending_earnings_task():
 # schedule.yaml: batch.reset_monthly_withdrawal_quota, watchdog_m: 60
 async def reset_monthly_withdrawal_quota_task():
     # UPDATE users SET monthly_free_withdrawals_used = 0 WHERE is_pro = true
+
+# Her gün 00:00 UTC — Finansal Mutabakat (Reconciliation)
+# schedule.yaml: batch.daily_financial_reconciliation, watchdog_m: 10
+async def daily_financial_reconciliation_task():
+    """
+    Sistemdeki tüm bakiyelerin matematiksel tutarlılığını doğrular.
+    1 kuruş (₺0.01) fark bile Critical Alert üretir — race condition,
+    Decimal hatası veya yetkisiz müdahale göstergesidir.
+
+    Denklem:
+      Toplam teqlik_balance (tüm kullanıcılar)
+      + Toplam harcanan teqlik (tüm TeqlikTransaction type='spend')
+      == Toplam yüklenen teqlik (tüm TeqlikTransaction type='iap')
+
+      Toplam tl_earnings_balance + tl_pending_balance
+      == SUM(gift_events.earnings_tl WHERE payout_status IN ('pending','released'))
+       - SUM(withdrawal_requests.amount_tl WHERE status='completed')
+
+    Fark != 0.00 TL → Telegram Critical Alert + admin_flags kaydı.
+    0 satır sonuç → sessiz başarı (watchdog_m izler; cron çalışmazsa alarm).
+    """
 ```
 
 > **Neden T+14:** Apple chargebackları teorik 120 güne kadar açık olsa da pratikte %99'u 14 gün içinde kapanır. Daha uzun beklemek yayıncı deneyimini bozar. Büyük miktarlarda (>₺5.000 tek hediye) T+30 uygulanabilir (V1.1 iyileştirmesi).
@@ -731,15 +759,15 @@ Kurumsal banka toplu ödeme API'si (şirket kuruluşu sonrası)
 
 | # | Görev | Yapan | Blokör mu? |
 |---|-------|-------|-----------|
-| W1 | Migration: users (tl_earnings_balance, tl_pending_balance) + `withdrawal_requests` (id, user_id, amount_tl, iban, account_holder, status, created_at, processed_at, admin_note) + `gift_events` (earnings_tl NUMERIC(10,4), payout_status, released_at) | Backend | Evet |
+| W1 | Migration: users (tl_earnings_balance, tl_pending_balance) + `withdrawal_requests` + `gift_events` (earnings_tl NUMERIC(10,4), payout_status, released_at) + `teqlik_transactions` (apple_transaction_id VARCHAR(64) UNIQUE, raw_receipt TEXT) | Backend | Evet |
 | W2 | `gift_events` payout index (`idx_gift_events_payout`) | Backend | Evet |
 | W3 | `use_cases/wallet/commands/` yapısı oluştur | Backend | Evet |
-| W4 | `verify_apple_receipt_command.py`: x5c zincir + environment/bundleId/productId hardcoded + velocity limit (Redis, ₺5.000/gün/cihaz) | Backend | Evet |
+| W4 | `verify_apple_receipt_command.py`: x5c zincir + environment/bundleId/productId hardcoded + velocity limit (Redis, ₺5.000/gün/cihaz) + `raw_receipt=signedTransactionInfo` kaydı | Backend | Evet |
 | W5 | `send_gift_command.py`: Decimal hassasiyeti + atomik SQL + Redis Token Bucket (2/sn per user) + 8 hediye tipi | Backend | Evet |
 | W6 | `get_wallet_summary_query.py`: teqlik + TL bakiyeleri tek sorguda | Backend | Evet |
 | W7 | `request_withdrawal_command.py`: bakiye atomik düşüm (UPDATE WHERE tl_earnings_balance >= amount, 0 satır → 400) + aktif pending yok kontrolü + withdrawal_requests INSERT — aynı transaction | Backend | Evet |
 | W7b | `convert_to_teqlik_command.py`: Seçenek C (+%10 bonus, atomik SQL) | Backend | Evet |
-| W7c | `schedule.yaml`: `release_pending_earnings` (02:00 UTC, watchdog_m:30) | Backend | Evet |
+| W7c | `schedule.yaml`: `release_pending_earnings` (02:00 UTC, watchdog_m:30) + `daily_financial_reconciliation` (00:00 UTC, watchdog_m:10) | Backend | Evet |
 | W8 | `handle_apple_refund_command.py`: orantılı gift iptali + negatif bakiye desteği | Backend | Evet |
 | W9 | Cüzdan Kart 2 UI: kazanç > 0 → "Teqlik'e Dönüştür" + "Çekim Talebi"; aktif talep → timeline stepper (pending/approved/rejected); kazanç = 0 → "Yayın Başlat" CTA; glassmorphism koyu zümrüt/altın kart tasarımı; hediye gönderim ekranında combo tap sayacı (x2/x5/x10 görsel + burst animasyonu) | Mobile | Hayır |
 | W10 | Çekim talebi formu: IBAN alanı otomatik 4'erli TR00 formatlaması + ilk 5 haneden banka logosu tespiti (statik Map) + "IBAN Yapıştır" butonu; ad-soyad; beta güvenlik notu; IBAN uzunluk kontrolü (26 hane) | Mobile | Hayır |
@@ -762,6 +790,7 @@ Aşağıdaki özellikler **şirket kuruluşu tamamlanana ve gerçek banka transf
 | V15-8 | Admin Maker-Checker (₺2.500+ çift onay, ₺10.000+ 2FA) | Gerçek transfer | Audit log zorunlu |
 | V15-9 | `request_withdrawal_command.py` tam akış | Tüm V1.5 bileşenleri | V1.0 sürümü komple rewrite edilir |
 | V15-10 | Web mağazası (teqlif.com/cuzdan, %2,5 işlemci ücreti) | Şirket + web ödeme altyapısı | Apple bypass — yalnızca web alımlar |
+| V15-11 | Finansal soğuk arşiv: `teqlik_transactions`, `gift_events`, `withdrawal_requests` SHA-256 imzalı CSV/JSONL dökümü → `backups/financial_archives/` (RETENTION_DAYS=7 döngüsünden muaf) + `offsite_sync.sh` ile uzak depo (Hetzner/B2/S3 Glacier) | Gerçek transfer başlayınca | TTK + MASAK 5-10 yıl saklama zorunluluğu; WORM (Write Once, Read Many) |
 
 ---
 
