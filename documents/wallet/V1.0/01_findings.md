@@ -330,85 +330,119 @@ mobile/lib/
 
 ### 4.2 Backend Tarafı
 
-#### 4.2.1 Apple IAP Doğrulama
+#### 4.2.1 Store Satın Alma Mimarisi (Platform-Agnostic)
 
-**Gerekli endpoint:** `POST /api/wallet/purchase/verify`
+**Tasarım ilkesi:** Mimari şimdi generic kurulur, V1.0'da sadece Apple implementasyonu yazılır. Google Play (V1.1+) ve Web (V1.1+) yeni bir `StoreVerifier` implementasyonu ekleyerek entegre olur — router, command veya iş mantığı değişmez.
 
-**Akış:**
+**Katman yapısı:**
 ```
-Mobil StoreKit   →  signedTransactionInfo (JWS)  →  POST /api/wallet/purchase/verify
-                                                          │
-                                               JWS doğrulama (Apple x5c sertifika zinciri)
-                                                          │
-                                               transaction_id unique check (Replay koruması)
-                                                          │
-                                               teqlik_balance += amount  (atomik)
-                                                          │
-                                               TeqlikTransaction kaydı
-                                                          │
-                                               200 OK → {new_balance: X}
+services/store/
+  base.py                         ← StoreVerifier ABC + PurchaseResult dataclass
+  apple_verifier.py               ← AppleVerifier(StoreVerifier) — V1.0
+  # google_verifier.py            ← GoogleVerifier(StoreVerifier) — V1.1+
+  # web_verifier.py               ← WebVerifier(StoreVerifier)    — V1.1+
+  factory.py                      ← StoreVerifierFactory.get(platform) → verifier
+  notifications/
+    base.py                       ← StoreNotificationHandler ABC
+    apple_handler.py              ← AppleNotificationHandler — V1.0
+    # google_handler.py           — V1.1+
+
+use_cases/wallet/commands/
+  verify_purchase_command.py      ← platform → factory → verify → dispatch by product_id
+  handle_store_notification_command.py ← platform → handler → event dispatch
 ```
 
-**Kritik: JWS Doğrulama Detayları**
-- Apple App Store Server API v2 → JWS formatında imzalı JWT
-- Doğrulama için Apple'ın x5c sertifika zinciri verify edilmeli: `rootCA → G3 CA → leaf cert`
-- Python kütüphanesi: `PyJWT` + `cryptography` paketi
-- **Sandbox vs Production:** Farklı Apple endpoint'leri kullanılır:
-  - Sandbox: `api.sandbox.storekit.itunes.apple.com`
-  - Production: `api.storekit.itunes.apple.com`
-- Konfigürasyonda `APPLE_ENVIRONMENT=sandbox|production` ayrımı zorunlu
+**Sözleşme (PurchaseResult dataclass):**
+```python
+@dataclass
+class PurchaseResult:
+    transaction_id: str        # platform'a özgü ID (Apple: originalTransactionId)
+    product_id: str            # teqlik_pack_100 | teqlif_pro_1m | ...
+    environment: str           # "sandbox" | "production"
+    purchased_at: datetime
+    expires_at: datetime | None      # subscription için; consumable → None
+    subscription_id: str | None      # abonelik zinciri ID'si; consumable → None
+    raw_payload: str                 # imzalı ham string (audit/dispute için arşiv)
+```
 
-**JWS Doğrulama — Zorunlu Güvenlik Kontrolleri (`verify_purchase_command.py`):**
+**StoreVerifier ABC:**
+```python
+class StoreVerifier(ABC):
+    @abstractmethod
+    async def verify(self, payload: str) -> PurchaseResult:
+        """Platforma özgü doğrulama yapar, PurchaseResult döner."""
+        ...
+```
+
+**Router → Command akışı:**
+```
+POST /api/wallet/purchase/verify
+  Body: { platform: "apple", payload: "<signedTransactionInfo JWS>", product_id: "teqlik_pack_100" }
+    │
+    ▼
+verify_purchase_command.py
+    │
+    ├─ StoreVerifierFactory.get("apple") → AppleVerifier
+    │    └─ verify(payload) → PurchaseResult
+    │         ├─ x5c sertifika zinciri doğrulama
+    │         ├─ jwt.decode(leeway=60)
+    │         ├─ bundleId + environment hardcoded kontrol
+    │         └─ PurchaseResult döner
+    │
+    ├─ store_transaction_id UNIQUE check → 409 (Replay koruması)
+    │
+    ├─ Velocity limit (Redis ₺5.000/gün/cihaz; Fail-Closed)
+    │
+    └─ Product dispatch by product_id:
+         teqlik_pack_*  → consumable handler (teqlik_balance += amount)
+         teqlif_pro_*   → subscription handler (user_type='pro', pro_expires_at, plan_type, store_subscription_id)
+         │
+         └─ TeqlikTransaction kaydı (store_transaction_id, store_platform='apple',
+                                     raw_payload, product_type)
+```
+
+**Apple Verifier detayları (V1.0 implementasyonu):**
+```python
+# Apple App Store Server API v2 → JWS formatında imzalı JWT (ES256)
+# Doğrulama: x5c sertifika zinciri → rootCA → G3 CA → leaf cert
+# Python: PyJWT + cryptography paketi
+
+# Güvenlik kontrolleri:
+assert payload["environment"] == "Production"     # Sandbox makbuzu prod'a geçemez
+assert payload["bundleId"]    == "com.teqlif.app" # Başka uygulamanın makbuzu reddedilir
+assert payload["productId"]   in VALID_PRODUCT_IDS
+
+# leeway=60: NTP clock skew toleransı — Node 1 saati Apple'dan 2-3 sn geri
+# kalırsa "Token used before issued" hatası üretilir, geçerli IAP reddedilir.
+```
+
+**Ürün ID listesi:**
 ```python
 VALID_CONSUMABLE_IDS   = {"teqlik_pack_100", "teqlik_pack_250", "teqlik_pack_500", "teqlik_pack_1000"}
 VALID_SUBSCRIPTION_IDS = {"teqlif_pro_1m", "teqlif_pro_3m", "teqlif_pro_6m", "teqlif_pro_12m"}
 VALID_PRODUCT_IDS      = VALID_CONSUMABLE_IDS | VALID_SUBSCRIPTION_IDS
-
-# 1. x5c sertifika zinciri doğrulama (leaf → G3 CA → Apple Root CA)
-# 2. jwt.decode ile JWS doğrulama — leeway=60 zorunlu:
-#    jwt.decode(signed_transaction, cert_chain[0].public_key(),
-#               algorithms=["ES256"], leeway=60)
-#    leeway=60: NTP clock skew toleransı. Node 1 saati Apple'dan 2-3 sn geri
-#    kalırsa "Token used before issued" hatası üretilir, geçerli IAP reddedilir.
-# 3. Payload hardcoded doğrulama:
-assert payload["environment"] == "Production"          # Sandbox makbuzu prod'a geçemez
-assert payload["bundleId"]    == "com.teqlif.app"      # Başka uygulamanın makbuzu reddedilir
-assert payload["productId"]   in VALID_PRODUCT_IDS     # Bilinen consumable + subscription ID'ler
-# Bu kontroller atlansa jailbreak araçlarıyla (LocalIAPStore) bedavadan teqlik yüklenebilir.
-
-# 4. Ürün tipine göre dispatch:
-product_id = payload["productId"]
-if product_id in VALID_CONSUMABLE_IDS:
-    # Consumable → teqlik_balance += amount, TeqlikTransaction kaydı (product_type='consumable')
-    ...
-elif product_id in VALID_SUBSCRIPTION_IDS:
-    # Subscription → user_type='pro', pro_expires_at=expires_date, plan_type=...,
-    #   premium_since=NOW(), store_subscription_id=original_transaction_id
-    #   TeqlikTransaction kaydı (product_type='subscription')
-    #   Daha önce aktif PRO varsa (yenileme) → pro_expires_at güncelle, premium_since dokunma
-    ...
 ```
 
-**Günlük IAP Hız Limiti (Velocity Limit):**
+**Günlük Velocity Limit:**
 ```
-Aynı Apple ID / cihaz kimliğinden 24 saatte maksimum ₺5.000 satın alma.
-Eşik aşılırsa: 429 → fraud_flag = True → admin incelemesi.
-Teqlik_transactions tablosunda device_id (StoreKit appAccountToken) saklanmalı.
+Aynı cihazdan 24 saatte maksimum ₺5.000 satın alma.
+Eşik aşılırsa: 429 → fraud_flag=True → admin alarmı.
+Redis çökerse: Fail-Closed (satın alma reddedilir, güvenli taraf).
 ```
 
-**Replay Saldırısı Koruması + Ham Fiş Arşivi:**
+**Replay Saldırısı Koruması + Ham Payload Arşivi:**
 ```sql
 -- Gerekli migration (V1.0 — W1'e dahil):
 ALTER TABLE teqlik_transactions
-  ADD COLUMN store_transaction_id VARCHAR(64) UNIQUE,
+  ADD COLUMN store_transaction_id VARCHAR(128) UNIQUE,
+  ADD COLUMN store_platform       VARCHAR(20),
   ADD COLUMN raw_payload          TEXT;
 -- store_transaction_id: aynı transaction_id → HTTP 409, bakiye yüklenmez.
--- raw_payload: Apple'ın kriptografik imzalı signedTransactionInfo (JWS string) tam
---   olarak saklanır. PostgreSQL satırı tek başına Apple dispute veya chargeback
---   davasında delil sayılmaz; orijinal JWS ile Apple kök sertifikasından bağımsız
---   doğrulama yapılabilir. 3-5 yıl sonra bile geçerlidir.
+-- store_platform: 'apple' | 'google' | 'web' — hangi mağazadan geldiği.
+-- raw_payload: Platform'un kriptografik imzalı ham payload'u (Apple: JWS string)
+--   tam olarak saklanır. Bağımsız doğrulama + dispute/chargeback delili. 3-5 yıl geçerlidir.
 ```
-Aynı `transaction_id` ile ikinci istek → HTTP 409 dönmeli, bakiye yüklenmemeli.
+Aynı `store_transaction_id` ile ikinci istek → HTTP 409 dönmeli, bakiye yüklenmemeli.
 
 **Refund / Revocation — ⚠️ V1.0 ZORUNLU:**
 Apple bir satın alımı geri alabilir (`REFUND` App Store Server Notification). "Görmezden gel" politikası aktif bir açık yaratır: kullanıcı büyük paket alır, tüm özellikleri hemen harcar (boost, blast), ardından Apple'dan iade alır. Teqlif para iadesi yapar ama harcanan teqlik geri dönmez. Türkiye mobil gaming'de "refund çetesi" belgelenmiş bir risktir.
@@ -432,7 +466,7 @@ Apple → POST /api/wallet/store-notifications/apple
   Endpoint yalnızca şunu yapar:
     1. signedPayload'u Redis kuyruğuna yaz (< 5ms)
     2. Apple'a 200 OK döndür (Apple 4xx alırsa 3 gün retry storm başlatır)
-  ARQ worker (handle_apple_refund_task) kuyruktaki payload'u alıp işler.
+  ARQ worker (handle_store_refund_task) kuyruktaki payload'u alıp işler.
   ──────────────────────────────────────────────────────────────────────────────
 
   ──── ADIM 1: signedPayload JWS Doğrulaması (ARQ worker'da, içeriğe bakmadan önce) ────
@@ -518,10 +552,10 @@ CREATE INDEX idx_gift_events_payout
 ALTER TABLE users
   ADD COLUMN pro_expires_at               TIMESTAMPTZ NULL,
   ADD COLUMN pro_grace_until              TIMESTAMPTZ NULL,
-  ADD COLUMN store_subscription_id VARCHAR(64) NULL;
-  -- pro_expires_at: Apple'ın expiresDate değeri; NULL iken kullanıcı standart
-  -- pro_grace_until: Apple billing retry grace period bitişi (maks 6 gün); NULL ise grace yok
-  -- store_subscription_id: abonelik zincirini izlemek için; yenilemede değişmez
+  ADD COLUMN store_subscription_id VARCHAR(128) NULL;
+  -- pro_expires_at: Abonelik bitiş zamanı; NULL iken kullanıcı standart
+  -- pro_grace_until: Billing retry grace period bitişi (Apple: maks 6 gün); NULL ise grace yok
+  -- store_subscription_id: Abonelik zinciri ID'si — platform bağımsız; yenilemede değişmez
   -- NOT: CHECK (pro_expires_at > NOW()) KONULMAMALI — cron ve webhook çakışırsa deadlock riski;
   --      süreli kontrol uygulama katmanında yapılır (pro_expires_at IS NULL koşulu).
 
@@ -619,9 +653,9 @@ Clean Architecture kuralı gereği iş mantığı `wallet.py` router'da değil; 
 app/use_cases/wallet/
   commands/
     send_gift_command.py                       ← tl_pending_balance += TRUNC(cost×pay_rate×0.50,2)
-    verify_purchase_command.py            ← JWS doğrulama + x5c zinciri; consumable/subscription dispatch
-    handle_store_notification_command.py       ← Apple Notifications V2: DID_RENEW/EXPIRED/GRACE/REFUND
-    handle_apple_refund_command.py             ← orantılı gift iptali + negatif bakiye
+    verify_purchase_command.py            ← platform → StoreVerifierFactory → verify; consumable/subscription dispatch
+    handle_store_notification_command.py       ← platform → StoreNotificationHandlerFactory → handler.handle()
+    handle_store_refund_command.py             ← orantılı gift iptali + negatif bakiye
     request_withdrawal_command.py              ← tl_earnings_balance atomik düşüm
     cancel_withdrawal_request_command.py       ← status='pending' → 'cancelled' + iade
     convert_to_teqlik_command.py               ← Seçenek C +%10 bonus, atomik SQL
@@ -803,7 +837,7 @@ worker.py'de iki ayrı worker havuzu tanımlıdır:
   WorkerSettingsCritical → queue_name="critical"  (anlık bildirimler; timeout 30sn, max_jobs 50)
 
 Cüzdan bildirimleri kuyruk seçimi:
-  handle_apple_refund_command  → queue_name="default"
+  handle_store_refund_command  → queue_name="default"
     (ağır JWS + DB işlemi; gecikme tolere edilir)
 
   Withdrawal durum değişimi push bildirimi (approved/rejected/completed) → queue_name="critical"
@@ -856,14 +890,16 @@ Sonraki yayın kazançları negatif bakiyeyi kapatır (borç mahsubu):
 | Gelişmiş analitik | Temel | Tam |
 | Çekim ücreti (V1.1) | ₺15/işlem | 2× ücretsiz/ay |
 
-**Apple Notifications V2 Webhook (`handle_store_notification_command.py`):**
+**Store Notifications Webhook — Apple V2 (V1.0 implementasyonu):**
 ```
 POST /api/wallet/store-notifications/apple
   Body: { signedPayload: "<JWS string>" }
 
   ──── 200 OK hemen döner, ağır iş ARQ kuyruğuna atılır (refund ile aynı pattern) ────
+  Router → handle_store_notification_command.py
+         → StoreNotificationHandlerFactory.get("apple") → AppleNotificationHandler
 
-  handle_apple_notification_task (ARQ worker — queue_name="default"):
+  handle_store_notification_task (ARQ worker — queue_name="default"):
 
   x5c sertifika zinciri doğrulaması (signedPayload JWS imzası) → payload parse
 
@@ -1005,7 +1041,7 @@ Kurumsal banka toplu ödeme API'si (şirket kuruluşu sonrası)
 | `cancel_withdrawal_request_command.py` (pending → cancelled + bakiye iade) | ❌ Yazılmamış |
 | `convert_to_teqlik_command.py` (Seçenek C, +%10 bonus) | ❌ Yazılmamış |
 | `get_wallet_summary_query.py` (tl_ balansları dahil) | ❌ Yazılmamış |
-| `handle_apple_refund_command.py` (orantılı gift iptali + negatif bakiye) | ❌ Yazılmamış |
+| `handle_store_refund_command.py` (orantılı gift iptali + negatif bakiye) | ❌ Yazılmamış |
 | `teqlik_transactions` (store_transaction_id UNIQUE + raw_payload TEXT + product_type) | ❌ Migration yok |
 | `daily_financial_reconciliation` cron (00:00 UTC, watchdog_m:10) | ❌ Eklenmemiş |
 | `schedule.yaml` T+14 cron (`release_pending_earnings`, watchdog_m:30) | ❌ Eklenmemiş |
@@ -1294,8 +1330,8 @@ Tüm W1–W13 görevleri aşağıdaki ilkelere uygun geliştirilir:
 
 | # | Görev | Yapan | Blokör mu? | Durum |
 |---|-------|-------|-----------|-------|
-| W1 | Migration `zzzzzx_wallet_v10`: `users` (tl_earnings_balance, tl_pending_balance, pro_expires_at, pro_grace_until, **store_subscription_id VARCHAR(128)**) + `withdrawal_requests` + `gift_events` (earnings_tl NUMERIC(10,4), payout_status, released_at) + `teqlik_transactions` (**store_transaction_id VARCHAR(128) UNIQUE, store_platform VARCHAR(20), raw_payload TEXT**, product_type) + `idx_users_pro_status` + `idx_gift_events_payout` | Backend | Evet | ✅ `8d194af5` |
-| W2 | `idx_gift_events_payout` (W1 migration'ına dahil edildi) | Backend | Evet | ✅ `8d194af5` |
+| W1 | Migration `zzzzzx_wallet_v10`: `users` (tl_earnings_balance, tl_pending_balance, pro_expires_at, pro_grace_until, **store_subscription_id VARCHAR(128)**) + `withdrawal_requests` + `gift_events` (earnings_tl NUMERIC(10,4), payout_status, released_at) + `teqlik_transactions` (**store_transaction_id VARCHAR(128) UNIQUE, store_platform VARCHAR(20), raw_payload TEXT**, product_type) + `idx_users_pro_status` + `idx_gift_events_payout` | Backend | Evet | ⏳ Bekliyor |
+| W2 | `idx_gift_events_payout` (W1 migration'ına dahil edildi) | Backend | Evet | ⏳ Bekliyor |
 | W3 | `use_cases/wallet/commands/` + `services/store/` dizin yapısı | Backend | Evet | ⏳ Bekliyor |
 | W4 | **Store Abstraction katmanı** (`services/store/`): `StoreVerifier` ABC + `AppleVerifier` (JWS x5c doğrulama, leeway=60, env/bundleId hardcoded, velocity limit Redis ₺5.000/gün Fail-Closed) + `StoreVerifierFactory`; `verify_purchase_command.py`: `{platform, payload, product_id}` → factory → `PurchaseResult` → productId dispatch: `teqlik_pack_*` → consumable (teqlik_balance +=, store_transaction_id UNIQUE 409), `teqlif_pro_*` → subscription (user_type='pro', pro_expires_at, plan_type, store_subscription_id); `raw_payload` arşivi; router: `POST /api/wallet/purchase/verify` | Backend | Evet | ⏳ Bekliyor |
 | W4c | **Store Notification katmanı**: `StoreNotificationHandler` ABC + `AppleNotificationHandler` (DID_RENEW → pro_expires_at uzat; BILLING_RETRY → pro_grace_until; EXPIRED/GRACE_PERIOD_EXPIRED → standard; REVOKE → standard+refund); `handle_store_notification_command.py`: 200 OK hemen → ARQ kuyruğa → worker'da handler dispatch; router: `POST /api/wallet/store-notifications/{platform}` | Backend | Evet | ⏳ Bekliyor |
@@ -1305,7 +1341,7 @@ Tüm W1–W13 görevleri aşağıdaki ilkelere uygun geliştirilir:
 | W7b | `convert_to_teqlik_command.py`: Seçenek C (+%10 bonus, atomik SQL) — modal yasal uyarısı zorunlu | Backend | Hayır |
 | W7c | `schedule.yaml`: `release_pending_earnings` (02:15 UTC, watchdog_m:30) + `daily_financial_reconciliation` (00:00 UTC, watchdog_m:10) + **`check_expired_pro_users` (03:00 UTC, watchdog_m:60)** — 02:15: Pazar 02:00 pg_basebackup çakışması önlenir; 03:00: webhook kaçırma sigortası; her fonksiyon `worker.py` `_SCHEDULE_FUNCTIONS` sözlüğüne eklenmeli + `await _agent_ok(ctx, "<task_name>")` son satır zorunlu (eksik → sahte alarm) | Backend | Hayır |
 | W7e | `cancel_withdrawal_request_command.py`: status='pending' → 'cancelled' + atomik bakiye iadesi + 403 yetki / 409 statü kontrolü; `DELETE /api/wallet/withdraw/{id}` | Backend | Hayır |
-| W8 | `handle_apple_refund_command.py`: orantılı gift iptali (payout_status='cancelled_refund', tl_pending_balance azalt) + negatif bakiye + `pending_refund=True`; NO CHECK constraint (webhook retry storm önlemi) | Backend | Evet |
+| W8 | `handle_store_refund_command.py`: orantılı gift iptali (payout_status='cancelled_refund', tl_pending_balance azalt) + negatif bakiye + `pending_refund=True`; NO CHECK constraint (webhook retry storm önlemi) | Backend | Evet |
 | W9 | Kart 2 UI: `cashout_enabled` flag `GET /api/wallet/summary` response'undan okunur (statik sabit değil); cashout_enabled==false → "Yayın Başlat" CTA (glassmorphism koyu zümrüt/altın kart); cashout_enabled==true → birincil "⚡ ANINDA KULLAN (+%10 Teqlik'e Dönüştür)", ikincil "🏦 Nakit Transferi İçin IBAN Tanımla"; aktif talep varsa sıra kartı (📋 #Queue-{id}, İptal Et, Teqlik'e Dönüştür); hediye ekranında combo tap sayacı (x2/x5/x10 + burst animasyonu) — **optimistic UI**: sayaç animasyonu anlık güncellenir, backend debit debounced (örn. 300ms); bakiye yetersizse toast ile geri al; **`AppLifecycleState.resumed`**: uygulama arka plandan öne gelince `GET /api/wallet/summary` yeniden çekilir (App Store dönüşünde bakiye güncellenmesi için) | Mobile | Hayır |
 | W10 | IBAN Ön Kayıt Bottom Sheet: tutar çipleri (₺500 Min / ₺1.000 / Tamamı); IBAN TR formatı + banka logosu; Seçenek C simülatörü (₺500 → 571+57 = 628 teqlik, FLOOR anlık); "Bilgilerimi Kaydet ve Sıraya Gir" CTA (Slide to Confirm YOK); MASAK yasal uyarı panosu | Mobile | Hayır |
 | W11 | 5 dil ARB: `giftNameClap`, `giftNameTea`, `giftNameGoldenHammer`, `giftNameRocket`, `giftNameTrophy`, `walletConvertToTeqlik`, `walletIbanPreRegistrationTitle`, `walletIbanRegistrationSuccess`, `walletIbanRejected`, `walletQueueNumber`, `walletPendingEarningsDesc`, `walletStartStreamCta`; **Arapça RTL**: `Directionality.of(context)` ile yön tespiti, gradient yönleri RTL'e göre tersler, `chevron_right`/`chevron_left` dinamik seçilir; **para miktarları**: `NumberFormat.currency(locale: locale.toString(), symbol: '₺')` — string birleştirme (`'₺' + amount`) yasak; **çoğul kurallar**: gün ve teqlik sayıları için ICU plural syntax `{count, plural, =1{# gün} other{# gün}}` | Mobile | Hayır |
