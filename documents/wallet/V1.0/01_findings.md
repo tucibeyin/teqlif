@@ -18,7 +18,7 @@
 | **Instagram Stars** | 1 Star | TR'de yok | ~$0,020 | ~%50 | İçerik üretici |
 | **Twitter/X Tips** | — | %0 (ext. işlemci) | %0 | **%0 X kesmez** | Doğrudan yaratıcı |
 | **Snapchat Tokens** | — | — | — | — | **Şubat 2025'te kapatıldı** |
-| **teqlik (planlanan)** | 1 teqlik | **₺1,43** (%30) / **₺1,18** (%15) | — | %30 veya %15 (Apple) | İlan güçlendirme |
+| **teqlik (planlanan)** | 1 teqlik | **₺1,50** (%30) / **₺1,20** (%15) | — | %30 veya %15 (Apple) | İlan güçlendirme |
 
 > **TikTok iOS vs Web:** App Store'da ₺0,88/coin, web'de ₺0,50/coin. Fark = Apple'ın %30'u + TikTok margin koruması. Bu, teqlik ekranında "web'den al" ibaresi kullanılamayacağını doğruluyor (Kural 3.1.1 ihlali).
 >
@@ -470,11 +470,11 @@ PRO'nun aylık sunduğu teqlik tasarrufu (30% komisyon senaryosunda iOS fiyatlar
 
 | Özellik | Standart ücreti | PRO tasarrufu |
 |---------|----------------|--------------|
-| +4 ekstra yenileme/ay | 4 × 10 teqlik × ₺1,43 | **₺57,20** |
-| +3 blast/ay | 3 × 10 teqlik × ₺1,43 | **₺42,90** |
-| **Toplam aylık teqlik değeri** | **70 teqlik** | **₺100,10** |
+| +4 ekstra yenileme/ay | 4 × 10 teqlik × ₺1,50 | **₺60,00** |
+| +3 blast/ay | 3 × 10 teqlik × ₺1,50 | **₺45,00** |
+| **Toplam aylık teqlik değeri** | **70 teqlik** | **₺105,00** |
 
-> **Sonuç:** PRO ₺99,99'dan fiyatlanırsa kullanıcı "neredeyse sıfır kazanıyor" — abonelik yerine teqlik almak aynı şey. PRO en az %15-20 avantaj sunmalı ki karar net olsun. **Doğru anchor: ₺79,99/ay.** Kullanıcı aylık ₺20 kazanıyor, üstüne rozet + analitik + öncelik geliyor.
+> **Sonuç:** PRO ₺79,99'dan fiyatlanırsa kullanıcı aylık **₺25 tasarruf** ediyor (%31 ucuz). PRO ₺99,99'a fiyatlansaydı tasarruf sadece ₺5 olurdu — yetersiz bir öneri. **₺79,99 anchor kesinlikle doğru.** Üstüne rozet + analitik + öncelik geliyor.
 
 **Önerilen PRO Paket Yapısı (Revize):**
 
