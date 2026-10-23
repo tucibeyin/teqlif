@@ -381,41 +381,44 @@ Apple → POST /api/wallet/apple-notifications
 
 ### 8.2 Hediye (Gift) Sistemi — Planlı Özellik
 
-**Konsept:** Kullanıcı A, kullanıcı B'ye teqlik gönderir (örn. bir satıcıya "teşekkür" veya "boost yap" desteği).
+**Temel kural: Doğrudan teqlik transferi yoktur.** Kullanıcılar birbirine "50 teqlik gönder" şeklinde ham miktar iletemez. teqlik yalnızca **hediye mekanizması üzerinden** el değiştirebilir — gönderen bir hediye objesi satın alır, sistem hediyeyi tetikler, alıcı payını alır. Bu tasarım mevcut `send-gift` endpoint'iyle (canlı yayın modeli) birebir örtüşmektedir.
 
-**Apple IAP perspektifi:** Hediye transferi yeni bir Apple IAP satın alımı DEĞİLdir — halihazırda satın alınmış teqlik bakiyesinin kullanıcılar arasında aktarılmasıdır. Apple bunu yasaklamıyor; App Review kılavuzlarında "transferable virtual currency" özel bir kısıt içermiyor.
+**Neden doğrudan transfer yok:**
+- Sahte hesap döngüsü ve kötüye kullanım vektörünü elimine eder
+- Platform her hediye işleminden komisyon alır → gelir kaynağı
+- Apple ve BDDK perspektifinden "ödeme aracı" görünümünden kaçınır
 
-**Endüstri notu:** Kullanıcılar arası sanal para hediyesi classified/marketplace uygulamalarında nadir — çoğu uygulama bunu desteklemiyor. Bu, teqlik için differentiating bir özellik.
+**Konsept:** Kullanıcı A, kullanıcı B'nin ilanında veya profilinde önceden tanımlı bir hediye paketi seçer. Sistem gönderenin bakiyesinden düşer, platform komisyon keser, alıcıya kalan aktarılır.
 
-**Tasarım gereksinimleri:**
+**Referans model — Mevcut Canlı Yayın Hediyesi (`wallet.py:191`):**
+```
+POST /api/wallet/send-gift
+  gift_name: "Süper Yıldız"
+  cost: 50          ← gönderenden kesilir
+  host_share: 47    ← alıcıya aktarılır (PRO: %95, std: %70)
+  stream_id: 123    ← şu an zorunlu; genel hediyede listing_id/receiver_id olur
+```
 
+**Genel Hediye Akışı (V1.1/V2.0):**
 ```
 Kullanıcı B'nin profili / ilan detayı
   [Hediye Gönder 🎁]
        │
        ▼
-  Miktar seç: [10] [25] [50] [100] veya özel giriş
-  "Gönderilecek: 50 teqlik"
+  Hediye seç: [⭐ Destek 10] [🔥 Boost 50] [💎 Mega 100]
+  "Seçilen: 🔥 Boost Hediye — 50 teqlik"
        │
        ▼
-  [Onayla] → Bakiye kontrol → Transfer → Bildirim
+  [Onayla] → bakiye kontrol → platform komisyon → alıcıya aktarım → bildirim
 ```
 
-**Akış:**
-- Gönderen: bakiyeden düşülür, işlem geçmişine "Hediye gönderildi → @kullanıcıB" yazılır
-- Alan: bakiyeye eklenir, bildirim: "@kullanıcıA sana 50 teqlik hediye gönderdi!"
+**Komisyon modeli (TBD):** Canlı yayın modeliyle tutarlı — PRO alıcı %95, standart %70; platform farkı tutar.
 
-**Risk azaltma kuralları (zorunlu):**
-- Minimum hediye: 10 teqlik
-- Maksimum günlük gönderim: 200 teqlik / kullanıcı (döngüsel kullanımı engeller)
-- Alıcı sadece **aynı gün içinde alınan hediyeyi** transfer edemez (24s bekleme — self-transfer döngüsünü kırar)
-- Backend: `gift_transactions` tablosu, `giver_id + receiver_id + created_at` loglama
+**Apple IAP perspektifi:** Hediye objesi satın alma modeli, ham transfer modeline göre Apple kılavuzlarıyla daha uyumludur. Platform aracı konumunda kalır.
 
-**BDDK/MASAK notu:** Sanal oyun parası gibi kapalı ekosistem kurrencies Türkiye'de ödeme aracı sayılmıyor. Ancak bu konu hukuki belirsizlik taşıdığından, hediye sistemi açıldığında bir hukuki görüş alınması tavsiye edilir.
+**BDDK/MASAK notu:** Platform komisyon alarak aracılık ettiği sürece "ödeme aracı" değil platform hizmeti olarak tanımlanır. Sistem açıldığında yine de hukuki görüş önerilir.
 
-**Scope:** Hediye sistemi teqlik satın alma akışına bağımlı değil — backend tek endpoint, bağımsız geliştirilebilir. V1.1 veya V2.0 planlanabilir.
-
-> **Not — Canlı Yayın Hediyesi (Ayrı Sistem):** `POST /api/wallet/send-gift` endpoint'i ZATEN mevcuttur (`wallet.py:191`) ancak bu `stream_id` zorunlu bir **canlı yayın hediyesidir** — izleyiciden yayıncıya, yayın sırasında. PRO yayıncı %95, standart yayıncı %70 komisyon alır. Bu §8.2'deki genel kullanıcıdan-kullanıcıya hediye sisteminden bağımsızdır; canlı yayın akışının IAP ile teqlik yükleme gelmesiyle hedge cirosu doğrudan büyüyecek.
+**Scope:** V1.1/V2.0 — `send-gift` endpoint'i `stream_id` → `listing_id`/`receiver_id` parametresiyle genişletilerek implement edilebilir; büyük ölçüde yeniden yazım gerektirmez.
 
 ### 8.3 İlan Ver Ekranında Ek teqlik Noktaları
 
