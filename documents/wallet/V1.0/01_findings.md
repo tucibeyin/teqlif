@@ -297,32 +297,46 @@ CREATE INDEX idx_gift_events_payout
 İzleyici → hediye seçer (gift_name + cost) → stream_id ile gönderir
   Gönderenden:   teqlik_balance -= cost                         (atomik)
   Yayıncıya:     tl_pending_balance += cost × pay_rate × 0,50  (atomik, T+14 kilitli)
+  gift_events:   earnings_tl = cost × pay_rate × 0,50, payout_status='pending'
   Platform net:  kalan Teqlif kasasında
 ```
 Dönüşüm kuru: **1 teqlik hediye = ₺0,50 net nakit** (V1.0'da sabit kur)
 
-| Hediye | Maliyet | PRO host (%95) | Std host (%70) | Teqlif net (PRO) | Teqlif net (Std) |
-|--------|---------|----------------|----------------|-----------------|-----------------|
-| 🔥 Fire | 10 teqlik | **₺4,75** | **₺3,50** | ₺8,75−₺4,75=₺4,00 | ₺8,75−₺3,50=₺5,25 |
-| 💎 Diamond | 50 teqlik | **₺23,75** | **₺17,50** | ₺43,75−₺23,75=₺20,00 | ₺43,75−₺17,50=₺26,25 |
-| 👑 Crown | 100 teqlik | **₺47,50** | **₺35,00** | ₺87,50−₺47,50=₺40,00 | ₺87,50−₺35,00=₺52,50 |
+Geçerli hediye tipleri: `clap`(1) · `tea`(5) · `fire`(10) · `diamond`(50) · `crown`(100) · `golden_hammer`(250) · `rocket`(500) · `trophy`(1000)
 
-> Teqlif net = hediye başına IAP net × (1 − pay_rate × 0,50/0,875)
+| Katman | Hediye | Maliyet | PRO host (%95) | Std host (%70) | Teqlif net (PRO) | Teqlif net (Std) |
+|--------|--------|---------|----------------|----------------|-----------------|-----------------|
+| Mikro | 👏 Alkış | 1 teqlik | ₺0,47 | ₺0,35 | ₺0,40 | ₺0,53 |
+| Mikro | ☕ Çay | 5 teqlik | ₺2,37 | ₺1,75 | ₺2,00 | ₺2,63 |
+| Standart | 🔥 Alev | 10 teqlik | ₺4,75 | ₺3,50 | ₺4,00 | ₺5,25 |
+| Standart | 💎 Elmas | 50 teqlik | ₺23,75 | ₺17,50 | ₺20,00 | ₺26,25 |
+| Premium | 👑 Taç | 100 teqlik | ₺47,50 | ₺35,00 | ₺40,00 | ₺52,50 |
+| Premium | 🔨 Altın Tokmak | 250 teqlik | ₺118,75 | ₺87,50 | ₺100,00 | ₺131,25 |
+| VIP | 🚀 Roket | 500 teqlik | ₺237,50 | ₺175,00 | ₺200,00 | ₺262,50 |
+| VIP | 🏆 Şampiyon Kupası | 1.000 teqlik | ₺475,00 | ₺350,00 | ₺400,00 | ₺525,00 |
+
+> Teqlif net = cost × 0,875 (100-pak IAP net/teqlik) − host payı. Mega paketten alındığında (0,675 TL/teqlik) net ₺0,20–₺0,40/teqlik'e iner — tüm senaryolarda Teqlif kârdadır.
 
 **Yeni endpointler:**
 ```
 GET  /api/wallet/summary
-  → { teqlik_balance, tl_earnings_balance, tl_pending_balance }
+  → { teqlik_balance, tl_earnings_balance, tl_pending_balance,
+      free_withdrawals_remaining }   ← PRO: 2/ay, Standart: 0
 
 POST /api/wallet/withdraw
   Body: { amount_tl, iban, account_holder_name }
   Kurallar:
     - tl_earnings_balance >= amount_tl  (pending bakiye sayılmaz)
     - amount_tl >= 500  (minimum çekim)
-    - tl_earnings_balance -= amount_tl  (atomik)
+    - Çekim ücreti:
+        PRO + free_withdrawals_remaining > 0  →  ₺0  (ücretsiz, sayacı azalt)
+        diğer                                 →  ₺15 sabit işlem ücreti
+    - tl_earnings_balance -= (amount_tl + çekim_ücreti)  (atomik)
     - withdrawal_requests kaydı oluştur (status=pending)
   → 200 OK | 400 yetersiz bakiye / limit altı
 ```
+
+> PRO'ya ayda 2 ücretsiz çekim hakkı: her ayın 1'inde `free_withdrawals_remaining` = 2 olarak sıfırlanır (ARQ monthly cron). Standart kullanıcı her çekimde ₺15 öder — bu da PRO'ya geçmeyi teşvik eden ek bir gerekçe olur.
 
 **T+14 Holding — ARQ cron görevi (idempotent):**
 ```python
@@ -375,11 +389,12 @@ async def release_pending_earnings_task():
 | `tl_earnings_balance` + `tl_pending_balance` (users) | ❌ Migration yok |
 | `withdrawal_requests` tablosu | ❌ Migration yok |
 | `gift_events` (`earnings_tl`, `payout_status`, `released_at`) | ❌ Migration yok |
-| `send-gift` → TL kazanca dönüşüm (teqlik yerine) | ⚠️ Güncellenmeli |
+| `send-gift` → TL kazanca dönüşüm + 8 hediye tipi | ⚠️ Güncellenmeli |
 | Refund webhook → orantılı gift iptali | ⚠️ Güncellenmeli |
-| `GET /api/wallet/summary` | ❌ Yazılmamış |
-| `POST /api/wallet/withdraw` | ❌ Yazılmamış |
+| `GET /api/wallet/summary` (+ `free_withdrawals_remaining`) | ❌ Yazılmamış |
+| `POST /api/wallet/withdraw` (₺15 ücret / PRO 2× ücretsiz) | ❌ Yazılmamış |
 | T+14 ARQ cron görevi (release_pending_earnings — idempotent) | ❌ Yazılmamış |
+| Aylık çekim hakkı sıfırlama ARQ cron (PRO: 2/ay) | ❌ Yazılmamış |
 
 ---
 
@@ -557,15 +572,31 @@ async def release_pending_earnings_task():
 ```
 Dönüşüm kuru: **1 teqlik hediye = ₺0,50 net nakit** (sabit, V1.0'da kilitlenecek)
 
-**Mevcut hediye kalemleri** (`swipe_live_screen.dart:925`):
+**İletişim stratejisi:** Yayıncıya oranları anlatırken hayal kırıklığı yaratmamak kritik. "100 TL'lik hediyenin 95 TL'si senin" demek yanlış — yayıncı hesabında ₺47,50 görünce tepki verir. Doğru anlatım: *"Canlı yayında toplanan hediyelerin net havuzunun %95'i PRO yayıncılara ödenir — 1 teqlik hediye = ₺0,50 net nakit değer."* Bu oran cüzdan ekranında şeffaf tablo olarak gösterilir.
 
-| Emoji | Kod | Maliyet | TL karşılığı (100-pak) | TL karşılığı (350-pak) |
-|-------|-----|---------|----------------------|----------------------|
-| 🔥 | `fire` | 10 teqlik | ₺15,00 | ₺12,30 |
-| 💎 | `diamond` | 50 teqlik | ₺75,00 | ₺61,50 |
-| 👑 | `crown` | 100 teqlik | ₺150,00 | ₺123,00 |
+**V1.0 hediye kalemleri** (8 katman, `swipe_live_screen.dart:925` güncellenecek):
 
-**PRO yayıncı flywheel:** Bir izleyici 👑 Taç (100 teqlik) attığında PRO yayıncı **₺47,50 TL kazanır** (standart: ₺35,00). Ayda 2 Taç alan PRO yayıncının komisyon avantajı (~₺25 ekstra) bir aylık PRO aboneliğinin %31'ini tek başına karşılar — yayıncıları PRO'ya çeken organik teşvik.
+| Katman | Emoji | Ad | Kod | Maliyet | PRO host (%95) | Std host (%70) | Teqlif net¹ | Animasyon |
+|--------|-------|----|-----|---------|----------------|----------------|------------|-----------|
+| Mikro | 👏 | Alkış | `clap` | 1 teqlik | ₺0,47 | ₺0,35 | ₺0,40 | Yüzen ikon |
+| Mikro | ☕ | Çay | `tea` | 5 teqlik | ₺2,37 | ₺1,75 | ₺2,00 | Yüzen ikon |
+| Standart | 🔥 | Alev | `fire` | 10 teqlik | ₺4,75 | ₺3,50 | ₺4,00 | Yüzen ikon |
+| Standart | 💎 | Elmas | `diamond` | 50 teqlik | ₺23,75 | ₺17,50 | ₺20,00 | Parlama efekti |
+| Premium | 👑 | Taç | `crown` | 100 teqlik | ₺47,50 | ₺35,00 | ₺40,00 | Parlama efekti |
+| Premium | 🔨 | Altın Tokmak | `golden_hammer` | 250 teqlik | ₺118,75 | ₺87,50 | ₺100,00 | Tam ekran Lottie |
+| VIP | 🚀 | Roket | `rocket` | 500 teqlik | ₺237,50 | ₺175,00 | ₺200,00 | Tam ekran Lottie |
+| VIP | 🏆 | Şampiyon Kupası | `trophy` | 1.000 teqlik | ₺475,00 | ₺350,00 | ₺400,00 | Tam ekran Lottie + 10sn banner |
+
+> ¹ Teqlif net = 100-pak senaryo (₺0,875/teqlik IAP net). Mega paketten alındığında ₺0,675/teqlik'e iner; tüm senaryolarda Teqlif kârdadır.
+
+**Animasyon katmanları (UX):**
+- **1–10 teqlik (Mikro/Standart):** Sağdan yukarı süzülen küçük yüzen ikon + hafif haptic
+- **50–100 teqlik (Premium):** Yayın ekranı ortasında 2 saniyelik parlama + chat'te renkli mesaj
+- **250–1.000 teqlik (VIP):** Tam ekran Lottie animasyonu, ağır haptic, chat üstünde 10 saniye sabit altın banner: *"@kullanıcı yayıncıya Şampiyon Kupası gönderdi!"*
+
+**🔨 Altın Tokmak — Mezat Kültürü:** 250 teqlik'lik bu hediye mezat kapanış anına özgüdür. Ürünü kazanan alıcının "satıldı" coşkusuyla mezatçıya atması platforma özgü bir geleneğe dönüşür.
+
+**PRO yayıncı flywheel:** Standart ve PRO arasındaki oran farkı her hediyede birikir. PRO abonelik bedelini aylık Taç hediyelerinden karşılamak için gereken sayı: ₺79,99 ÷ (₺47,50 − ₺35,00) = **6,4 Taç/ay**. Ayda yalnızca 6–7 Taç alan PRO yayıncının abonelik bedeli otomatik amortize olur. Üstüne 3 ücretsiz Boost (₺225), 6 AI Açıklama (₺45), 720p HD yayın ve 2 ücretsiz çekim hakkı eklenir.
 
 **Bakiye yetersiz → PiP akışı** (`swipe_live_screen.dart:945`):
 Kullanıcı hediye atmak isteyip bakiyesi yetmediğinde `_handleLoadBalance()` tetiklenir: yayın PiP moduna alınır, cüzdan ekranı açılır. iOS IAP ile teqlik yükleme geldikten sonra kullanıcı Face ID ile paketi alıp canlı yayına döner — mezatı kaçırmadan satın alma.
@@ -677,21 +708,31 @@ PRO faydaları `credit_service.py` kodundan doğrulandı (free_standard vs free_
 
 > **App Store Connect'te iki ayrı ürün grubu gerekiyor:** Consumable grubu (teqlik paketleri) + Auto-Renewable Subscription grubu (PRO planlar). Her grup ayrı Apple onayından geçiyor.
 
-### 8.5 Tüm Gelir Akışı Haritası (V1.0 + V2.0)
+### 8.5 Tüm Gelir Akışı Haritası (V1.0 + V1.5 + V2.0)
 
 ```
-TEQLif Gelir Akışı
-├── Consumable IAP (teqlik paketleri)
+Teqlif Gelir Akışı
+├── Consumable IAP (teqlik paketleri)          ← V1.0
 │    ├── 100 teqlik — ₺149,99
 │    ├── 300 teqlik +50 bonus — ₺429,99  
 │    ├── 700 teqlik +150 bonus — ₺999,99
 │    └── 1500 teqlik +400 bonus — ₺2.199,99
+│
+├── Web Mağazası (teqlif.com/cuzdan)           ← V1.5 — Apple bypass
+│    ├── Aynı 4 paket, yalnızca %2,5 işlemci komisyonu
+│    ├── Apple komisyonu (%15–%30) tamamen sıfır
+│    ├── Kullanıcıya "web'den al" söylenmez (Kural 3.1.1)
+│    │   → Kullanıcı kendi inisiyatifiyle tarayıcıdan gelir
+│    └── iOS IAP margin gap: ₺149,99 → Teqlif net ₺87,49 (IAP) vs ₺146,24 (web)
 │
 ├── Auto-Renewable Subscription (PRO)         ← V2.0
 │    ├── 1 Ay — ₺79,99
 │    ├── 3 Ay — ₺214,99
 │    ├── 6 Ay — ₺389,99
 │    └── 12 Ay — ₺679,99
+│
+├── Enterprise PRO Subscription               ← V2.0
+│    └── ₺249,99/ay — %98 pay, ₺0 çekim ücreti, sınırsız replay
 │
 ├── teqlik Harcama Noktaları
 │    ├── AI Açıklama (5 teqlik) — create_listing_screen ✅
@@ -700,7 +741,13 @@ TEQLif Gelir Akışı
 │    ├── İlan Boost (50 teqlik) ✅
 │    └── Başlangıç Boost (ilan oluşturulurken, 50 teqlik) ← V1.1
 │
-└── Canlı Yayın Hediyesi (send-gift)           ← ✅ Mevcut — stream_id ile, PRO %95 / std %70
+├── Canlı Yayın Hediyesi (send-gift)           ← V1.0 — PRO %95 / Std %70
+│    └── Teqlif net: her Taç hediyesinde ₺40,00–₺52,50
+│
+└── Çekim Ücreti                               ← V1.0
+     ├── Standart: ₺15 sabit/işlem (direkt marj)
+     └── PRO: 2 ücretsiz/ay → 3. çekimden itibaren ₺15
+         (aylık reset ARQ cron — PRO'ya geçiş teşviki)
 ```
 
 ---
@@ -899,6 +946,8 @@ Ancak veriler tersi gösteriyor (SaaS'ta yaygın pattern):
 
 PRO kullanıcı standart kullanıcının **~7×** gelirine katkı yapıyor.
 
+> **Enterprise PRO (V2.0):** Düzenli büyük ciro yapan satıcılar ve profesyonel yayıncılar için üst segment plan: **₺249,99/ay**, %98 yayıncı pay oranı, sınırsız replay erişimi, ₺0 çekim ücreti (unlimited), öncelikli müşteri desteği. V1.0'da yalnızca PRO ve Standart olmak üzere iki tier; Enterprise V2.0 kapsamında.
+
 ### 9.7 teqlik Bonus Ekonomisi — Paket Teşvik Sistemi
 
 Bonus teqlik sistemi hem kullanıcı teşviki hem de ekonomik güvence sağlıyor:
@@ -945,15 +994,21 @@ Kullanıcıya 50 bonus teqlik veriyoruz (300 pakette) → bu 50 teqlik gelecekte
 | teqlik IAP ürün tipi | **Consumable** |
 | PRO üyelik IAP ürün tipi | **Auto-Renewable Subscription** (V2.0) |
 | Backend doğrulama | App Store Server API v2 JWS |
-| Refund politikası V1.0 | **REFUND webhook zorunlu** — bakiyeden düş + pending_refund flag |
+| Refund politikası V1.0 | **REFUND webhook zorunlu** — bakiyeden düş + pending_refund flag + orantılı gift iptali |
 | Android | V1.0 kapsamı dışı |
 | Tab yapısı | Tab 1: Mağaza, Tab 2: İşlem Geçmişi |
 | Hediye sistemi (teqlik → TL dönüşüm) | **V1.0 — send-gift güncellenmeli** |
+| Hediye kalemleri | **8 katman** — clap(1)·tea(5)·fire(10)·diamond(50)·crown(100)·golden_hammer(250)·rocket(500)·trophy(1000) |
+| Animasyon katmanları | Mikro/Std: yüzen ikon · Premium: parlama · VIP: tam ekran Lottie + banner |
 | Yayıncı TL kazanç + IBAN çekim | **V1.0 — W1-W9 görevleri** |
-| T+14 holding süresi | **V1.0 zorunlu** — Apple refund sigortası |
+| T+14 holding süresi | **V1.0 zorunlu** — Apple refund sigortası; idempotent cron + `FOR UPDATE SKIP LOCKED` |
 | Minimum çekim eşiği | **₺500** |
 | TL dönüşüm kuru | **1 teqlik = ₺0,50 net nakit** (sabit V1.0) |
+| Çekim ücreti | **₺15 sabit** — PRO ayda 2 ücretsiz (aylık ARQ reset); Std her çekimde öder |
+| İletişim stratejisi (hediye oranları) | "Net havuzun %95'i PRO yayıncılara ödenir" — "100 TL'lik hediyenin 95 TL'si" değil |
 | Başlangıç Boost (İlan Ver'de) | V1.1 — yüksek öncelik |
-| PRO anchor fiyatı | **₺79,99/ay** (₺99,99 değil — teqlik eşdeğeri ₺100, başabaş kabul edilemez) |
-| PRO Pass fiyatı (teqlik) | **56 teqlik** — büyük pakette ₺64,96 efektif maliyet vs ₺79,99 cash |
+| Web mağazası (teqlif.com/cuzdan) | V1.5 — %2,5 işlemci komisyonu, Apple bypass |
+| PRO anchor fiyatı | **₺79,99/ay** (teqlik eşdeğeri: büyük pakette ₺64,96 — cash'dan ucuz) |
+| PRO Pass fiyatı (teqlik) | **56 teqlik** — mega pakette ₺64,96 efektif vs ₺79,99 cash |
 | PRO planlar | V2.0 — 1ay ₺79,99 / 3ay ₺214,99 / 6ay ₺389,99 / 12ay ₺679,99 |
+| Enterprise PRO | V2.0 — ₺249,99/ay, %98 pay, ₺0 çekim, sınırsız replay |
