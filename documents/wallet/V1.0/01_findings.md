@@ -406,6 +406,14 @@ Kullanıcı hediye atmak isteyip bakiyesi yetmediğinde `_handleLoadBalance()` t
 
 **Replay/VOD erişimi:** Canlı yayın kaydına (stream_recordings) erişim **PRO zorunludur** (`streams.py:310`). Standart kullanıcı replay ekranını göremez.
 
+**Yayın kalitesi — `host_stream_view_model.dart:24`:**
+
+| Mod | Ana çözünürlük | Simulcast katmanları | Maks bitrate |
+|-----|---------------|---------------------|-------------|
+| PRO | **720p** | 720p + 540p + 360p | 1.700 kbps |
+| Standart | **540p** | 540p + 360p + 240p | 800 kbps |
+| PiP | 360p | — (`VideoQuality.LOW`) | — |
+
 ### 8.3 İlan Ver Ekranında Ek teqlik Noktaları
 
 **Mevcut:** AI Açıklama (5 teqlik) — create_listing_screen'de aktif.
@@ -494,6 +502,8 @@ PRO faydaları `credit_service.py` kodundan doğrulandı (free_standard vs free_
 | AI Açıklama (aylık) | 0 ücretsiz | **6 ücretsiz** |
 | Blast / Kitle Bildirimi (aylık) | 3 ücretsiz | **6 ücretsiz** (+3 extra) |
 | İlan Yenileme / Reactivation (aylık) | 0 ücretsiz | **3 ücretsiz** |
+| Yayın kalitesi | 540p ana (max 800 kbps) | **720p ana (max 1.700 kbps)** |
+| Replay/VOD erişimi | — | ✓ PRO zorunlu (streams.py:310) |
 | Profil rozeti | — | ✓ Doğrulanmış rozet |
 | İlan sıralaması | Normal | Aynı kategoride +öncelik |
 | İstatistik / Analytics | Temel | Detaylı (görüntülenme, tıklama) |
