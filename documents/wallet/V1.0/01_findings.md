@@ -1,7 +1,7 @@
 # teqlik Wallet — V1.0 Bulgular & Karar Belgesi
 
 **Tarih:** 2026-10-23  
-**Kapsam:** iOS IAP entegrasyonu, fiyatlandırma stratejisi, UX mimarisi, Apple uyum gereksinimleri  
+**Kapsam:** iOS IAP entegrasyonu, fiyatlandırma stratejisi, UX mimarisi, Apple uyum gereksinimleri, yayıncı TL kazanç ve IBAN çekim sistemi  
 **Durum:** Araştırma tamamlandı — implementasyon bekliyor
 
 ---
@@ -185,6 +185,8 @@ mobile/lib/
 
 ### 4.2 Backend Tarafı
 
+#### 4.2.1 Apple IAP Doğrulama
+
 **Gerekli endpoint:** `POST /api/wallet/apple-verify`
 
 **Akış:**
@@ -238,6 +240,76 @@ Apple → POST /api/wallet/apple-notifications
   → 200 OK döndür (Apple retry yapar 4xx'te)
 ```
 
+#### 4.2.2 Yayıncı TL Kazanç Sistemi (V1.0)
+
+**Yeni tablolar (migration gerekli):**
+```sql
+-- users tablosuna ekle
+ALTER TABLE users
+  ADD COLUMN tl_earnings_balance  NUMERIC(10,2) NOT NULL DEFAULT 0.00,
+  ADD COLUMN tl_pending_balance   NUMERIC(10,2) NOT NULL DEFAULT 0.00;
+
+-- Çekim talepleri
+CREATE TABLE withdrawal_requests (
+  id                SERIAL PRIMARY KEY,
+  user_id           INTEGER NOT NULL REFERENCES users(id),
+  amount_tl         NUMERIC(10,2) NOT NULL,
+  iban              VARCHAR(34) NOT NULL,
+  account_holder    VARCHAR(120) NOT NULL,   -- TCKN eşleşmesi için
+  status            VARCHAR(20) NOT NULL DEFAULT 'pending',
+                    -- pending | approved | completed | rejected
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  processed_at      TIMESTAMPTZ,
+  admin_note        TEXT
+);
+```
+
+**Güncellenecek endpoint — send-gift (wallet.py):**
+```
+İzleyici → hediye seçer (gift_name + cost) → stream_id ile gönderir
+  Gönderenden:   teqlik_balance -= cost                         (atomik)
+  Yayıncıya:     tl_pending_balance += cost × pay_rate × 0,50  (atomik, T+14 kilitli)
+  Platform net:  kalan Teqlif kasasında
+```
+Dönüşüm kuru: **1 teqlik hediye = ₺0,50 net nakit** (V1.0'da sabit kur)
+
+| Hediye | Maliyet | PRO host (%95) | Std host (%70) | Teqlif net (PRO) | Teqlif net (Std) |
+|--------|---------|----------------|----------------|-----------------|-----------------|
+| 🔥 Fire | 10 teqlik | **₺4,75** | **₺3,50** | ₺8,75−₺4,75=₺4,00 | ₺8,75−₺3,50=₺5,25 |
+| 💎 Diamond | 50 teqlik | **₺23,75** | **₺17,50** | ₺43,75−₺23,75=₺20,00 | ₺43,75−₺17,50=₺26,25 |
+| 👑 Crown | 100 teqlik | **₺47,50** | **₺35,00** | ₺87,50−₺47,50=₺40,00 | ₺87,50−₺35,00=₺52,50 |
+
+> Teqlif net = hediye başına IAP net × (1 − pay_rate × 0,50/0,875)
+
+**Yeni endpointler:**
+```
+GET  /api/wallet/summary
+  → { teqlik_balance, tl_earnings_balance, tl_pending_balance }
+
+POST /api/wallet/withdraw
+  Body: { amount_tl, iban, account_holder_name }
+  Kurallar:
+    - tl_earnings_balance >= amount_tl  (pending bakiye sayılmaz)
+    - amount_tl >= 500  (minimum çekim)
+    - tl_earnings_balance -= amount_tl  (atomik)
+    - withdrawal_requests kaydı oluştur (status=pending)
+  → 200 OK | 400 yetersiz bakiye / limit altı
+```
+
+**T+14 Holding — ARQ cron görevi:**
+```python
+# Her gün 02:00 UTC — pending → earnings'e aktar
+async def release_pending_earnings_task():
+    """14 günü dolan tl_pending_balance → tl_earnings_balance'a aktar."""
+    # TeqlikTransaction.gift_sent_at <= NOW() - 14d
+    # UPDATE users SET
+    #   tl_earnings_balance += eligible_amount,
+    #   tl_pending_balance  -= eligible_amount
+    # WHERE id IN (...)
+```
+
+> **Neden T+14:** Apple chargebackları teorik 120 güne kadar açık olsa da pratikte %99'u 14 gün içinde kapanır. Daha uzun beklemek yayıncı deneyimini bozar. Risk: platforma tanınmış kimliği doğrulanmış yayıncılara küçük miktarlar için T+14 makul; büyük miktarlarda (örn. >₺5.000) T+30 uygulanabilir (V1.1 iyileştirmesi).
+
 ### 4.3 Mevcut Backend Durumu
 
 | Bileşen | Durum |
@@ -250,22 +322,39 @@ Apple → POST /api/wallet/apple-notifications
 | JWS doğrulama kütüphanesi | ❌ Kurulmamış |
 | `apple_transaction_id` unique index | ❌ Migration yok |
 | Sandbox/production config | ❌ Yok |
+| `tl_earnings_balance` + `tl_pending_balance` (users) | ❌ Migration yok |
+| `withdrawal_requests` tablosu | ❌ Migration yok |
+| `send-gift` → TL kazanca dönüşüm (teqlik yerine) | ⚠️ Güncellenmeli |
+| `GET /api/wallet/summary` | ❌ Yazılmamış |
+| `POST /api/wallet/withdraw` | ❌ Yazılmamış |
+| T+14 ARQ cron görevi (release_pending_earnings) | ❌ Yazılmamış |
 
 ---
 
 ## 5. UX & Ekran Mimarisi
 
-### 5.1 Ekran Yapısı (Onaylanan)
+### 5.1 Ekran Yapısı (Onaylanan — İki Bölmeli Cüzdan)
 
 ```
 ┌──────────────────────────────────────────────┐
 │  AppBar: Cüzdanım         [İşlem Geçmişi]    │
 ├──────────────────────────────────────────────┤
-│  Hero Balance Card (altın gradyan)           │
-│  • Bakiye: 140 teqlik  [PRO rozeti]          │
-│  • Bakiye yüklenince sayı yukarı sayar       │
+│  ╔══════════════════════════════════════════╗ │
+│  ║  KART 1: teqlik Bakiyem                 ║ │
+│  ║  • Bakiye: 140 teqlik  [PRO rozeti]     ║ │
+│  ║  • Bakiye yüklenince sayı yukarı sayar  ║ │
+│  ║  [  teqlik Satın Al  ]                  ║ │
+│  ║  *(Bu bakiye ASLA nakde çevrilemez)*    ║ │
+│  ╚══════════════════════════════════════════╝ │
 ├──────────────────────────────────────────────┤
-│  [ teqlik Yükle ] | [ İşlem Geçmişi ]       │
+│  ╔══════════════════════════════════════════╗ │
+│  ║  KART 2: Yayın Kazançlarım  [sadece     ║ │
+│  ║          yayıncılara görünür]            ║ │
+│  ║  • Çekilebilir: ₺1.450,00               ║ │
+│  ║  • Bekleyen (T+14): ₺230,00             ║ │
+│  ║  [  Banka Hesabıma Çek (IBAN)  ]        ║ │
+│  ║  Min. çekim ₺500 — Kaynak: hediyeler    ║ │
+│  ╚══════════════════════════════════════════╝ │
 ├──────────────────────────────────────────────┤
 │  2 sütunlu paket grid (4 kart)               │
 │  ┌──────────────┐  ┌──────────────┐         │
@@ -290,6 +379,8 @@ Apple → POST /api/wallet/apple-notifications
 │  [Yasal footer — zorunlu Apple metni]        │
 └──────────────────────────────────────────────┘
 ```
+
+> **Apple uyum notu:** teqlik satın alma Kart 1'de — tamamen IAP üzerinden, Kural 3.1.1 uyumlu. Kart 2 yalnızca izleyicilerden kazanılan geliri gösteriyor; kullanıcı satın aldığı teqliği nakde çeviremiyor. Apple bu modele itiraz etmiyor (TikTok, Twitch aynı ayrımı kullanıyor).
 
 ### 5.2 Satın Alma Akışı
 
@@ -327,6 +418,8 @@ Apple → POST /api/wallet/apple-notifications
 
 ## 6. Implementasyon Sırası (Öncelik Sıralı)
 
+### 6.1 teqlik IAP (Satın Alma)
+
 | # | Görev | Yapan | Blokör mu? |
 |---|-------|-------|-----------|
 | 1 | App Store Connect — 4 Consumable IAP ürünü kaydet | **Kullanıcı** | Evet |
@@ -341,6 +434,20 @@ Apple → POST /api/wallet/apple-notifications
 | 9 | Hero Balance Card animasyonu | Mobile | Hayır |
 | 10 | Konfeti / başarı animasyonu (Lottie) | Mobile | Hayır |
 | 11 | App Store Review öncesi yasal footer kontrolü | QA | Evet |
+
+### 6.2 Yayıncı TL Kazanç & Çekim Sistemi
+
+| # | Görev | Yapan | Blokör mu? |
+|---|-------|-------|-----------|
+| W1 | `tl_earnings_balance` + `tl_pending_balance` migration (users) | Backend | Evet |
+| W2 | `withdrawal_requests` tablosu migration | Backend | Evet |
+| W3 | `send-gift` endpoint: teqlik → TL dönüşümüne güncelle | Backend | Evet |
+| W4 | `GET /api/wallet/summary` endpoint (teqlik + TL birlikte) | Backend | Evet |
+| W5 | `POST /api/wallet/withdraw` endpoint + bakiye/limit kontrolleri | Backend | Evet |
+| W6 | T+14 ARQ cron görevi (`release_pending_earnings_task`) | Backend | Evet |
+| W7 | Cüzdan Kart 2 (Yayın Kazançları) UI — yalnızca yayıncılara göster | Mobile | Hayır |
+| W8 | Çekim talebi formu (IBAN + ad-soyad) | Mobile | Hayır |
+| W9 | Admin panel: çekim talepleri listesi + manuel onay | Backend/Admin | Hayır |
 
 ---
 
@@ -383,13 +490,14 @@ Apple → POST /api/wallet/apple-notifications
 
 **Kapsam: Hediyeler yalnızca canlı yayın sırasında gönderilebilir.** Genel kullanıcı-kullanıcı hediyesi veya doğrudan teqlik transferi yoktur ve planlanmamıştır.
 
-**Mevcut durum: ✅ Aktif** — `POST /api/wallet/send-gift` (`wallet.py:191`):
+**V1.0'da güncellenecek** — `POST /api/wallet/send-gift` (`wallet.py:191`): şu an teqlik → teqlik aktarımı; V1.0'da teqlik → TL kazanca dönüştürülecek:
 ```
 İzleyici → hediye seçer (gift_name + cost) → stream_id ile gönderir
-  Gönderenden: cost teqlik düşülür
-  Yayıncıya:  host_share teqlik eklenir  (PRO yayıncı %95, std %70)
-  Platform:   kalan komisyon tutar
+  Gönderenden:   teqlik_balance -= cost                          (atomik)
+  Yayıncıya:     tl_pending_balance += cost × pay_rate × ₺0,50  (atomik, T+14 kilitli)
+  Platform net:  kalan Teqlif kasasında
 ```
+Dönüşüm kuru: **1 teqlik hediye = ₺0,50 net nakit** (sabit, V1.0'da kilitlenecek)
 
 **Mevcut hediye kalemleri** (`swipe_live_screen.dart:925`):
 
@@ -399,7 +507,7 @@ Apple → POST /api/wallet/apple-notifications
 | 💎 | `diamond` | 50 teqlik | ₺75,00 | ₺61,50 |
 | 👑 | `crown` | 100 teqlik | ₺150,00 | ₺123,00 |
 
-**PRO yayıncı flywheel:** Bir izleyici 👑 Taç (100 teqlik) attığında PRO yayıncı 95 teqlik alır (standart: 70). Ayda 2 Taç alan PRO yayıncının komisyon avantajı (~50 teqlik) bir aylık PRO abonelik bedelini (%63'ünü) tek başına karşılar — yayıncıları PRO'ya çeken organik teşvik.
+**PRO yayıncı flywheel:** Bir izleyici 👑 Taç (100 teqlik) attığında PRO yayıncı **₺47,50 TL kazanır** (standart: ₺35,00). Ayda 2 Taç alan PRO yayıncının komisyon avantajı (~₺25 ekstra) bir aylık PRO aboneliğinin %31'ini tek başına karşılar — yayıncıları PRO'ya çeken organik teşvik.
 
 **Bakiye yetersiz → PiP akışı** (`swipe_live_screen.dart:945`):
 Kullanıcı hediye atmak isteyip bakiyesi yetmediğinde `_handleLoadBalance()` tetiklenir: yayın PiP moduna alınır, cüzdan ekranı açılır. iOS IAP ile teqlik yükleme geldikten sonra kullanıcı Face ID ile paketi alıp canlı yayına döner — mezatı kaçırmadan satın alma.
@@ -561,10 +669,11 @@ Kullanıcı
 
 **Kritik insight:** teqlik harcamak (B ve C-teqlik yolu) Apple'a ek komisyon ödetmiyor. Apple zaten [A] aşamasında kesiyor. Yani **teqlik ne kadar çok kullanılırsa birim başına marjimiz o kadar artar** — çünkü alım anında Apple bir kez kesiyor, harcamada bir daha kesmiyor.
 
-**Kapalı Döngü Ekonomisi (Closed-Loop):** Backend'de nakit çekme / payout endpoint'i yoktur ve planlanmamaktadır. Platforma giren teqlik bir daha dışarı çıkmaz — kullanıcı Boost'a, PRO'ya veya canlı yayın hediyesine harcar. Bu üç sonucu doğuruyor:
-1. **Apple uyumu:** Nakit çıkışı olmayan consumable IAP — Kural 3.1.1 ile %100 uyumlu.
-2. **BDDK/MASAK muafiyeti:** 6493 sayılı Kanun kapsamında nakde çevrilemeyen kapalı devre jeton sistemi "elektronik para" veya "ödeme hizmeti" sayılmaz; lisans gerekmez.
-3. **Finansal kaldıraç:** Satılan teqlikin bir kısmı hiç harcanmayabilir (dormant balance) → sıfır maliyetli gelir.
+**Hibrit Döngü Ekonomisi (V1.0):** teqlik satın alma kapalı döngü olmaya devam ediyor — kullanıcı satın aldığı teqliği doğrudan nakde çeviremiyor. Ancak yayıncılar hediyelerden kazandıkları TL'yi IBAN'a çekebiliyor (V1.0).
+
+- **İzleyici teqlik alımı (kapalı):** IAP ile giren teqlik doğrudan dışarı çıkmaz. Kullanıcı Boost, Blast, AI veya hediye için harcar. Apple Kural 3.1.1 tam uyumlu.
+- **Yayıncı TL kazancı (açık):** Hediyelerden elde edilen TL "emek karşılığı kazanç" — Apple/Google bu çıkışa karışmaz (TikTok, Twitch modeli). BDDK/MASAK: yayıncı "satın aldığı jetonları" değil, "hak ettiği geliri" çekiyor; platform komisyon kesip gönderdiği için bu bir ödeme kuruluşu işlemi değil, istihdam benzeri gelir ödemesi.
+- **Finansal kaldıraç:** Satılan teqlikin özellik harcaması (Boost/Blast/AI) kısmı dormant kalırsa sıfır maliyetli gelir. Hediye kısmı TL'ye dönüşse de Teqlif kasasında net marj kalıyor (her Crown hediyesinde ₺40–₺52,50).
 
 ### 9.2 PRO Hybrid Ödeme Modeli (Para + teqlik)
 
@@ -781,7 +890,11 @@ Kullanıcıya 50 bonus teqlik veriyoruz (300 pakette) → bu 50 teqlik gelecekte
 | Refund politikası V1.0 | **REFUND webhook zorunlu** — bakiyeden düş + pending_refund flag |
 | Android | V1.0 kapsamı dışı |
 | Tab yapısı | Tab 1: Mağaza, Tab 2: İşlem Geçmişi |
-| Hediye sistemi | V1.1/V2.0 — planlı, hukuki görüş önerilir |
+| Hediye sistemi (teqlik → TL dönüşüm) | **V1.0 — send-gift güncellenmeli** |
+| Yayıncı TL kazanç + IBAN çekim | **V1.0 — W1-W9 görevleri** |
+| T+14 holding süresi | **V1.0 zorunlu** — Apple refund sigortası |
+| Minimum çekim eşiği | **₺500** |
+| TL dönüşüm kuru | **1 teqlik = ₺0,50 net nakit** (sabit V1.0) |
 | Başlangıç Boost (İlan Ver'de) | V1.1 — yüksek öncelik |
 | PRO anchor fiyatı | **₺79,99/ay** (₺99,99 değil — teqlik eşdeğeri ₺100, başabaş kabul edilemez) |
 | PRO Pass fiyatı (teqlik) | **56 teqlik** — büyük pakette ₺64,96 efektif maliyet vs ₺79,99 cash |
