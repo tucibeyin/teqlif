@@ -22,8 +22,8 @@ const int _kTrackPollIntervalMs = 100;
 const int _kTrackPollMaxAttempts = 50;
 
 RoomOptions _roomOptionsForProfile(String profile) {
-  // PRO:      main=720p (1700k) + simulcast 540p(800k)/360p(450k)/240p(140k) — PiP=240p
-  // standard: main=540p  (800k) + simulcast 360p(450k)/240p(140k)           — PiP=240p
+  // PRO:      main=720p (1700k) + simulcast 540p(800k)/360p(450k)           — PiP=360p
+  // standard: main=540p  (800k) + simulcast 360p(450k)/240p(140k)          — PiP=240p
   final isPro = profile == 'pro';
   return RoomOptions(
     adaptiveStream: true,
@@ -32,7 +32,7 @@ RoomOptions _roomOptionsForProfile(String profile) {
       simulcast: true,
       backupVideoCodec: const BackupVideoCodec(codec: 'vp9'),
       videoSimulcastLayers: isPro
-          ? const [VideoParametersPresets.h240_43, VideoParametersPresets.h360_169, VideoParametersPresets.h540_169]
+          ? const [VideoParametersPresets.h360_169, VideoParametersPresets.h540_169]
           : const [VideoParametersPresets.h240_43, VideoParametersPresets.h360_169],
       videoEncoding: VideoEncoding(
         maxBitrate: isPro ? 1700000 : 800000,
