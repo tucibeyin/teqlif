@@ -659,7 +659,10 @@ Kurumsal banka toplu ödeme API'si (şirket kuruluşu sonrası)
 │  ║  [ Çekim Talebi Oluştur (IBAN)    ]     ║ │
 │  ║                                          ║ │
 │  ║  [Aktif talep varsa — timeline stepper] ║ │
-│  ║  ● Talep Alındı  ○ İnceleme  ○ Onay    ║ │
+│  ║  🛡️ Ref: #TRX-94812  ₺1.000,00        ║ │
+│  ║  ● Talep Kaydedildi   23 Eki 17:20     ║ │
+│  ║  ◐ Beta Güvenlik Denetimi  İnceleniyor ║ │
+│  ║  ○ Banka Transfer Emri     Bekleniyor  ║ │
 │  ║  Min. çekim ₺500 — Kaynak: hediyeler    ║ │
 │  ║                                          ║ │
 │  ║  [Kazanç yoksa — henüz yayın yapmamış]  ║ │
@@ -696,11 +699,84 @@ Kurumsal banka toplu ödeme API'si (şirket kuruluşu sonrası)
 
 **Kart 2 Görsel Tasarımı:** Kart 1 (enerjik mor/neon — teqlik satın alma enerjisi) ile bilinçli kontrast kurulur. Kart 2 koyu zümrüt yeşili + altın aksanlı glassmorphism/sheen doku kullanır — "kazanılmış para" hissini Kart 1'den ayırt eder ve fintech premium estetiği verir.
 
-**Çekim Talebi Timeline Stepper:** Aktif `withdrawal_requests` kaydı varken Kart 2 "Çekim Talebi Oluştur" butonu yerine 3 adımlı durum göstergesi sunar:
+**Terminoloji Standardı:** Uygulama genelinde "Para Çekme" / "Çekim Talebi" ifadeleri kullanılmaz. Standart terimler:
+
+| Kullanılmayacak | Kullanılacak |
+|-----------------|--------------|
+| Para Çekme | Hakediş Aktarımı |
+| Çekim Talebi | Hakediş Talebi |
+| Bekleyen talep | Güvence Havuzunda |
+| İncelemede | Beta Güvenlik Denetimi |
+| Reddedildi | İnceleme Güncellemesi |
+
+**Hakediş Aktarımı Akışı (Glassmorphism Bottom Sheet):**
+
+"Hakediş Aktarımı" butonuna basıldığında tam ekran modal yerine arka plan hafif karartılmış/bulanıklaştırılmış Bottom Sheet açılır. İçerik yapısı:
+
 ```
-● Talep Alındı  ──►  ○ Beta İncelemesi  ──►  ○ Onaylandı
+┌─ Hakediş Aktarımı ────────────────────────────────┐
+│                                                    │
+│  Çekilebilir Bakiye                                │
+│  ┌──────────────────────────────────────────────┐  │
+│  │  ₺1.450,00  (zümrüt/altın degrade)          │  │
+│  │  Minimum çekim tutarı ₺500                   │  │
+│  └──────────────────────────────────────────────┘  │
+│                                                    │
+│  Tutar                                             │
+│  [ ₺500 (Min) ]  [ ₺1.000 ]  [ Bakiyenin Tamamı ] │
+│  veya manuel giriş: [_________]                    │
+│                                                    │
+│  IBAN                                              │
+│  [📋 Panodan Yapıştır]                             │
+│  [ TR | 00 0000 0000 0000 0000 00   [🏦 Logo] ]    │
+│                                                    │
+│  Hesap Sahibi                                      │
+│  [ Ahmet Yılmaz (profil adından öneri) ]           │
+│  ℹ️ IBAN üzerindeki isim profil adıyla             │
+│     birebir uyuşmalıdır                            │
+│                                                    │
+│  ✨ Beklemek İstemiyor musun?                      │
+│  ┌──────────────────────────────────────────────┐  │
+│  │ Kazancını +%10 Bonusla teqlik'e çevir;       │  │
+│  │ ₺500 yerine ₺550 değerinde teqlik anında     │  │
+│  │ hesabında!                                   │  │
+│  │  [ Hemen Teqlik'e Dönüştür ]                 │  │
+│  └──────────────────────────────────────────────┘  │
+│                                                    │
+│  [ 🔒  ₺1.000 Hakediş Talebini Onayla  ►►►► ]     │
+│  (Slide to Confirm — kaydırarak onayla)            │
+└────────────────────────────────────────────────────┘
 ```
-`withdrawal_requests.status` alanı (pending / approved / rejected) bu göstergeyi doğrudan besler; ekstra backend değişikliği gerekmez. Red durumunda: "Talebiniz reddedildi — bakiyeniz iade edildi" mesajı + yeni talep butonu.
+
+Slider (`Slide to Confirm`): Kullanıcı başparmağıyla sağa kaydırır → `Haptic.heavy()`. Kazara tıklamayı engeller; işlemin geri alınamaz finansal talimat olduğu hissini verir.
+
+**Hakediş Talebi Timeline Stepper:** `withdrawal_requests.status` (pending / approved / rejected) göstergeyi doğrudan besler; ekstra backend değişikliği gerekmez. Referans numarası `#TRX-{id}` formatında gösterilir (sıfır dolgu: #TRX-00094).
+
+Slider onaylandığı anda Kart 2 canlı takip kartına dönüşür:
+```
+┌─ 🛡️ Hakediş Talebiniz Güvence Altında ───────────┐
+│  Referans No: #TRX-00094  •  Tutar: ₺1.000,00    │
+├───────────────────────────────────────────────────┤
+│  ● Talep Kaydedildi        23 Eki, 17:20          │
+│    Bakiye güvenli havuza alındı                   │
+│                                                   │
+│  ◐ Beta Güvenlik Denetimi  İnceleniyor            │
+│    Yayın & hediye orijinallik kontrolü            │
+│                                                   │
+│  ○ Banka Transfer Emri     Bekleniyor             │
+│    IBAN hesabınıza FAST/EFT ile aktarım           │
+└───────────────────────────────────────────────────┘
+```
+
+**Uygulama içi mesaj metinleri:**
+
+Başarı (Snackbar / BottomSheet kapanırken):
+> Başlık: **Talebiniz Başarıyla Oluşturuldu 💎**
+> "₺1.000 tutarındaki hakedişiniz korumalı havuza aktarıldı. Lansman güvenlik politikamız uyarınca uzman ekibimizin onayının ardından IBAN hesabınıza sevk edilecektir. İşlem durumunu cüzdanınızdan anlık takip edebilirsiniz."
+
+Red / İade (admin `rejected` ayarladığında push notification + Kart 2 durumu):
+> Başlık: **İnceleme Güncellemesi ⚠️**
+> "Talebiniz güvenlik eşleşmesi nedeniyle tamamlanamadı. ₺1.000 tutarındaki bakiyeniz eksiksiz olarak cüzdanınıza iade edildi. Bilgilerinizi kontrol ederek dilediğiniz zaman yeni talep oluşturabilirsiniz."
 
 ### 5.2 Satın Alma Akışı
 
@@ -769,9 +845,9 @@ Kurumsal banka toplu ödeme API'si (şirket kuruluşu sonrası)
 | W7b | `convert_to_teqlik_command.py`: Seçenek C (+%10 bonus, atomik SQL) | Backend | Evet |
 | W7c | `schedule.yaml`: `release_pending_earnings` (02:00 UTC, watchdog_m:30) + `daily_financial_reconciliation` (00:00 UTC, watchdog_m:10) | Backend | Evet |
 | W8 | `handle_apple_refund_command.py`: orantılı gift iptali + negatif bakiye desteği | Backend | Evet |
-| W9 | Cüzdan Kart 2 UI: kazanç > 0 → "Teqlik'e Dönüştür" + "Çekim Talebi"; aktif talep → timeline stepper (pending/approved/rejected); kazanç = 0 → "Yayın Başlat" CTA; glassmorphism koyu zümrüt/altın kart tasarımı; hediye gönderim ekranında combo tap sayacı (x2/x5/x10 görsel + burst animasyonu) | Mobile | Hayır |
-| W10 | Çekim talebi formu: IBAN alanı otomatik 4'erli TR00 formatlaması + ilk 5 haneden banka logosu tespiti (statik Map) + "IBAN Yapıştır" butonu; ad-soyad; beta güvenlik notu; IBAN uzunluk kontrolü (26 hane) | Mobile | Hayır |
-| W11 | 5 dil ARB: `giftNameClap`, `giftNameTea`, `giftNameGoldenHammer`, `giftNameRocket`, `giftNameTrophy`, `walletConvertToTeqlik`, `walletWithdrawRequestNote`, `walletPendingEarningsDesc` | Mobile | Hayır |
+| W9 | Kart 2 UI: kazanç > 0 → "Hakediş Aktarımı" + "Teqlik'e Dönüştür"; aktif talep → timeline stepper (#TRX-{id}, 3 adım, status alanından); kazanç = 0 → "Yayın Başlat" CTA; glassmorphism koyu zümrüt/altın kart; hediye ekranında combo tap sayacı (x2/x5/x10 + burst animasyonu) | Mobile | Hayır |
+| W10 | Hakediş Aktarımı Bottom Sheet: hızlı tutar çipleri (₺500 Min / ₺1.000 / Bakiyenin Tamamı); IBAN 4'erli TR00 formatı + sabit TR rozeti + ilk 5 haneden banka logosu (statik Map) + panodan yapıştır; hesap sahibi profil adından önerili; IBAN-isim eşleşme uyarısı; Seçenek C dönüşüm kartı form içinde; Slide to Confirm slider (kaydırarak onayla, Haptic.heavy); IBAN 26 hane uzunluk kontrolü | Mobile | Hayır |
+| W11 | 5 dil ARB: `giftNameClap`, `giftNameTea`, `giftNameGoldenHammer`, `giftNameRocket`, `giftNameTrophy`, `walletConvertToTeqlik`, `walletEarningsTransferTitle` (Hakediş Aktarımı), `walletTransferSuccess`, `walletTransferRejected`, `walletPendingEarningsDesc` | Mobile | Hayır |
 | W12 | Admin panel: bekleyen çekim talepleri listesi + Onayla / Reddet butonları (red durumunda bakiye iadesi: `tl_earnings_balance += amount_tl`) | Backend/Admin | Hayır |
 
 ### 6.3 V1.5'e Ertelenen Özellikler
