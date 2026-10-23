@@ -62,3 +62,6 @@ mobile/.flutter-plugins
 mobile/.flutter-plugins-dependencies
 mobile/build/
 mobile/*.g.dart
+
+# Claude Code
+.claude/
