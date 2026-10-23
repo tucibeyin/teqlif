@@ -114,7 +114,55 @@ Mevcut fiyatlandırma: ₺119,99 → 100 teqlik → ₺0,850 net/teqlik
 
 ---
 
-## 3. Apple App Store Uyum Gereksinimleri
+## 3. Apple App Store — Manuel Adımlar & Uyum Gereksinimleri
+
+### 3.0 App Store Connect'te Yapılacak Manuel Adımlar (Koddan Önce)
+
+Aşağıdaki adımlar App Store Connect panelinde elle yapılır; bunlar tamamlanmadan kod tarafı çalışmaz.
+
+**Adım 1 — Small Business Program Başvurusu**
+- App Store Connect → **Agreements, Tax, and Banking** → Small Business Program
+- Yıllık net gelir < $1M ise %15 komisyon için başvur (otomatik değil, manuel başvuru zorunlu)
+- Onay 1–3 iş günü. Başvurulmadan tüm alımlar %30 komisyonla açılır.
+- URL: `appstoreconnect.apple.com/agreements` → "Request Small Business Program"
+
+**Adım 2 — IAP Ürünlerini Oluştur (Consumable × 4)**
+- App Store Connect → uygulamanı seç → **In-App Purchases** → (+) → **Consumable**
+
+| Product ID | Display Name (TR) | Fiyat Tier (%30) | Fiyat Tier (%15) |
+|------------|------------------|-----------------|-----------------|
+| `teqlik_pack_100` | 100 teqlik | ₺149,99 (Tier ~35) | ₺119,99 (Tier ~28) |
+| `teqlik_pack_250` | 250 teqlik + 25 Bonus | ₺349,99 | ₺279,99 |
+| `teqlik_pack_500` | 500 teqlik + 75 Bonus | ₺649,99 | ₺519,99 |
+| `teqlik_pack_1000` | 1000 teqlik + 200 Bonus | ₺1.199,99 | ₺949,99 |
+
+Her ürün için doldurulacaklar:
+- **Reference Name**: `teqlik_100_tr` (dahili ad, Store'da görünmez)
+- **Product ID**: yukarıdaki tablo (büyük/küçük harf duyarlı — Flutter kodu ile birebir eşleşmeli)
+- **Pricing**: tier seç (₺ fiyatlar Apple'ın tier tablosundan — sabit kur Apple'ın kendi oranıyla)
+- **Localizations**: TR dili için başlık + kısa açıklama ekle
+- **Review Information**: screenshot + "Bu uygulama içi satın alım teqlik dijital token'ı sağlar, yalnızca uygulama içinde kullanılır" notu
+- Ürünü **Ready to Submit** durumuna al (uygulama App Review'dan geçince otomatik aktif)
+
+**Adım 3 — App Store Server Notifications V2 Yapılandırması**
+- App Store Connect → uygulamanı seç → **App Information** → **App Store Server Notifications**
+- **Production URL**: `https://api.teqlif.com/api/wallet/apple-notifications`
+- **Sandbox URL**: `https://staging.teqlif.com/api/wallet/apple-notifications`
+- **Version**: **Version 2** seç (V1 hatalı/eksik bildirim gönderir)
+- "Send Test Notification" ile doğrula — backend `200 OK` dönmeli
+
+**Adım 4 — Sandbox Test Hesapları**
+- App Store Connect → **Users and Access** → **Sandbox** → Testers → (+)
+- En az 2 sandbox hesap oluştur: `sandbox1@teqlif.com`, `sandbox2@teqlif.com`
+- Bu hesaplar gerçek para harcamaz; `StoreKit.environment = "Sandbox"` ile işaretlenir
+- Simulator'da IAP çalışmaz — fiziksel cihaz + sandbox hesap zorunlu
+
+**Adım 5 — Tax & Banking Bilgileri (Ödemeler için Zorunlu)**
+- App Store Connect → **Agreements, Tax, and Banking** → Paid Apps sözleşmesini imzala
+- Banka hesabı ve vergi bilgileri girilmeden Apple ödeme yapmaz
+- **Apple ödeme takvimi**: Net-33 ile Net-45 gün (ayın kapanış dönemine göre değişir). Örnek: Ekim satışları en erken Kasım sonunda hesapta. V1.0'da gerçek banka transferi yapılmadığı için bu gecikme kritiktir — Teqlif, Apple'dan parayı tahsil etmeden kullanıcıya ödeme yapamaz. Seçenek C (Teqlik'e Dönüştür) bu gecikmeyi bypass eder; nakit ön kayıt ise Apple ödemesi alınana kadar listede bekler.
+
+---
 
 ### 3.1 Zorunlu Kurallar (İhlali = Red)
 
@@ -255,6 +303,23 @@ Apple bir satın alımı geri alabilir (`REFUND` App Store Server Notification).
 **Refund webhook akışı:**
 ```
 Apple → POST /api/wallet/apple-notifications
+  Body: { signedPayload: "<JWS string>" }
+
+  ──── ADIM 0: signedPayload JWS Doğrulaması (zorunlu, içeriğe bakmadan önce) ────
+  signedPayload kendisi de Apple tarafından imzalı bir JWS'dir.
+  İçindeki event type'a güvenmeden önce Apple root sertifikasıyla doğrulanmalı:
+
+    header = jwt.get_unverified_header(signed_payload)
+    # header["x5c"][0] → leaf cert, [1] → G3 CA, [2] → Apple Root CA
+    cert_chain = [load_der_x509_certificate(b64decode(c)) for c in header["x5c"]]
+    # 1. Zincir doğrulama: leaf → G3 CA → Apple Root CA imzası kontrol et
+    # 2. Apple Root CA hash'i hardcoded doğrula (MITM koruması):
+    #    SHA-256: 4f5f 4b63 75d8 91ab 4333 1ea9 2b25 5a00 ... (Apple'ın yayımladığı sabit hash)
+    # 3. cert_chain[0].not_valid_after > datetime.utcnow() (sertifika süresi)
+    # 4. jwt.decode(signed_payload, cert_chain[0].public_key(), algorithms=["ES256"])
+  Bu doğrulama atlanırsa saldırgan sahte POST → gift_events iptal ettirebilir.
+  ──────────────────────────────────────────────────────────────────────────────
+
   eventType: "REFUND"
   → apple_transaction_id ile TeqlikTransaction'ı bul (iade_miktarı, orijinal_miktar)
   → teqlik_balance -= iade_miktarı  (atomik)
@@ -357,10 +422,12 @@ Clean Architecture kuralı gereği iş mantığı `wallet.py` router'da değil; 
 ```
 app/use_cases/wallet/
   commands/
-    send_gift_command.py          ← TL dönüşüm + atomik SQL
-    request_withdrawal_command.py ← ücret hesabı + credit_service.py
-    verify_apple_receipt_command.py
-    handle_apple_refund_command.py
+    send_gift_command.py              ← TL dönüşüm + atomik SQL
+    request_withdrawal_command.py     ← bakiye atomik düşüm + pending insert
+    cancel_withdrawal_request_command.py ← status='pending' → 'cancelled' + bakiye iade
+    convert_to_teqlik_command.py      ← Seçenek C +%10 bonus, atomik SQL
+    verify_apple_receipt_command.py   ← JWS doğrulama + x5c zinciri
+    handle_apple_refund_command.py    ← orantılı gift iptali + negatif bakiye
   queries/
     get_wallet_summary_query.py
 ```
@@ -427,6 +494,20 @@ POST /api/wallet/withdraw  →  request_withdrawal_command.py
     UPDATE withdrawal_requests SET status='rejected', admin_note=:note, processed_at=NOW()
       WHERE id = :wid;
     → Bakiye kullanıcıya anında iade edilir; kullanıcıya bildirim gönderilir.
+
+DELETE /api/wallet/withdraw/{request_id}  →  cancel_withdrawal_request_command.py
+  — Kullanıcı Kendi Talebini İptal Edebilir —
+  Kurallar:
+    - withdrawal_request.user_id == current_user.id  (yetki kontrolü)
+    - status == 'pending'  (approved/completed/rejected talep iptal edilemez)
+    - Bakiye iadesi (atomik):
+        UPDATE users SET tl_earnings_balance = tl_earnings_balance + :amount_tl
+        WHERE id = :uid;
+    - withdrawal_requests UPDATE status='cancelled', cancelled_at=NOW()
+    - Kart 2 sıra kartı kaybolur; bakiye anında geri gelir
+    → 200 OK | 403 başkasının talebi | 409 iptal edilemez statü
+
+  withdrawal_requests.status genişletilmiş: pending | approved | completed | rejected | cancelled
 
   — Seçenek C: Kazancı Teqlik'e Dönüştür (+%10 Bonus) —
   POST /api/wallet/convert-to-teqlik
@@ -610,12 +691,18 @@ Kurumsal banka toplu ödeme API'si (şirket kuruluşu sonrası)
 | `verify_apple_receipt_command.py` (JWS + env/bundleId + velocity limit) | ❌ Yazılmamış |
 | `send_gift_command.py` (Decimal + atomik SQL + Redis rate limit) | ❌ Yazılmamış |
 | `request_withdrawal_command.py` (talep modu — bakiye kontrolü + pending insert) | ❌ Yazılmamış |
+| `cancel_withdrawal_request_command.py` (status pending → cancelled + bakiye iade) | ❌ Yazılmamış |
 | `convert_to_teqlik_command.py` (Seçenek C, +%10 bonus) | ❌ Yazılmamış |
 | `get_wallet_summary_query.py` | ❌ Yazılmamış |
 | `handle_apple_refund_command.py` (orantılı gift iptali + negatif bakiye) | ❌ Yazılmamış |
 | `teqlik_transactions` (apple_transaction_id UNIQUE + raw_receipt TEXT) | ❌ Migration yok |
 | `daily_financial_reconciliation` cron (00:00 UTC, watchdog_m:10) | ❌ Eklenmemiş |
 | `schedule.yaml` T+14 cron (`release_pending_earnings`, watchdog_m:30) | ❌ Eklenmemiş |
+
+**Neden V1.0'da Gerçek Banka Transferi Yapılmıyor — İki Bağımsız Neden:**
+
+1. **MASAK/Hukuki**: Şirket kuruluşu tamamlanmadan kişisel hesaptan toplu kullanıcı transferi "şüpheli ticari faaliyet" sayılır (banka hesabı bloke riski).
+2. **Apple Net-45 Nakit Akışı**: Apple App Store ödemeleri Net-33 ile Net-45 gün arasında geliştiricinin banka hesabına yatar. Ekim satışları en erken Kasım sonunda gelir. Yayıncı 14. günde çekim talep etseydi, Teqlif henüz Apple'dan tahsil etmemiş parayı kendi cebinden ödemek zorunda kalacaktı — negatif nakit akışı tuzağı. Seçenek C (Teqlik'e Dönüştür) ekosistemi kapatır ve bu gecikmeyi tamamen bypass eder; nakit ön kayıt ise Apple ödemesi geldiğinde işleme alınır.
 
 **V1.5 kapsamı (şirket kuruluşu + gerçek banka transfer akışı hazırlanana kadar kodlanmaz):**
 
@@ -782,6 +869,38 @@ IBAN güncellemesi gerektiğinde (admin `rejected` → bakiye iade → push noti
 > Başlık: **IBAN Güncellemesi Gerekiyor ℹ️**
 > "Kayıtlı IBAN bilgilerinizde bir uyumsuzluk tespit edildi. ₺1.000 tutarındaki bakiyeniz eksiksiz olarak cüzdanınıza iade edildi. IBAN bilgilerinizi güncelleyerek dilediğiniz zaman yeniden sıraya girebilirsiniz."
 
+**Dönüştürme Simülatörü (Seçenek C — Anlık Hesap Gösterimi):**
+
+"⚡ ANINDA KULLAN" butonuna veya Bottom Sheet'teki "Teqlik'e Dönüştür" kartına basıldığında, kullanıcı bakiyesini girmeden önce interaktif bir hesap özeti görür. Bakiye TextFormField'a yazıldıkça sonuç gerçek zamanlı güncellenir:
+
+```
+┌─ Teqlik'e Dönüştür ───────────────────────────────┐
+│  Ne kadar dönüştürmek istiyorsunuz?                │
+│  [_₺500_________________]  (max ₺1.450)            │
+│                                                    │
+│  ┌──────────────────────────────────────────────┐  │
+│  │  ₺500  →  571 teqlik                        │  │
+│  │       +  57 bonus (%10)                     │  │
+│  │  ─────────────────────────────              │  │
+│  │  Toplam  628 teqlik                         │  │
+│  │  (Piyasa değeri: ≈ ₺550)                    │  │
+│  └──────────────────────────────────────────────┘  │
+│                                                    │
+│  [ ⚡ 628 Teqlik Al ]                             │
+└────────────────────────────────────────────────────┘
+```
+
+Hesaplama formülü (Flutter tarafında, sunucuya göndermeden önce):
+```dart
+// teqlik_amount = FLOOR(amount_tl / 0.875) * 1.10
+// bonus = teqlik_amount - FLOOR(amount_tl / 0.875)
+// Örn: FLOOR(500 / 0.875) = 571 teqlik baz; 571 * 1.10 = 628.1 → FLOOR → 628
+double base = (amountTl / 0.875).floor().toDouble();
+double total = (base * 1.10).floor().toDouble();
+double bonus = total - base;  // 57
+```
+Sunucu da aynı formülü uygular; Flutter gösterimi sadece kullanıcı bilgisi amaçlı.
+
 ### 5.2 Satın Alma Akışı
 
 ```
@@ -848,9 +967,10 @@ IBAN güncellemesi gerektiğinde (admin `rejected` → bakiye iade → push noti
 | W7 | `request_withdrawal_command.py`: bakiye atomik düşüm (UPDATE WHERE tl_earnings_balance >= amount, 0 satır → 400) + aktif pending yok kontrolü + withdrawal_requests INSERT — aynı transaction | Backend | Evet |
 | W7b | `convert_to_teqlik_command.py`: Seçenek C (+%10 bonus, atomik SQL) | Backend | Evet |
 | W7c | `schedule.yaml`: `release_pending_earnings` (02:00 UTC, watchdog_m:30) + `daily_financial_reconciliation` (00:00 UTC, watchdog_m:10) | Backend | Evet |
+| W7e | `cancel_withdrawal_request_command.py`: status='pending' → 'cancelled' + atomik bakiye iadesi + 403 yetki / 409 statü kontrolü; `DELETE /api/wallet/withdraw/{id}` endpoint | Backend | Evet |
 | W8 | `handle_apple_refund_command.py`: orantılı gift iptali + negatif bakiye desteği | Backend | Evet |
 | W9 | Kart 2 UI: kazanç > 0 → birincil neon "⚡ ANINDA KULLAN (+%10 Bonus Teqlik'e Dönüştür)" + ikincil "🏦 Nakit Transferi İçin IBAN Tanımla (Ön Kayıt)"; aktif ön kayıt varsa → sıra kartı (📋 Sıra No: #Queue-{id}, "Kurumsal entegrasyon açılınca bildirim", İptal Et + Teqlik'e Dönüştür); kazanç = 0 → "Yayın Başlat" CTA; glassmorphism koyu zümrüt/altın kart; hediye ekranında combo tap sayacı (x2/x5/x10 + burst animasyonu) | Mobile | Hayır |
-| W10 | IBAN Ön Kayıt Bottom Sheet: açılışta yasal uyum mesaj panosu (MASAK/kurumsal finans açıklaması); tutar çipleri (₺500 Min / ₺1.000 / Bakiyenin Tamamı); IBAN 4'erli TR00 formatı + sabit TR rozeti + ilk 5 haneden banka logosu (statik Map) + panodan yapıştır; hesap sahibi profil adından önerili; IBAN-isim eşleşme uyarısı; Seçenek C dönüşüm kartı ("Şimdi Teqlik'e Dönüştür +%10"); "Bilgilerimi Kaydet ve Sıraya Gir" CTA (Slide to Confirm YOK); IBAN 26 hane uzunluk kontrolü | Mobile | Hayır |
+| W10 | IBAN Ön Kayıt Bottom Sheet: açılışta yasal uyum mesaj panosu (MASAK/kurumsal finans açıklaması); tutar çipleri (₺500 Min / ₺1.000 / Bakiyenin Tamamı); IBAN 4'erli TR00 formatı + sabit TR rozeti + ilk 5 haneden banka logosu (statik Map) + panodan yapıştır; hesap sahibi profil adından önerili; IBAN-isim eşleşme uyarısı; Seçenek C dönüşüm simülatörü (anlık FLOOR hesabı: "₺500 → 571 + 57 bonus = 628 teqlik", TextFormField değişince gerçek zamanlı güncellenir); "Bilgilerimi Kaydet ve Sıraya Gir" CTA (Slide to Confirm YOK); IBAN 26 hane uzunluk kontrolü | Mobile | Hayır |
 | W11 | 5 dil ARB: `giftNameClap`, `giftNameTea`, `giftNameGoldenHammer`, `giftNameRocket`, `giftNameTrophy`, `walletConvertToTeqlik`, `walletIbanPreRegistrationTitle` (Nakit Transferi İçin IBAN Tanımla), `walletIbanRegistrationSuccess`, `walletIbanRejected`, `walletQueueNumber`, `walletPendingEarningsDesc` | Mobile | Hayır |
 | W12 | Admin panel: bekleyen çekim talepleri listesi + Onayla / Reddet butonları (red durumunda bakiye iadesi: `tl_earnings_balance += amount_tl`) | Backend/Admin | Hayır |
 
@@ -871,6 +991,7 @@ Aşağıdaki özellikler **şirket kuruluşu tamamlanana ve gerçek banka transf
 | V15-9 | `request_withdrawal_command.py` tam akış | Tüm V1.5 bileşenleri | V1.0 sürümü komple rewrite edilir |
 | V15-10 | Web mağazası (teqlif.com/cuzdan, %2,5 işlemci ücreti) | Şirket + web ödeme altyapısı | Apple bypass — yalnızca web alımlar |
 | V15-11 | Finansal soğuk arşiv: `teqlik_transactions`, `gift_events`, `withdrawal_requests` SHA-256 imzalı CSV/JSONL dökümü → `backups/financial_archives/` (RETENTION_DAYS=7 döngüsünden muaf) + `offsite_sync.sh` ile uzak depo (Hetzner/B2/S3 Glacier) | Gerçek transfer başlayınca | TTK + MASAK 5-10 yıl saklama zorunluluğu; WORM (Write Once, Read Many) |
+| V15-12 | Vergi / Stopaj / Gider Pusulası: Türkiye'de şirket kurulduktan sonra vergiden muaf olmayan yayıncıya ödeme yapılırken Gelir Vergisi Kanunu gereği iki seçenek — (a) Sosyal İçerik Üreticiliği İstisnası belgesi (yayıncı banka hesabı vergiden muaf onaylıysa kesinti yok), (b) Gider Pusulası düzenleme ve stopaj kesintisi yapıp muhtasar beyanname. withdrawal_requests tablosuna `gross_amount_tl`, `withholding_tax_tl`, `net_amount_tl` kolonları eklenmeli; admin panelinde beyanname döküm raporu. | Şirket kuruluşu + mali müşavir onayı |
 
 ---
 
@@ -1368,6 +1489,10 @@ Kullanıcıya 50 bonus teqlik veriyoruz (300 pakette) → bu 50 teqlik gelecekte
 | IAP velocity limit | ₺5.000/gün/cihaz Redis rate limit; aşılırsa fraud_flag + admin alarmı | V1.0 |
 | send-gift rate limit | Redis Token Bucket: 2/sn per user (burst 5); aşılırsa 429 | V1.0 |
 | İletişim stratejisi (hediye oranları) | "Net havuzun %95'i PRO yayıncılara ödenir" — "100 TL'lik hediyenin 95 TL'si" değil | V1.0 |
+| Apple Net-45 nakit akışı | Apple ödemeleri Net-33/45 gün sonra gelir; yayıncıya 14. günde nakit ödenmesi imkânsız — Seçenek C bu gecikmeyi bypass eder, nakit ön kayıt Apple ödemesi gelince işleme alınır | V1.0 |
+| Kullanıcı çekim iptal hakkı | `cancel_withdrawal_request_command` — status='pending' talebi kullanıcı iptal edebilir; bakiye anında iade, statüsü 'cancelled' | V1.0 |
+| Apple Notifications V2 JWS doğrulama | `signedPayload` Apple x5c sertifika zincirine karşı doğrulanmadan event type'a güvenilmez; leaf cert + G3 CA + Root CA + sertifika süresi zorunlu | V1.0 |
+| Dönüştürme simülatörü | TextFormField değişince anlık FLOOR hesabı: "₺500 → 571 + 57 bonus = 628 teqlik"; Flutter tarafı önizleme, sunucu aynı formülü uygular | V1.0 |
 | Gerçek banka transfer API | Şirket kuruluşu sonrası (LTD zorunlu) | **V1.5** |
 | MERNIS / KYC | İlk gerçek çekim zorunlu; TCKN AES-256 şifreli `user_kyc` tablosunda | **V1.5** |
 | Rolling Reserve | Yeni yayıncı 90 gün max ₺2.500/çekim | **V1.5** |
