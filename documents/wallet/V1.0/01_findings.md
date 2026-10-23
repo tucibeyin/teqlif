@@ -233,10 +233,26 @@ Apple bir satın alımı geri alabilir (`REFUND` App Store Server Notification).
 ```
 Apple → POST /api/wallet/apple-notifications
   eventType: "REFUND"
-  → apple_transaction_id ile TeqlikTransaction'ı bul
+  → apple_transaction_id ile TeqlikTransaction'ı bul (iade_miktarı, orijinal_miktar)
   → teqlik_balance -= iade_miktarı  (atomik)
   → bakiye < 0 ise: users.pending_refund = true
-  → RefundLog kaydı oluştur
+
+  → Orantılı hediye kazancı iptali (anti-fraud):
+       iade_oranı = iade_miktarı / orijinal_miktar
+       iptal_tl   = users.tl_pending_balance × iade_oranı
+       UPDATE gift_events
+         SET payout_status = 'cancelled_refund'
+         WHERE sender_id = kullanıcı
+           AND payout_status = 'pending'
+         ORDER BY sent_at ASC          -- en eskiden başla
+         LIMIT (en fazla iptal_tl'yi karşılayana kadar)
+       tl_pending_balance -= iptal_tl  (atomik)
+
+     Not: IAP transaction → bireysel hediyeler arasında tam iz mümkün değil;
+     orantılı iptal yaklaşık ama yeterli koruma sağlar. Sadece 'pending'
+     bakiye etkilenir — zaten released olan kazançlara dokunulmaz.
+
+  → RefundLog kaydı oluştur (iade_miktarı + iptal_tl)
   → 200 OK döndür (Apple retry yapar 4xx'te)
 ```
 
@@ -262,6 +278,18 @@ CREATE TABLE withdrawal_requests (
   processed_at      TIMESTAMPTZ,
   admin_note        TEXT
 );
+
+-- gift_events tablosuna kazanç takip kolonları
+-- (T+14 cron ve refund iptali için event bazında iz)
+ALTER TABLE gift_events
+  ADD COLUMN earnings_tl   NUMERIC(10,2) NOT NULL DEFAULT 0.00,
+  ADD COLUMN payout_status VARCHAR(20)   NOT NULL DEFAULT 'pending',
+                           -- pending | released | cancelled_refund
+  ADD COLUMN released_at   TIMESTAMPTZ;
+
+CREATE INDEX idx_gift_events_payout
+  ON gift_events (payout_status, sent_at)
+  WHERE payout_status = 'pending';
 ```
 
 **Güncellenecek endpoint — send-gift (wallet.py):**
@@ -296,19 +324,41 @@ POST /api/wallet/withdraw
   → 200 OK | 400 yetersiz bakiye / limit altı
 ```
 
-**T+14 Holding — ARQ cron görevi:**
+**T+14 Holding — ARQ cron görevi (idempotent):**
 ```python
-# Her gün 02:00 UTC — pending → earnings'e aktar
+# Her gün 02:00 UTC — pending → released (tam idempotent)
 async def release_pending_earnings_task():
-    """14 günü dolan tl_pending_balance → tl_earnings_balance'a aktar."""
-    # TeqlikTransaction.gift_sent_at <= NOW() - 14d
-    # UPDATE users SET
-    #   tl_earnings_balance += eligible_amount,
-    #   tl_pending_balance  -= eligible_amount
-    # WHERE id IN (...)
+    """14 günü dolan gift_events.payout_status='pending' → 'released', balance aktar."""
+    # BEGIN TRANSACTION
+    #
+    # 1. Aktarılacak hediyeleri kilitle ve topla
+    #    SELECT receiver_id, SUM(earnings_tl) AS total
+    #    FROM gift_events
+    #    WHERE payout_status = 'pending'
+    #      AND sent_at <= NOW() - INTERVAL '14 days'
+    #    GROUP BY receiver_id
+    #    FOR UPDATE SKIP LOCKED
+    #
+    # 2. Kullanıcı bakiyelerini güncelle
+    #    UPDATE users SET
+    #      tl_earnings_balance += total,
+    #      tl_pending_balance  -= total
+    #    WHERE id = receiver_id
+    #
+    # 3. Event'leri released olarak işaretle
+    #    UPDATE gift_events SET
+    #      payout_status = 'released',
+    #      released_at   = NOW()
+    #    WHERE payout_status = 'pending'
+    #      AND sent_at <= NOW() - INTERVAL '14 days'
+    #
+    # COMMIT
+    #
+    # Cron iki kez çalışsa, yeniden başlasa, yarıda kalsa güvenli:
+    # 'released' satırlar WHERE payout_status = 'pending' koşuluna girmez.
 ```
 
-> **Neden T+14:** Apple chargebackları teorik 120 güne kadar açık olsa da pratikte %99'u 14 gün içinde kapanır. Daha uzun beklemek yayıncı deneyimini bozar. Risk: platforma tanınmış kimliği doğrulanmış yayıncılara küçük miktarlar için T+14 makul; büyük miktarlarda (örn. >₺5.000) T+30 uygulanabilir (V1.1 iyileştirmesi).
+> **Neden T+14:** Apple chargebackları teorik 120 güne kadar açık olsa da pratikte %99'u 14 gün içinde kapanır. Daha uzun beklemek yayıncı deneyimini bozar. Büyük miktarlarda (>₺5.000 tek hediye) T+30 uygulanabilir (V1.1 iyileştirmesi).
 
 ### 4.3 Mevcut Backend Durumu
 
@@ -324,10 +374,12 @@ async def release_pending_earnings_task():
 | Sandbox/production config | ❌ Yok |
 | `tl_earnings_balance` + `tl_pending_balance` (users) | ❌ Migration yok |
 | `withdrawal_requests` tablosu | ❌ Migration yok |
+| `gift_events` (`earnings_tl`, `payout_status`, `released_at`) | ❌ Migration yok |
 | `send-gift` → TL kazanca dönüşüm (teqlik yerine) | ⚠️ Güncellenmeli |
+| Refund webhook → orantılı gift iptali | ⚠️ Güncellenmeli |
 | `GET /api/wallet/summary` | ❌ Yazılmamış |
 | `POST /api/wallet/withdraw` | ❌ Yazılmamış |
-| T+14 ARQ cron görevi (release_pending_earnings) | ❌ Yazılmamış |
+| T+14 ARQ cron görevi (release_pending_earnings — idempotent) | ❌ Yazılmamış |
 
 ---
 
@@ -348,12 +400,18 @@ async def release_pending_earnings_task():
 │  ╚══════════════════════════════════════════╝ │
 ├──────────────────────────────────────────────┤
 │  ╔══════════════════════════════════════════╗ │
-│  ║  KART 2: Yayın Kazançlarım  [sadece     ║ │
-│  ║          yayıncılara görünür]            ║ │
+│  ║  KART 2: Yayın Kazançlarım  [herkese]   ║ │
+│  ║                                          ║ │
+│  ║  [Kazanç varsa — yayıncı]               ║ │
 │  ║  • Çekilebilir: ₺1.450,00               ║ │
 │  ║  • Bekleyen (T+14): ₺230,00             ║ │
 │  ║  [  Banka Hesabıma Çek (IBAN)  ]        ║ │
 │  ║  Min. çekim ₺500 — Kaynak: hediyeler    ║ │
+│  ║                                          ║ │
+│  ║  [Kazanç yoksa — henüz yayın yapmamış]  ║ │
+│  ║  💡 Yayın aç, izleyicilerden hediye     ║ │
+│  ║     topla, IBAN'ına nakit kazan!        ║ │
+│  ║  [  Yayın Başlat  ]                     ║ │
 │  ╚══════════════════════════════════════════╝ │
 ├──────────────────────────────────────────────┤
 │  2 sütunlu paket grid (4 kart)               │
@@ -380,7 +438,7 @@ async def release_pending_earnings_task():
 └──────────────────────────────────────────────┘
 ```
 
-> **Apple uyum notu:** teqlik satın alma Kart 1'de — tamamen IAP üzerinden, Kural 3.1.1 uyumlu. Kart 2 yalnızca izleyicilerden kazanılan geliri gösteriyor; kullanıcı satın aldığı teqliği nakde çeviremiyor. Apple bu modele itiraz etmiyor (TikTok, Twitch aynı ayrımı kullanıyor).
+> **Apple uyum notu:** teqlik satın alma Kart 1'de — tamamen IAP üzerinden, Kural 3.1.1 uyumlu. Kart 2 yalnızca izleyicilerden kazanılan geliri gösteriyor; kullanıcı satın aldığı teqliği nakde çeviremiyor. Apple bu modele itiraz etmiyor (TikTok, Twitch aynı ayrımı kullanıyor). Kart 2'nin tüm kullanıcılara gösterilmesi — kazanç yokken "Yayın Başlat" CTA'sıyla — organik büyüme döngüsü yaratır: sıradan alıcı/satıcıyı yayıncıya dönüştürür.
 
 ### 5.2 Satın Alma Akışı
 
@@ -439,13 +497,13 @@ async def release_pending_earnings_task():
 
 | # | Görev | Yapan | Blokör mu? |
 |---|-------|-------|-----------|
-| W1 | `tl_earnings_balance` + `tl_pending_balance` migration (users) | Backend | Evet |
-| W2 | `withdrawal_requests` tablosu migration | Backend | Evet |
+| W1 | Migration: users (`tl_earnings_balance`, `tl_pending_balance`) + `withdrawal_requests` + `gift_events` (`earnings_tl`, `payout_status`, `released_at`) | Backend | Evet |
+| W2 | `gift_events` payout index (`idx_gift_events_payout`) | Backend | Evet |
 | W3 | `send-gift` endpoint: teqlik → TL dönüşümüne güncelle | Backend | Evet |
 | W4 | `GET /api/wallet/summary` endpoint (teqlik + TL birlikte) | Backend | Evet |
 | W5 | `POST /api/wallet/withdraw` endpoint + bakiye/limit kontrolleri | Backend | Evet |
 | W6 | T+14 ARQ cron görevi (`release_pending_earnings_task`) | Backend | Evet |
-| W7 | Cüzdan Kart 2 (Yayın Kazançları) UI — yalnızca yayıncılara göster | Mobile | Hayır |
+| W7 | Cüzdan Kart 2 UI: kazanç > 0 → çekim formu; kazanç = 0 → "Yayın Başlat" CTA (tüm kullanıcı) | Mobile | Hayır |
 | W8 | Çekim talebi formu (IBAN + ad-soyad) | Mobile | Hayır |
 | W9 | Admin panel: çekim talepleri listesi + manuel onay | Backend/Admin | Hayır |
 
