@@ -213,6 +213,22 @@ Mobil StoreKit   →  signedTransactionInfo (JWS)  →  POST /api/wallet/apple-v
   - Production: `api.storekit.itunes.apple.com`
 - Konfigürasyonda `APPLE_ENVIRONMENT=sandbox|production` ayrımı zorunlu
 
+**JWS Doğrulama — Zorunlu Güvenlik Kontrolleri (`verify_apple_receipt_command.py`):**
+```python
+# JWS decode edildikten sonra payload'da şunlar HARDCODED doğrulanmalı:
+assert payload["environment"] == "Production"          # Sandbox makbuzu prod'a geçemez
+assert payload["bundleId"]    == "com.teqlif.app"      # Başka uygulamanın makbuzu reddedilir
+assert payload["productId"]   in VALID_PRODUCT_IDS     # Sadece bilinen 4 paketin ID'si
+# Bu 3 kontrol atlansa jailbreak araçlarıyla (LocalIAPStore) bedavadan teqlik yüklenebilir.
+```
+
+**Günlük IAP Hız Limiti (Velocity Limit):**
+```
+Aynı Apple ID / cihaz kimliğinden 24 saatte maksimum ₺5.000 satın alma.
+Eşik aşılırsa: 429 → fraud_flag = True → admin incelemesi.
+Teqlik_transactions tablosunda device_id (StoreKit appAccountToken) saklanmalı.
+```
+
 **Replay Saldırısı Koruması:**
 ```sql
 -- Gerekli migration:
@@ -262,9 +278,22 @@ Apple → POST /api/wallet/apple-notifications
 ```sql
 -- users tablosuna ekle
 ALTER TABLE users
-  ADD COLUMN tl_earnings_balance       NUMERIC(10,2) NOT NULL DEFAULT 0.00,
-  ADD COLUMN tl_pending_balance        NUMERIC(10,2) NOT NULL DEFAULT 0.00,
-  ADD COLUMN monthly_free_withdrawals_used INTEGER NOT NULL DEFAULT 0;
+  ADD COLUMN tl_earnings_balance           NUMERIC(10,2) NOT NULL DEFAULT 0.00,
+  ADD COLUMN tl_pending_balance            NUMERIC(10,2) NOT NULL DEFAULT 0.00,
+  ADD COLUMN monthly_free_withdrawals_used INTEGER NOT NULL DEFAULT 0,
+  -- Anti-fraud: yeni yayıncı 90 gün Rolling Reserve (NULL = reserve yok/bitti)
+  ADD COLUMN rolling_reserve_expires_at    TIMESTAMPTZ,
+  ADD COLUMN rolling_reserve_limit_tl      NUMERIC(10,2) NOT NULL DEFAULT 2500.00,
+  -- Negatif bakiye durumu (borç mahsubu akışı)
+  ADD COLUMN is_in_debt                    BOOLEAN NOT NULL DEFAULT false,
+  -- Borç 30 günden uzun sürerse veya MERNIS uyuşmazlığında dondurulur
+  ADD COLUMN account_frozen                BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN account_frozen_reason         VARCHAR(120),
+  -- MERNIS/KYC doğrulama
+  ADD COLUMN mernis_verified               BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN mernis_verified_at            TIMESTAMPTZ;
+  -- mernis_tckn VERİTABANINDA DÜZYAZI SAKLANMAZ: uygulama katmanında şifrelenir (AES-256)
+  -- ve şifreli hali ayrı bir tabloda (user_kyc) tutulur.
   -- ⚠️ tl_earnings_balance'a CHECK (>= 0) KONULMAMALI:
   -- Çekim sonrası Apple iadesi gelirse bakiye negatife düşebilir (borç mahsubu).
   -- DB constraint hatası Apple webhook'unun 500 alıp sonsuz retry'a girmesine yol açar.
@@ -297,6 +326,17 @@ ALTER TABLE gift_events
 CREATE INDEX idx_gift_events_payout
   ON gift_events (payout_status, sent_at)
   WHERE payout_status = 'pending';
+```
+
+**Rate Limiting — send-gift (Redis Token Bucket):**
+```
+Canlı yayında saniyede 50 hediye → PostgreSQL + Redis + WebSocket kilitlenir.
+Kullanıcı başına sınır (Redis SETNX + TTL):
+  Normal:  saniyede maks. 2 hediye (burst: 5)
+  Aşılırsa: HTTP 429 — "Çok hızlı! Biraz bekleyin."
+  Kötü niyet tespiti (burst limit 10×): sender'ı 10 dakika bloke et.
+
+Redis key: rate:gift:{sender_id}  |  TTL: 1 saniye  |  increment > limit → red
 ```
 
 **Güncellenecek Use Case — `app/use_cases/wallet/commands/send_gift_command.py`:**
@@ -350,16 +390,31 @@ GET  /api/wallet/summary  →  get_wallet_summary_query.py
       free_withdrawals_remaining }   ← 2 - monthly_free_withdrawals_used
 
 POST /api/wallet/withdraw  →  request_withdrawal_command.py
-  Body: { amount_tl, iban, account_holder_name }
+  Body: { amount_tl, iban, account_holder_name, tckn }
   Kurallar (credit_service.py merkezi kontrol — ADR §40):
+    - account_frozen == false  (dondurulmuş hesap çekemez)
+    - mernis_verified == true  (ilk çekimde MERNIS doğrulaması zorunlu)
+    - IBAN checksum doğrulama (TR + 24 karakter + Luhn-benzeri mod-97 kontrolü)
+    - IBAN sahibi adı + MERNIS adı birebir eşleşmeli  (admin onayında kontrol edilir)
     - tl_earnings_balance >= amount_tl  (negatif bakiyede çekim reddedilir)
     - amount_tl >= 500  (minimum çekim)
+    - Rolling Reserve: rolling_reserve_expires_at > NOW() ise amount_tl <= rolling_reserve_limit_tl
+    - Dağıtık kilit (Concurrency / Race Condition önlemi):
+        Redis SETNX lock:withdraw:{user_id} EX 10
+        Kilit alınamazsa: 409 "İşlem devam ediyor, tekrar deneyin"
+    - Atomik SQL (bakiye kontrolü + düşüm tek sorguda):
+        UPDATE users
+          SET tl_earnings_balance = tl_earnings_balance - :total_tl,
+              monthly_free_withdrawals_used = monthly_free_withdrawals_used + :used_slot
+          WHERE id = :uid AND tl_earnings_balance >= :total_tl AND account_frozen = false
+          RETURNING tl_earnings_balance
+        Dönen satır yoksa (None): bakiye yetersiz veya hesap dondurulmuş → 400/403
     - Çekim ücreti (credit_service.py → can_withdraw_free(user)):
-        PRO + monthly_free_withdrawals_used < 2  →  ₺0  (monthly_free_withdrawals_used += 1)
+        PRO + monthly_free_withdrawals_used < 2  →  ₺0  (used_slot = 1)
         diğer                                    →  ₺15 sabit işlem ücreti
-    - tl_earnings_balance -= (amount_tl + fee_tl)  (atomik ham SQL)
-    - withdrawal_requests kaydı oluştur (status=pending, fee_tl kolonu ile)
-  → 200 OK | 400 yetersiz bakiye / limit altı
+    - withdrawal_requests kaydı oluştur (status=pending, fee_tl, iban, mernis_name)
+    - Redis lock serbest bırak
+  → 200 OK | 400 yetersiz bakiye / limit | 403 hesap dondurulmuş | 409 kilit
 ```
 
 > PRO'ya ayda 2 ücretsiz çekim: her ayın 1'inde `monthly_free_withdrawals_used` = 0 sıfırlanır (schedule.yaml ARQ cron). Standart kullanıcı her çekimde ₺15 öder.
@@ -433,6 +488,60 @@ Sonraki yayın kazançları negatif bakiyeyi kapatır (borç mahsubu):
    döngüsüne girer ve aynı iade birden çok kez işlenebilir.
 ```
 
+### 4.4 Güvenlik & Anti-Fraud Mimarisi
+
+**Rolling Reserve — Yeni Yayıncı Kademeli Çekim Kotası:**
+
+Nakit çıkışı olan her fintech platformunun en büyük riski yeni hesapların ilk 90 günde abuse yapmasıdır. Rolling Reserve bu riski sınırlar:
+
+```
+Hesap oluşturulunca: rolling_reserve_expires_at = NOW() + 90 gün
+İlk 90 gün içinde: maksimum tek seferlik çekim = rolling_reserve_limit_tl (₺2.500)
+90 gün sonra:       rolling_reserve_expires_at = NULL → sınır kalkar
+Limit esnetilebilir: admin el ile NULL yapabilir (güvenilir satıcı/yayıncı için)
+```
+
+Bu mekanizma organize refund çetelerinin "teqlik al → hediye yağdır → ₺9.500 çek → iadeyi al" döngüsünü ilk 90 gün içinde maddi olarak imkânsız kılar.
+
+**MERNIS / KYC Doğrulama (İlk Çekim Zorunlu):**
+
+```
+Kullanıcı ilk IBAN çekim talebinde TCKN + Ad + Soyad + Doğum Yılı girer.
+Backend: NVİ MERNIS SOAP API ile doğrular.
+  Başarılı: mernis_verified = true, mernis_verified_at = NOW()
+  Başarısız: çekim reddedilir, kullanıcıya "kimlik doğrulanamadı" mesajı
+Admin onayında: IBAN alıcı adı (bankadan gelen) ile MERNIS adı birebir eşleşmeli.
+TCKN şifreli saklanır (AES-256, uygulama katmanı) — veritabanında düzyazı yok.
+```
+
+Yasal zemin: Emniyet / Savcılık yazısı geldiğinde "Kimin hesabı?" sorusuna doğrulanmış kimlik kaydıyla anında yanıt verilebilir.
+
+**Negatif Bakiye & Borç Mahsubu Akışı:**
+
+```
+Durum: Yayıncı parayı çekti, sonradan iade geldi → tl_earnings_balance negatif
+  is_in_debt = true  (otomatik flag)
+  Sonraki kazançlar önce negatif bakiyeyi kapatır (borç mahsubu)
+  tl_earnings_balance < 0 iken çekim talebi reddedilir
+  Borç 30 günü aşarsa:
+    account_frozen = true
+    account_frozen_reason = "Ödenmemiş borç — 30 gün aşıldı"
+    Tüm aktif mezat ve satış ilanları pasif yapılır (admin tetikler)
+  Admin borcu sıfırlarsa: is_in_debt = false, account_frozen = false
+```
+
+**Admin Onay Mekanizması — Çift Onay (Maker-Checker):**
+
+```
+₺2.500 altı çekim:  tek admin onayı yeterli
+₺2.500–₺10.000:    iki ayrı admin onayı (Maker-Checker)
+₺10.000 üzeri:     Maker-Checker + 2FA (Google Authenticator)
+Admin paneli:
+  - Çekim talebini açınca IBAN alıcı adı + MERNIS adı yan yana gösterilir
+  - Eşleşmiyorsa kırmızı uyarı, onay bloke
+  - Her onay işlemi audit_log tablosuna yazılır (kim, ne zaman, IP)
+```
+
 ### 4.3 Mevcut Backend Durumu
 
 | Bileşen | Durum |
@@ -449,10 +558,16 @@ Sonraki yayın kazançları negatif bakiyeyi kapatır (borç mahsubu):
 | `withdrawal_requests` tablosu (+ `fee_tl` kolonu) | ❌ Migration yok |
 | `gift_events` (`earnings_tl` NUMERIC(10,4), `payout_status`, `released_at`) | ❌ Migration yok |
 | `use_cases/wallet/commands/` + `queries/` use case yapısı | ❌ Yazılmamış |
-| `send_gift_command.py` (Decimal hassasiyeti + atomik SQL) | ❌ Yazılmamış |
+| `send_gift_command.py` (Decimal hassasiyeti + atomik SQL + Redis rate limit) | ❌ Yazılmamış |
 | Refund webhook → orantılı gift iptali + negatif bakiye desteği | ⚠️ Güncellenmeli |
 | `get_wallet_summary_query.py` | ❌ Yazılmamış |
-| `request_withdrawal_command.py` (credit_service.py entegrasyon) | ❌ Yazılmamış |
+| `request_withdrawal_command.py` (Redis lock + atomik SQL WHERE + MERNIS + Rolling Reserve) | ❌ Yazılmamış |
+| Rolling Reserve kolonları (`rolling_reserve_expires_at`, `rolling_reserve_limit_tl`) | ❌ Migration yok |
+| Negatif bakiye kolonları (`is_in_debt`, `account_frozen`, `account_frozen_reason`) | ❌ Migration yok |
+| MERNIS kolonu (`mernis_verified`, `mernis_verified_at`) + `user_kyc` şifreli tablo | ❌ Migration yok |
+| JWS: `environment`, `bundleId`, `productId` hardcoded kontrolleri | ❌ Yazılmamış |
+| IAP günlük velocity limit (Redis, ₺5.000/gün/cihaz) | ❌ Yazılmamış |
+| Redis Token Bucket (send-gift, 2/sn per user) | ❌ Yazılmamış |
 | `schedule.yaml` T+14 cron (`release_pending_earnings`, watchdog_m:30) | ❌ Eklenmemiş |
 | `schedule.yaml` aylık kota sıfırlama cron (`reset_monthly_withdrawal_quota`, watchdog_m:60) | ❌ Eklenmemiş |
 
@@ -572,18 +687,19 @@ Sonraki yayın kazançları negatif bakiyeyi kapatır (borç mahsubu):
 
 | # | Görev | Yapan | Blokör mu? |
 |---|-------|-------|-----------|
-| W1 | Migration: users (`tl_earnings_balance`, `tl_pending_balance`, `monthly_free_withdrawals_used`) + `withdrawal_requests` (+ `fee_tl`) + `gift_events` (`earnings_tl` NUMERIC(10,4), `payout_status`, `released_at`) | Backend | Evet |
+| W1 | Migration: users (tl_earnings/pending_balance, monthly_free_withdrawals_used, rolling_reserve, is_in_debt, account_frozen, mernis_verified) + `user_kyc` şifreli tablo + `withdrawal_requests` (+ fee_tl) + `gift_events` (earnings_tl NUMERIC(10,4), payout_status, released_at) | Backend | Evet |
 | W2 | `gift_events` payout index (`idx_gift_events_payout`) | Backend | Evet |
-| W3 | `use_cases/wallet/commands/` yapısı oluştur (`send_gift`, `request_withdrawal`, `verify_apple_receipt`, `handle_apple_refund`) + `queries/get_wallet_summary` | Backend | Evet |
-| W4 | `send_gift_command.py`: Decimal hassasiyetiyle TL dönüşüm + atomik ham SQL + 8 hediye tipi + animasyon katmanı payload | Backend | Evet |
-| W5 | `get_wallet_summary_query.py`: teqlik + TL bakiyeleri tek sorguda | Backend | Evet |
-| W6 | `request_withdrawal_command.py`: `credit_service.py` entegrasyon, ₺15 ücret / PRO 2× ücretsiz (`monthly_free_withdrawals_used`), ROUND_DOWN, negatif bakiyede red | Backend | Evet |
-| W6b | `schedule.yaml` güncelle: `release_pending_earnings` (02:00 UTC, watchdog_m:30) + `reset_monthly_withdrawal_quota` (ayın 1'i 00:05 UTC, watchdog_m:60) | Backend | Evet |
-| W7 | Refund webhook (`handle_apple_refund_command.py`): orantılı gift iptali + çekim sonrası negatif bakiye desteği + `pending_refund` flag | Backend | Evet |
-| W8 | Cüzdan Kart 2 UI: kazanç > 0 → çekim formu; kazanç = 0 → "Yayın Başlat" CTA (tüm kullanıcı) | Mobile | Hayır |
-| W9 | Çekim talebi formu (IBAN + ad-soyad) | Mobile | Hayır |
-| W10 | 5 dil ARB güncelleme: `giftNameClap`, `giftNameTea`, `giftNameGoldenHammer`, `giftNameRocket`, `giftNameTrophy`, `walletWithdrawFeeNotice`, `walletMinWithdrawError`, `walletPendingEarningsDesc` | Mobile | Hayır |
-| W11 | Admin panel: çekim talepleri listesi + manuel onay + negatif bakiye uyarısı | Backend/Admin | Hayır |
+| W3 | `use_cases/wallet/commands/` yapısı: `send_gift`, `request_withdrawal`, `verify_apple_receipt`, `handle_apple_refund` + `queries/get_wallet_summary` | Backend | Evet |
+| W4 | `verify_apple_receipt_command.py`: x5c zincir + environment/bundleId/productId hardcoded + velocity limit (Redis, ₺5.000/gün/cihaz) | Backend | Evet |
+| W5 | `send_gift_command.py`: Decimal hassasiyeti + atomik SQL + Redis Token Bucket (2/sn per user) + 8 hediye tipi + animasyon payload | Backend | Evet |
+| W6 | `get_wallet_summary_query.py`: teqlik + TL bakiyeleri tek sorguda | Backend | Evet |
+| W7 | `request_withdrawal_command.py`: IBAN checksum + MERNIS + Rolling Reserve + Redis distributed lock + atomik SQL WHERE + credit_service.py (ücret/kota) | Backend | Evet |
+| W7b | `schedule.yaml`: `release_pending_earnings` (02:00 UTC, watchdog_m:30) + `reset_monthly_withdrawal_quota` (ayın 1'i 00:05 UTC, watchdog_m:60) | Backend | Evet |
+| W8 | `handle_apple_refund_command.py`: orantılı gift iptali + negatif bakiye + is_in_debt flag + account_frozen (30 gün borç) | Backend | Evet |
+| W9 | Cüzdan Kart 2 UI: kazanç > 0 → çekim formu; kazanç = 0 → "Yayın Başlat" CTA (tüm kullanıcı) | Mobile | Hayır |
+| W10 | Çekim talebi formu (IBAN + ad-soyad + TCKN — ilk çekim MERNIS akışı) | Mobile | Hayır |
+| W11 | 5 dil ARB: `giftNameClap`, `giftNameTea`, `giftNameGoldenHammer`, `giftNameRocket`, `giftNameTrophy`, `walletWithdrawFeeNotice`, `walletMinWithdrawError`, `walletPendingEarningsDesc` | Mobile | Hayır |
+| W12 | Admin panel: çekim listesi + Maker-Checker (₺2.500+) + MERNIS ad eşleşme uyarısı + negatif bakiye göstergesi + account_frozen toggle | Backend/Admin | Hayır |
 
 ---
 
@@ -1072,7 +1188,15 @@ Kullanıcıya 50 bonus teqlik veriyoruz (300 pakette) → bu 50 teqlik gelecekte
 | Negatif bakiye | `tl_earnings_balance` negatife düşebilir; CHECK constraint yok; borç mahsubu ile kapanır |
 | Backend mimari | İş mantığı `use_cases/wallet/commands/` + `queries/`; `wallet.py` router sadece delege |
 | Cron yerleşimi | `schedule.yaml`'da tanımlanır (worker.py'ye değil); watchdog_m ile izlenir |
-| i18n ARB (W10) | 5 dil ARB: 5 yeni hediye adı + walletWithdrawFeeNotice + walletMinWithdrawError + walletPendingEarningsDesc |
+| i18n ARB (W11) | 5 dil ARB: 5 yeni hediye adı + walletWithdrawFeeNotice + walletMinWithdrawError + walletPendingEarningsDesc |
+| Rolling Reserve | Yeni yayıncı 90 gün max ₺2.500/çekim; `rolling_reserve_expires_at` NULL ise limit yok |
+| MERNIS / KYC | İlk çekim zorunlu; TCKN AES-256 şifreli `user_kyc` tablosunda; IBAN adı eşleşmeli |
+| IBAN checksum | TR + 24 karakter + mod-97 → geçersiz IBAN çekim talebinde reddedilir |
+| IAP velocity limit | ₺5.000/gün/cihaz Redis rate limit; aşılırsa fraud_flag + admin alarmı |
+| send-gift rate limit | Redis Token Bucket: 2/sn per user (burst 5); aşılırsa 429 |
+| Concurrency (withdraw) | Redis SETNX lock:withdraw:{uid} EX 10 + atomik SQL WHERE bakiye |
+| Borç dondurma | 30 günlük ödenmemiş borçta account_frozen; tüm ilanlar pasif |
+| Admin Maker-Checker | ₺2.500+ çekimde 2 admin onayı; ₺10.000+ 2FA zorunlu |
 | Çekim ücreti | **₺15 sabit** — PRO ayda 2 ücretsiz (aylık ARQ reset); Std her çekimde öder |
 | İletişim stratejisi (hediye oranları) | "Net havuzun %95'i PRO yayıncılara ödenir" — "100 TL'lik hediyenin 95 TL'si" değil |
 | Başlangıç Boost (İlan Ver'de) | V1.1 — yüksek öncelik |
