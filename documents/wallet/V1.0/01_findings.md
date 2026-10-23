@@ -208,6 +208,56 @@ Satın alımlar Apple Kimliği hesabınız üzerinden faturalandırılır.
 
 ## 4. Teknik Mimari
 
+### 4.0 teqlik Yaşam Döngüsü Haritası
+
+```
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│  [1. DOĞUŞ — Minting]                                                            │
+│  App Store IAP → JWS doğrulama (leeway=60, bundleId, env=Prod)                  │
+│               → Replay koruması (apple_transaction_id UNIQUE)                    │
+│               → users.teqlik_balance += amount                                   │
+│               → teqlik_transactions (raw_receipt arşivi)                         │
+└────────────────────────────┬─────────────────────────────────────────────────────┘
+                             │
+              ┌──────────────┴──────────────┐
+              ▼                             ▼
+┌─────────────────────────┐   ┌────────────────────────────────────────┐
+│  [2. İÇ TÜKETİM]        │   │  [3. HEDİYELEŞME — Sanal → Hakediş]  │
+│  Boost·Blast·AI·PRO Pass│   │  Canlı mezatta 8 katman hediye         │
+│  Nakit çıkışı: ₺0        │   │  Gönderen: teqlik_balance -= cost      │
+│  Teqlif marjı: %100     │   │  Alıcı:    tl_pending_balance += share  │
+│  (Yeniden [2]'ye döner) │   │  Kilit: LEAST(sender,host) sırası      │
+└─────────────────────────┘   │  Rate:  Redis Token Bucket 2/sn        │
+                              └────────────────┬───────────────────────┘
+                                               ▼
+                              ┌────────────────────────────────────────┐
+                              │  [4. ESCROW — T+14 Bekleme]            │
+                              │  gift_events.payout_status = 'pending' │
+                              │  Apple chargeback sigortası            │
+                              │  14 gün boyunca dokunulamaz            │
+                              └────────────────┬───────────────────────┘
+                                               ▼ 02:15 UTC — CTE Cron
+                              ┌────────────────────────────────────────┐
+                              │  [5. OLGUNLAŞMA — Release]             │
+                              │  WITH locked_events AS (               │
+                              │    ... FOR UPDATE SKIP LOCKED          │
+                              │  ) SELECT ... GROUP BY receiver_id     │
+                              │  tl_pending_balance → tl_earnings_balance│
+                              │  _agent_ok(ctx, "release_pending...")  │
+                              └───────────────┬────────────────────────┘
+                                              │
+                      ┌───────────────────────┴───────────────────────┐
+                      ▼                                               ▼
+┌──────────────────────────────────┐    ┌────────────────────────────────────────┐
+│  [6A. GERİ KAZANIM — Seçenek C]  │    │  [6B. ÇIKIŞ — IBAN Ön Kayıt #Queue]   │
+│  tl_earnings_balance → teqlik    │    │  tl_earnings_balance atomik düşülür    │
+│  +%10 bonus (FLOOR formülü)      │    │  withdrawal_requests status='pending'  │
+│  ₺500 → 571+57 bonus = 628 tqlk  │    │  İptal hakkı: cancel_withdrawal        │
+│  Para dışarı ÇIKMAZ, geri döner  │    │  (bakiye anında iade, status=cancelled)│
+│  Yeniden [2] akışına akar        │    │  Gerçek transfer: V1.5 (şirket sonrası)│
+└──────────────────────────────────┘    └────────────────────────────────────────┘
+```
+
 ### 4.1 Flutter Tarafı
 
 **Gereken paket:** `in_app_purchase` (pub.dev resmi plugin — iOS StoreKit 2 + Android Billing desteği)
@@ -1647,6 +1697,37 @@ Kullanıcıya verilen +%10 bonusların veya dönüşüm teşviklerinin Teqlif'e 
 
 **4. Hukuki Zırh Tamamdır (V1.0)**
 Şirketleşene kadar dışarıya 1 TL bile kontrolsüz para çıkarmadığı için maliye ve MASAK karşısında temiz: kapalı döngü, beta yazılım testi. V1.5'te şirket + MASAK uyumu ile tam lisanslı operasyon.
+
+### 9.12 V2.1 Altyapı Teknolojileri — Kullanım Karması
+
+**4 Katmanlı Transaction Güvencesi (RPO ≈ 0):**
+```
+Katman 1 — pg_receivewal (Anlık WAL Stream, Node 1 → Node 2 WireGuard)
+  Her cüzdan transaction'ı tamamlanır tamamlanmaz Node 2'ye stream edilir.
+  Node 1 fiziksel olarak yok olsa bile tek kuruş veri kaybı sıfır.
+
+Katman 2 — pg_dump (Her gün 03:00 UTC, mantıksal yedek)
+  Node 2 Node 1'den mantıksal SQL yedeği çeker; pg_restore --list bütünlük testi.
+
+Katman 3 — pg_basebackup (Her Pazar 02:00 UTC, fiziksel snapshot)
+  Disk blok seviyesinde tam kopya. Cüzdan kron 02:15'te başlar — çakışma sıfır.
+
+Katman 4 — daily_financial_reconciliation (Her gün 00:00 UTC, watchdog_m:10)
+  Toplam bakiye == Yüklemeler - Harcamalar - Çekimler.
+  1 kuruş sapma → Telegram Critical Alert + admin_flags kaydı.
+```
+
+**scale/V2.1 Bileşen Kullanım Karması:**
+
+| Teknoloji | Cüzdan Mimarisindeki Kullanımı |
+|-----------|-------------------------------|
+| Bare Metal NVMe (Node 1) | Atomik bakiye kilitleri + PgBouncer connection pool — disk I/O darboğazı yok |
+| WireGuard Mesh (10.10.0.0/24) | pg_receivewal şifreli P2P tünel; Node 1 ↔ Node 2 anlık finansal veri akışı |
+| ClickHouse (Node 2) | `sync_pg_to_clickhouse_task` (01:50 UTC) — hediye kazançları analitik motoruna; ana DB yükten arındırılmış |
+| ARQ & schedule.yaml | Cron doğrudan koda gömülmez; merkezi IaC + `_agent_ok` watchdog sinyali |
+| Redis Core (Node 1:6379) | Token Bucket rate limit (2/sn), IAP velocity limit (₺5.000/gün/cihaz), Fail-Safe/Fail-Closed |
+| Bulkhead Workers | Cüzdan durum bildirimleri → `queue_name="critical"` (30sn); ML eğitimleri → `default` — karşılıklı blok yok |
+| LiveKit + PiP (Node 3/4) | Bakiye bitince video kesilmeden PiP; StoreKit satın alma Node 1 üzerinden bağımsız akar |
 
 ---
 
