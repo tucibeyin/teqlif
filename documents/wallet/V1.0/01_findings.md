@@ -415,6 +415,8 @@ Kullanıcı B'nin profili / ilan detayı
 
 **Scope:** Hediye sistemi teqlik satın alma akışına bağımlı değil — backend tek endpoint, bağımsız geliştirilebilir. V1.1 veya V2.0 planlanabilir.
 
+> **Not — Canlı Yayın Hediyesi (Ayrı Sistem):** `POST /api/wallet/send-gift` endpoint'i ZATEN mevcuttur (`wallet.py:191`) ancak bu `stream_id` zorunlu bir **canlı yayın hediyesidir** — izleyiciden yayıncıya, yayın sırasında. PRO yayıncı %95, standart yayıncı %70 komisyon alır. Bu §8.2'deki genel kullanıcıdan-kullanıcıya hediye sisteminden bağımsızdır; canlı yayın akışının IAP ile teqlik yükleme gelmesiyle hedge cirosu doğrudan büyüyecek.
+
 ### 8.3 İlan Ver Ekranında Ek teqlik Noktaları
 
 **Mevcut:** AI Açıklama (5 teqlik) — create_listing_screen'de aktif.
@@ -468,33 +470,41 @@ Kullanıcı B'nin profili / ilan detayı
 
 PRO'nun aylık sunduğu teqlik tasarrufu (30% komisyon senaryosunda iOS fiyatlarıyla):
 
-| Özellik | Standart ücreti | PRO tasarrufu |
-|---------|----------------|--------------|
-| +4 ekstra yenileme/ay | 4 × 10 teqlik × ₺1,50 | **₺60,00** |
-| +3 blast/ay | 3 × 10 teqlik × ₺1,50 | **₺45,00** |
-| **Toplam aylık teqlik değeri** | **70 teqlik** | **₺105,00** |
+PRO faydaları `credit_service.py` kodundan doğrulandı (free_standard vs free_pro alanları):
 
-> **Sonuç:** PRO ₺79,99'dan fiyatlanırsa kullanıcı aylık **₺25 tasarruf** ediyor (%31 ucuz). PRO ₺99,99'a fiyatlansaydı tasarruf sadece ₺5 olurdu — yetersiz bir öneri. **₺79,99 anchor kesinlikle doğru.** Üstüne rozet + analitik + öncelik geliyor.
+| Özellik | Standart (free) | PRO (free) | PRO tasarrufu |
+|---------|----------------|------------|--------------|
+| İlan Boost | 0/ay | 3/ay | 3 × 50 teqlik × ₺1,50 = **₺225,00** |
+| AI Açıklama | 0/ay | 6/ay | 6 × 5 teqlik × ₺1,50 = **₺45,00** |
+| Blast / Kitle Bildir. | 3/ay | 6/ay | +3 × 10 teqlik × ₺1,50 = **₺45,00** |
+| İlan Yenileme | 0/ay | 3/ay | 3 × 10 teqlik × ₺1,50 = **₺45,00** |
+| **Toplam aylık teqlik değeri** | — | — | **240 teqlik → ₺360,00** |
+
+> **Sonuç:** PRO ₺79,99/ay ile kullanıcı **₺360 değerinde özellik** alıyor — %78 tasarruf. Bu, fiyatın çok altında değer (deliberate under-pricing): platformda tutulma oranını artırmak ve PRO'yu "kaçırılmaz fırsat" konumuna taşımak için doğru strateji. **₺79,99 anchor kesinlikle doğru.** Rozet + analitik + öncelik bonuslarla daha da güçleniyor.
 
 **Önerilen PRO Paket Yapısı (Revize):**
 
-| Plan | App Store Fiyatı | Aylık maliyet | Net Gelir (%30) | Net Gelir (%15 SBP) | İndirim |
+| Plan | App Store Fiyatı | Aylık maliyet | Net (KDV+%30)¹ | Net (KDV+%15 SBP)¹ | İndirim |
 |------|-----------------|--------------|----------------|--------------------|----|
-| 1 Ay | **₺79,99** | ₺79,99 | ₺55,99 | ₺67,99 | — |
-| 3 Ay | **₺214,99** | ₺71,66 | ₺150,49 | ₺182,74 | %10,4 |
-| 6 Ay | **₺389,99** | ₺65,00 | ₺272,99 | ₺331,49 | %18,7 |
-| 12 Ay | **₺679,99** | ₺56,67 | ₺475,99 | ₺577,99 | %29,2 |
+| 1 Ay | **₺79,99** | ₺79,99 | **₺46,66** | **₺56,66** | — |
+| 3 Ay | **₺214,99** | ₺71,66 | **₺125,41** | **₺152,28** | %10,4 |
+| 6 Ay | **₺389,99** | ₺65,00 | **₺227,49** | **₺276,24** | %18,7 |
+| 12 Ay | **₺679,99** | ₺56,67 | **₺396,66** | **₺481,66** | %29,2 |
 
-> **Neden ₺79,99 değil ₺99,99:** teqlik eşdeğeri aylık ₺100,10 — ₺99,99 ile fiyatlamak "başabaş" demek, kullanıcı neden abone olsun ki? ₺79,99 net bir kazanım mesajı veriyor: "PRO al, aylık ₺20 artı tasarruf et." Türkiye'de Spotify ₺39,99, YouTube ₺49,99 — ₺79,99 bu anchors'ların biraz üstünde ama PRO bir iş aracı, eğlence değil.
+> ¹ Net = Fiyat ÷ 1,20 × (1 − komisyon) — Türkiye KDV %20 dahil
+
+> **Neden ₺79,99 değil ₺99,99:** PRO'nun gerçek aylık teqlik değeri **₺360** (240 teqlik — Boost+AI+Blast+Yenileme). ₺79,99 bu değerin %22'si — kullanıcı için "kaçırılmaz fırsat", Teqlif için ise yüksek retention ve daha fazla organik PRO dönüşümü. Türkiye'de Spotify ₺39,99, YouTube ₺49,99 — ₺79,99 bu anchors'ların biraz üstünde ama PRO bir iş aracı, eğlence değil.
 
 > **Yıllık paket önerisi:** ₺679,99 = aylık ₺56,67 → ₺79,99'a göre %29 indirim. Standart endüstri pratiği yıllık için %25-30 indirim. Bu doğru aralıkta.
 
-**PRO Üye Avantajları (Öneri):**
+**PRO Üye Avantajları (`credit_service.py` free_standard vs free_pro'dan doğrulandı):**
 
 | Özellik | Standart | PRO |
 |---------|---------|-----|
-| Aktif ilan yenileme (aylık) | 1 ücretsiz | 5 ücretsiz |
-| Blast / Kitle Bildirimi | Ücretli | 3/ay ücretsiz |
+| İlan Boost (aylık) | 0 ücretsiz | **3 ücretsiz** |
+| AI Açıklama (aylık) | 0 ücretsiz | **6 ücretsiz** |
+| Blast / Kitle Bildirimi (aylık) | 3 ücretsiz | **6 ücretsiz** (+3 extra) |
+| İlan Yenileme / Reactivation (aylık) | 0 ücretsiz | **3 ücretsiz** |
 | Profil rozeti | — | ✓ Doğrulanmış rozet |
 | İlan sıralaması | Normal | Aynı kategoride +öncelik |
 | İstatistik / Analytics | Temel | Detaylı (görüntülenme, tıklama) |
@@ -525,7 +535,8 @@ TEQLif Gelir Akışı
 │    ├── İlan Boost (50 teqlik) ✅
 │    └── Başlangıç Boost (ilan oluşturulurken, 50 teqlik) ← V1.1
 │
-└── Hediye Sistemi (kullanıcılar arası)       ← V1.1/V2.0 — hukuki görüş al
+├── Canlı Yayın Hediyesi (send-gift)           ← ✅ V1.0 mevcut — stream_id ile, PRO %95 / std %70
+└── Genel Kullanıcı-Kullanıcı Hediye          ← V1.1/V2.0 — hukuki görüş al
 ```
 
 ---
