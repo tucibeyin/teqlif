@@ -147,7 +147,7 @@ Her ürün için doldurulacaklar:
 **Adım 3 — App Store Server Notifications V2 Yapılandırması**
 - App Store Connect → uygulamanı seç → **App Information** → **App Store Server Notifications**
 - **Production URL**: `https://api.teqlif.com/api/wallet/apple-notifications`
-- **Sandbox URL**: `https://staging.teqlif.com/api/wallet/apple-notifications`
+- **Sandbox URL**: `https://api-staging.teqlif.com/v1/wallet/apple-notifications`
 - **Version**: **Version 2** seç (V1 hatalı/eksik bildirim gönderir)
 - "Send Test Notification" ile doğrula — backend `200 OK` dönmeli
 
@@ -526,8 +526,10 @@ DELETE /api/wallet/withdraw/{request_id}  →  cancel_withdrawal_request_command
 Her iki cron görevi `worker.py`'ye değil; **`deploy/scale/V2.1/schedule.yaml`** dosyasına `batch` altında eklenir. `schedule_loader.py` bu dosyayı okur, `teqlif-agent/watchdog.py` görevi izler — cron doğrudan koda yazılırsa agent tarafından izlenemez.
 
 ```python
-# Her gün 02:00 UTC — pending → released (tam idempotent)
+# Her gün 02:15 UTC — pending → released (tam idempotent)
 # schedule.yaml: batch.release_pending_earnings, watchdog_m: 30
+# 02:15 UTC: Her Pazar 02:00'de başlayan pg_basebackup (Node 2 fiziksel yedek)
+# ile disk I/O çakışmasını önlemek için 15 dk ötelendi.
 async def release_pending_earnings_task():
     """14 günü dolan gift_events.payout_status='pending' → 'released', balance aktar."""
     # BEGIN TRANSACTION
@@ -966,7 +968,7 @@ Sunucu da aynı formülü uygular; Flutter gösterimi sadece kullanıcı bilgisi
 | W6 | `get_wallet_summary_query.py`: teqlik + TL bakiyeleri tek sorguda | Backend | Evet |
 | W7 | `request_withdrawal_command.py`: bakiye atomik düşüm (UPDATE WHERE tl_earnings_balance >= amount, 0 satır → 400) + aktif pending yok kontrolü + withdrawal_requests INSERT — aynı transaction | Backend | Evet |
 | W7b | `convert_to_teqlik_command.py`: Seçenek C (+%10 bonus, atomik SQL) | Backend | Evet |
-| W7c | `schedule.yaml`: `release_pending_earnings` (02:00 UTC, watchdog_m:30) + `daily_financial_reconciliation` (00:00 UTC, watchdog_m:10) | Backend | Evet |
+| W7c | `schedule.yaml`: `release_pending_earnings` (02:15 UTC, watchdog_m:30) + `daily_financial_reconciliation` (00:00 UTC, watchdog_m:10) — 02:15: Pazar 02:00 pg_basebackup çakışması önlenir | Backend | Evet |
 | W7e | `cancel_withdrawal_request_command.py`: status='pending' → 'cancelled' + atomik bakiye iadesi + 403 yetki / 409 statü kontrolü; `DELETE /api/wallet/withdraw/{id}` endpoint | Backend | Evet |
 | W8 | `handle_apple_refund_command.py`: orantılı gift iptali + negatif bakiye desteği | Backend | Evet |
 | W9 | Kart 2 UI: kazanç > 0 → birincil neon "⚡ ANINDA KULLAN (+%10 Bonus Teqlik'e Dönüştür)" + ikincil "🏦 Nakit Transferi İçin IBAN Tanımla (Ön Kayıt)"; aktif ön kayıt varsa → sıra kartı (📋 Sıra No: #Queue-{id}, "Kurumsal entegrasyon açılınca bildirim", İptal Et + Teqlik'e Dönüştür); kazanç = 0 → "Yayın Başlat" CTA; glassmorphism koyu zümrüt/altın kart; hediye ekranında combo tap sayacı (x2/x5/x10 + burst animasyonu) | Mobile | Hayır |
