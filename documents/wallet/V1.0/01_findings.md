@@ -148,7 +148,6 @@ Her ürün için doldurulacaklar:
 - App Store Connect → uygulamanı seç → **App Information** → **App Store Server Notifications**
 - **Production URL**: `https://api.teqlif.com/api/wallet/store-notifications/apple`
 - **Sandbox URL**: `https://api-staging.teqlif.com/api/wallet/store-notifications/apple`
-- ⚠️ App Store Connect'te eski `/apple-notifications` URL'si varsa güncelle (pre-launch, tek doğru path)
 - **Version**: **Version 2** seç (V1 hatalı/eksik bildirim gönderir)
 - "Send Test Notification" ile doğrula — backend `200 OK` dönmeli
 
