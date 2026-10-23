@@ -226,7 +226,8 @@ mobile/lib/
   │    └── widgets/
   │         ├── teqlik_package_card.dart
   │         ├── hero_balance_card.dart
-  │         └── teqlik_utility_guide.dart
+  │         ├── teqlik_utility_guide.dart
+  │         └── iban_pre_registration_sheet.dart  // Glassmorphism bottom sheet: yasal uyum panosu + IBAN formatter + banka logosu + simülatör + "Sıraya Gir" CTA
 ```
 
 > **Mevcut durum:** `WalletScreen` hâlâ `profile_screen.dart` içinde — 5000+ satırlık dosya. V1.0 implementasyonunda ayrı modüle çıkarılmalı.
