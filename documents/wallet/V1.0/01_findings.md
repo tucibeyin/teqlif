@@ -1231,6 +1231,36 @@ Teqlif Gelir Akışı
 ### 9.1 teqlik Ekosistemi — Paranın Akışı
 
 ```
+İzleyici Kredi Kartı (App Store)
+         │  ₺149,99 (100 teqlik paketi)
+         ▼
+[ Apple Kasası ] ─────────────────────────────────────────┐
+   • %20 KDV devlete gider (₺25,00)                       │ Apple Net-45 Gün
+   • %30 Apple komisyonu (₺37,50)                         │ bekletir
+   • Teqlif Net Hakediş: ₺87,49 (₺0,875 / teqlik)         │
+         │                                                ▼
+         ▼                                       [ Teqlif Banka Hesabı ]
+[ Kullanıcı Cüzdanı ]                                     (₺87,49 nakit girer)
+   100 teqlik yüklenir (Sanal Değer)
+         │
+         ├──────────────────────┬──────────────────────┬──────────────────────┐
+         │                      │                      │                      │
+         ▼                      ▼                      ▼                      ▼
+  [ İlan Özelliği ]     [ Canlı Yayın Hediyesi ]  [ PRO Pass ]         [ IBAN Ön Kayıt ]
+  Boost / AI / Blast     PRO Yayıncıya Taç(100)    56 teqlik ile       Yayıncı ₺500+
+  • Yayıncı payı: ₺0     • Yayıncıya: ₺47,50       • Nakit çıkış: ₺0  çekim talep eder
+  • Nakit çıkış: ₺0        (T+14 kilitli)           • Teqlif kâr: %100 • Nakit çıkış: ₺0
+  • Teqlif kârı: %100    • Teqlif net: ₺40,00       (sanal jeton eridi)  (Queue listesi)
+                           • Brüt marj: %45,7
+
+```
+
+**Paranın Üç Kolu — Her Biri Teqlif Lehine:**
+- **Kol 1 (Özellik harcaması):** Kullanıcı Boost/AI/Blast yaparken %100 net marj. Apple harcamadan ek kesinti almaz — alım anında bir kez kesti, bitti.
+- **Kol 2 (Hediye):** Yayıncı T+14 havuzundaki TL'yi büyük ihtimalle Seçenek C ile teqlik'e çevirir (%65+ kullanıcı bu yolu seçer) — Teqlif'ten nakit çıkış sıfır. Nakit çekse bile %30–45 Teqlif payı kasada kalır.
+- **Kol 3 (IBAN Ön Kayıt):** V1.0'da gerçek transfer yok; Apple'dan para gelmeden liste tutulur, V1.5'te transfer başladığında bile çekim ücreti + komisyon farkı kasada kalır.
+
+```
 Kullanıcı
    │
    ├─► [A] Para ile teqlik satın alır (IAP)
@@ -1454,6 +1484,77 @@ Kullanıcıya 50 bonus teqlik veriyoruz (300 pakette) → bu 50 teqlik gelecekte
 > **KDV düzeltmesi etkisi:** Önceki projeksiyon ₺96.399 net gösteriyordu (%30 kesinti varsayımıyla). KDV %20 dahil edilince ₺79.450'ye geriledi — ₺16.949 fark (%17,5). Bu fark tüm finansal planlama dökümanlarına yansıtılmalı.
 
 **Altyapı ₺40.000 → Net kâr: ~₺39.450/ay** (1.000 ödeme yapan kullanıcıda)
+
+### 9.9 Karma Kohort Simülasyonu — 1 Aylık Gerçekçi Ekosistem (1.000 Aktif Kullanıcı)
+
+**A. Sisteme Giren Gelirler (IAP Satışları):**
+
+| Kullanıcı Segmenti | Adet | Paket | Brüt | KDV (%20) | Apple (%30) | Teqlif Net |
+|--------------------|------|-------|------|-----------|-------------|------------|
+| Küçük Alıcılar | 500 | 100 teqlik (₺149,99) | ₺74.995,00 | ₺12.499,17 | ₺18.748,75 | ₺43.747,08 |
+| Orta Alıcılar | 200 | 350 teqlik (₺429,99) | ₺85.998,00 | ₺14.333,00 | ₺21.499,50 | ₺50.165,50 |
+| Mezat Balinaları | 40 | 1.900 teqlik (₺2.199,99) | ₺87.999,60 | ₺14.666,60 | ₺21.999,90 | ₺51.333,10 |
+| PRO Aboneler | 150 | 1 Ay PRO (₺79,99 IAP) | ₺11.998,50 | ₺1.999,75 | ₺2.999,63 | ₺6.999,12 |
+| **TOPLAM** | **890** | | **₺260.991,10** | **₺43.498,52** | **₺65.247,78** | **₺152.244,80** |
+
+**B. İçerideki Harcama & Hakediş Dağılımı (266.000 teqlik):**
+
+| Kullanım Alanı | Harcanan teqlik | Yayıncı Hakedişi (TL) | Teqlif Kasasında Kalan |
+|----------------|-----------------|----------------------|----------------------|
+| İlan Boost & Vitrin | 90.000 | ₺0,00 | ₺62.100,00 (%100 net) |
+| AI Açıklama & Blast | 26.000 | ₺0,00 | ₺17.940,00 (%100 net) |
+| Canlı Yayın Hediyeleri (PRO %95) | 100.000 | ₺47.500,00 (T+14 havuzda) | ₺21.500,00 (net komisyon) |
+| Canlı Yayın Hediyeleri (Std %70) | 30.000 | ₺10.500,00 (T+14 havuzda) | ₺10.200,00 (net komisyon) |
+| PRO Pass (teqlik ile alım) | 20.000 | ₺0,00 | ₺13.800,00 (%100 net) |
+| **TOPLAM** | **266.000** | **₺58.000,00** | **₺125.540,00** |
+
+**C. Yayıncı Çıkış Kanalları (₺58.000 toplam hakediş):**
+
+| Kanal | Oran | Tutar | Teqlif'ten Nakit Çıkışı |
+|-------|------|-------|------------------------|
+| Seçenek C (Teqlik'e Dönüştür +%10) | %65 | ₺37.700 → 47.392 teqlik | **₺0,00** — para kapalı döngüde kaldı |
+| IBAN Ön Kayıt (#Queue listesi) | %25 | ₺14.500 → sıra listesi | **₺0,00** — V1.5'e kadar bekler |
+| T+14 Havuzu (olgunlaşmadı) | %10 | ₺5.800 → henüz serbest değil | **₺0,00** |
+
+**D. 1 Aylık Net Finansal Sonuç:**
+
+| Kalem | Tutar |
+|-------|-------|
+| Apple'dan gelen net tahsilat | +₺152.244,80 |
+| Teqlif'ten çıkan gerçek nakit (V1.0) | ₺0,00 |
+| Altyapı VPS giderleri (Node 1–6 + nodeMonitor) | −₺40.000,00 |
+| **Aylık Net Nakit Akışı Kârı** | **+₺112.244,80** |
+
+> V1.5'te ₺14.500 Queue sırası ödendiğinde bile aylık net: **+₺97.744,80** — sistemin kendini finanse etmesi için gerekli olan V1.5 banka entegrasyonu maliyetini fazlasıyla karşılar.
+
+### 9.10 Platform Savunma Matrisi — Tüm Edge Case'ler
+
+| # | Senaryo | Risk | Savunma Mekanizması | Sonuç |
+|---|---------|------|---------------------|-------|
+| E1 | **Refund Çetesi:** Kullanıcı 1.000 teqlik alır, hediye atar, Apple'dan iade ister | Platform yayıncıya ödedi, Apple parayı geri aldı — çifte zarar | `handle_apple_refund_command.py`: T+14 dolmamış hediyelerde `cancelled_refund`, `tl_pending_balance` düşülür | Yayıncıya haksız para gitmez; Teqlif kasasından 1 kuruş çıkmaz |
+| E2 | **Geç Apple İadesi:** İade 20. günde geldi, bakiye serbest kalmıştı | `tl_earnings_balance` negatife düşer; DB CHECK varsa webhook 500 verir ve sonsuz retry döner | DB'de `CHECK (>= 0)` yasak. `tl_earnings_balance` negatife düşer, `pending_refund = True` bayrağı | Borç mahsubu: sonraki kazançlar eksi bakiyeyi kapatır; webhook asla 500 vermez |
+| E3 | **Apple Net-45 Uçurumu:** Hediye 14. günde serbest, yayıncı nakit istiyor; Apple Teqlif'e 45. günde öder | Teqlif tahsil etmediği parayı cebinden ödemek zorunda — nakit iflası | V1.0 Ön Kayıt modu: nakit çekim hemen yapılmaz; birincil buton Seçenek C (+%10 bonus) | Yayıncı ilan gücüne çevirir; nakit çıkışı sıfırlanır |
+| E4 | **Kullanıcı Sırada Beklerken Vazgeçer:** ₺500 çekim sırasında akşam mezatını kaçırmak istemez | Bakiye kilitli kalırsa müşteri memnuniyetsizliği, churn riski | `cancel_withdrawal_request_command.py` (`DELETE /withdraw/{id}`): tek tıkla iptal, bakiye anında iade | Kullanıcı 628 teqlik'e çevirip mezatta teklif verir; para platformda kalır |
+| E5 | **Bot Gift Flood:** Script ile saniyede 100 hediye, DB ve WebSocket çöküşü | Sunucu kilitlenmesi, bakiye senkron hataları | Redis Token Bucket: 2/sn (burst 5); limit aşılırsa 429; ısrar ederse 10 dk ban | Sunucu yükü sabit kalır; kilitlenme yaşanmaz |
+| E6 | **MASAK/CİMER Şikâyeti:** "Teqlif paramı vermiyor" | Yetkisiz bankacılık/ödeme kuruluşu soruşturması | Arayüzde ödeme sözü yok; "Kurumsal bankacılık öncesi Ön Kayıt ve Hakediş Koruma Sırası" — kullanıcı istediğinde iptal edip içeride kullanabilir | Hukuken "yetkisiz para transferi" oluşmaz; kapalı döngü beta yazılım testi |
+| E7 | **Kuruş Kaçağı:** 10.000 adet 1 teqlik hediye, PRO payı ₺0,4750; ROUND yapılırsa ₺0,005 × 10.000 = ₺50 buharlaşır | Platform aleyhine kuruş kaçağı | `gift_events.earnings_tl` NUMERIC(10,4); kullanıcı bakiyesine aktarımda `TRUNC(x, 2)`; ₺0,4750 → ₺0,47 | Kuruş kaçağı sıfır; küsurat Teqlif lehine |
+
+### 9.11 Bu Platform Neden Batmaz — Dört Temel Güç
+
+**1. Parayı Önden Tahsil Eder (Negatif İşletme Sermayesi Avantajı)**
+Kullanıcı teqlik'i alırken para kasaya girer. Özellikler kullanıldıkça veya yayıncı nakde dönüştürdükçe yükümlülük erir. Teqlif hiçbir zaman "önce hizmeti ver, sonra para al" pozisyonunda değil — tam tersi.
+
+**2. Kendi Parasını Basar (Sıfır Maliyetli Büyüme)**
+Kullanıcıya verilen +%10 bonusların veya dönüşüm teşviklerinin Teqlif'e maliyeti ₺0'dır. Sanal token basıp dağıtarak nakit çıkışını engeller, kullanıcı bağlılığını pekiştirir.
+
+**3. Her İşlemden Komisyon Alır (Katmanlı Marj)**
+- İlan özelliği: %100 Teqlif marjı
+- Hediye: %30–45 Teqlif marjı
+- PRO Pass (teqlik ile): %100 Teqlif marjı (Apple bir kez kesmişti)
+- Çekim (V1.5): ₺15 sabit ücret + Rolling Reserve faiz fırsatı
+
+**4. Hukuki Zırh Tamamdır (V1.0)**
+Şirketleşene kadar dışarıya 1 TL bile kontrolsüz para çıkarmadığı için maliye ve MASAK karşısında temiz: kapalı döngü, beta yazılım testi. V1.5'te şirket + MASAK uyumu ile tam lisanslı operasyon.
 
 ---
 
