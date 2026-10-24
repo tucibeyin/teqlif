@@ -83,6 +83,78 @@ _TYPE_LABELS = {
 }
 
 
+@router.get("/summary")
+async def wallet_summary(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.use_cases.wallet.queries.get_wallet_summary_query import GetWalletSummaryQuery
+    return await GetWalletSummaryQuery(db).execute(current_user.id)
+
+
+# ── Cashout (withdraw) ──────────────────────────────────────────────────────────
+
+class WithdrawRequest(BaseModel):
+    teqlik_amount: int = Field(gt=0)
+    currency: str = Field(default="TRY", pattern="^[A-Z]{3}$")
+    iban: str = Field(min_length=15, max_length=34)
+    account_holder_name: str = Field(min_length=2, max_length=120)
+
+
+@router.post("/withdraw")
+async def request_withdrawal(
+    body: WithdrawRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.use_cases.wallet.commands.request_withdrawal_command import RequestWithdrawalCommand
+    result = await RequestWithdrawalCommand(db).execute(
+        user_id=current_user.id,
+        teqlik_amount=body.teqlik_amount,
+        currency=body.currency,
+        iban=body.iban,
+        account_holder=body.account_holder_name,
+    )
+    await db.commit()
+    return result
+
+
+@router.delete("/withdraw/{request_id}")
+async def cancel_withdrawal(
+    request_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.use_cases.wallet.commands.cancel_withdrawal_request_command import CancelWithdrawalRequestCommand
+    result = await CancelWithdrawalRequestCommand(db).execute(
+        user_id=current_user.id,
+        request_id=request_id,
+    )
+    await db.commit()
+    return result
+
+
+# ── Seçenek C — available → teqlik_balance (%10 bonus) ─────────────────────────
+
+class ConvertToTeqlikRequest(BaseModel):
+    teqlik_amount: int = Field(gt=0)
+
+
+@router.post("/convert-to-teqlik")
+async def convert_to_teqlik(
+    body: ConvertToTeqlikRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.use_cases.wallet.commands.convert_to_teqlik_command import ConvertToTeqlikCommand
+    result = await ConvertToTeqlikCommand(db).execute(
+        user_id=current_user.id,
+        teqlik_amount=body.teqlik_amount,
+    )
+    await db.commit()
+    return result
+
+
 class TopupRequest(BaseModel):
     amount: int = Field(gt=0, le=10000)
 
