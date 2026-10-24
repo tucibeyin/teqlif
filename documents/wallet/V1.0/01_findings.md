@@ -619,6 +619,15 @@ CREATE TABLE user_wallet_earnings (
 -- Platform payı (platform_revenue) ve teşvik bonusu (bonus_mint) bu hesaba yazılır.
 -- id=0: SERIAL sequence 1'den başladığı için gerçek kullanıcılarla çakışmaz.
 -- status='inactive' + 'LOCKED_SYSTEM_ACCOUNT' hash → login fiilen imkânsız.
+--
+-- ⚠️ SERIAL vs IDENTITY NOTU (Alembic migration yazarken):
+--   Mevcut şema: id = Column(Integer, primary_key=True, autoincrement=True) → PostgreSQL SERIAL
+--   SERIAL'da explicit id=0 INSERT sorunsuz çalışır; sequence sayacı etkilenmez.
+--   Eğer şema ileride GENERATED ALWAYS AS IDENTITY'e geçerse,
+--   bu INSERT'e `OVERRIDING SYSTEM VALUE` eklenmesi gerekir:
+--     INSERT INTO users (id, ...) OVERRIDING SYSTEM VALUE VALUES (0, ...);
+--   Aksi takdirde "cannot insert into a generated always column" hatası alınır.
+--   V1.0 migration'ı SERIAL ile yazılır; geçiş olursa bu notu güncelle.
 INSERT INTO users (
   id, email, username, full_name, hashed_password,
   status, email_verified, is_admin, teqlik_balance, token_version, locale
@@ -1883,6 +1892,16 @@ Teqlif Gelir Akışı
 **Paranın Üç Kolu — Her Biri Teqlif Lehine:**
 - **Kol 1 (Özellik harcaması):** Kullanıcı Boost/AI/Blast yaparken %100 net marj. Apple harcamadan ek kesinti almaz — alım anında bir kez kesti, bitti.
 - **Kol 2 (Hediye):** Yayıncı T+14 havuzundaki TL'yi büyük ihtimalle Seçenek C ile teqlik'e çevirir (%65+ kullanıcı bu yolu seçer) — Teqlif'ten nakit çıkış sıfır. Nakit çekse bile %30–45 Teqlif payı kasada kalır.
+
+  **Seçenek C Döngü Mekaniği — Neden %10 Bonus Platform İçin Kârlı:**
+  Yayıncı 1.000 teqlik kazancını Seçenek C ile 1.100 teqlik'e çevirip başka bir yayıncıya hediye ettiğinde:
+  - Yeni yayıncı (standart): `1.100 × %70 = 770 teqlik` kazanır (₺385 nakit yükümlülüğü)
+  - Teqlif aradan `1.100 × %30 = 330 teqlik` platform_revenue keser
+  - Orijinal nakit borç: ₺500 → döngü sonrası: ₺385
+  - `1.10 × 0.70 = 0.77`: %10 bonus verilmesine rağmen nakit yükümlülük **%23 azalır**
+  Para içeride döndükçe platform komisyonu birikir, nakit çıkış riski erir.
+  Bu mekanizma, bonus_mint'in bilanço eşitliğinde "basılan" tarafa eklenmesini doğrular:
+  bonus teqlik gerçekte yaratılmış değil, yeniden döngüye girmiş ekonomik değerdir.
 - **Kol 3 (IBAN Ön Kayıt):** V1.0'da gerçek transfer yok; Apple'dan para gelmeden liste tutulur, V1.1'de transfer başladığında bile çekim ücreti + komisyon farkı kasada kalır.
 
 ```
