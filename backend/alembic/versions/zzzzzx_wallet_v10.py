@@ -6,7 +6,6 @@ Create Date: 2026-10-24
 """
 from __future__ import annotations
 import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import JSONB
 from alembic import op
 
 revision = 'zzzzzx_wallet_v10'
@@ -16,177 +15,248 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # ── 1. users — PRO abonelik kolonları ────────────────────────────────────
-    op.add_column('users', sa.Column('pro_expires_at', sa.DateTime(timezone=True), nullable=True))
-    op.add_column('users', sa.Column('pro_grace_until', sa.DateTime(timezone=True), nullable=True))
-    op.add_column('users', sa.Column('store_subscription_id', sa.String(128), nullable=True))
-    op.add_column('users', sa.Column('store_subscription_platform', sa.String(20), nullable=True))
-    op.create_index(
-        'idx_users_pro_expires', 'users', ['user_type', 'pro_expires_at'],
-        postgresql_where=sa.text("user_type = 'pro'"),
-    )
+    # ── 1. users — PRO abonelik kolonları (IF NOT EXISTS → idempotent) ───────
+    op.execute(sa.text(
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS "
+        "pro_expires_at TIMESTAMP WITH TIME ZONE"
+    ))
+    op.execute(sa.text(
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS "
+        "pro_grace_until TIMESTAMP WITH TIME ZONE"
+    ))
+    op.execute(sa.text(
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS "
+        "store_subscription_id VARCHAR(128)"
+    ))
+    op.execute(sa.text(
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS "
+        "store_subscription_platform VARCHAR(20)"
+    ))
+    op.execute(sa.text(
+        "CREATE INDEX IF NOT EXISTS idx_users_pro_expires "
+        "ON users (user_type, pro_expires_at) "
+        "WHERE user_type = 'pro'"
+    ))
 
-    # ── 2. userstatus PostgreSQL enum — sistem kullanıcısı için 'inactive' ──
-    # ALTER TYPE ... ADD VALUE transaction içinde kullanılamaz (PG kısıtı);
-    # autocommit_block ile kendi transaction'ında çalıştırılır.
+    # ── 2. userstatus PostgreSQL enum — autocommit_block zorunlu (PG kısıtı) ─
     # Downgrade'de enum value PG'de kalır (zararsız).
     with op.get_context().autocommit_block():
-        op.execute(sa.text("ALTER TYPE userstatus ADD VALUE IF NOT EXISTS 'inactive'"))
+        op.execute(sa.text(
+            "ALTER TYPE userstatus ADD VALUE IF NOT EXISTS 'inactive'"
+        ))
 
     # ── 3. platform_config — tek yapılandırma deposu (Redis-cached) ──────────
-    op.create_table(
-        'platform_config',
-        sa.Column('key', sa.String(60), nullable=False, primary_key=True),
-        sa.Column('value', JSONB(), nullable=False),
-        sa.Column('description', sa.Text(), nullable=True),
-        sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False,
-                  server_default=sa.text('NOW()')),
-    )
-    op.execute(
+    op.execute(sa.text(
+        "CREATE TABLE IF NOT EXISTS platform_config ("
+        "  key         VARCHAR(60) NOT NULL PRIMARY KEY, "
+        "  value       JSONB       NOT NULL, "
+        "  description TEXT, "
+        "  updated_at  TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()"
+        ")"
+    ))
+    op.execute(sa.text(
         "INSERT INTO platform_config (key, value, description) VALUES "
         "('teqlik_try_rate',     '{\"rate\": 0.50}',    '1 teqlik = kaç TRY (cashout dönüşüm kuru)'), "
         "('host_share_standard', '{\"pct\": 70}',        'Standart host hediye payı (%)'), "
         "('host_share_pro',      '{\"pct\": 95}',        'PRO host hediye payı (%)'), "
         "('iap_velocity_limit',  '{\"try\": 5000.00}',   'Cihaz başına günlük IAP limiti (TRY, Fail-Closed)'), "
         "('min_withdrawal_try',  '{\"try\": 500.00}',    'Minimum cashout tutarı (TRY karşılığı)'), "
-        "('cashout_enabled',     '{\"enabled\": false}', 'Cashout özelliği aktif mi (OTA flag)')"
-    )
+        "('cashout_enabled',     '{\"enabled\": false}', 'Cashout özelliği aktif mi (OTA flag)') "
+        "ON CONFLICT (key) DO NOTHING"
+    ))
 
     # ── 4. user_wallet_earnings — kazanç deposu (teqlik birimi) ──────────────
-    op.create_table(
-        'user_wallet_earnings',
-        sa.Column('user_id', sa.Integer(),
-                  sa.ForeignKey('users.id', ondelete='CASCADE'),
-                  nullable=False, primary_key=True),
-        sa.Column('pending', sa.Integer(), nullable=False, server_default='0'),
-        sa.Column('available', sa.Integer(), nullable=False, server_default='0'),
-        sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False,
-                  server_default=sa.text('NOW()')),
-    )
+    op.execute(sa.text(
+        "CREATE TABLE IF NOT EXISTS user_wallet_earnings ("
+        "  user_id    INTEGER NOT NULL PRIMARY KEY "
+        "               REFERENCES users(id) ON DELETE CASCADE, "
+        "  pending    INTEGER NOT NULL DEFAULT 0, "
+        "  available  INTEGER NOT NULL DEFAULT 0, "
+        "  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()"
+        ")"
+    ))
 
     # ── 5. sistem kullanıcısı (id=0) — platform hazine hesabı ────────────────
     # SERIAL'da explicit id=0 INSERT sorunsuz; sequence 1'den başlar, çakışmaz.
-    op.execute(
+    op.execute(sa.text(
         "INSERT INTO users "
         "(id, email, username, full_name, hashed_password, status, "
         " email_verified, is_admin, teqlik_balance, token_version, locale) "
         "VALUES "
         "(0, 'system@teqlif.internal', 'system', 'Teqlif Platform', "
         " 'LOCKED_SYSTEM_ACCOUNT_NO_LOGIN', "
-        " 'inactive', false, false, 0, 0, 'tr')"
-    )
+        " 'inactive', false, false, 0, 0, 'tr') "
+        "ON CONFLICT (id) DO NOTHING"
+    ))
 
     # ── 6. wallet_ledger — append-only finansal denetim izi ──────────────────
-    op.create_table(
-        'wallet_ledger',
-        sa.Column('id', sa.BigInteger(), primary_key=True, autoincrement=True),
-        sa.Column('user_id', sa.Integer(),
-                  sa.ForeignKey('users.id'), nullable=False),
-        sa.Column('delta_teqlik', sa.Integer(), nullable=False),
-        sa.Column('balance_after', sa.Integer(), nullable=False),
-        sa.Column('try_equivalent', sa.Numeric(12, 4), nullable=True),
-        sa.Column('try_rate_used', sa.Numeric(10, 6), nullable=True),
-        sa.Column('tcmb_rate_used', sa.Numeric(10, 6), nullable=True),
-        sa.Column('currency', sa.String(3), nullable=True),
-        sa.Column('tx_type', sa.String(40), nullable=False),
-        sa.Column('reference_id', sa.Integer(), nullable=True),
-        sa.Column('reference_type', sa.String(30), nullable=True),
-        sa.Column('created_at', sa.DateTime(timezone=True), nullable=False,
-                  server_default=sa.text('NOW()')),
-    )
-    op.create_index('idx_wallet_ledger_user_time', 'wallet_ledger',
-                    ['user_id', 'created_at'])
-    op.create_index('idx_wallet_ledger_type', 'wallet_ledger',
-                    ['tx_type', 'created_at'])
+    op.execute(sa.text(
+        "CREATE TABLE IF NOT EXISTS wallet_ledger ("
+        "  id             BIGSERIAL PRIMARY KEY, "
+        "  user_id        INTEGER NOT NULL REFERENCES users(id), "
+        "  delta_teqlik   INTEGER NOT NULL, "
+        "  balance_after  INTEGER NOT NULL, "
+        "  try_equivalent NUMERIC(12,4), "
+        "  try_rate_used  NUMERIC(10,6), "
+        "  tcmb_rate_used NUMERIC(10,6), "
+        "  currency       VARCHAR(3), "
+        "  tx_type        VARCHAR(40) NOT NULL, "
+        "  reference_id   INTEGER, "
+        "  reference_type VARCHAR(30), "
+        "  created_at     TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()"
+        ")"
+    ))
+    op.execute(sa.text(
+        "CREATE INDEX IF NOT EXISTS idx_wallet_ledger_user_time "
+        "ON wallet_ledger (user_id, created_at)"
+    ))
+    op.execute(sa.text(
+        "CREATE INDEX IF NOT EXISTS idx_wallet_ledger_type "
+        "ON wallet_ledger (tx_type, created_at)"
+    ))
 
     # ── 7. gift_events ALTER — kazanç teqlik birimi + T+14 payout durumu ─────
-    op.add_column('gift_events',
-                  sa.Column('earned_teqlik', sa.Integer(), nullable=False, server_default='0'))
-    op.add_column('gift_events',
-                  sa.Column('host_share_pct', sa.Numeric(5, 2), nullable=False,
-                            server_default='70.00'))
-    op.add_column('gift_events',
-                  sa.Column('payout_status', sa.String(20), nullable=False,
-                            server_default="'pending'"))
-    op.add_column('gift_events',
-                  sa.Column('released_at', sa.DateTime(timezone=True), nullable=True))
-    op.create_index(
-        'idx_gift_events_payout', 'gift_events', ['payout_status', 'sent_at'],
-        postgresql_where=sa.text("payout_status = 'pending'"),
-    )
+    op.execute(sa.text(
+        "ALTER TABLE gift_events ADD COLUMN IF NOT EXISTS "
+        "earned_teqlik INTEGER NOT NULL DEFAULT 0"
+    ))
+    op.execute(sa.text(
+        "ALTER TABLE gift_events ADD COLUMN IF NOT EXISTS "
+        "host_share_pct NUMERIC(5,2) NOT NULL DEFAULT 70.00"
+    ))
+    op.execute(sa.text(
+        "ALTER TABLE gift_events ADD COLUMN IF NOT EXISTS "
+        "payout_status VARCHAR(20) NOT NULL DEFAULT 'pending'"
+    ))
+    op.execute(sa.text(
+        "ALTER TABLE gift_events ADD COLUMN IF NOT EXISTS "
+        "released_at TIMESTAMP WITH TIME ZONE"
+    ))
+    op.execute(sa.text(
+        "CREATE INDEX IF NOT EXISTS idx_gift_events_payout "
+        "ON gift_events (payout_status, sent_at) "
+        "WHERE payout_status = 'pending'"
+    ))
 
     # ── 8. teqlik_transactions ALTER — store platform-agnostic ───────────────
-    op.add_column('teqlik_transactions',
-                  sa.Column('store_platform', sa.String(20), nullable=True))
-    op.add_column('teqlik_transactions',
-                  sa.Column('store_transaction_id', sa.String(128), nullable=True))
-    op.add_column('teqlik_transactions',
-                  sa.Column('raw_payload', sa.Text(), nullable=True))
-    op.add_column('teqlik_transactions',
-                  sa.Column('product_type', sa.String(20), nullable=False,
-                            server_default="'consumable'"))
-    op.create_index(
-        'uq_store_tx', 'teqlik_transactions',
-        ['store_platform', 'store_transaction_id'],
-        unique=True,
-        postgresql_where=sa.text('store_transaction_id IS NOT NULL'),
-    )
+    op.execute(sa.text(
+        "ALTER TABLE teqlik_transactions ADD COLUMN IF NOT EXISTS "
+        "store_platform VARCHAR(20)"
+    ))
+    op.execute(sa.text(
+        "ALTER TABLE teqlik_transactions ADD COLUMN IF NOT EXISTS "
+        "store_transaction_id VARCHAR(128)"
+    ))
+    op.execute(sa.text(
+        "ALTER TABLE teqlik_transactions ADD COLUMN IF NOT EXISTS "
+        "raw_payload TEXT"
+    ))
+    op.execute(sa.text(
+        "ALTER TABLE teqlik_transactions ADD COLUMN IF NOT EXISTS "
+        "product_type VARCHAR(20) NOT NULL DEFAULT 'consumable'"
+    ))
+    op.execute(sa.text(
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_store_tx "
+        "ON teqlik_transactions (store_platform, store_transaction_id) "
+        "WHERE store_transaction_id IS NOT NULL"
+    ))
 
-    # ── 9. withdrawal_requests — cashout talepleri ────────────────────────────
-    op.create_table(
-        'withdrawal_requests',
-        sa.Column('id', sa.Integer(), primary_key=True, autoincrement=True),
-        sa.Column('user_id', sa.Integer(),
-                  sa.ForeignKey('users.id'), nullable=False),
-        sa.Column('teqlik_amount', sa.Integer(), nullable=False),
-        sa.Column('try_amount', sa.Numeric(12, 2), nullable=False),
-        sa.Column('currency', sa.String(3), nullable=False, server_default="'TRY'"),
-        sa.Column('fiat_amount', sa.Numeric(12, 2), nullable=False),
-        sa.Column('try_rate_used', sa.Numeric(10, 6), nullable=False),
-        sa.Column('tcmb_rate_used', sa.Numeric(10, 6), nullable=True),
-        sa.Column('iban', sa.String(34), nullable=False),
-        sa.Column('account_holder', sa.String(120), nullable=False),
-        sa.Column('status', sa.String(20), nullable=False, server_default="'pending'"),
-        sa.Column('created_at', sa.DateTime(timezone=True), nullable=False,
-                  server_default=sa.text('NOW()')),
-        sa.Column('processed_at', sa.DateTime(timezone=True), nullable=True),
-        sa.Column('cancelled_at', sa.DateTime(timezone=True), nullable=True),
-        sa.Column('admin_note', sa.Text(), nullable=True),
-    )
-    op.create_index('idx_withdrawal_user', 'withdrawal_requests',
-                    ['user_id', 'created_at'])
-    op.create_index(
-        'idx_withdrawal_pending', 'withdrawal_requests', ['status', 'created_at'],
-        postgresql_where=sa.text("status = 'pending'"),
-    )
+    # ── 9. refund_log — iade denetim kaydı ───────────────────────────────────
+    op.execute(sa.text(
+        "CREATE TABLE IF NOT EXISTS refund_log ("
+        "  id                    SERIAL PRIMARY KEY, "
+        "  user_id               INTEGER NOT NULL REFERENCES users(id), "
+        "  store_platform        VARCHAR(20) NOT NULL, "
+        "  store_transaction_id  VARCHAR(128) NOT NULL, "
+        "  refunded_teqlik       INTEGER NOT NULL, "
+        "  original_teqlik       INTEGER NOT NULL, "
+        "  gift_teqlik_cancelled INTEGER NOT NULL DEFAULT 0, "
+        "  balance_after         INTEGER NOT NULL, "
+        "  raw_payload           TEXT, "
+        "  created_at            TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()"
+        ")"
+    ))
+
+    # ── 10. withdrawal_requests — cashout talepleri ───────────────────────────
+    op.execute(sa.text(
+        "CREATE TABLE IF NOT EXISTS withdrawal_requests ("
+        "  id             SERIAL PRIMARY KEY, "
+        "  user_id        INTEGER NOT NULL REFERENCES users(id), "
+        "  teqlik_amount  INTEGER NOT NULL, "
+        "  try_amount     NUMERIC(12,2) NOT NULL, "
+        "  currency       VARCHAR(3) NOT NULL DEFAULT 'TRY', "
+        "  fiat_amount    NUMERIC(12,2) NOT NULL, "
+        "  try_rate_used  NUMERIC(10,6) NOT NULL, "
+        "  tcmb_rate_used NUMERIC(10,6), "
+        "  iban           VARCHAR(34) NOT NULL, "
+        "  account_holder VARCHAR(120) NOT NULL, "
+        "  status         VARCHAR(20) NOT NULL DEFAULT 'pending', "
+        "  created_at     TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(), "
+        "  processed_at   TIMESTAMP WITH TIME ZONE, "
+        "  cancelled_at   TIMESTAMP WITH TIME ZONE, "
+        "  admin_note     TEXT"
+        ")"
+    ))
+    op.execute(sa.text(
+        "CREATE INDEX IF NOT EXISTS idx_withdrawal_user "
+        "ON withdrawal_requests (user_id, created_at)"
+    ))
+    op.execute(sa.text(
+        "CREATE INDEX IF NOT EXISTS idx_withdrawal_pending "
+        "ON withdrawal_requests (status, created_at) "
+        "WHERE status = 'pending'"
+    ))
 
 
 def downgrade() -> None:
-    op.drop_table('withdrawal_requests')
+    op.execute(sa.text("DROP TABLE IF EXISTS withdrawal_requests"))
+    op.execute(sa.text("DROP TABLE IF EXISTS refund_log"))
 
-    op.drop_index('uq_store_tx', table_name='teqlik_transactions')
-    op.drop_column('teqlik_transactions', 'product_type')
-    op.drop_column('teqlik_transactions', 'raw_payload')
-    op.drop_column('teqlik_transactions', 'store_transaction_id')
-    op.drop_column('teqlik_transactions', 'store_platform')
+    op.execute(sa.text("DROP INDEX IF EXISTS uq_store_tx"))
+    op.execute(sa.text(
+        "ALTER TABLE teqlik_transactions DROP COLUMN IF EXISTS product_type"
+    ))
+    op.execute(sa.text(
+        "ALTER TABLE teqlik_transactions DROP COLUMN IF EXISTS raw_payload"
+    ))
+    op.execute(sa.text(
+        "ALTER TABLE teqlik_transactions DROP COLUMN IF EXISTS store_transaction_id"
+    ))
+    op.execute(sa.text(
+        "ALTER TABLE teqlik_transactions DROP COLUMN IF EXISTS store_platform"
+    ))
 
-    op.drop_index('idx_gift_events_payout', table_name='gift_events')
-    op.drop_column('gift_events', 'released_at')
-    op.drop_column('gift_events', 'payout_status')
-    op.drop_column('gift_events', 'host_share_pct')
-    op.drop_column('gift_events', 'earned_teqlik')
+    op.execute(sa.text("DROP INDEX IF EXISTS idx_gift_events_payout"))
+    op.execute(sa.text(
+        "ALTER TABLE gift_events DROP COLUMN IF EXISTS released_at"
+    ))
+    op.execute(sa.text(
+        "ALTER TABLE gift_events DROP COLUMN IF EXISTS payout_status"
+    ))
+    op.execute(sa.text(
+        "ALTER TABLE gift_events DROP COLUMN IF EXISTS host_share_pct"
+    ))
+    op.execute(sa.text(
+        "ALTER TABLE gift_events DROP COLUMN IF EXISTS earned_teqlik"
+    ))
 
-    op.drop_table('wallet_ledger')
+    op.execute(sa.text("DROP TABLE IF EXISTS wallet_ledger"))
+    op.execute(sa.text("DELETE FROM users WHERE id = 0"))
+    op.execute(sa.text("DROP TABLE IF EXISTS user_wallet_earnings"))
+    op.execute(sa.text("DROP TABLE IF EXISTS platform_config"))
 
-    op.execute("DELETE FROM users WHERE id = 0")
-
-    op.drop_table('user_wallet_earnings')
-    op.drop_table('platform_config')
-
-    op.drop_index('idx_users_pro_expires', table_name='users')
-    op.drop_column('users', 'store_subscription_platform')
-    op.drop_column('users', 'store_subscription_id')
-    op.drop_column('users', 'pro_grace_until')
-    op.drop_column('users', 'pro_expires_at')
+    op.execute(sa.text("DROP INDEX IF EXISTS idx_users_pro_expires"))
+    op.execute(sa.text(
+        "ALTER TABLE users DROP COLUMN IF EXISTS store_subscription_platform"
+    ))
+    op.execute(sa.text(
+        "ALTER TABLE users DROP COLUMN IF EXISTS store_subscription_id"
+    ))
+    op.execute(sa.text(
+        "ALTER TABLE users DROP COLUMN IF EXISTS pro_grace_until"
+    ))
+    op.execute(sa.text(
+        "ALTER TABLE users DROP COLUMN IF EXISTS pro_expires_at"
+    ))
     # userstatus 'inactive' değeri PG'de kalır — enum value kaldırmak
     # DROP TYPE + yeniden oluşturma gerektirir, mevcut satırlar etkilenmez.
