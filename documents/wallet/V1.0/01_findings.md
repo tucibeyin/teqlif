@@ -1501,19 +1501,202 @@ Sunucu da aynı formülü uygular; Flutter gösterimi sadece kullanıcı bilgisi
 
 ## 6. Implementasyon Sırası (Öncelik Sıralı)
 
-### 6.0 Uygulama İlkeleri
+### 6.0 Mühendislik Standartları — Her Adımda Uyulacak Kurallar
 
-Tüm W1–W13 görevleri aşağıdaki ilkelere uygun geliştirilir:
+> Bu bölüm W1–W13 arasındaki her görevde geçerlidir. Kural ihlali pull request'te bloklayıcı sayılır.
 
-| # | İlke | Açıklama |
-|---|------|---------|
-| 1 | **Clean Code** | Tek sorumluluk, anlamlı isimlendirme, yorum yerine okunabilir kod |
-| 2 | **Clean Architecture** | Use case katmanı domain'den bağımsız; router sadece delege eder |
-| 3 | **MVVM** | Flutter tarafında ViewModel (Riverpod Provider/Notifier) — UI'da iş mantığı yok |
-| 4 | **OTA / ARB** | Kullanıcıya gösterilen tüm metinler ARB'ye eklenir; hardcoded string yasak |
-| 5 | **ADR uyumu** | Her karar `documents/teqlif_architectural_decisions.md` ile çelişmez |
-| 6 | **ADR workflow** | Geliştirme ADR §13'teki 10 adımlı workflow'a göre ilerler |
-| 7 | **Commit takibi** | Her görev tamamlandığında bu döküman ilgili commit hash'i ile güncellenir |
+---
+
+#### 6.0.1 Clean Architecture — Katman Sözleşmesi
+
+**Backend (FastAPI / Python)**
+
+```
+HTTP İsteği
+    ↓
+routers/wallet.py          — Sadece: auth, input parse, command/query çağır, response döndür
+    ↓                         FastAPI bağımlılığı BURADA kalır; use case'e taşınmaz
+use_cases/wallet/
+  commands/<action>.py     — İş mantığı buradadır. FastAPI import'u YOKTUR.
+  queries/<view>.py        — Okuma sorguları. Mutation YOKTUR.
+    ↓
+repositories/              — DB erişimi. İş mantığı YOKTUR. SQL veya ORM.
+services/store/            — Dış servis soyutlaması. ABC tanımı + platform impl.
+    ↓
+models/                    — SQLAlchemy ORM. Saf veri yapısı; metod YOKTUR.
+```
+
+**İhlal örnekleri (yasak):**
+- Router'da `FLOOR(cost × host_share_pct / 100)` hesabı → use case'e taşı
+- Command içinde `from fastapi import HTTPException` → exception yerine domain exception fırlat
+- Query içinde `UPDATE` → komut/sorgu ayrımı bozulur
+- Repository içinde `if host.user_type == 'pro'` → iş kuralı değil, veri erişimi olmalı
+
+**UnitOfWork (UoW) zorunluluğu:**
+Her finansal mutasyon (send_gift, verify_purchase, request_withdrawal, convert_to_teqlik)
+tek bir `async with uow:` bloğu içinde tamamlanır. `commit()` dışarıda çağrılmaz.
+Domain event'ler (WebSocket broadcast, push notification) `await uow.commit()` SONRASINDA,
+transaction bloğu DIŞINDA tetiklenir.
+
+```python
+async with uow:
+    # tüm DB yazımları burada
+    await uow.commit()
+# commit'ten SONRA:
+await notify_websocket(...)
+await push_notification(...)
+```
+
+---
+
+#### 6.0.2 Clean Architecture — Flutter / MVVM
+
+```
+View (Widget)
+    ↓  ref.watch / ref.read
+ViewModel (Riverpod AsyncNotifier / Notifier)
+    ↓  state yönetimi, hata işleme
+Repository (abstract + impl)
+    ↓  HTTP çağrısı, JSON parse
+API Client (Dio / http)
+```
+
+**Katman kuralları:**
+| Katman | İzin verilen | Yasak |
+|--------|-------------|-------|
+| Widget | `ref.watch`, `ref.read`, render | `if` ile iş mantığı, doğrudan API çağrısı |
+| ViewModel | state mutasyonu, use case çağrısı | `BuildContext`, widget referansı |
+| Repository | HTTP, JSON parse, cache okuma | iş kuralı, UI state |
+| Model | `fromJson`, `toJson`, `copyWith` | ağ çağrısı, state |
+
+**State yönetimi:**
+- Her ViewModel bir immutable state sınıfı tutar (`WalletState`, `GiftState`)
+- `state = state.copyWith(...)` — doğrudan alan mutasyonu yasak
+- Hata: `state = state.copyWith(error: e.message)` — `throw` widget'a kadar taşınmaz
+- Loading: `state = state.copyWith(isLoading: true)` → işlem → `isLoading: false`
+
+**`cashout_enabled` kuralı:** Flutter flag'i `GET /api/wallet/summary` response'undan okur.
+Statik sabit, `.env` veya hardcoded boolean YASAKTIR.
+
+---
+
+#### 6.0.3 Clean Code Kuralları
+
+**İsimlendirme:**
+- Teqlik miktarları: `earned_teqlik`, `cost_teqlik`, `bonus_teqlik` — `amount` tek başına kullanılmaz
+- Boolean'lar: `is_pro`, `cashout_enabled`, `payout_released` — `flag`, `check`, `status` YASAK
+- Command sınıfları: fiil + nesne + `_command` → `send_gift_command.py`
+- Query sınıfları: `get_` + nesne + `_query` → `get_wallet_summary_query.py`
+- Kısaltma yasak: `tqlk`, `amt`, `usr`, `cfg` — tam isim zorunlu
+
+**Fonksiyon kuralları:**
+- Tek sorumluluk: bir fonksiyon bir şey yapar
+- Maksimum iç içe geçme: 2 seviye (`if` içinde `if` sonrası guard clause kullan)
+- Guard clause önce: `if not condition: raise/return` → ana mantık girintisiz akar
+- Sihirli sayı yasak: `0.70`, `0.95`, `0.10` → `platform_config`'den okunur; kaynak kodda sabit değil
+- Yorum: NEDEN açıklanır, NE değil. "T+14: Apple chargebackları %99 bu pencerede kapanır" ✓
+  "# pending'i available'a taşır" ✗ — kod zaten söylüyor
+
+**Finansal hesaplama kuralları (ihlali veri kaybı):**
+```python
+# DOĞRU — INTEGER aritmetiği, FLOOR explicit
+earned_teqlik = math.floor(cost * host_share_pct / 100)   # int
+bonus_teqlik  = math.floor(teqlik_amount * 0.10)           # int
+
+# YANLIŞ — float/Decimal teqlik tutarında kullanılmaz
+earned_teqlik = cost * Decimal('0.70')   # ← YASAK
+earned_teqlik = cost * 0.70              # ← YASAK (float precision)
+```
+
+---
+
+#### 6.0.4 Endüstriyel Pratikler — Finansal Sistem Gereksinimleri
+
+**Idempotency (çift işlemi önleme):**
+- `teqlik_transactions.store_transaction_id` UNIQUE: aynı Apple receipt ikinci kez işlenirse 409
+- `withdrawal_requests`: aktif pending varken yeni talep 409 (çakışma önleme)
+- ARQ cron görevleri `SKIP LOCKED` kullanır — paralel worker'lar aynı satıra dokunmaz
+
+**Atomik bakiye güncellemeleri:**
+```sql
+-- DOĞRU: read-modify-write tek SQL'de
+UPDATE user_wallet_earnings
+SET available = available - :teqlik_amount
+WHERE user_id = :uid AND available >= :teqlik_amount
+RETURNING available;
+-- 0 satır döndü → yetersiz bakiye (Python'da değil, DB'de kontrol edildi)
+
+-- YANLIŞ: read then write (race condition)
+balance = SELECT available ...
+if balance >= amount:   ← başka istek burada araya girebilir
+    UPDATE ...
+```
+
+**Kilit sırası (deadlock önleme):**
+- send_gift: `SELECT ... FOR UPDATE` her zaman `LEAST(sender_id, host_id)` sırasıyla alınır
+- İki eşzamanlı hediye işlemi daima aynı sırada kilitlenir → deadlock imkânsız
+
+**Fail-Closed ilkesi:**
+- Redis Token Bucket (velocity limit): Redis erişilemiyorsa işlemi **reddet** (izin verme)
+- Apple JWS doğrulama: sertifika bozuksa işlemi **reddet**
+- `platform_config` Redis cache boşsa: DB'den oku, boşsa **reddet** (varsayılan izin verme)
+
+**Finansal tablolar değişmez (WORM):**
+- `wallet_ledger`: `UPDATE` ve `DELETE` yasak — migration'a `RULE` veya trigger ekle
+- `teqlik_transactions`: aynı şekilde append-only
+- Düzeltme satırla yapılır (withdrawal_refund, iap_refunded tx_type'ları)
+
+**Dış servis izolasyonu:**
+- Apple/Google çağrıları `services/store/` sınıflarının arkasında; use case platform bilmez
+- Webhook'lar: 200 OK hemen → ARQ kuyruğa at → worker'da işle (Apple 5sn timeout'u)
+- Başarısız webhook yeniden deneme: ARQ retry + dead-letter queue
+
+**Gece mutabakatı (00:00 UTC):**
+- Reconciliation task her gece çalışır; 1 teqlik fark = Critical Alert
+- `schedule.yaml`'a eklenir, `worker.py`'ye değil (watchdog izleyebilsin)
+- `await _agent_ok(ctx, "daily_financial_reconciliation")` son satır zorunlu
+
+---
+
+#### 6.0.5 ADR Uyumu & Geliştirme Workflow'u
+
+**Her görevde başlamadan önce:**
+1. `documents/teqlif_architectural_decisions.md` okunur
+2. Yapılacak değişiklik mevcut ADR kararıyla çelişiyor mu kontrol edilir
+3. Yeni mimari karar gerekiyorsa önce ADR güncellenir, sonra kod yazılır
+
+**ADR §13 — 10 Adımlı Geliştirme Workflow'u** (tek kaynak, sapma yapılmaz):
+
+| Adım | Eylem |
+|------|-------|
+| 1 | `01_findings.md` ilgili bölümü okunur (bu döküman) |
+| 2 | Migration SQL varsa okunur; Alembic revision ID ≤ 32 karakter |
+| 3 | Model dosyaları güncellenir (SQLAlchemy) |
+| 4 | Repository yazılır |
+| 5 | Use case / command / query yazılır |
+| 6 | Router endpoint'i yazılır |
+| 7 | Flutter model + repository güncellenir |
+| 8 | ViewModel güncellenir |
+| 9 | Widget güncellenir |
+| 10 | Bu döküman commit hash'i ile güncellenir |
+
+**Alembic kuralları** (ihlali migration bozulur):
+- Multi-statement yasak: her değişiklik ayrı `op.*` çağrısı
+- `CREATE INDEX CONCURRENTLY` yasak (Alembic transaction içinde çalışır)
+- Revision ID ≤ 32 karakter (staging'de sorun çıkar)
+- `alembic upgrade head` staging'de bozuk: `pg_dump --schema-only` + `alembic stamp head`
+
+**OTA / ARB kuralı:**
+- Kullanıcıya gösterilen her metin `app_tr.arb`, `app_en.arb`, vb.'ye eklenir
+- Hardcoded Türkçe/İngilizce string widget'ta YASAKTIR
+- Kısaltma yasak: `tqlk` değil `teqlik`, `pnding` değil `pending`
+- Para miktarları: `NumberFormat.currency(locale: ..., symbol: '₺')` — `'₺' + amount` YASAK
+- Çoğul kurallar: ICU plural syntax: `{count, plural, =1{# gün} other{# gün}}`
+
+**Commit standardı:**
+- Her W-görevi tamamlandığında bu döküman `| W# | ... | ✅ commit: abc1234 |` formatında güncellenir
+- Commit mesajı: `feat(wallet): W# — <kısa açıklama>`
+- Secrets `.env`'de, repoya girmez; `platform_config` DB'de, `.env`'de değil
 
 ### 6.1 teqlik IAP (Satın Alma)
 
