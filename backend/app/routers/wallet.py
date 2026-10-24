@@ -1,12 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, Path
-from app.core.exceptions import NotFoundException, BadRequestException, InsufficientFundsException
+from app.core.exceptions import NotFoundException
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc, text as sql_text
+from sqlalchemy import select, desc
 
 import json
 import logging
-from app.models.enums import ListingStatus
 from app.database import get_db, get_uow
 from app.core.uow import SqlAlchemyUnitOfWork
 from app.models.user import User
@@ -240,94 +239,59 @@ async def send_gift(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(User).where(User.username == body.receiver_username))
-    receiver = result.scalar_one_or_none()
-    if receiver is None:
-        raise NotFoundException()
-    if receiver.id == current_user.id:
-        raise BadRequestException()
+    from app.use_cases.wallet.commands.send_gift_command import SendGiftCommand
 
-    # Platform komisyonu: Pro yayıncı %95, Standart %70 alır
-    commission_rate = 0.95 if receiver.user_type == 'pro' else 0.70
-    host_share = int(body.cost * commission_rate)
-
-    # 1) Atomik bakiye düşüşü — tek SQL ile kontrol + güncelleme.
-    # WHERE teqlik_balance >= cost koşulu olmazsa iki eş zamanlı istek session
-    # cache'deki aynı bakiyeyi okuyup ikisi de geçer ve bakiye eksi olur.
-    deduct = await db.execute(
-        sql_text(
-            "UPDATE users SET teqlik_balance = teqlik_balance - :cost "
-            "WHERE id = :uid AND teqlik_balance >= :cost "
-            "RETURNING teqlik_balance"
-        ),
-        {"cost": body.cost, "uid": current_user.id},
-    )
-    if deduct.fetchone() is None:
-        logger.warning("TEQlik transaction failed: insufficient balance", extra={
-            "user_id": current_user.id, "required": body.cost,
-        })
-        raise InsufficientFundsException()
-
-    await db.execute(
-        sql_text("UPDATE users SET teqlik_balance = teqlik_balance + :share WHERE id = :uid"),
-        {"share": host_share, "uid": receiver.id},
-    )
-
-    # 2) GiftEvent kaydı — tam audit trail
-    gift_ev = GiftEvent(
-        stream_id=body.stream_id,
+    cmd = SendGiftCommand(db)
+    result = await cmd.execute(
         sender_id=current_user.id,
-        receiver_id=receiver.id,
+        receiver_username=body.receiver_username,
         gift_name=body.gift_name,
-        cost_teqlik=body.cost,
-        host_share=host_share,
+        stream_id=body.stream_id,
     )
-    db.add(gift_ev)
-    await db.flush()  # gift_ev.id'yi al
 
-    # 3) Her iki TeqlikTransaction aynı GiftEvent'e işaret eder
-    db.add(TeqlikTransaction(
-        user_id=current_user.id, amount=-body.cost,
-        transaction_type="send_gift",
-        reference_id=gift_ev.id, reference_type="gift_event",
-    ))
-    db.add(TeqlikTransaction(
-        user_id=receiver.id, amount=host_share,
-        transaction_type="receive_gift",
-        reference_id=gift_ev.id, reference_type="gift_event",
-    ))
-
-    logger.info("TEQlik transaction: send_gift", extra={
-        "sender_id": current_user.id,
-        "receiver_id": receiver.id,
-        "amount": body.cost,
-        "gift_name": body.gift_name
-    })
-    
+    # commit — transaction serbest bırakılır, ardından domain events
     await db.commit()
 
-    # 4) WebSocket: anlık animasyon
-    await publish_chat(body.stream_id, {
-        "type": "gift",
-        "sender": current_user.username,
-        "gift_name": body.gift_name,
-        "cost": body.cost,
-    })
+    # Post-commit domain events: commit SONRASI, transaction DIŞINDA
+    try:
+        await publish_chat(body.stream_id, {
+            "type": "gift",
+            "sender": current_user.username,
+            "gift_name": body.gift_name,
+            "cost": result["cost"],
+            "gift_event_id": result["gift_event_id"],
+        })
+    except Exception as _ws_exc:
+        logger.warning("[WALLET] WebSocket yayını başarısız | stream_id=%s | %s", body.stream_id, _ws_exc)
 
-    # 5) Redis event log: son 200 hediye, 24s TTL
+    try:
+        from app.services.notification_service import push_notification
+        from app.core.logger import fire_and_forget
+        fire_and_forget(push_notification(
+            result["receiver_id"],
+            {
+                "type": "gift_received",
+                "sender_username": current_user.username,
+                "gift_name": body.gift_name,
+                "earned_teqlik": result["earned_teqlik"],
+            },
+            pref_key="gift_received",
+        ))
+    except Exception as _push_exc:
+        logger.warning("[WALLET] Push notification başarısız | %s", _push_exc)
+
+    # Redis gift log (son 200 hediye, 24s TTL)
     try:
         redis = await get_redis()
         key = f"gift:log:{body.stream_id}"
-        payload = json.dumps({
-            "gift_event_id": gift_ev.id,
+        log_payload = json.dumps({
+            "gift_event_id": result["gift_event_id"],
             "gift_name": body.gift_name,
-            "cost_teqlik": body.cost,
-            "host_share": host_share,
+            "cost_teqlik": result["cost"],
+            "host_share": result["earned_teqlik"],
             "sender": current_user.username,
-            "receiver": receiver.username,
-            "ts": gift_ev.sent_at.isoformat() if gift_ev.sent_at else None,
         })
-        await redis.lpush(key, payload)
+        await redis.lpush(key, log_payload)
         await redis.ltrim(key, 0, 199)
         await redis.expire(key, 86400)
     except Exception as _redis_exc:
