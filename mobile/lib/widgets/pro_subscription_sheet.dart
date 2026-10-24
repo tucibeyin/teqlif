@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/iap_service.dart';
 import '../services/localization_service.dart';
@@ -95,11 +94,7 @@ class _ProSubscriptionSheetState extends State<ProSubscriptionSheet> {
   }
 
   String _priceFor(String productId) {
-    final p = _iap.products.firstWhere(
-      (p) => p.id == productId,
-      orElse: () => _DummyProduct(productId),
-    );
-    return p.price;
+    return _iap.products.where((p) => p.id == productId).firstOrNull?.price ?? '—';
   }
 
   @override
@@ -329,19 +324,6 @@ class _PlanCard extends StatelessWidget {
       ),
     );
   }
-}
-
-/// Ürün bulunamazsa fiyat alanı için geçici yer tutucu
-class _DummyProduct implements ProductDetails {
-  final String _id;
-  _DummyProduct(this._id);
-  @override String get id => _id;
-  @override String get title => '';
-  @override String get description => '';
-  @override String get price => '—';
-  @override double get rawPrice => 0;
-  @override String get currencyCode => '';
-  @override String get currencySymbol => '';
 }
 
 /// EULA + Privacy Policy satırı (Apple Guideline 3.1.2 zorunlu)
