@@ -799,3 +799,75 @@ async def reset_shill_counter(
     logger.info("[ADMIN] Shill counter reset | stream_id=%s user_id=%s deleted=%s admin=%s",
                 stream_id, user_id, deleted, admin.email)
     return {"ok": True, "deleted": bool(deleted)}
+
+
+# ==========================================
+# WALLET — Çekim Talepleri (W12)
+# ==========================================
+
+class WithdrawalProcessRequest(BaseModel):
+    action: str = Field(..., pattern="^(approve|reject)$")
+    admin_note: str | None = Field(default=None, max_length=500)
+
+
+@router.get("/wallet/withdrawals")
+async def list_withdrawal_requests(
+    status: str = Query(default="pending", pattern="^(pending|approved|rejected|all)$"),
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(check_admin_access),
+):
+    """Çekim taleplerini listele (varsayılan: pending)."""
+    from sqlalchemy import text as sql_text
+    where = "" if status == "all" else f"WHERE wr.status = '{status}'"
+    rows = await db.execute(
+        sql_text(
+            f"SELECT wr.id, wr.user_id, u.username, u.full_name, "
+            f"wr.teqlik_amount, wr.try_amount, wr.fiat_amount, wr.currency, "
+            f"wr.try_rate_used, wr.iban, wr.account_holder, "
+            f"wr.status, wr.created_at, wr.processed_at, wr.admin_note "
+            f"FROM withdrawal_requests wr "
+            f"JOIN users u ON u.id = wr.user_id "
+            f"{where} "
+            f"ORDER BY wr.created_at ASC "
+            f"LIMIT :lim OFFSET :off"
+        ),
+        {"lim": limit, "off": offset},
+    )
+    items = [
+        {
+            "id": r[0], "user_id": r[1], "username": r[2], "full_name": r[3],
+            "teqlik_amount": r[4], "try_amount": str(r[5]), "fiat_amount": str(r[6]),
+            "currency": r[7], "try_rate_used": str(r[8]),
+            "iban": r[9], "account_holder": r[10],
+            "status": r[11],
+            "created_at": r[12].isoformat() if r[12] else None,
+            "processed_at": r[13].isoformat() if r[13] else None,
+            "admin_note": r[14],
+        }
+        for r in rows.fetchall()
+    ]
+    return {"items": items, "count": len(items)}
+
+
+@router.post("/wallet/withdrawals/{request_id}/process")
+async def process_withdrawal(
+    request_id: int,
+    body: WithdrawalProcessRequest,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(check_admin_access),
+):
+    """Çekim talebini onayla veya reddet."""
+    from app.use_cases.wallet.commands.process_withdrawal_command import ProcessWithdrawalCommand
+    result = await ProcessWithdrawalCommand(db).execute(
+        request_id=request_id,
+        action=body.action,
+        admin_note=body.admin_note,
+    )
+    await db.commit()
+    logger.info(
+        "[ADMIN] Withdrawal %s | request=%s user=%s admin=%s note=%s",
+        body.action, request_id, result["user_id"], admin.email, body.admin_note,
+    )
+    return result

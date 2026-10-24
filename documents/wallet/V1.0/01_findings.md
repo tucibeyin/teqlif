@@ -3,7 +3,7 @@
 **Tarih:** 2026-10-24  
 **Kapsam:** iOS IAP entegrasyonu, fiyatlandırma stratejisi, UX mimarisi, Apple uyum gereksinimleri, yayıncı teqlik kazanç sistemi, IBAN çekim altyapısı (upfront — tüm V1.1 altyapısı dahil)  
 **Mimari:** Kapalı döngü teqlik ekonomisi — teqlik biriminde saklama, TRY dönüşümü cashout anında, `platform_config` tek kaynak  
-**Durum:** W1–W8 tamamlandı — W9–W13 bekliyor (W9-W11 Mobile, W12 Admin, W13 Mobile)
+**Durum:** W1–W8, W12 tamamlandı — W9–W11, W13 bekliyor (Mobile görevleri)
 
 ---
 
@@ -1828,7 +1828,7 @@ psql -U teqlif teqlif   ← YASAK
 | W9 | Kart 2 UI: `cashout_enabled` flag `GET /api/wallet/summary` response'undan okunur (statik sabit değil); cashout_enabled==false → "Yayın Başlat" CTA (glassmorphism koyu zümrüt/altın kart); cashout_enabled==true → birincil "⚡ ANINDA KULLAN (+%10 Teqlik'e Dönüştür)", ikincil "🏦 Nakit Transferi İçin IBAN Tanımla"; aktif talep varsa sıra kartı (📋 #Queue-{id}, İptal Et, Teqlik'e Dönüştür); hediye ekranında combo tap sayacı (x2/x5/x10 + burst animasyonu) — **optimistic UI**: sayaç animasyonu anlık güncellenir, backend debit debounced (örn. 300ms); bakiye yetersizse toast ile geri al; **`AppLifecycleState.resumed`**: uygulama arka plandan öne gelince `GET /api/wallet/summary` yeniden çekilir (App Store dönüşünde bakiye güncellenmesi için) | Mobile | Hayır |
 | W10 | IBAN Ön Kayıt Bottom Sheet: tutar çipleri (500 teqlik Min / 1.000 teqlik / Tamamı — teqlik birimi, TRY gösterimi altında bilgi amaçlı); IBAN TR formatı + banka logosu; Seçenek C simülatörü (1.000 teqlik → +100 bonus = 1.100 teqlik, FLOOR anlık); "Bilgilerimi Kaydet ve Sıraya Gir" CTA (Slide to Confirm YOK); MASAK yasal uyarı panosu | Mobile | Hayır |
 | W11 | 5 dil ARB: `giftNameClap`, `giftNameTea`, `giftNameGoldenHammer`, `giftNameRocket`, `giftNameTrophy`, `walletConvertToTeqlik`, `walletIbanPreRegistrationTitle`, `walletIbanRegistrationSuccess`, `walletIbanRejected`, `walletQueueNumber`, `walletPendingEarningsDesc`, `walletStartStreamCta`; **Arapça RTL**: `Directionality.of(context)` ile yön tespiti, gradient yönleri RTL'e göre tersler, `chevron_right`/`chevron_left` dinamik seçilir; **para miktarları**: `NumberFormat.currency(locale: locale.toString(), symbol: '₺')` — string birleştirme (`'₺' + amount`) yasak; **çoğul kurallar**: gün ve teqlik sayıları için ICU plural syntax `{count, plural, =1{# gün} other{# gün}}` | Mobile | Hayır |
-| W12 | Admin panel: bekleyen çekim talepleri + Onayla / Reddet (red → `user_wallet_earnings.available += teqlik_amount`) | Backend/Admin | Hayır |
+| W12 | Admin panel: bekleyen çekim talepleri + Onayla / Reddet (red → `user_wallet_earnings.available += teqlik_amount`); `GET /api/admin-data/wallet/withdrawals?status=pending` + `POST /api/admin-data/wallet/withdrawals/{id}/process` | Backend/Admin | Hayır | ✅ Bu commit |
 | W13 | PRO Abonelik UI: `ProSubscriptionSheet` (glassmorphism — 1/3/6/12 ay plan seçim kartları, fiyat + tasarruf badge, PRO fayda listesi); `pro_badge_widget.dart` (Kart 1 + profil); Kart 1 "PRO'ya Yükselt" CTA (PRO değilse); `IAPService` unified purchaseStream (`teqlif_pro_*` prefix → verify endpoint); **"Satın Alımları Geri Yükle"** butonu (`restorePurchases()` — Apple Guideline 3.1.1 zorunlu); otomatik yenileme uyarı metni (Apple zorunluluğu); `AppLifecycleState.resumed` → wallet summary yenile (PRO badge güncelleme) | Mobile | Hayır |
 
 ### 6.3 V1.1'e Ertelenen Özellikler (şirket kuruluşu sonrası)
