@@ -2,6 +2,8 @@
 memory/
 
 # Hassas dosyalar
+secrets.env
+scale/**/secrets.env
 .env
 .env.staging
 .env.local
