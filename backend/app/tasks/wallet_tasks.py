@@ -152,11 +152,13 @@ async def daily_financial_reconciliation_task(ctx: dict) -> None:
             )
             ledger_total = ledger_net_row.fetchone()[0]
 
-            if wr_total and ledger_total and abs(int(wr_total) - int(ledger_total)) > 0:
+            wr_val = int(wr_total or 0)
+            ledger_val = int(ledger_total or 0)
+            if abs(wr_val - ledger_val) > 0:
                 anomalies += 1
                 logger.warning(
                     "[Reconciliation] withdrawal tutarsızlığı: wr_total=%s ledger_net=%s diff=%s",
-                    wr_total, ledger_total, abs(int(wr_total) - int(ledger_total)),
+                    wr_val, ledger_val, abs(wr_val - ledger_val),
                 )
 
         status = "ok" if anomalies == 0 else f"anomalies={anomalies}"

@@ -29,9 +29,17 @@ _PLAN_TYPE: dict[str, str] = {
 }
 
 # Redis velocity key: rate:iap:{device_id}  |  rolling 24h window (₺5.000/gün)
-# Değer: approx TRY tutarı (paket tutarı dışarıdan gelir; şimdilik 0 olarak geçilir)
 _IAP_VELOCITY_LIMIT_TRY = 5000.0
 _IAP_VELOCITY_TTL_SEC   = 86400  # 24 saat
+
+# Mobil try_amount <= 0 gelirse fallback fiyat tablosu kullanılır
+# — direkt API çağrılarında client manipülasyonu önlenir
+_PRODUCT_TRY_PRICES: dict[str, float] = {
+    "teqlik_pack_100":   49.99,
+    "teqlik_pack_250":  119.99,
+    "teqlik_pack_500":  229.99,
+    "teqlik_pack_1000": 429.99,
+}
 
 
 async def _check_velocity(redis, device_id: str, try_amount: float) -> None:
@@ -88,16 +96,23 @@ class VerifyPurchaseCommand:
             raise ConflictException(code="IAP_ALREADY_PROCESSED")
 
         # Velocity limiti (Fail-Closed — Redis yoksa reddet)
-        if device_id and try_amount > 0:
-            try:
-                from app.utils.redis_client import get_redis
-                redis = await get_redis()
-                await _check_velocity(redis, device_id, try_amount)
-            except (BadRequestException, ConflictException):
-                raise
-            except Exception as exc:
-                logger.error("[VerifyPurchase] Redis velocity check başarısız | %s", exc)
-                raise BadRequestException(code="IAP_VELOCITY_UNAVAILABLE")
+        # try_amount <= 0 gelirse product_id bazlı fallback fiyat tablosu kullanılır
+        # — direkt API çağrısıyla velocity bypass'ı önlenir
+        if device_id:
+            effective_try_amount = (
+                try_amount if try_amount > 0
+                else _PRODUCT_TRY_PRICES.get(result.product_id, 0.0)
+            )
+            if effective_try_amount > 0:
+                try:
+                    from app.utils.redis_client import get_redis
+                    redis = await get_redis()
+                    await _check_velocity(redis, device_id, effective_try_amount)
+                except (BadRequestException, ConflictException):
+                    raise
+                except Exception as exc:
+                    logger.error("[VerifyPurchase] Redis velocity check başarısız | %s", exc)
+                    raise BadRequestException(code="IAP_VELOCITY_UNAVAILABLE")
 
         if result.product_id in VALID_CONSUMABLE_IDS:
             return await self._handle_consumable(user_id, platform, result)

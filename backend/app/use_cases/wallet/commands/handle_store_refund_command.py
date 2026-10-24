@@ -58,8 +58,10 @@ class HandleStoreRefundCommand:
 
         _tx_id, user_id, original_teqlik, product_type = tx
 
-        # Consumable olmayan (abonelik) refund → basit bakiye düşümü
-        if product_type != "consumable":
+        # V1.0: Apple/Google consumable iadelerinde tam paket miktarı iade edilir.
+        # Abonelik iadelerinde de original_teqlik kullanılır.
+        # _parse_refund içindeki refunded_teqlik=0 placeholder'ı bu satırda doldurulur.
+        if not refunded_teqlik:
             refunded_teqlik = original_teqlik
 
         # ── 3. Atomik bakiye azalt (negatife düşebilir) ───────────────────────
