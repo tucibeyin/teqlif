@@ -1505,6 +1505,19 @@ Sunucu da aynı formülü uygular; Flutter gösterimi sadece kullanıcı bilgisi
 
 > Bu bölüm W1–W13 arasındaki her görevde geçerlidir. Kural ihlali pull request'te bloklayıcı sayılır.
 
+**Temel İlkeler (Özet):**
+
+| # | İlke | Kural |
+|---|------|-------|
+| 1 | **Clean Architecture** | Use case katmanı domain'den bağımsız; router sadece delege eder → §6.0.1 |
+| 2 | **Clean Code** | Tek sorumluluk, anlamlı isimlendirme, sihirli sayı yasak, INTEGER aritmetiği → §6.0.3 |
+| 3 | **MVVM** | Flutter tarafında ViewModel (Riverpod Notifier) — UI'da iş mantığı yok → §6.0.2 |
+| 4 | **OTA / ARB** | Kullanıcıya gösterilen tüm metinler ARB'ye eklenir; hardcoded string yasak → §6.0.5 |
+| 5 | **ADR uyumu** | Her karar `documents/teqlif_architectural_decisions.md` ile çelişmez → §6.0.5 |
+| 6 | **ADR workflow** | Geliştirme ADR §13'teki 10 adımlı workflow'a göre ilerler → §6.0.5 |
+| 7 | **Endüstriyel pratikler** | Atomik bakiye, idempotency, Fail-Closed, WORM ledger, post-commit event → §6.0.4 |
+| 8 | **Commit takibi** | Her görev tamamlandığında bu döküman ilgili commit hash'i ile güncellenir → §6.0.5 |
+
 ---
 
 #### 6.0.1 Clean Architecture — Katman Sözleşmesi
