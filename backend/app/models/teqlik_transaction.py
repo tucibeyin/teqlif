@@ -19,5 +19,11 @@ class TeqlikTransaction(Base):
     reference_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     reference_type: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)  # "listing" | "stream"
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    store_platform: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    store_transaction_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    raw_payload: Mapped[str | None] = mapped_column(String, nullable=True)
+    product_type: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="consumable", server_default="'consumable'"
+    )
 
 

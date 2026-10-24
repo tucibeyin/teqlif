@@ -67,3 +67,7 @@ class User(Base):
     cross_border_consent_ip: Mapped[Optional[str]] = mapped_column(String(45), nullable=True, default=None)
     cross_border_consent_locale: Mapped[Optional[str]] = mapped_column(String(5), nullable=True, default=None)
     token_version: Mapped[int] = mapped_column(Integer, default=0, nullable=False, server_default="0")
+    pro_expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    pro_grace_until: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    store_subscription_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    store_subscription_platform: Mapped[str | None] = mapped_column(String(20), nullable=True)

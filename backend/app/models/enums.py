@@ -13,6 +13,7 @@ class UserStatus(str, enum.Enum):
     PASSIVE = "passive"
     BANNED = "banned"
     DELETED = "deleted"
+    INACTIVE = "inactive"  # sistem kullanıcısı (id=0) için
 
 class CategoryStatus(str, enum.Enum):
     ACTIVE = "active"
