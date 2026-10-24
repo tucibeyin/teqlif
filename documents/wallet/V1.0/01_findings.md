@@ -1389,10 +1389,14 @@ Aşağıdaki özellikler **şirket kuruluşu tamamlanana kadar** kodlanmaz. Tüm
 | V11-9 | Web mağazası (teqlif.com/cuzdan, %2,5 işlemci ücreti) | Şirket + web ödeme altyapısı | Apple bypass — yalnızca web alımlar |
 | V11-10 | Finansal soğuk arşiv: SHA-256 imzalı CSV/JSONL → `backups/financial_archives/` + `offsite_sync.sh` uzak depo (Hetzner/B2/S3 Glacier) | Gerçek transfer başlayınca | TTK + MASAK 5-10 yıl saklama; WORM |
 | V11-11 | Vergi / Stopaj / Gider Pusulası: Sosyal İçerik Üreticiliği İstisnası belgesi veya Gider Pusulası + stopaj | Şirket + mali müşavir | Beyanname döküm raporu admin panelinde |
+| V11-12 | **TL Ledger tablosu** (`tl_ledger`): her TL bakiye değişimini (hediye gelişi, T+14 aktarımı, çekim, Seçenek C, iade) tek denetlenebilir tabloda topla; `(user_id, currency, amount, balance_after, transaction_type, reference_id, reference_type, created_at)` — V1.0'da gift_events + withdrawal_requests'e dağılmış olan iz burada birleşir; dispute ve destek talebi yanıtlama süresi düşer | Gerçek transfer başlayınca | `daily_financial_reconciliation` cron bu tabloyu da kontrol edecek şekilde genişletilir |
 
 ### 6.4 V3.0 Vizyon — teqlik Çift Yönlü Para Birimi (Süper Uygulama)
 
 > Bu vizyon; WeChat Pay, Mercado Pago, Roblox DevEx modelinin Teqlif uyarlamasıdır. V1.0–V1.1 mimarisi (atomik kilitler, NUMERIC(10,4) hassasiyeti, T+14 escrow, çift cüzdan ayrımı) bu vizyona geçişte kodları çöpe atmadan BaaS API'si bağlanarak genişleyecek şekilde tasarlanmıştır.
+
+**V3.0 Şema Değişikliği Notu (Multi-Currency):**
+V1.0 kolon isimleri (`tl_earnings_balance`, `tl_pending_balance`, `earnings_tl`, `amount_tl`) Türkiye odaklı ve bilinçli bir pragmatik tercihtir. Global para birimlerine açılırken şu dönüşüm yapılacaktır: `tl_earnings_balance` → `earnings_balance` + `earnings_currency VARCHAR(3) DEFAULT 'TRY'` (ISO 4217). Bu migration V11-12 tl_ledger tablosuyla birlikte atılır — aynı anda tüm finansal soyutlama katmanı yenilenir.
 
 **Aşılması gereken 3 duvar:**
 
