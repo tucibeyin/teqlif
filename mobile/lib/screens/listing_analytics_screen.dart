@@ -7,6 +7,7 @@ import "../services/localization_service.dart";
 import '../ui_library/components/buttons/teq_button.dart';
 
 import 'package:url_launcher/url_launcher.dart';
+import '../widgets/pro_subscription_sheet.dart';
 import '../config/app_colors.dart';
 import '../ui_library/components/filters/teq_filter_bar.dart';
 import 'viewmodels/listing_analytics_view_model.dart';
@@ -495,9 +496,12 @@ class _ListingAnalyticsScreenState extends ConsumerState<ListingAnalyticsScreen>
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: ElevatedButton(
-                          onPressed: () => launchUrl(
-                            Uri.parse('https://www.teqlif.com/pro-plan.html'),
-                            mode: LaunchMode.inAppWebView,
+                          onPressed: () => showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            useSafeArea: true,
+                            backgroundColor: Colors.transparent,
+                            builder: (_) => ProSubscriptionSheet(loc: loc),
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent,

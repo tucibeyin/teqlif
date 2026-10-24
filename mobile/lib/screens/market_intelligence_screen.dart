@@ -3,6 +3,7 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:flutter/material.dart";
 import "../services/localization_service.dart";
 import 'package:url_launcher/url_launcher.dart';
+import '../widgets/pro_subscription_sheet.dart';
 import '../config/app_colors.dart';
 import 'viewmodels/market_intelligence_view_model.dart';
 
@@ -384,8 +385,13 @@ class _MarketIntelligenceScreenState extends ConsumerState<MarketIntelligenceScr
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: ElevatedButton(
-                          onPressed: () => launchUrl(Uri.parse('https://www.teqlif.com/pro-plan.html'),
-                              mode: LaunchMode.inAppWebView),
+                          onPressed: () => showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            useSafeArea: true,
+                            backgroundColor: Colors.transparent,
+                            builder: (_) => ProSubscriptionSheet(loc: loc),
+                          ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent, shadowColor: Colors.transparent,
                             padding: const EdgeInsets.symmetric(vertical: 14),
