@@ -765,11 +765,12 @@ async def cleanup_old_media_messages_task(ctx: dict) -> None:
                     await storage.delete_object_dm(storage.url_to_key(msg.media_url))
                 if msg.thumbnail_url:
                     await storage.delete_object_dm(storage.url_to_key(msg.thumbnail_url))
-                await db.delete(msg)
+                msg.media_url = None
+                msg.thumbnail_url = None
                 deleted_count += 1
 
             await db.commit()
-            logger.info("[Worker] Medya mesaj cleanup tamamlandı | silinen=%d", deleted_count)
+            logger.info("[Worker] Medya mesaj cleanup tamamlandı | temizlenen=%d", deleted_count)
         await _agent_ok(ctx, "cleanup_old_media_messages_task")
     except Exception as exc:
         logger.error("[Worker] Medya mesaj cleanup başarısız | %s", str(exc), exc_info=True)

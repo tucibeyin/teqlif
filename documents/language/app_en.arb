@@ -331,6 +331,7 @@
   "attachPickVideo": "Choose Video",
   "attachRecordVideo": "Record Video",
   "attachPickFile": "File",
+  "dmMediaExpired": "Media expired",
   "msgLastPhoto": "📷 Photo",
   "msgLastVideo": "🎥 Video",
   "msgLastVoice": "🎙 Voice message",

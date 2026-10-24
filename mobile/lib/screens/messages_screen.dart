@@ -1937,6 +1937,31 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
 
   // ─── Message content builder ─────────────────────────────────────────
 
+  Widget _buildArchivedMedia(String ct, bool isMe, TranslationPack loc) {
+    final icon = switch (ct) {
+      'image' => Icons.image_not_supported_outlined,
+      'video' => Icons.videocam_off_outlined,
+      'voice' => Icons.mic_off_outlined,
+      'file'  => Icons.insert_drive_file_outlined,
+      _       => Icons.block_outlined,
+    };
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 15, color: isMe ? Colors.white38 : Colors.grey.shade400),
+        const SizedBox(width: 5),
+        Text(
+          loc.t('dmMediaExpired'),
+          style: TextStyle(
+            fontSize: 12,
+            fontStyle: FontStyle.italic,
+            color: isMe ? Colors.white38 : Colors.grey.shade500,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildMsgContent(Map<String, dynamic> msg, bool isMe) {
     final loc = ref.read(localizationProvider);
     final ct = msg['content_type'] as String? ?? 'text';
@@ -1946,6 +1971,10 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
     final fileName = msg['file_name'] as String?;
     final fileSize = msg['file_size'] as int?;
     final msgId = msg['id'] as int;
+
+    if (ct != 'text' && mediaUrl == null) {
+      return _buildArchivedMedia(ct, isMe, loc);
+    }
 
     switch (ct) {
       case 'voice':
