@@ -1,11 +1,30 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../main.dart' show providerContainer;
 import '../core/network/api_client.dart';
 import 'storage_service.dart';
 import 'package:http/http.dart' as http;
+
+const _kDeviceIdKey = 'teqlif_iap_device_id';
+
+Future<String> _getOrCreateDeviceId() async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    var id = prefs.getString(_kDeviceIdKey);
+    if (id == null) {
+      final rng = Random.secure();
+      id = List.generate(32, (_) => rng.nextInt(16).toRadixString(16)).join();
+      await prefs.setString(_kDeviceIdKey, id);
+    }
+    return id;
+  } catch (_) {
+    return 'unknown';
+  }
+}
 
 /// Consumable teqlik paketi ID'leri
 const kConsumableIds = {
@@ -100,6 +119,10 @@ class IAPService {
       final productId = purchase.productID;
       final platform = defaultTargetPlatform == TargetPlatform.iOS ? 'apple' : 'google';
 
+      final deviceId = await _getOrCreateDeviceId();
+      final matchedProduct = products.where((p) => p.id == productId).firstOrNull;
+      final tryAmount = matchedProduct?.rawPrice ?? 0.0;
+
       final resp = await http.post(
         Uri.parse('${providerContainer.read(apiClientProvider).config.baseUrl}/wallet/purchase/verify'),
         headers: {
@@ -110,8 +133,8 @@ class IAPService {
           'platform': platform,
           'payload': payload,
           'product_id': productId,
-          'device_id': null,
-          'try_amount': 0.0,
+          'device_id': deviceId,
+          'try_amount': tryAmount,
         }),
       );
 

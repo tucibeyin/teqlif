@@ -173,61 +173,65 @@ class HandleStoreRefundCommand:
         refunded_teqlik: int,
         original_teqlik: int,
     ) -> int:
-        """Orantılı gift kazancı iptal et; iptal edilen teqlik miktarını döndür."""
+        """sender_id=user_id olan pending hediyeleri orantılı iptal et.
+
+        user_id = iade alan kişi (IAP GÖNDEREN/satın alan izleyici).
+        Etkilenmesi gereken taraf alıcı yayıncılar (receiver_id).
+        """
         if original_teqlik <= 0:
             return 0
 
-        # pending kazanç miktarını öğren
-        earn_row = await self._session.execute(
-            text("SELECT pending FROM user_wallet_earnings WHERE user_id = :uid"),
-            {"uid": user_id},
-        )
-        earn = earn_row.fetchone()
-        if earn is None or earn[0] <= 0:
-            return 0
-
-        pending = earn[0]
-        # iade_oranı = refunded / original; iptal = FLOOR(pending × oran)
-        iade_orani = refunded_teqlik / original_teqlik
-        iptal_teqlik = math.floor(pending * iade_orani)
-        if iptal_teqlik <= 0:
-            return 0
-
-        # gift_events: payout_status='pending' olanları sent_at ASC sırasıyla iptal et
-        # Toplam earned_teqlik >= iptal_teqlik olana kadar
+        # İade edenin gönderdiği pending hediyeler
         gifts_row = await self._session.execute(
             text(
-                "SELECT id, earned_teqlik FROM gift_events "
-                "WHERE receiver_id = :uid AND payout_status = 'pending' "
+                "SELECT id, receiver_id, earned_teqlik FROM gift_events "
+                "WHERE sender_id = :uid AND payout_status = 'pending' "
                 "ORDER BY sent_at ASC"
             ),
             {"uid": user_id},
         )
         gifts = gifts_row.fetchall()
+        if not gifts:
+            return 0
 
-        remaining = iptal_teqlik
+        iade_orani = refunded_teqlik / original_teqlik
+
+        # Her hediye için orantılı iptal miktarı hesapla; alıcı bazında grupla
         cancelled_ids: list[int] = []
-        for gift_id, earned in gifts:
-            if remaining <= 0:
-                break
-            cancelled_ids.append(gift_id)
-            remaining -= earned
+        receiver_cancellations: dict[int, int] = {}
 
-        if cancelled_ids:
-            placeholders = ",".join(str(gid) for gid in cancelled_ids)
-            await self._session.execute(
-                text(
-                    f"UPDATE gift_events SET payout_status = 'cancelled_refund' "
-                    f"WHERE id IN ({placeholders})"
-                )
+        for gift_id, receiver_id, earned in gifts:
+            iptal = math.floor(earned * iade_orani)
+            if iptal <= 0:
+                continue
+            cancelled_ids.append(gift_id)
+            receiver_cancellations[receiver_id] = (
+                receiver_cancellations.get(receiver_id, 0) + iptal
             )
+
+        if not cancelled_ids:
+            return 0
+
+        # gift_events'i iptal et
+        placeholders = ",".join(str(gid) for gid in cancelled_ids)
+        await self._session.execute(
+            text(
+                f"UPDATE gift_events SET payout_status = 'cancelled_refund' "
+                f"WHERE id IN ({placeholders})"
+            )
+        )
+
+        # Her ALICI yayıncının pending bakiyesini düş
+        total_cancelled = 0
+        for receiver_id, iptal_amt in receiver_cancellations.items():
             await self._session.execute(
                 text(
                     "UPDATE user_wallet_earnings "
                     "SET pending = pending - :amt, updated_at = NOW() "
                     "WHERE user_id = :uid"
                 ),
-                {"amt": iptal_teqlik, "uid": user_id},
+                {"amt": iptal_amt, "uid": receiver_id},
             )
+            total_cancelled += iptal_amt
 
-        return iptal_teqlik
+        return total_cancelled

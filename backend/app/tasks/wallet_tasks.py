@@ -10,7 +10,7 @@ process_store_notification_task     — ARQ enqueue (Apple/Google store notif i�
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 from sqlalchemy import text
 
@@ -31,15 +31,18 @@ async def release_pending_earnings_task(ctx: dict) -> None:
     released_teqlik = 0
 
     try:
+        cutoff = datetime.now(timezone.utc) - timedelta(days=_PENDING_HOLD_DAYS)
+
         async with AsyncSessionLocal() as session:
             locked = await session.execute(
                 text(
                     "SELECT receiver_id, SUM(earned_teqlik) AS total "
                     "FROM gift_events "
                     "WHERE payout_status = 'pending' "
-                    "  AND sent_at <= NOW() - INTERVAL '14 days' "
+                    "  AND sent_at <= :cutoff "
                     "GROUP BY receiver_id"
-                )
+                ),
+                {"cutoff": cutoff},
             )
             rows = locked.fetchall()
 
@@ -76,13 +79,15 @@ async def release_pending_earnings_task(ctx: dict) -> None:
                 released_users += 1
                 released_teqlik += int(total)
 
+            # Aynı :cutoff — TOCTOU zaman kayması yok
             await session.execute(
                 text(
                     "UPDATE gift_events "
                     "SET payout_status = 'released', released_at = NOW() "
                     "WHERE payout_status = 'pending' "
-                    "  AND sent_at <= NOW() - INTERVAL '14 days'"
-                )
+                    "  AND sent_at <= :cutoff"
+                ),
+                {"cutoff": cutoff},
             )
             await session.commit()
 
@@ -121,7 +126,9 @@ async def daily_financial_reconciliation_task(ctx: dict) -> None:
                     [(r[0], r[1], r[2]) for r in neg_list[:10]],
                 )
 
-            # Withdrawal tutarsızlığı — status IN ('pending','approved','completed')
+            # Withdrawal tutarsızlığı:
+            # wr_total = aktif çekimler (pending+approved+completed)
+            # ledger_net = withdrawal_request - (cancelled + rejected) = gerçek net çıkış
             wr_row = await session.execute(
                 text(
                     "SELECT COALESCE(SUM(teqlik_amount), 0) "
@@ -132,20 +139,23 @@ async def daily_financial_reconciliation_task(ctx: dict) -> None:
             )
             wr_total = wr_row.fetchone()[0]
 
-            ledger_row = await session.execute(
+            ledger_net_row = await session.execute(
                 text(
-                    "SELECT COALESCE(SUM(ABS(delta_teqlik)), 0) "
-                    "FROM wallet_ledger "
-                    "WHERE tx_type = 'withdrawal_request' "
-                    "  AND created_at >= NOW() - INTERVAL '30 days'"
+                    "SELECT "
+                    "  COALESCE((SELECT SUM(ABS(delta_teqlik)) FROM wallet_ledger "
+                    "            WHERE tx_type = 'withdrawal_request' "
+                    "            AND created_at >= NOW() - INTERVAL '30 days'), 0) "
+                    "- COALESCE((SELECT SUM(delta_teqlik) FROM wallet_ledger "
+                    "            WHERE tx_type IN ('withdrawal_cancelled', 'withdrawal_rejected') "
+                    "            AND created_at >= NOW() - INTERVAL '30 days'), 0)"
                 )
             )
-            ledger_total = ledger_row.fetchone()[0]
+            ledger_total = ledger_net_row.fetchone()[0]
 
             if wr_total and ledger_total and abs(int(wr_total) - int(ledger_total)) > 0:
                 anomalies += 1
                 logger.warning(
-                    "[Reconciliation] withdrawal tutarsızlığı: wr_total=%s ledger_total=%s diff=%s",
+                    "[Reconciliation] withdrawal tutarsızlığı: wr_total=%s ledger_net=%s diff=%s",
                     wr_total, ledger_total, abs(int(wr_total) - int(ledger_total)),
                 )
 
