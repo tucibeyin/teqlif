@@ -27,10 +27,11 @@ def upgrade() -> None:
     )
 
     # ── 2. userstatus PostgreSQL enum — sistem kullanıcısı için 'inactive' ──
-    # PG 12+'da transaction içinde güvenli; PG 17 ✓
-    # Downgrade'de enum value kaldırılamaz — DROP TYPE + yeniden oluşturma gerekir,
-    # downgrade yalnızca kolonu kaldırır, enum değeri PG'de kalır (zararsız).
-    op.execute("ALTER TYPE userstatus ADD VALUE IF NOT EXISTS 'inactive'")
+    # ALTER TYPE ... ADD VALUE transaction içinde kullanılamaz (PG kısıtı);
+    # autocommit_block ile kendi transaction'ında çalıştırılır.
+    # Downgrade'de enum value PG'de kalır (zararsız).
+    with op.get_context().autocommit_block():
+        op.execute(sa.text("ALTER TYPE userstatus ADD VALUE IF NOT EXISTS 'inactive'"))
 
     # ── 3. platform_config — tek yapılandırma deposu (Redis-cached) ──────────
     op.create_table(
