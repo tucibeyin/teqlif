@@ -18,11 +18,14 @@ def upgrade() -> None:
     # users.pending_refund — Apple iadesi sonrası bakiye < 0 ise admin inceleme bayrağı
     # ⚠️ CHECK (teqlik_balance >= 0) veya available >= 0 constraint'i OLMAMALI:
     #   webhook 500 → Apple 3 gün sonsuz retry döngüsü.
-    op.add_column('users',
-                  sa.Column('pending_refund', sa.Boolean(), nullable=False,
-                            server_default='false'))
+    op.execute(sa.text(
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS "
+        "pending_refund BOOLEAN NOT NULL DEFAULT false"
+    ))
 
     # refund_log — tüm IAP iade olaylarının audit izi
+    # IF NOT EXISTS + DROP eski tablo (v10 kısmen uygulandıysa SERIAL schema ile kalmış olabilir)
+    op.execute(sa.text("DROP TABLE IF EXISTS refund_log"))
     op.create_table(
         'refund_log',
         sa.Column('id', sa.BigInteger(), primary_key=True, autoincrement=True),
@@ -45,5 +48,5 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_table('refund_log')
-    op.drop_column('users', 'pending_refund')
+    op.execute(sa.text("DROP TABLE IF EXISTS refund_log"))
+    op.execute(sa.text("ALTER TABLE users DROP COLUMN IF EXISTS pending_refund"))

@@ -161,23 +161,7 @@ def upgrade() -> None:
         "WHERE store_transaction_id IS NOT NULL"
     ))
 
-    # ── 9. refund_log — iade denetim kaydı ───────────────────────────────────
-    op.execute(sa.text(
-        "CREATE TABLE IF NOT EXISTS refund_log ("
-        "  id                    SERIAL PRIMARY KEY, "
-        "  user_id               INTEGER NOT NULL REFERENCES users(id), "
-        "  store_platform        VARCHAR(20) NOT NULL, "
-        "  store_transaction_id  VARCHAR(128) NOT NULL, "
-        "  refunded_teqlik       INTEGER NOT NULL, "
-        "  original_teqlik       INTEGER NOT NULL, "
-        "  gift_teqlik_cancelled INTEGER NOT NULL DEFAULT 0, "
-        "  balance_after         INTEGER NOT NULL, "
-        "  raw_payload           TEXT, "
-        "  created_at            TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()"
-        ")"
-    ))
-
-    # ── 10. withdrawal_requests — cashout talepleri ───────────────────────────
+    # ── 9. withdrawal_requests — cashout talepleri ────────────────────────────
     op.execute(sa.text(
         "CREATE TABLE IF NOT EXISTS withdrawal_requests ("
         "  id             SERIAL PRIMARY KEY, "
@@ -210,7 +194,6 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.execute(sa.text("DROP TABLE IF EXISTS withdrawal_requests"))
-    op.execute(sa.text("DROP TABLE IF EXISTS refund_log"))
 
     op.execute(sa.text("DROP INDEX IF EXISTS uq_store_tx"))
     op.execute(sa.text(
