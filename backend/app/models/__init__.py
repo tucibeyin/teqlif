@@ -29,7 +29,6 @@ from .district import District
 from .category_field import CategoryField, FieldOption
 from .teqlik_transaction import TeqlikTransaction
 from .gift_event import GiftEvent
-from .withdrawal_request import WithdrawalRequest
 from .referral import Referral
 from .search_alert import SearchAlert
 from .user_interest import UserInterest
