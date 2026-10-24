@@ -748,7 +748,7 @@ async def cleanup_old_media_messages_task(ctx: dict) -> None:
     from app.services import storage_service as storage
     from sqlalchemy import select
 
-    cutoff = datetime.now(timezone.utc) - timedelta(days=7)
+    cutoff = datetime.now(timezone.utc) - timedelta(days=60)
     try:
         async with AsyncSessionLocal() as db:
             result = await db.execute(
