@@ -37,6 +37,35 @@ batch:
     minute: 45
     watchdog_m: 1440
 
+  # ── 00:00 — Finansal mutabakat (wallet) ────────────────────────────────────
+  # Gece yarısı UTC; tüm tz'lerde önceki günün kapanışı.
+  # Yük: aggregation + reconciliation SQL; pg_dump (03:00) başlamadan biter.
+
+  - name: daily_financial_reconciliation_task
+    hour: 0
+    minute: 0
+    watchdog_m: 1440
+
+  # ── 00:05 — Aylık çekim kotası sıfırlama (ayın 1'i) ────────────────────────
+  # PRO aylık ücretsiz çekim hakkı sıfırlanır.
+
+  - name: reset_monthly_withdrawal_quota_task
+    day: 1
+    hour: 0
+    minute: 5
+    watchdog_m: 43200            # 30 gün
+
+  # ── 02:15 — T+14 pending → available (wallet hakediş açma) ─────────────────
+  # Çakışma analizi: pg_basebackup (Pazar 02:00) ACCESS SHARE tutar;
+  # release_pending_earnings ROW EXCLUSIVE — birbirini bloklamaz.
+  # cluster.yaml transfer_window_start_utc:2 ile stream transfer başlangıcından
+  # da 15 dk uzakta.
+
+  - name: release_pending_earnings_task
+    hour: 2
+    minute: 15
+    watchdog_m: 1440
+
   # ── 03:00 — Temizlik penceresi açılır ──────────────────────────────────────
 
   - name: cleanup_old_notifications_task
@@ -47,6 +76,15 @@ batch:
   - name: cleanup_old_stream_likes_task
     hour: 3
     minute: 0
+    watchdog_m: 1440
+
+  # ── 03:10 — PRO abonelik expiry sigortası (wallet) ─────────────────────────
+  # Apple webhook (EXPIRED) zaten yapar; bu cron ağ hatası / worker restart sigortasıdır.
+  # 03:00'daki pg_dump + cleanup_old_notifications kalabalığından 10 dk ötelendi.
+
+  - name: check_expired_pro_users_task
+    hour: 3
+    minute: 10
     watchdog_m: 1440
 
   # ── 03:20 — Hafif hesaplama ─────────────────────────────────────────────────
