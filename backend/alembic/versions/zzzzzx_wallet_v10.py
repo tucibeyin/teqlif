@@ -81,11 +81,11 @@ def upgrade() -> None:
     op.execute(sa.text(
         "INSERT INTO users "
         "(id, email, username, full_name, hashed_password, status, "
-        " email_verified, is_admin, teqlik_balance, token_version, locale) "
+        " email_verified, is_admin, is_shadowbanned, teqlik_balance, token_version, locale) "
         "VALUES "
         "(0, 'system@teqlif.internal', 'system', 'Teqlif Platform', "
         " 'LOCKED_SYSTEM_ACCOUNT_NO_LOGIN', "
-        " 'inactive', false, false, 0, 0, 'tr') "
+        " 'inactive', false, false, false, 0, 0, 'tr') "
         "ON CONFLICT (id) DO NOTHING"
     ))
 
