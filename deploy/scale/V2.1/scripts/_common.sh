@@ -220,7 +220,17 @@ $(. /etc/os-release; echo "$VERSION_CODENAME") main" \
         crowdsecurity/http-cve \
         2>/dev/null || true
     systemctl enable --now crowdsec crowdsec-firewall-bouncer
-    log_ok "CrowdSec + firewall-bouncer aktif"
+    # Kümülatif ban: (tekrar_sayısı + 1) × 4 saat (duration_expr, CrowdSec ≥ v1.5)
+    python3 - <<'PY'
+import re, pathlib
+p = pathlib.Path('/etc/crowdsec/profiles.yaml')
+c = p.read_text()
+c = c.replace('#duration_expr:', 'duration_expr:')
+c = re.sub(r'   duration: 4h\n', '', c)
+p.write_text(c)
+PY
+    systemctl restart crowdsec
+    log_ok "CrowdSec + firewall-bouncer aktif (kümülatif ban)"
 }
 
 # ── Repo klonlama veya doğrulama ──────────────────────────────────────────────
