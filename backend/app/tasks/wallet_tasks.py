@@ -1,16 +1,16 @@
 """
 Wallet Cron Görevleri
 
-release_pending_earnings_task       — Her gün 02:15 (T+14 pending → available)
+release_pending_earnings_task       — Her gün 02:15 (T+14 gift_events → available)
 daily_financial_reconciliation_task — Her gün 00:00 (denetim raporu)
-reset_monthly_withdrawal_quota_task — Her ayın 1'i 00:05 (aylık çekim kotası sıfırla)
+reset_monthly_withdrawal_quota_task — Her ayın 1'i 00:05 (V1.0: no-op)
 check_expired_pro_users_task        — Her gün 03:10 (süresi dolmuş PRO güvenlik ağı)
 process_store_notification_task     — ARQ enqueue (Apple/Google store notif işle)
 """
 
 from __future__ import annotations
 
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 
 from sqlalchemy import text
 
@@ -19,47 +19,43 @@ from app.database import AsyncSessionLocal
 
 logger = get_logger(__name__)
 
-_PENDING_HOLD_DAYS = 14  # T+14 kazanç kilit süresi
-
 
 async def release_pending_earnings_task(ctx: dict) -> None:
-    """T+14 dolmuş pending kazançları available'a taşı."""
-    cutoff = datetime.now(timezone.utc) - timedelta(days=_PENDING_HOLD_DAYS)
+    """T+14 dolmuş gift_events kazançlarını available'a taşı.
+
+    gift_events.payout_status='pending' AND sent_at <= NOW()-14d
+    → user_wallet_earnings: available += total, pending -= total
+    → gift_events.payout_status = 'released'
+    """
     released_users = 0
     released_teqlik = 0
 
     try:
         async with AsyncSessionLocal() as session:
-            rows = await session.execute(
+            locked = await session.execute(
                 text(
-                    "SELECT user_id, SUM(pending_teqlik) AS amt "
-                    "FROM user_wallet_earnings_pending "
-                    "WHERE release_at <= :cutoff AND released = FALSE "
-                    "GROUP BY user_id"
-                ),
-                {"cutoff": cutoff},
+                    "SELECT receiver_id, SUM(earned_teqlik) AS total "
+                    "FROM gift_events "
+                    "WHERE payout_status = 'pending' "
+                    "  AND sent_at <= NOW() - INTERVAL '14 days' "
+                    "GROUP BY receiver_id"
+                )
             )
-            pending_rows = rows.fetchall()
+            rows = locked.fetchall()
 
-            for user_id, amt in pending_rows:
-                if not amt or amt <= 0:
+            for user_id, total in rows:
+                if not total or total <= 0:
                     continue
 
                 await session.execute(
                     text(
                         "UPDATE user_wallet_earnings "
-                        "SET available = available + :amt, updated_at = NOW() "
+                        "SET available = available + :amt, "
+                        "    pending   = pending   - :amt, "
+                        "    updated_at = NOW() "
                         "WHERE user_id = :uid"
                     ),
-                    {"amt": amt, "uid": user_id},
-                )
-                await session.execute(
-                    text(
-                        "UPDATE user_wallet_earnings_pending "
-                        "SET released = TRUE, released_at = NOW() "
-                        "WHERE user_id = :uid AND release_at <= :cutoff AND released = FALSE"
-                    ),
-                    {"uid": user_id, "cutoff": cutoff},
+                    {"amt": int(total), "uid": user_id},
                 )
 
                 avail_row = await session.execute(
@@ -74,18 +70,27 @@ async def release_pending_earnings_task(ctx: dict) -> None:
                         "(user_id, delta_teqlik, balance_after, tx_type, reference_type) "
                         "VALUES (:uid, :delta, :bal, 'earnings_released', 'cron')"
                     ),
-                    {"uid": user_id, "delta": int(amt), "bal": int(avail_after)},
+                    {"uid": user_id, "delta": int(total), "bal": int(avail_after)},
                 )
 
                 released_users += 1
-                released_teqlik += int(amt)
+                released_teqlik += int(total)
 
+            await session.execute(
+                text(
+                    "UPDATE gift_events "
+                    "SET payout_status = 'released', released_at = NOW() "
+                    "WHERE payout_status = 'pending' "
+                    "  AND sent_at <= NOW() - INTERVAL '14 days'"
+                )
+            )
             await session.commit()
 
         logger.info(
             "[WalletTask] release_pending_earnings: %d kullanıcı, %d teqlik serbest bırakıldı",
             released_users, released_teqlik,
         )
+        await _agent_ok(ctx, "release_pending_earnings_task")
 
     except Exception as exc:
         logger.error("[WalletTask] release_pending_earnings başarısız | %s", exc, exc_info=True)
@@ -94,12 +99,12 @@ async def release_pending_earnings_task(ctx: dict) -> None:
 
 
 async def daily_financial_reconciliation_task(ctx: dict) -> None:
-    """Günlük finansal denetim — wallet_ledger vs tablo bakiyeleri tutarlılık kontrolü."""
+    """Günlük finansal denetim — negatif bakiye + withdrawal tutarsızlığı kontrolü."""
     anomalies = 0
 
     try:
         async with AsyncSessionLocal() as session:
-            # Negatif available bakiye tespiti
+            # Negatif available/pending bakiye tespiti
             neg_rows = await session.execute(
                 text(
                     "SELECT user_id, available, pending "
@@ -116,23 +121,23 @@ async def daily_financial_reconciliation_task(ctx: dict) -> None:
                     [(r[0], r[1], r[2]) for r in neg_list[:10]],
                 )
 
-            # pending + approved + completed withdrawal toplamı vs ledger
+            # Withdrawal tutarsızlığı — status IN ('pending','approved','completed')
             wr_row = await session.execute(
                 text(
-                    "SELECT COUNT(*), COALESCE(SUM(teqlik_amount), 0) "
+                    "SELECT COALESCE(SUM(teqlik_amount), 0) "
                     "FROM withdrawal_requests "
                     "WHERE status IN ('pending', 'approved', 'completed') "
-                    "AND created_at >= NOW() - INTERVAL '30 days'"
+                    "  AND created_at >= NOW() - INTERVAL '30 days'"
                 )
             )
-            wr_count, wr_total = wr_row.fetchone()
+            wr_total = wr_row.fetchone()[0]
 
             ledger_row = await session.execute(
                 text(
                     "SELECT COALESCE(SUM(ABS(delta_teqlik)), 0) "
                     "FROM wallet_ledger "
-                    "WHERE tx_type IN ('withdrawal_request') "
-                    "AND created_at >= NOW() - INTERVAL '30 days'"
+                    "WHERE tx_type = 'withdrawal_request' "
+                    "  AND created_at >= NOW() - INTERVAL '30 days'"
                 )
             )
             ledger_total = ledger_row.fetchone()[0]
@@ -140,12 +145,13 @@ async def daily_financial_reconciliation_task(ctx: dict) -> None:
             if wr_total and ledger_total and abs(int(wr_total) - int(ledger_total)) > 0:
                 anomalies += 1
                 logger.warning(
-                    "[Reconciliation] withdrawal tutarsızlığı: wr_total=%s ledger_total=%s",
-                    wr_total, ledger_total,
+                    "[Reconciliation] withdrawal tutarsızlığı: wr_total=%s ledger_total=%s diff=%s",
+                    wr_total, ledger_total, abs(int(wr_total) - int(ledger_total)),
                 )
 
         status = "ok" if anomalies == 0 else f"anomalies={anomalies}"
         logger.info("[WalletTask] daily_financial_reconciliation tamamlandı | status=%s", status)
+        await _agent_ok(ctx, "daily_financial_reconciliation_task")
 
     except Exception as exc:
         logger.error("[WalletTask] daily_financial_reconciliation başarısız | %s", exc, exc_info=True)
@@ -154,23 +160,13 @@ async def daily_financial_reconciliation_task(ctx: dict) -> None:
 
 
 async def reset_monthly_withdrawal_quota_task(ctx: dict) -> None:
-    """Her ayın 1'inde aylık çekim sayacını sıfırla."""
-    try:
-        async with AsyncSessionLocal() as session:
-            result = await session.execute(
-                text(
-                    "UPDATE user_wallet_earnings "
-                    "SET monthly_withdrawal_count = 0, updated_at = NOW() "
-                    "WHERE monthly_withdrawal_count > 0"
-                )
-            )
-            await session.commit()
-            updated = result.rowcount
+    """Her ayın 1'inde aylık çekim sayacını sıfırla.
 
-        logger.info(
-            "[WalletTask] reset_monthly_withdrawal_quota: %d kullanıcı sıfırlandı",
-            updated,
-        )
+    V1.0: Aylık kota kolonu yok — no-op. V1.1'de eklenir.
+    """
+    try:
+        logger.info("[WalletTask] reset_monthly_withdrawal_quota: V1.0 no-op")
+        await _agent_ok(ctx, "reset_monthly_withdrawal_quota_task")
 
     except Exception as exc:
         logger.error("[WalletTask] reset_monthly_withdrawal_quota başarısız | %s", exc, exc_info=True)
@@ -179,7 +175,10 @@ async def reset_monthly_withdrawal_quota_task(ctx: dict) -> None:
 
 
 async def check_expired_pro_users_task(ctx: dict) -> None:
-    """pro_expires_at < NOW() olan kullanıcıları 'free'ye düşür (güvenlik ağı)."""
+    """pro_expires_at < NOW() olan kullanıcıları 'standard'a düşür (güvenlik ağı).
+
+    Grace period (pro_grace_until) dolmadan düşürme yapılmaz.
+    """
     downgraded = 0
 
     try:
@@ -187,19 +186,23 @@ async def check_expired_pro_users_task(ctx: dict) -> None:
             result = await session.execute(
                 text(
                     "UPDATE users "
-                    "SET user_type = 'free', plan_type = NULL "
+                    "SET user_type = 'standard', plan_type = NULL, "
+                    "    pro_expires_at = NULL, pro_grace_until = NULL "
                     "WHERE user_type = 'pro' "
-                    "AND pro_expires_at IS NOT NULL "
-                    "AND pro_expires_at < NOW()"
+                    "  AND pro_expires_at IS NOT NULL "
+                    "  AND pro_expires_at < NOW() "
+                    "  AND (pro_grace_until IS NULL OR pro_grace_until < NOW())"
                 )
             )
             await session.commit()
             downgraded = result.rowcount
 
         if downgraded:
-            logger.info("[WalletTask] check_expired_pro: %d kullanıcı free'ye düşürüldü", downgraded)
+            logger.info("[WalletTask] check_expired_pro: %d kullanıcı standard'a düşürüldü", downgraded)
         else:
             logger.debug("[WalletTask] check_expired_pro: süresi dolan PRO yok")
+
+        await _agent_ok(ctx, "check_expired_pro_users_task")
 
     except Exception as exc:
         logger.error("[WalletTask] check_expired_pro başarısız | %s", exc, exc_info=True)
@@ -213,15 +216,25 @@ async def process_store_notification_task(
     platform: str,
     signed_payload: str,
 ) -> None:
-    """ARQ job — Apple/Google store bildirimini işle (JWS doğrulama + DB yazma)."""
+    """ARQ job — Apple/Google store bildirimini notificationType'a göre yönlendir."""
     try:
         async with AsyncSessionLocal() as session:
             if platform == "apple":
-                from app.use_cases.wallet.commands.handle_store_refund_command import (
-                    HandleStoreRefundCommand,
-                )
-                cmd = HandleStoreRefundCommand(session)
-                await cmd.execute(platform=platform, signed_payload=signed_payload)
+                from app.services.store.apple_verifier import verify_signed_payload_jws
+                claims = verify_signed_payload_jws(signed_payload)
+                notif_type = claims.get("notificationType", "")
+
+                if notif_type == "REFUND":
+                    from app.use_cases.wallet.commands.handle_store_refund_command import (
+                        HandleStoreRefundCommand,
+                    )
+                    await HandleStoreRefundCommand(session).execute(
+                        platform=platform, signed_payload=signed_payload
+                    )
+                else:
+                    from app.services.store.notification_factory import StoreNotificationHandlerFactory
+                    handler = StoreNotificationHandlerFactory.get(platform, session)
+                    await handler.handle(signed_payload)
             else:
                 logger.warning(
                     "[StoreNotif] Bilinmeyen platform, atlandı | platform=%s", platform
@@ -237,3 +250,14 @@ async def process_store_notification_task(
         )
         capture_exception(exc)
         raise
+
+
+async def _agent_ok(ctx: dict, job_name: str) -> None:
+    """teqlif-agent watchdog'a 'job çalıştı' sinyali gönderir."""
+    try:
+        await ctx["redis"].hset(
+            "teqlif:agent:job_ok", job_name,
+            datetime.now(timezone.utc).isoformat(),
+        )
+    except Exception:
+        pass
