@@ -956,8 +956,12 @@ Her iki cron görevi `worker.py`'ye değil; **`deploy/scale/V2.1/schedule.yaml`*
 ```python
 # Her gün 02:15 UTC — pending → released (tam idempotent)
 # schedule.yaml: batch.release_pending_earnings, watchdog_m: 30
-# 02:15 UTC: Her Pazar 02:00'de başlayan pg_basebackup (Node 2 fiziksel yedek)
-# ile disk I/O çakışmasını önlemek için 15 dk ötelendi.
+# 02:15 UTC: Her Pazar 02:00'de başlayan pg_basebackup (Node 2 fiziksel yedek) ile
+# örtüşür; çakışma değerlendirmesi: pg_basebackup büyük sequential READ (node1→node2),
+# release_pending_earnings küçük hedefli UPDATE (yalnızca sent_at≤14gün satırlar).
+# Doğrudan lock çakışması yok — pg_basebackup ACCESS SHARE tutar, UPDATE ROW EXCLUSIVE;
+# birbirini bloklamaz. 15 dk öteleme cluster.yaml transfer_window_start_utc:2 ile
+# stream transfer başlangıcından da uzaklaştırır.
 async def release_pending_earnings_task():
     """14 günü dolan gift_events.payout_status='pending' → 'released', teqlik aktar."""
     # BEGIN TRANSACTION
@@ -1133,10 +1137,11 @@ POST /api/wallet/store-notifications/apple
     → refund akışı: teqlik_balance azalt (paketle gelen bonuslar varsa orantılı)
 ```
 
-**Gece Cron — check_expired_pro_users_task (03:00 UTC):**
+**Gece Cron — check_expired_pro_users_task (03:10 UTC):**
 ```python
-# Her gün 03:00 UTC — webhook kaçırma sigortası (network glitch / worker restart)
+# Her gün 03:10 UTC — webhook kaçırma sigortası (network glitch / worker restart)
 # schedule.yaml: batch.check_expired_pro_users, watchdog_m: 60
+# 03:10 UTC: 03:00'daki pg_dump + cleanup_old_notifications kalabalığından 10 dk ötelendi.
 async def check_expired_pro_users_task():
     """
     pro_expires_at geçmiş ve grace_period'u da bitmiş PRO kullanıcıları standard'a çeker.
@@ -1258,7 +1263,7 @@ Kurumsal banka toplu ödeme API'si (şirket kuruluşu sonrası)
 | **PRO Abonelik** | |
 | `verify_purchase_command.py` consumable + subscription dispatch | ❌ Yazılmamış |
 | `handle_store_notification_command.py` (DID_RENEW/EXPIRED/GRACE/REVOKE) | ❌ Yazılmamış |
-| `schedule.yaml` check_expired_pro_users (03:00 UTC, watchdog_m:60) | ❌ Eklenmemiş |
+| `schedule.yaml` check_expired_pro_users (03:10 UTC, watchdog_m:60) | ❌ Eklenmemiş |
 | PRO subscription Flutter UI (ProSubscriptionSheet, Restore Purchases) | ❌ Yazılmamış |
 
 **Neden Gerçek Banka Transferi CASHOUT_ENABLED=false Döneminde Yapılmıyor — İki Bağımsız Neden:**
@@ -1817,7 +1822,7 @@ psql -U teqlif teqlif   ← YASAK
 | W6 | `get_wallet_summary_query.py`: teqlik_balance + earnings_pending_teqlik + earnings_available_teqlik + try_rate (platform_config) + **cashout_enabled: bool** döndürür; cashout_enabled + teqlik_try_rate Redis'ten okunur; Flutter bu değerleri API response'undan okur — statik sabit veya .env değil | Backend | Evet |
 | W7 | `request_withdrawal_command.py`: available atomik düşüm (UPDATE WHERE available >= teqlik_amount, 0 satır → 400) + kurları kilitle (try_rate + tcmb_rate) + aktif pending yok kontrolü (409) + withdrawal_requests INSERT — aynı transaction | Backend | Hayır |
 | W7b | `convert_to_teqlik_command.py`: Seçenek C (+%10 bonus): `available -= teqlik_amount`; `teqlik_balance += FLOOR(teqlik_amount × 1.10)` + **wallet_ledger 3 satır**: user -teqlik_amount (convert_to_teqlik), user +total_teqlik (convert_to_teqlik), user_id=0 -bonus_teqlik (bonus_mint; sistem basar) — modal yasal uyarısı zorunlu | Backend | Hayır |
-| W7c | `schedule.yaml`: `release_pending_earnings` (02:15 UTC, watchdog_m:30) + `daily_financial_reconciliation` (00:00 UTC, watchdog_m:10) + **`check_expired_pro_users` (03:00 UTC, watchdog_m:60)** — 02:15: Pazar 02:00 pg_basebackup çakışması önlenir; 03:00: webhook kaçırma sigortası; her fonksiyon `worker.py` `_SCHEDULE_FUNCTIONS` sözlüğüne eklenmeli + `await _agent_ok(ctx, "<task_name>")` son satır zorunlu (eksik → sahte alarm) | Backend | Hayır |
+| W7c | `schedule.yaml`'a 4 yeni görev eklenir — tümü `worker.py` `_SCHEDULE_FUNCTIONS` sözlüğüne de eklenmeli + `await _agent_ok(ctx, "<task_name>")` son satır zorunlu (eksik → sahte alarm): `daily_financial_reconciliation` (00:00 UTC, watchdog_m:10 — pencerede tek başına, ideal) + `reset_monthly_withdrawal_quota` (00:05 UTC ayın 1'i, watchdog_m:60 — temiz pencere) + `release_pending_earnings` (02:15 UTC, watchdog_m:30 — Pazar pg_basebackup ile örtüşür: ACCESS SHARE vs ROW EXCLUSIVE, blok yok) + `check_expired_pro_users` (**03:10** UTC, watchdog_m:60 — 03:00 pg_dump+cleanup kalabalığından 10 dk ötelendi) | Backend | Hayır |
 | W7e | `cancel_withdrawal_request_command.py`: status='pending' → 'cancelled' + atomik bakiye iadesi + 403 yetki / 409 statü kontrolü; `DELETE /api/wallet/withdraw/{id}` | Backend | Hayır |
 | W8 | `handle_store_refund_command.py`: orantılı gift iptali (payout_status='cancelled_refund', `user_wallet_earnings.pending -= iptal_teqlik`) + negatif bakiye olabilir (CHECK constraint YOK — webhook retry storm önlemi) + `pending_refund=True` | Backend | Evet |
 | W9 | Kart 2 UI: `cashout_enabled` flag `GET /api/wallet/summary` response'undan okunur (statik sabit değil); cashout_enabled==false → "Yayın Başlat" CTA (glassmorphism koyu zümrüt/altın kart); cashout_enabled==true → birincil "⚡ ANINDA KULLAN (+%10 Teqlik'e Dönüştür)", ikincil "🏦 Nakit Transferi İçin IBAN Tanımla"; aktif talep varsa sıra kartı (📋 #Queue-{id}, İptal Et, Teqlik'e Dönüştür); hediye ekranında combo tap sayacı (x2/x5/x10 + burst animasyonu) — **optimistic UI**: sayaç animasyonu anlık güncellenir, backend debit debounced (örn. 300ms); bakiye yetersizse toast ile geri al; **`AppLifecycleState.resumed`**: uygulama arka plandan öne gelince `GET /api/wallet/summary` yeniden çekilir (App Store dönüşünde bakiye güncellenmesi için) | Mobile | Hayır |
