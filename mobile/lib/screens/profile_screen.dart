@@ -53,6 +53,7 @@ import 'live_stream_analytics_screen.dart';
 import 'public_profile_screen.dart';
 import 'create_listing_screen.dart';
 import 'pro_hub_screen.dart';
+import 'viewmodels/pro_hub_view_model.dart';
 import 'notification_settings_screen.dart';
 import 'blocked_users_screen.dart';
 import 'account_info_screen.dart';
@@ -70,9 +71,10 @@ import 'viewmodels/profile_view_model.dart';
 import '../utils/snackbar_helper.dart';
 import '../widgets/consent_settings_modal.dart';
 import '../services/media_compressor.dart';
-import '../widgets/pro_badge_widget.dart';
 import '../widgets/pro_subscription_sheet.dart';
+import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:flutter/rendering.dart' show FontFeature;
+import '../services/iap_service.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -3915,13 +3917,15 @@ class WalletScreen extends ConsumerStatefulWidget {
 }
 
 class _WalletScreenState extends ConsumerState<WalletScreen>
-    with WidgetsBindingObserver {
+    with WidgetsBindingObserver, TickerProviderStateMixin {
   int? _balance;
   List<dynamic> _txns = [];
   bool _loading = false;
 
   // Kart 1 — PRO durumu
   late bool _isPro;
+  String? _proExpiresAt;
+  String? _activePlanType;
 
   // Kart 2 — kazanç özeti
   int _pendingTeqlik = 0;
@@ -3929,6 +3933,11 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
   bool _cashoutEnabled = false;
   double _tryRate = 0.0;
   int? _activeWithdrawalId;
+
+  late TabController _tabController;
+  final _iap = IAPService();
+  StreamSubscription<PurchaseDetails>? _iapSub;
+  bool _iapLoading = false;
 
   Map<String, String> _typeLabels(TranslationPack loc) => {
     'airdrop': loc.t('walletTxnAirdrop'),
@@ -3956,15 +3965,23 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // PRO kullanıcı için bakiye/hareketler sekmesiyle aç; standart için PRO upsell
+    _tabController = TabController(length: 3, vsync: this, initialIndex: widget.isPro ? 1 : 0);
     _isPro = widget.isPro;
     _balance = widget.initialBalance;
     _txns = List.from(widget.initialHistory);
+    _iapSub = _iap.purchaseStream.listen(_onIapPurchase);
+    if (_iap.products.isEmpty) {
+      _iap.loadProducts().then((_) { if (mounted) setState(() {}); });
+    }
     _load();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _tabController.dispose();
+    _iapSub?.cancel();
     super.dispose();
   }
 
@@ -3999,6 +4016,8 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
         if (summaryData.containsKey('is_pro')) {
           _isPro = summaryData['is_pro'] as bool? ?? false;
         }
+        _proExpiresAt   = summaryData['pro_expires_at'] as String?;
+        _activePlanType = summaryData['plan_type'] as String?;
       }
     });
   }
@@ -4079,27 +4098,168 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
     }
   }
 
+  void _onIapPurchase(PurchaseDetails purchase) {
+    if (!mounted) return;
+    setState(() => _iapLoading = false);
+    if (purchase.status == PurchaseStatus.purchased ||
+        purchase.status == PurchaseStatus.restored) {
+      _load();
+      if (kSubscriptionIds.contains(purchase.productID)) {
+        setState(() => _isPro = true);
+      }
+    }
+  }
+
+  Future<void> _buyPack(ProductDetails product) async {
+    setState(() => _iapLoading = true);
+    try {
+      await _iap.buy(product);
+    } catch (_) {
+      if (mounted) setState(() => _iapLoading = false);
+    }
+  }
+
+  String _txnDateGroup(String isoDate) {
+    if (isoDate.isEmpty) return '';
+    try {
+      final d = DateTime.parse(isoDate).toLocal();
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final yesterday = today.subtract(const Duration(days: 1));
+      final date = DateTime(d.year, d.month, d.day);
+      if (date == today) return 'Bugün';
+      if (date == yesterday) return 'Dün';
+      const m = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+      return '${d.day} ${m[d.month - 1]}';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  (IconData, Color) _txnIcon(String type) {
+    switch (type) {
+      case 'iap_purchase':
+      case 'web_topup':
+        return (Icons.diamond_rounded, const Color(0xFF06B6D4));
+      case 'send_gift':
+      case 'receive_gift':
+        return (Icons.card_giftcard_rounded, const Color(0xFFFB923C));
+      case 'stream_gift_received':
+        return (Icons.podcasts_rounded, const Color(0xFF10B981));
+      case 'airdrop':
+      case 'welcome_bonus':
+      case 'referral_bonus':
+      case 'churn_airdrop':
+      case 'daily_login':
+        return (Icons.celebration_rounded, const Color(0xFF3B82F6));
+      case 'spend_boost':
+      case 'spend_boost_paid':
+        return (Icons.rocket_launch_rounded, const Color(0xFF8B5CF6));
+      case 'spend_blast':
+        return (Icons.bolt_rounded, const Color(0xFFEF4444));
+      case 'spend_ai':
+      case 'spend_ai_desc':
+        return (Icons.auto_awesome_rounded, const Color(0xFF06B6D4));
+      case 'spend_lead_gen':
+      case 'spend_ad_campaign':
+      case 'spend_retargeting':
+      case 'spend_reactivation':
+        return (Icons.bar_chart_rounded, const Color(0xFF6366F1));
+      default:
+        return (Icons.payments_rounded, const Color(0xFF6B7280));
+    }
+  }
+
   Widget _buildTxnRow(dynamic t, TranslationPack loc) {
     final amount = t['amount'] as int? ?? 0;
-    final label =
-        _typeLabels(loc)[t['transaction_type'] as String? ?? ''] ??
-        (t['label'] as String? ?? t['transaction_type'] as String? ?? '');
+    final type = t['transaction_type'] as String? ?? '';
+    final label = _typeLabels(loc)[type] ?? (t['label'] as String? ?? type);
     final isPos = amount > 0;
     final dateStr = t['created_at'] as String? ?? '';
-    String formattedDate = '';
+    String formattedTime = '';
     try {
       final d = DateTime.parse(dateStr).toLocal();
-      formattedDate =
-          '${d.day.toString().padLeft(2, '0')}.${d.month.toString().padLeft(2, '0')}.${d.year}  ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+      formattedTime =
+          '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
     } catch (_) {}
+    final meta = t['counterpart_username'] as String? ??
+        t['gift_name'] as String? ??
+        t['product_id'] as String?;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final (icon, iconColor) = _txnIcon(type);
+
     return InkWell(
       onTap: () => _showTxnDetailSheet(context, t, loc),
-      borderRadius: BorderRadius.circular(8),
-      child: _TxnRow(
-        label: label,
-        amount: amount,
-        isPositive: isPos,
-        date: formattedDate,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: iconColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: iconColor, size: 18),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.white : const Color(0xFF111827),
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                  if (meta != null)
+                    Text(
+                      meta,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isDark
+                            ? const Color(0xFF737373)
+                            : const Color(0xFF9CA3AF),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  '${isPos ? '+' : ''}$amount',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: isPos
+                        ? const Color(0xFF10B981)
+                        : (isDark ? Colors.white : const Color(0xFF111827)),
+                    letterSpacing: -0.3,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+                Text(
+                  formattedTime,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: isDark
+                        ? const Color(0xFF737373)
+                        : const Color(0xFF9CA3AF),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -4140,27 +4300,17 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
     );
   }
 
-  // Harcama özeti: spend_* türlerini topla
-  Map<String, int> get _spendingSummary {
-    final map = <String, int>{};
-    for (final t in _txns) {
-      final type = t['transaction_type'] as String? ?? '';
-      final amount = (t['amount'] as int? ?? 0).abs();
-      if (type.startsWith('spend_')) {
-        map[type] = (map[type] ?? 0) + amount;
-      }
-    }
-    return map;
-  }
-
   @override
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
-    final summary = _spendingSummary;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final hasEarnings = _pendingTeqlik > 0 || _availableTeqlik > 0;
+
     return Scaffold(
+      backgroundColor: AppColors.bg(context),
       appBar: AppBar(
         title: Text(
-          ref.read(localizationProvider).t('walletTitle'),
+          loc.t('walletTitle'),
           style: const TextStyle(fontWeight: FontWeight.w700),
         ),
         surfaceTintColor: Colors.transparent,
@@ -4179,187 +4329,218 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
       ),
       body: Column(
         children: [
-          // ── Bakiye kartı — sabit üst ──────────────────────────────
+          // ── Hero kartı ─────────────────────────────────────────────
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [
-                    Color(0xFFB8860B),
-                    Color(0xFFFFD700),
-                    Color(0xFFFFA500),
-                  ],
-                  begin: AlignmentDirectional.topStart,
-                  end: AlignmentDirectional.bottomEnd,
-                ),
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFFFFD700).withValues(alpha: 0.4),
-                    blurRadius: 20,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        loc.t('walletBalance'),
-                        style: const TextStyle(color: Colors.white70, fontSize: 13),
-                      ),
-                      if (_isPro)
-                        const ProBadgeWidget(fontSize: 11)
-                      else
-                        GestureDetector(
-                          onTap: _showProSheet,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: Colors.white30),
-                            ),
-                            child: Text(
-                              loc.t('proUpgradeCta'),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _balance != null ? '$_balance teqlik' : '—',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 38,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: .5,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // ── İşlem listesi — kaydırılabilir orta ──────────────────
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: _load,
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-                children: [
-                  // ── Harcama özeti ──────────────────────────────────
-                  if (summary.isNotEmpty) ...[
-                    Text(
-                      loc.t('walletSpendingSummary'),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    ...summary.entries.map(
-                      (e) => _SummaryRow(
-                        label: _typeLabels(loc)[e.key] ?? e.key,
-                        amount: e.value,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                  ],
-
-                  // ── İşlem geçmişi ──────────────────────────────────
-                  if (_txns.isNotEmpty) ...[
-                    Text(
-                      loc.t('walletTxnHistory'),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    ..._txns.map((t) => _buildTxnRow(t, loc)),
-                  ] else if (!_loading) ...[
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      child: Text(
-                        loc.t('walletNoTxns'),
-                        style: const TextStyle(color: Colors.grey),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-
-          // ── Kart 2 — Kazanç (yayıncı earnings) — sabit alt ──────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            child: _EarningsCard(
-              pendingTeqlik: _pendingTeqlik,
-              availableTeqlik: _availableTeqlik,
-              cashoutEnabled: _cashoutEnabled,
-              tryRate: _tryRate,
-              activeWithdrawalId: _activeWithdrawalId,
-              onConvert: _convertToTeqlik,
-              onIban: _showIbanSheet,
-              onCancelWithdrawal: _cancelWithdrawal,
-              onStartStream: () => Navigator.pop(context),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: _WalletHeroCard(
+              balance: _balance,
+              isPro: _isPro,
+              proExpiresAt: _proExpiresAt,
+              isDark: isDark,
+              onBuyTeqlik: () => _tabController.animateTo(1),
+              onProAction: _isPro
+                  ? () => _tabController.animateTo(0)
+                  : _showProSheet,
               loc: loc,
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
 
-class _SummaryRow extends ConsumerWidget {
-  final String label;
-  final int amount;
-  const _SummaryRow({required this.label, required this.amount});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
-      child: Row(
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: const BoxDecoration(
-              color: Color(0xFFFFD700),
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                color: Theme.of(context).colorScheme.onSurface,
+          // ── Kazanç pill'i (yayıncılar için) ───────────────────────
+          if (hasEarnings)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+              child: _EarningsPill(
+                pendingTeqlik: _pendingTeqlik,
+                availableTeqlik: _availableTeqlik,
+                tryRate: _tryRate,
+                isPro: _isPro,
+                loc: loc,
+                onTap: () => showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  useSafeArea: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (_) => Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.surface(context),
+                      borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(24)),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          margin: const EdgeInsets.only(top: 10, bottom: 8),
+                          width: 36,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: AppColors.border(context),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                          child: _EarningsCard(
+                            pendingTeqlik: _pendingTeqlik,
+                            availableTeqlik: _availableTeqlik,
+                            cashoutEnabled: _cashoutEnabled,
+                            tryRate: _tryRate,
+                            activeWithdrawalId: _activeWithdrawalId,
+                            onConvert: () {
+                              Navigator.pop(context);
+                              _convertToTeqlik();
+                            },
+                            onIban: () {
+                              Navigator.pop(context);
+                              _showIbanSheet();
+                            },
+                            onCancelWithdrawal: (id) {
+                              Navigator.pop(context);
+                              _cancelWithdrawal(id);
+                            },
+                            onStartStream: () => Navigator.pop(context),
+                            loc: ref.read(localizationProvider),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
-          ),
-          Text(
-            '$amount teqlik',
-            style: const TextStyle(
+
+          // ── Sekme çubuğu ───────────────────────────────────────────
+          const SizedBox(height: 8),
+          TabBar(
+            controller: _tabController,
+            indicatorColor: const Color(0xFF06B6D4),
+            indicatorWeight: 2.5,
+            indicatorSize: TabBarIndicatorSize.label,
+            labelColor: isDark ? Colors.white : const Color(0xFF111827),
+            unselectedLabelColor:
+                isDark ? const Color(0xFF737373) : const Color(0xFF9CA3AF),
+            labelStyle: const TextStyle(
               fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFFB8860B),
+              fontWeight: FontWeight.w600,
+              letterSpacing: -0.2,
+            ),
+            tabs: [
+              Tab(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    FaIcon(FontAwesomeIcons.crown, size: 12),
+                    SizedBox(width: 5),
+                    Text('PRO'),
+                  ],
+                ),
+              ),
+              Tab(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Icon(Icons.diamond_rounded, size: 13),
+                    SizedBox(width: 5),
+                    Text('teqlik Al'),
+                  ],
+                ),
+              ),
+              const Tab(text: 'Hareketler'),
+            ],
+          ),
+
+          // ── Sekme içerikleri ───────────────────────────────────────
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                // ── Sekme 1: PRO ─────────────────────────────────────
+                _ProTab(
+                  isPro: _isPro,
+                  iap: _iap,
+                  proExpiresAt: _proExpiresAt,
+                  activePlanType: _activePlanType,
+                  isDark: isDark,
+                  onSubscribe: _showProSheet,
+                  loc: loc,
+                ),
+
+                // ── Sekme 2: teqlik Al ───────────────────────────────
+                _TeqlikPacksTab(
+                  iap: _iap,
+                  iapLoading: _iapLoading,
+                  onBuy: _buyPack,
+                  isDark: isDark,
+                ),
+
+                // ── Sekme 3: Hareketler ──────────────────────────────
+                RefreshIndicator(
+                  onRefresh: _load,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.only(bottom: 32),
+                    itemCount:
+                        _txns.isEmpty && !_loading ? 1 : _txns.length,
+                    itemBuilder: (context, i) {
+                      if (_txns.isEmpty) {
+                        return Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: Center(
+                            child: Text(
+                              loc.t('walletNoTxns'),
+                              style: TextStyle(
+                                color: isDark
+                                    ? const Color(0xFF737373)
+                                    : const Color(0xFF9CA3AF),
+                              ),
+                            ),
+                          ),
+                        );
+                      }
+                      final t = _txns[i];
+                      final thisGroup = _txnDateGroup(
+                          t['created_at'] as String? ?? '');
+                      String? groupHeader;
+                      if (i == 0) {
+                        groupHeader = thisGroup;
+                      } else {
+                        final prevGroup = _txnDateGroup(
+                            _txns[i - 1]['created_at'] as String? ?? '');
+                        if (thisGroup != prevGroup) groupHeader = thisGroup;
+                      }
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (groupHeader != null && groupHeader.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(20, 14, 20, 6),
+                              child: Text(
+                                groupHeader.toUpperCase(),
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.9,
+                                  color: isDark
+                                      ? const Color(0xFF737373)
+                                      : const Color(0xFF9CA3AF),
+                                ),
+                              ),
+                            ),
+                          _buildTxnRow(t, loc),
+                          if (i < _txns.length - 1)
+                            Divider(
+                              height: 1,
+                              color: isDark
+                                  ? const Color(0xFF2A2A2A)
+                                  : const Color(0xFFE5E7EB),
+                              indent: 72,
+                              endIndent: 20,
+                            ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -4368,68 +4549,1765 @@ class _SummaryRow extends ConsumerWidget {
   }
 }
 
-class _TxnRow extends ConsumerWidget {
-  final String label;
-  final int amount;
-  final bool isPositive;
-  final String date;
-  const _TxnRow({
-    required this.label,
-    required this.amount,
-    required this.isPositive,
-    required this.date,
+// ─── Wallet Hero Card ─────────────────────────────────────────────────────────
+
+class _WalletHeroCard extends StatelessWidget {
+  final int? balance;
+  final bool isPro;
+  final String? proExpiresAt;
+  final bool isDark;
+  final VoidCallback onBuyTeqlik;
+  final VoidCallback onProAction;
+  final TranslationPack loc;
+
+  const _WalletHeroCard({
+    required this.balance,
+    required this.isPro,
+    this.proExpiresAt,
+    required this.isDark,
+    required this.onBuyTeqlik,
+    required this.onProAction,
+    required this.loc,
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
+      decoration: BoxDecoration(
+        gradient: isDark
+            ? const LinearGradient(
+                colors: [Color(0xFF091f2e), Color(0xFF0f1115)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : const LinearGradient(
+                colors: [Color(0xFFECFEFF), Color(0xFFF0FEFF)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: isDark
+              ? const Color(0xFF06B6D4).withValues(alpha: 0.18)
+              : const Color(0xFF06B6D4).withValues(alpha: 0.3),
+        ),
+        boxShadow: isDark
+            ? [
+                BoxShadow(
+                  color: const Color(0xFF06B6D4).withValues(alpha: 0.07),
+                  blurRadius: 24,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : [],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: isPositive
-                  ? Colors.green.withValues(alpha: 0.15)
-                  : Colors.red.withValues(alpha: 0.15),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              isPositive ? Icons.add_rounded : Icons.remove_rounded,
-              color: isPositive ? Colors.green : Colors.red,
-              size: 18,
+          Row(
+            children: [
+              Text(
+                'teqlik bakiyesi',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF06B6D4).withValues(alpha: 0.8),
+                  letterSpacing: 0.04,
+                ),
+              ),
+              const Spacer(),
+              if (isPro) _ProDaysBadge(proExpiresAt: proExpiresAt, loc: loc),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(
+                balance != null ? _fmt(balance!) : '—',
+                style: TextStyle(
+                  fontSize: 44,
+                  fontWeight: FontWeight.w900,
+                  color: isDark ? Colors.white : const Color(0xFF111827),
+                  letterSpacing: -2.2,
+                  height: 1.05,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+              const SizedBox(width: 7),
+              const Padding(
+                padding: EdgeInsets.only(bottom: 4),
+                child: Text(
+                  'teqlik',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF06B6D4),
+                    letterSpacing: -0.4,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: onBuyTeqlik,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF0284C7), Color(0xFF06B6D4), Color(0xFF22D3EE)],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF06B6D4).withValues(alpha: 0.42),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text('💎', style: TextStyle(fontSize: 13)),
+                        SizedBox(width: 5),
+                        Text(
+                          'teqlik Al',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: GestureDetector(
+                  onTap: onProAction,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFD97706), Color(0xFFF59E0B), Color(0xFFFFD700)],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFD97706).withValues(alpha: 0.35),
+                          blurRadius: 12,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const FaIcon(FontAwesomeIcons.crown, size: 11, color: Colors.white),
+                        const SizedBox(width: 5),
+                        Text(
+                          isPro ? loc.t('walletHeroPrivilegesBtn') : loc.t('proSheetTitle'),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _fmt(int n) {
+    final s = n.toString();
+    if (s.length <= 3) return s;
+    final buf = StringBuffer();
+    for (int i = 0; i < s.length; i++) {
+      if (i > 0 && (s.length - i) % 3 == 0) buf.write('.');
+      buf.write(s[i]);
+    }
+    return buf.toString();
+  }
+}
+
+// ─── PRO Days Badge ───────────────────────────────────────────────────────────
+
+class _ProDaysBadge extends StatelessWidget {
+  final String? proExpiresAt;
+  final TranslationPack loc;
+  const _ProDaysBadge({this.proExpiresAt, required this.loc});
+
+  @override
+  Widget build(BuildContext context) {
+    int? daysLeft;
+    if (proExpiresAt != null) {
+      try {
+        final exp = DateTime.parse(proExpiresAt!).toLocal();
+        daysLeft = exp.difference(DateTime.now()).inDays;
+      } catch (_) {}
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFD97706), Color(0xFFFFD700)],
+        ),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const FaIcon(FontAwesomeIcons.crown, size: 9, color: Colors.white),
+          const SizedBox(width: 4),
+          Text(
+            daysLeft != null
+                ? loc.t('walletProDaysBadge', {'days': '$daysLeft'})
+                : 'PRO',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.1,
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Earnings Pill ────────────────────────────────────────────────────────────
+
+class _EarningsPill extends StatelessWidget {
+  final int pendingTeqlik;
+  final int availableTeqlik;
+  final double tryRate;
+  final bool isPro;
+  final TranslationPack loc;
+  final VoidCallback onTap;
+
+  const _EarningsPill({
+    required this.pendingTeqlik,
+    required this.availableTeqlik,
+    required this.tryRate,
+    required this.isPro,
+    required this.loc,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFF10B981).withValues(alpha: 0.09),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+              color: const Color(0xFF10B981).withValues(alpha: 0.22)),
+        ),
+        child: Row(
+          children: [
+            const _PulsingDot(),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text.rich(
+                    TextSpan(children: [
+                      TextSpan(
+                        text: '$pendingTeqlik teqlik ',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF10B981),
+                        ),
+                      ),
+                      const TextSpan(
+                        text: 'kazancın işlemde',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF10B981),
+                        ),
+                      ),
+                    ]),
+                  ),
+                  Text(
+                    availableTeqlik > 0
+                        ? '$availableTeqlik teqlik kullanıma hazır'
+                            '${tryRate > 0 ? '  ·  ≈ ₺${(availableTeqlik * tryRate).toStringAsFixed(2)}' : ''}'
+                        : '14 gün sonra hesabına aktarılır',
+                    style: const TextStyle(
+                        fontSize: 11, color: Color(0x9010B981)),
+                  ),
+                ],
+              ),
+            ),
+            if (isPro) ...[
+              Container(
+                margin: const EdgeInsets.only(right: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFD97706), Color(0xFFFFD700)],
+                  ),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  loc.t('walletEarningsProBadge'),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+            const Icon(Icons.chevron_right_rounded,
+                color: Color(0x7210B981), size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PulsingDot extends StatefulWidget {
+  const _PulsingDot();
+
+  @override
+  State<_PulsingDot> createState() => _PulsingDotState();
+}
+
+class _PulsingDotState extends State<_PulsingDot>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _anim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 2000))
+      ..repeat(reverse: true);
+    _anim = Tween(begin: 1.0, end: 0.25)
+        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _anim,
+      child: Container(
+        width: 8,
+        height: 8,
+        decoration: const BoxDecoration(
+          color: Color(0xFF10B981),
+          shape: BoxShape.circle,
+        ),
+      ),
+    );
+  }
+}
+
+// ─── teqlik Al Tab ────────────────────────────────────────────────────────────
+
+class _UseCase {
+  final String icon;
+  final String name;
+  final String desc;
+  final bool isActive;
+  const _UseCase(this.icon, this.name, this.desc, this.isActive);
+}
+
+class _TeqlikPacksTab extends StatelessWidget {
+  final IAPService iap;
+  final bool iapLoading;
+  final Future<void> Function(ProductDetails) onBuy;
+  final bool isDark;
+
+  const _TeqlikPacksTab({
+    required this.iap,
+    required this.iapLoading,
+    required this.onBuy,
+    required this.isDark,
+  });
+
+  static const _useCases = [
+    _UseCase('🎁', 'Canlı yayında hediye gönder',
+        'Favori yayıncına özel hediyeler at, onları destekle', true),
+    _UseCase('🚀', 'Boost — yayınını öne çıkar',
+        "Keşfet'te daha fazla kişiye ulaş, görünürlüğünü artır", true),
+    _UseCase('💥', 'Blast — toplu bildirim gönder',
+        'Özel mesajını tüm takipçilerine anında ilet', true),
+    _UseCase('🤖', 'Yapay zeka araçlarını kullan',
+        'AI destekli içerik önerileri, metin ve görsel üretimi', true),
+    _UseCase('🌟', 'Avatar ve rozet satın al',
+        'Profilini özel tasarımlarla kişiselleştir', false),
+  ];
+
+  static const _ucColors = [
+    Color(0x1AFB923C),
+    Color(0x1A8B5CF6),
+    Color(0x1AEF4444),
+    Color(0x1A06B6D4),
+    Color(0x1AF59E0B),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // ── Başlık ──
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF06B6D4).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: const Color(0xFF06B6D4).withValues(alpha: 0.28),
+                          ),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.diamond_rounded,
+                                size: 12, color: Color(0xFF06B6D4)),
+                            SizedBox(width: 5),
+                            Text(
+                              'teqlik Al',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF06B6D4),
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        'Daha fazla teqlik,\ndaha fazla imkan',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: isDark ? Colors.white : const Color(0xFF111827),
+                          letterSpacing: -0.5,
+                          height: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Yayın izle, hediye gönder, içeriklerini\nbooost\'la ve yapay zekayı kullan',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: isDark
+                              ? const Color(0xFFA8A8A8)
+                              : const Color(0xFF6B7280),
+                          height: 1.45,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+                  child: Text(
+                    'teqlik ile neler yapabilirsin?',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? Colors.white : const Color(0xFF111827),
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                ),
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1C1C1C) : Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    children: _useCases.asMap().entries.map((e) {
+                      final uc = e.value;
+                      final isLast = e.key == _useCases.length - 1;
+                      return Container(
+                        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                        decoration: BoxDecoration(
+                          border: isLast
+                              ? null
+                              : Border(
+                                  bottom: BorderSide(
+                                    color: isDark
+                                        ? const Color(0xFF2A2A2A)
+                                        : const Color(0xFFE5E7EB),
+                                  ),
+                                ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: _ucColors[e.key],
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Center(
+                                child: Text(uc.icon,
+                                    style: const TextStyle(fontSize: 18)),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    uc.name,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: isDark
+                                          ? Colors.white
+                                          : const Color(0xFF111827),
+                                      letterSpacing: -0.1,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 1),
+                                  Text(
+                                    uc.desc,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: isDark
+                                          ? const Color(0xFF737373)
+                                          : const Color(0xFF9CA3AF),
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: uc.isActive
+                                          ? const Color(0xFF10B981)
+                                              .withValues(alpha: 0.14)
+                                          : (isDark
+                                              ? const Color(0xFF2A2A2A)
+                                              : const Color(0xFFF3F4F6)),
+                                      borderRadius: BorderRadius.circular(5),
+                                    ),
+                                    child: Text(
+                                      uc.isActive ? 'Aktif' : 'Yakında',
+                                      style: TextStyle(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 0.04,
+                                        color: uc.isActive
+                                            ? const Color(0xFF10B981)
+                                            : (isDark
+                                                ? const Color(0xFF737373)
+                                                : const Color(0xFF9CA3AF)),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        // Sabit alt buton
+        Container(
+          padding: EdgeInsets.fromLTRB(
+            16,
+            12,
+            16,
+            MediaQuery.of(context).padding.bottom + 12,
+          ),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF000000) : const Color(0xFFFAFAFA),
+            border: Border(
+              top: BorderSide(
+                color: isDark
+                    ? const Color(0xFF1C1C1C)
+                    : const Color(0xFFE5E7EB),
+              ),
+            ),
+          ),
+          child: GestureDetector(
+            onTap: () => showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              useSafeArea: true,
+              backgroundColor: Colors.transparent,
+              builder: (_) => const _TeqlikPacksSheet(),
+            ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [
+                    Color(0xFF0284C7),
+                    Color(0xFF06B6D4),
+                    Color(0xFF22D3EE),
+                  ],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF06B6D4).withValues(alpha: 0.36),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.diamond_rounded, size: 16, color: Colors.white),
+                  SizedBox(width: 7),
+                  Text(
+                    'teqlik Paketlerini Gör',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+
+
+// ─── teqlik Paketleri Sheet ───────────────────────────────────────────────────
+
+class _TeqlikPacksSheet extends StatefulWidget {
+  const _TeqlikPacksSheet();
+
+  @override
+  State<_TeqlikPacksSheet> createState() => _TeqlikPacksSheetState();
+}
+
+class _TeqlikPacksSheetState extends State<_TeqlikPacksSheet> {
+  final _iap = IAPService();
+  String _selectedPackId = 'teqlik_pack_500';
+  bool _loading = false;
+  StreamSubscription<PurchaseDetails>? _sub;
+
+  // (productId, amount, highlighted, badgeLabel)
+  static const _packOptions = [
+    ('teqlik_pack_100', 100, false, null),
+    ('teqlik_pack_250', 250, false, null),
+    ('teqlik_pack_500', 500, true, 'Popüler'),
+    ('teqlik_pack_1000', 1000, false, 'En İyi'),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _sub = _iap.purchaseStream.listen(_onPurchase);
+    if (_iap.products.isEmpty) {
+      _iap.loadProducts().then((_) {
+        if (mounted) setState(() {});
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    super.dispose();
+  }
+
+  void _onPurchase(PurchaseDetails purchase) {
+    if (!mounted) return;
+    setState(() => _loading = false);
+    if (purchase.status == PurchaseStatus.purchased ||
+        purchase.status == PurchaseStatus.restored) {
+      Navigator.pop(context);
+    }
+  }
+
+  Future<void> _buy() async {
+    final product = _iap.products.firstWhere(
+      (p) => p.id == _selectedPackId,
+      orElse: () => throw StateError('Ürün bulunamadı'),
+    );
+    setState(() => _loading = true);
+    try {
+      await _iap.buy(product);
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _restore() async {
+    setState(() => _loading = true);
+    await _iap.restorePurchases();
+    if (mounted) setState(() => _loading = false);
+  }
+
+  String _priceFor(String productId) =>
+      _iap.products.where((p) => p.id == productId).firstOrNull?.price ?? '—';
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = _packOptions.firstWhere((p) => p.$1 == _selectedPackId);
+
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF0B1929), Color(0xFF0F2337)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Başlık
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF0284C7), Color(0xFF06B6D4)],
+                  ),
+                  borderRadius: BorderRadius.circular(7),
+                ),
+                child: const Icon(Icons.diamond_rounded,
+                    color: Colors.white, size: 15),
+              ),
+              const SizedBox(width: 9),
+              const Text(
+                'teqlik Paketleri',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'App Store üzerinden güvenle satın al',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.white54, fontSize: 13),
+          ),
+          const SizedBox(height: 20),
+
+          // Kullanım alanları
+          const _TeqlikBenefits(),
+          const SizedBox(height: 20),
+
+          // Paket seçim listesi
+          ...(_packOptions.map((pack) => _TeqlikPackOption(
+                productId: pack.$1,
+                amount: pack.$2,
+                highlighted: pack.$3,
+                badgeLabel: pack.$4,
+                price: _priceFor(pack.$1),
+                selected: _selectedPackId == pack.$1,
+                onTap: () => setState(() => _selectedPackId = pack.$1),
+              ))),
+          const SizedBox(height: 20),
+
+          // Bilgi notu
+          const Text(
+            'teqlik satın alımları tek seferlik ücretlendirilir. Abonelik değildir.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.white38, fontSize: 10, height: 1.5),
+          ),
+          const SizedBox(height: 16),
+
+          // Satın al CTA — dinamik teqlik miktarı
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: _loading ? null : _buy,
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF0284C7),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
+              ),
+              child: _loading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.diamond_rounded,
+                            size: 16, color: Colors.white),
+                        const SizedBox(width: 7),
+                        Text(
+                          '${selected.$2} teqlik Al',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // Satın alımları geri yükle (Apple Guideline 3.1.1 zorunlu)
+          TextButton(
+            onPressed: _loading ? null : _restore,
+            child: const Text(
+              'Satın alımları geri yükle',
+              style: TextStyle(color: Colors.white38, fontSize: 12),
+            ),
+          ),
+          const SizedBox(height: 4),
+
+          // EULA + Privacy Policy (Apple Guideline 3.1.2 zorunlu)
+          const _TeqlikLegalLinks(),
+        ],
+      ),
+    );
+  }
+}
+
+class _TeqlikLegalLinks extends StatelessWidget {
+  const _TeqlikLegalLinks();
+
+  static const _kTermsUrl   = 'https://www.teqlif.com/kullanim-sartlari.html';
+  static const _kPrivacyUrl = 'https://www.teqlif.com/gizlilik-politikasi';
+
+  Future<void> _launch(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const style = TextStyle(color: Colors.white38, fontSize: 10);
+    const linkStyle = TextStyle(
+      color: Colors.white54,
+      fontSize: 10,
+      decoration: TextDecoration.underline,
+      decorationColor: Colors.white54,
+    );
+    return Wrap(
+      alignment: WrapAlignment.center,
+      spacing: 2,
+      children: [
+        const Text('Satın alarak ', style: style),
+        GestureDetector(
+          onTap: () => _launch(_kTermsUrl),
+          child: const Text('Kullanım Şartları', style: linkStyle),
+        ),
+        const Text("'nı ve ", style: style),
+        GestureDetector(
+          onTap: () => _launch(_kPrivacyUrl),
+          child: const Text('Gizlilik Politikası', style: linkStyle),
+        ),
+        const Text("'nı kabul etmiş olursunuz.", style: style),
+      ],
+    );
+  }
+}
+
+class _TeqlikBenefits extends StatelessWidget {
+  const _TeqlikBenefits();
+
+  @override
+  Widget build(BuildContext context) {
+    const benefits = [
+      (Icons.card_giftcard_rounded, 'Canlı yayında hediye gönder'),
+      (Icons.rocket_launch_rounded, "İçeriklerini boost'la, keşfedil"),
+      (Icons.smart_toy_rounded, 'Yapay zeka araçlarını kullan'),
+      (Icons.bolt_rounded, 'Blast ile tüm takipçilerine ulaş'),
+    ];
+    return Column(
+      children: benefits
+          .map((b) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: [
+                    Icon(b.$1, color: const Color(0xFF06B6D4), size: 18),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        b.$2,
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
+              ))
+          .toList(),
+    );
+  }
+}
+
+class _TeqlikPackOption extends StatelessWidget {
+  final String productId;
+  final int amount;
+  final bool highlighted;
+  final String? badgeLabel;
+  final String price;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _TeqlikPackOption({
+    required this.productId,
+    required this.amount,
+    required this.highlighted,
+    required this.badgeLabel,
+    required this.price,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: selected
+              ? const Color(0xFF06B6D4).withValues(alpha: 0.15)
+              : Colors.white.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: selected ? const Color(0xFF06B6D4) : Colors.white12,
+            width: selected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              selected ? Icons.radio_button_checked : Icons.radio_button_off,
+              color: selected ? const Color(0xFF06B6D4) : Colors.white38,
+              size: 20,
+            ),
+            const SizedBox(width: 12),
+            const Icon(Icons.diamond_rounded,
+                color: Color(0xFF06B6D4), size: 16),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                '$amount teqlik',
+                style: TextStyle(
+                  color: selected ? Colors.white : Colors.white70,
+                  fontWeight:
+                      selected ? FontWeight.w700 : FontWeight.w500,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+            if (badgeLabel != null) ...[
+              Container(
+                margin: const EdgeInsets.only(right: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: highlighted
+                      ? const Color(0xFF06B6D4)
+                      : const Color(0xFFD97706),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  badgeLabel!,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+            Text(
+              price,
+              style: TextStyle(
+                color: selected
+                    ? const Color(0xFF22D3EE)
+                    : Colors.white54,
+                fontWeight: FontWeight.w700,
+                fontSize: 15,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── PRO Tab ──────────────────────────────────────────────────────────────────
+
+class _ProTab extends ConsumerWidget {
+  final bool isPro;
+  final IAPService iap;
+  final String? proExpiresAt;
+  final String? activePlanType;
+  final bool isDark;
+  final VoidCallback onSubscribe;
+  final TranslationPack loc;
+
+  const _ProTab({
+    required this.isPro,
+    required this.iap,
+    required this.proExpiresAt,
+    this.activePlanType,
+    required this.isDark,
+    required this.onSubscribe,
+    required this.loc,
+  });
+
+  // Yükseltme seçenekleri: (productId, ARB labelKey, tasarruf%, tierIndex)
+  static const _upgradePlans = [
+    ('teqlif_pro_1m',  'proMonthlyFull',   0,  0),
+    ('teqlif_pro_3m',  'proQuarterlyFull', 10, 1),
+    ('teqlif_pro_6m',  'proBiannualFull',  20, 2),
+    ('teqlif_pro_12m', 'proAnnualFull',    30, 3),
+  ];
+
+  static const _benefits = [
+    ('% ', '%95 hediye geliri (Standart: %70)'),
+    ('📺', 'HD yayın ve düşük gecikme'),
+    ('📊', 'Gelişmiş yayın analizleri'),
+    ('⭐', 'PRO rozeti ve keşif avantajı'),
+    ('🔔', 'Takipçilere yayın bildirimi'),
+    ('🎭', 'Özel yayın araçları'),
+    ('💬', 'Öncelikli destek'),
+  ];
+
+  static String _monthName(int m) {
+    const months = [
+      'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
+      'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
+    ];
+    return months[m - 1];
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return isPro ? _buildActive(context, ref) : _buildPurchase();
+  }
+
+  Widget _buildActive(BuildContext context, WidgetRef ref) {
+    final hub = ref.watch(proHubProvider(true));
+
+    // Bitiş tarihi
+    String expiryDisplay = '';
+    if (proExpiresAt != null) {
+      try {
+        final d = DateTime.parse(proExpiresAt!).toLocal();
+        expiryDisplay = '${d.day} ${_monthName(d.month)} ${d.year}';
+      } catch (_) {}
+    }
+
+    // Mevcut plan tier indeksi (yükseltme paneli için)
+    final currentTierIndex = _upgradePlans
+        .where((p) => p.$1 == activePlanType)
+        .map((p) => p.$4)
+        .firstOrNull ?? 0;
+    final isAnnual = activePlanType == 'teqlif_pro_12m';
+
+    return ListView(
+      padding: const EdgeInsets.only(bottom: 32),
+      children: [
+        // ── Aktif Abonelik Kartı ─────────────────────────────────────────
+        Container(
+          margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF92400E), Color(0xFFB45309)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFD97706).withValues(alpha: 0.28),
+                blurRadius: 20,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const FaIcon(FontAwesomeIcons.crown, size: 13, color: Colors.white),
+                  const SizedBox(width: 6),
+                  Text(
+                    _upgradePlans.where((p) => p.$1 == activePlanType).map((p) => loc.t(p.$2)).firstOrNull ?? 'PRO',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                ],
+              ),
+              if (expiryDisplay.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text(
+                  loc.t('walletProRenewalDate', {'date': expiryDisplay}),
+                  style: const TextStyle(color: Colors.white70, fontSize: 13),
+                ),
+              ],
+              const SizedBox(height: 14),
+              GestureDetector(
+                onTap: () async {
+                  final uri = Uri.parse('itms-apps://apps.apple.com/account/subscriptions');
+                  if (await canLaunchUrl(uri)) {
+                    launchUrl(uri, mode: LaunchMode.externalApplication);
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    loc.t('walletProManageAppStore'),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // ── Aylık Kredi Paneli ───────────────────────────────────────────
+        const SizedBox(height: 16),
+        if (hub.isLoading)
+          const Center(child: Padding(
+            padding: EdgeInsets.all(16),
+            child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFD97706)),
+          ))
+        else
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1C1C1C) : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  label,
-                  style: const TextStyle(
+                  loc.t('walletProMonthlyCreditsTitle'),
+                  style: TextStyle(
                     fontSize: 13,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? Colors.white : const Color(0xFF111827),
                   ),
                 ),
-                if (date.isNotEmpty)
-                  Text(
-                    date,
-                    style: const TextStyle(fontSize: 11, color: Colors.grey),
-                  ),
+                const SizedBox(height: 12),
+                _CreditRow(label: loc.t('proCreditsBlastName'), credits: hub.blastCredits, isDark: isDark),
+                _CreditRow(label: loc.t('proCreditsBoostName'), credits: hub.boostCredits, isDark: isDark),
+                _CreditRow(label: loc.t('proCreditsAiDescName'), credits: hub.aiDescCredits, isDark: isDark),
+                _CreditRow(label: loc.t('proCreditsReactivationName'), credits: hub.reactivationCredits, isDark: isDark, isLast: true),
               ],
             ),
           ),
-          Text(
-            '${isPositive ? '+' : ''}$amount teqlik',
-            style: TextStyle(
-              fontWeight: FontWeight.w700,
-              fontSize: 13,
-              color: isPositive ? Colors.green.shade700 : Colors.red.shade700,
+
+        // ── Finansal Ayrıcalık Kartı ─────────────────────────────────────
+        const SizedBox(height: 12),
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF10B981).withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.2)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.percent_rounded, color: Color(0xFF10B981), size: 18),
+                  const SizedBox(width: 6),
+                  Text(
+                    loc.t('walletProFinancialTitle'),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF10B981),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              _PrivilegeRow(label: loc.t('walletProEarningsRateLabel'), value: '%95', subtext: 'Standart: %70', isDark: isDark),
+              const SizedBox(height: 6),
+              _PrivilegeRow(label: loc.t('walletProCommissionLabel'), value: '%0', subtext: loc.t('walletProCommissionNote'), isDark: isDark),
+            ],
+          ),
+        ),
+
+        // ── Yükseltme veya VIP Paneli ────────────────────────────────────
+        const SizedBox(height: 12),
+        if (isAnnual)
+          // Yıllık plan → VIP gurur kartı
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF0F172A), Color(0xFF1E1060)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              children: [
+                const FaIcon(FontAwesomeIcons.crown, color: Color(0xFFFFD700), size: 22),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        loc.t('walletProTopPlanTitle'),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        loc.t('walletProTopPlanDesc'),
+                        style: const TextStyle(color: Colors.white54, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          // Daha yüksek planları göster
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1C1C1C) : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  loc.t('walletProUpgradeTitle'),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? Colors.white : const Color(0xFF111827),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  loc.t('walletProUpgradeNote'),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ..._upgradePlans
+                    .where((p) => p.$4 > currentTierIndex)
+                    .map((p) {
+                      final product = iap.products
+                          .where((pr) => pr.id == p.$1)
+                          .firstOrNull;
+                      final price = product?.price ?? '—';
+                      return _UpgradePlanRow(
+                        label: loc.t(p.$2),
+                        savingText: p.$3 > 0 ? loc.t('walletProUpgradeSaving', {'percent': '${p.$3}'}) : '',
+                        price: price,
+                        isDark: isDark,
+                        onTap: product != null ? () => iap.buy(product) : null,
+                      );
+                    }),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildPurchase() {
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [
+                              Color(0xFFD97706),
+                              Color(0xFFF59E0B),
+                              Color(0xFFFFD700),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            FaIcon(FontAwesomeIcons.crown,
+                                size: 11, color: Colors.white),
+                            SizedBox(width: 5),
+                            Text(
+                              'PRO Üyelik',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                                letterSpacing: 0.4,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        'Daha fazla kazan,\ndaha az öde',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color:
+                              isDark ? Colors.white : const Color(0xFF111827),
+                          letterSpacing: -0.5,
+                          height: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        "Yayın gelirinin %95'ini al, HD yayın yap,\nözel araçları kullan",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: isDark
+                              ? const Color(0xFFA8A8A8)
+                              : const Color(0xFF6B7280),
+                          height: 1.45,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1C1C1C) : Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    children: _benefits.asMap().entries.map((e) {
+                      final b = e.value;
+                      final isLast = e.key == _benefits.length - 1;
+                      return Container(
+                        padding:
+                            const EdgeInsets.fromLTRB(14, 11, 14, 11),
+                        decoration: BoxDecoration(
+                          border: isLast
+                              ? null
+                              : Border(
+                                  bottom: BorderSide(
+                                    color: isDark
+                                        ? const Color(0xFF2A2A2A)
+                                        : const Color(0xFFE5E7EB),
+                                  ),
+                                ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 34,
+                              height: 34,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFD97706)
+                                    .withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Center(
+                                child: Text(b.$1,
+                                    style:
+                                        const TextStyle(fontSize: 16)),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                b.$2,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                  color: isDark
+                                      ? Colors.white
+                                      : const Color(0xFF111827),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        // Sabit alt buton
+        Container(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF000000) : const Color(0xFFFAFAFA),
+            border: Border(
+              top: BorderSide(
+                color: isDark
+                    ? const Color(0xFF1C1C1C)
+                    : const Color(0xFFE5E7EB),
+              ),
+            ),
+          ),
+          child: GestureDetector(
+            onTap: onSubscribe,
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 15),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [
+                    Color(0xFFD97706),
+                    Color(0xFFF59E0B),
+                    Color(0xFFFFD700),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFD97706).withValues(alpha: 0.32),
+                    blurRadius: 20,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  FaIcon(FontAwesomeIcons.crown, size: 15, color: Colors.white),
+                  SizedBox(width: 8),
+                  Text(
+                    'PRO Üyelikleri Gör',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─── ProTab Yardımcı Widget'ları ─────────────────────────────────────────────
+
+class _CreditRow extends StatelessWidget {
+  final String label;
+  final Map<String, dynamic>? credits;
+  final bool isDark;
+  final bool isLast;
+
+  const _CreditRow({
+    required this.label,
+    required this.credits,
+    required this.isDark,
+    this.isLast = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final remaining = credits?['remaining'] as int? ?? 0;
+    final limit = credits?['limit'] as int? ?? 0;
+    final ratio = limit > 0 ? remaining / limit : 0.0;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: isLast ? 0 : 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280),
+                ),
+              ),
+              Text(
+                '$remaining / $limit',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: isDark ? Colors.white : const Color(0xFF111827),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: ratio.clamp(0.0, 1.0),
+              minHeight: 4,
+              backgroundColor: isDark
+                  ? const Color(0xFF2A2A2A)
+                  : const Color(0xFFE5E7EB),
+              color: const Color(0xFFD97706),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PrivilegeRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final String subtext;
+  final bool isDark;
+
+  const _PrivilegeRow({
+    required this.label,
+    required this.value,
+    required this.subtext,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            color: isDark ? Colors.white70 : const Color(0xFF374151),
+          ),
+        ),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF10B981),
+              ),
+            ),
+            Text(
+              subtext,
+              style: const TextStyle(fontSize: 10, color: Color(0x9010B981)),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _UpgradePlanRow extends StatelessWidget {
+  final String label;
+  final String savingText;
+  final String price;
+  final bool isDark;
+  final VoidCallback? onTap;
+
+  const _UpgradePlanRow({
+    required this.label,
+    required this.savingText,
+    required this.price,
+    required this.isDark,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: isDark
+              ? const Color(0xFFD97706).withValues(alpha: 0.08)
+              : const Color(0xFFFEF3C7),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: const Color(0xFFD97706).withValues(alpha: 0.3),
+          ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? Colors.white : const Color(0xFF111827),
+                    ),
+                  ),
+                  if (savingText.isNotEmpty)
+                    Text(
+                      savingText,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF10B981),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Text(
+              price,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFFD97706),
+              ),
+            ),
+            const SizedBox(width: 6),
+            const Icon(
+              Icons.arrow_forward_ios_rounded,
+              size: 14,
+              color: Color(0xFFD97706),
+            ),
+          ],
+        ),
       ),
     );
   }

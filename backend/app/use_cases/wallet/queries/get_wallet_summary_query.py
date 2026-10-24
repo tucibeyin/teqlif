@@ -12,6 +12,14 @@ _REDIS_KEY_CASHOUT = "teqlif:config:cashout_enabled"
 _REDIS_KEY_TRY_RATE = "teqlif:config:teqlik_try_rate"
 _DB_FALLBACK_RATE = 0.50  # platform_config seed değeri
 
+# DB'deki plan_type → IAP product ID dönüşümü
+_PLAN_TYPE_TO_IAP = {
+    'monthly':   'teqlif_pro_1m',
+    'quarterly': 'teqlif_pro_3m',
+    'biannual':  'teqlif_pro_6m',
+    'annual':    'teqlif_pro_12m',
+}
+
 
 class GetWalletSummaryQuery:
     """GET /api/wallet/summary — bakiye + kazanç + OTA flag."""
@@ -20,12 +28,30 @@ class GetWalletSummaryQuery:
         self._session = session
 
     async def execute(self, user_id: int) -> dict:
-        # ── teqlik_balance ─────────────────────────────────────────────────────
+        # ── kullanıcı temel alanları ───────────────────────────────────────────
         user_row = await self._session.execute(
-            text("SELECT teqlik_balance FROM users WHERE id = :uid"),
+            text(
+                "SELECT teqlik_balance, user_type, pro_expires_at, plan_type "
+                "FROM users WHERE id = :uid"
+            ),
             {"uid": user_id},
         )
-        teqlik_balance = user_row.scalar() or 0
+        u = user_row.fetchone()
+        teqlik_balance   = u[0] if u else 0
+        is_pro           = (u[1] == "pro") if u else False
+        pro_expires_at   = u[2].isoformat() if u and u[2] else None
+        plan_type        = _PLAN_TYPE_TO_IAP.get(u[3]) if u and u[3] else None
+
+        # ── aktif çekim talebi ────────────────────────────────────────────────
+        wr_row = await self._session.execute(
+            text(
+                "SELECT id FROM withdrawal_requests "
+                "WHERE user_id = :uid AND status = 'pending' "
+                "ORDER BY created_at DESC LIMIT 1"
+            ),
+            {"uid": user_id},
+        )
+        active_withdrawal_id = wr_row.scalar()
 
         # ── user_wallet_earnings ───────────────────────────────────────────────
         earn_row = await self._session.execute(
@@ -78,4 +104,8 @@ class GetWalletSummaryQuery:
             "earnings_available_teqlik": earnings_available,
             "try_rate": try_rate,
             "cashout_enabled": cashout_enabled,
+            "is_pro": is_pro,
+            "pro_expires_at": pro_expires_at,
+            "plan_type": plan_type,
+            "active_withdrawal_id": active_withdrawal_id,
         }

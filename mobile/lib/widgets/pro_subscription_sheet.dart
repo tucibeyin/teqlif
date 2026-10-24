@@ -1,31 +1,33 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/iap_service.dart';
 import '../services/localization_service.dart';
-import 'pro_badge_widget.dart';
 
 /// Plan seçim kartı veri modeli
 class _PlanOption {
   final String productId;
-  final String labelKey;     // loc key
-  final String? savingKey;   // loc key (opsiyonel tasarruf etiketi)
+  final String labelKey;
+  final String? savingKey;
   final bool highlighted;
+  final String? badgeLabel;
 
   const _PlanOption({
     required this.productId,
     required this.labelKey,
     this.savingKey,
     this.highlighted = false,
+    this.badgeLabel,
   });
 }
 
 const _plans = [
   _PlanOption(productId: 'teqlif_pro_1m', labelKey: 'proMonthly'),
-  _PlanOption(productId: 'teqlif_pro_3m', labelKey: 'proQuarterly', savingKey: 'proSave10', highlighted: true),
+  _PlanOption(productId: 'teqlif_pro_3m', labelKey: 'proQuarterly', savingKey: 'proSave10', highlighted: true, badgeLabel: 'Popüler'),
   _PlanOption(productId: 'teqlif_pro_6m', labelKey: 'proBiannual', savingKey: 'proSave20'),
-  _PlanOption(productId: 'teqlif_pro_12m', labelKey: 'proAnnual', savingKey: 'proSave30'),
+  _PlanOption(productId: 'teqlif_pro_12m', labelKey: 'proAnnual', savingKey: 'proSave30', badgeLabel: 'En İyi'),
 ];
 
 class ProSubscriptionSheet extends StatefulWidget {
@@ -118,8 +120,21 @@ class _ProSubscriptionSheetState extends State<ProSubscriptionSheet> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const ProBadgeWidget(fontSize: 13),
-              const SizedBox(width: 8),
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFD97706), Color(0xFFFFD700)],
+                  ),
+                  borderRadius: BorderRadius.circular(7),
+                ),
+                child: const Center(
+                  child: FaIcon(FontAwesomeIcons.crown,
+                      color: Colors.white, size: 13),
+                ),
+              ),
+              const SizedBox(width: 9),
               Text(
                 loc.t('proSheetTitle'),
                 style: const TextStyle(
@@ -298,6 +313,22 @@ class _PlanCard extends StatelessWidget {
                 ],
               ),
             ),
+            if (plan.badgeLabel != null) ...[
+              Container(
+                margin: const EdgeInsets.only(right: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: plan.highlighted
+                      ? const Color(0xFF10B981)
+                      : const Color(0xFFD97706),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  plan.badgeLabel!,
+                  style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
             Text(
               price,
               style: TextStyle(
@@ -306,20 +337,6 @@ class _PlanCard extends StatelessWidget {
                 fontSize: 15,
               ),
             ),
-            if (plan.highlighted) ...[
-              const SizedBox(width: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF10B981),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  loc.t('proPopularBadge'),
-                  style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700),
-                ),
-              ),
-            ],
           ],
         ),
       ),
