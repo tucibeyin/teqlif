@@ -1517,6 +1517,7 @@ Sunucu da aynı formülü uygular; Flutter gösterimi sadece kullanıcı bilgisi
 | 6 | **ADR workflow** | Geliştirme ADR §13'teki 10 adımlı workflow'a göre ilerler → §6.0.5 |
 | 7 | **Endüstriyel pratikler** | Atomik bakiye, idempotency, Fail-Closed, WORM ledger, post-commit event → §6.0.4 |
 | 8 | **Commit takibi** | Her görev tamamlandığında bu döküman ilgili commit hash'i ile güncellenir → §6.0.5 |
+| 9 | **Ortam ayrımı** | Staging (node5) → doğrula → Production (node1); sistem bilgisi `deploy/scale/V2.1/` → §6.0.6 |
 
 ---
 
@@ -1710,6 +1711,77 @@ if balance >= amount:   ← başka istek burada araya girebilir
 - Her W-görevi tamamlandığında bu döküman `| W# | ... | ✅ commit: abc1234 |` formatında güncellenir
 - Commit mesajı: `feat(wallet): W# — <kısa açıklama>`
 - Secrets `.env`'de, repoya girmez; `platform_config` DB'de, `.env`'de değil
+
+---
+
+#### 6.0.6 Ortam Mimarisi — Staging & Production
+
+**İki ortam, tek repo:**
+
+| Özellik | Staging | Production |
+|---------|---------|-----------|
+| Node | **node5** (45.146.252.165, ZAP Münster DE) | **node1** (193.70.46.74, OVH Gravelines FR) |
+| REST API | `https://api-staging.teqlif.com/v1/...` | `https://api.teqlif.com/v1/...` |
+| WebSocket | `wss://api-staging.teqlif.com/ws/...` | `wss://api.teqlif.com/ws/...` |
+| Media | `https://staging.uploads.teqlif.com/...` | `https://uploads.teqlif.com/...` |
+| LiveKit | `wss://live-staging.teqlif.com` (node5:7890) | `wss://live1/live2.teqlif.com` (node3/4) |
+| PostgreSQL | node5 lokal :5432 | node1 lokal :5432 |
+| Redis | node5 lokal :6379 | node1 lokal :6379 |
+| MinIO | node5 lokal :9100 (`teqlif-staging` bucket) | node1 :9000 (`teqlif` bucket) |
+| ClickHouse | node5 lokal :8123 (WG mesh'e kapalı) | node2 :8123 |
+| Cloudflare | Proxy (staging.teqlif.com / api-staging) | Proxy (teqlif.com / api.teqlif.com) |
+
+**Kural: Her W-görev önce staging'de test edilir, sonra production'a alınır.**
+
+**Staging'de migration uygulaması (ihlali schema bozulması):**
+```bash
+# YANLIŞ — staging'de alembic upgrade head schema'yı bozabilir
+alembic upgrade head   ← YASAK staging'de
+
+# DOĞRU — taze staging kurulumu
+pg_dump --schema-only -h 127.0.0.1 -U teqlif teqlif | psql -h 127.0.0.1 -U teqlif teqlif
+alembic stamp head     ← migration geçmişi mevcut schema'ya eşitlenir
+```
+
+**Flutter staging çalıştırma (ihlali yanlış ortama bağlanma):**
+```bash
+# DOĞRU — staging dart defines zorunlu
+flutter run --dart-define-from-file=dart_defines/staging.json
+
+# YANLIŞ — staging defines olmadan çalıştırma production'a bağlanır
+flutter run   ← YASAK (staging testinde)
+```
+
+**Sistem bilgisi tek kaynağı — `deploy/scale/V2.1/`:**
+
+| Dosya | İçerik |
+|-------|--------|
+| `documents/01_architecture.md` | Node envanteri, servis erişim noktaları, ağ mimarisi, HA/failover |
+| `documents/00_README.md` | Kurulum ve bootstrap kılavuzu |
+| `cluster.yaml` | Küme geneli config (recording, MinIO bucket, transfer penceresi) |
+| `schedule.yaml` | Tüm ARQ cron görevleri (zamanlama tek kaynak) |
+| `nodeN/specs.md` | Her node'un donanım ve servis envanteri |
+| `teqlif-agent/configs/nodeN.yaml` | Agent konfigürasyonu (watchdog, janitor, healer) |
+| `secrets.env.template` | Tüm secret değişkenlerin şablonu (gerçek değerler repoya girmez) |
+
+**Servis restart kuralı:**
+```bash
+# DOĞRU — tüm node'larda tek komut
+sudo teqlif-restart
+
+# YANLIŞ — direkt systemctl çağrısı
+sudo systemctl restart teqlif-app   ← YASAK (servis bağımlılıkları atlanır)
+```
+
+**psql / pg_dump bağlantı kuralı (peer auth hatası önleme):**
+```bash
+# DOĞRU — TCP bağlantısı zorunlu
+psql -h 127.0.0.1 -U teqlif teqlif
+pg_dump -h 127.0.0.1 -U teqlif teqlif
+
+# YANLIŞ — peer auth staging/production'da hata verir
+psql -U teqlif teqlif   ← YASAK
+```
 
 ### 6.1 teqlik IAP (Satın Alma)
 
