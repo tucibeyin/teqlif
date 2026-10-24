@@ -4,6 +4,7 @@ server:
   http_listen_port: 3100
   grpc_listen_port: 9096
   http_listen_address: 10.10.0.99
+  grpc_listen_address: 10.10.0.99
 
 common:
   instance_addr: 10.10.0.99
