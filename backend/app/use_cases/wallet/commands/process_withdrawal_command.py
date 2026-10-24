@@ -69,11 +69,46 @@ class ProcessWithdrawalCommand:
                 ),
                 {"amt": teqlik_amount, "uid": user_id},
             )
+            avail_row = await self._session.execute(
+                text("SELECT available FROM user_wallet_earnings WHERE user_id = :uid"),
+                {"uid": user_id},
+            )
+            avail_after = avail_row.fetchone()[0]
+            await self._session.execute(
+                text(
+                    "INSERT INTO wallet_ledger "
+                    "(user_id, delta_teqlik, balance_after, tx_type, reference_id, reference_type) "
+                    "VALUES (:uid, :delta, :bal, 'withdrawal_rejected', :ref_id, 'withdrawal_request')"
+                ),
+                {
+                    "uid": user_id,
+                    "delta": teqlik_amount,
+                    "bal": int(avail_after),
+                    "ref_id": request_id,
+                },
+            )
             logger.info(
                 "[Withdrawal] Reddedildi | request=%s user=%s teqlik=%s iade",
                 request_id, user_id, teqlik_amount,
             )
         else:
+            avail_row = await self._session.execute(
+                text("SELECT available FROM user_wallet_earnings WHERE user_id = :uid"),
+                {"uid": user_id},
+            )
+            avail_after = avail_row.fetchone()[0]
+            await self._session.execute(
+                text(
+                    "INSERT INTO wallet_ledger "
+                    "(user_id, delta_teqlik, balance_after, tx_type, reference_id, reference_type) "
+                    "VALUES (:uid, 0, :bal, 'withdrawal_approved', :ref_id, 'withdrawal_request')"
+                ),
+                {
+                    "uid": user_id,
+                    "bal": int(avail_after),
+                    "ref_id": request_id,
+                },
+            )
             logger.info(
                 "[Withdrawal] Onaylandı | request=%s user=%s teqlik=%s",
                 request_id, user_id, teqlik_amount,
