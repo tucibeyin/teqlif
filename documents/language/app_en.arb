@@ -228,6 +228,11 @@
   "proSubscribeButton": "Go PRO",
   "proRestorePurchases": "Restore Purchases",
   "proAutoRenewNotice": "Subscription renews automatically unless cancelled at least 24 hours before the end of the current period.",
+  "proLegalLine": "By continuing you agree to our",
+  "proTermsLink": "Terms of Use",
+  "proAndLabel": "and",
+  "proPrivacyLink": "Privacy Policy",
+  "proLegalSuffix": ".",
   "proUpgradeCta": "Upgrade to PRO",
   "giftSentHud": "🎉 {sender} sent a gift!",
   "@giftSentHud": [

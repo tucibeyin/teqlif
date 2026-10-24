@@ -151,11 +151,11 @@ class HandleStoreRefundCommand:
         """JWS doğrula, (transaction_id, refunded_teqlik, raw_payload) döndür."""
         if platform == "apple":
             from app.services.store.apple_verifier import verify_signed_payload_jws
-            claims = await verify_signed_payload_jws(signed_payload)
+            claims = verify_signed_payload_jws(signed_payload)
             # Apple REFUND notification: transactionInfo içinde transactionId + amount
             tx_info = claims.get("data", {}).get("signedTransactionInfo", "")
             if tx_info:
-                tx_claims = await verify_signed_payload_jws(tx_info)
+                tx_claims = verify_signed_payload_jws(tx_info)
             else:
                 tx_claims = claims
 

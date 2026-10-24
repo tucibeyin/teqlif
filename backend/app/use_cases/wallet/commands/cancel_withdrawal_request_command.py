@@ -53,6 +53,26 @@ class CancelWithdrawalRequestCommand:
             {"rid": request_id},
         )
 
+        avail_after_row = await self._session.execute(
+            text("SELECT available FROM user_wallet_earnings WHERE user_id = :uid"),
+            {"uid": user_id},
+        )
+        avail_after = avail_after_row.fetchone()[0]
+
+        await self._session.execute(
+            text(
+                "INSERT INTO wallet_ledger "
+                "(user_id, delta_teqlik, balance_after, tx_type, reference_id, reference_type) "
+                "VALUES (:uid, :delta, :bal, 'withdrawal_cancelled', :ref_id, 'withdrawal_request')"
+            ),
+            {
+                "uid": user_id,
+                "delta": teqlik_amount,
+                "bal": int(avail_after),
+                "ref_id": request_id,
+            },
+        )
+
         logger.info(
             "[Withdrawal] İptal edildi | user=%s request=%s teqlik=%s iade",
             user_id, request_id, teqlik_amount,

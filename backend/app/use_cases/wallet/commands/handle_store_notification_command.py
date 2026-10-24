@@ -14,18 +14,23 @@ class HandleStoreNotificationCommand:
         Apple 4xx alırsa 3 gün retry storm başlatır — bu endpoint asla 4xx dönmez.
         """
         try:
-            from app.utils.redis_client import get_redis
-            redis = await get_redis()
-            queue_key = f"arq:store_notif:{platform}"
-            await redis.rpush(queue_key, signed_payload)
-            logger.info(
-                "[StoreNotif] Kuyruğa eklendi | platform=%s queue=%s",
-                platform, queue_key,
-            )
+            from app.core.task_queue import get_pool
+            pool = get_pool()
+            if pool:
+                await pool.enqueue_job(
+                    "process_store_notification_task",
+                    platform=platform,
+                    signed_payload=signed_payload,
+                )
+                logger.info(
+                    "[StoreNotif] ARQ kuyruğuna eklendi | platform=%s",
+                    platform,
+                )
+            else:
+                logger.warning("[StoreNotif] ARQ pool hazır değil, payload atıldı | platform=%s", platform)
         except Exception as exc:
-            # Redis yazma başarısız olsa bile 200 dön — Apple retry storm önlenir.
-            # Worker Redis'i izlediğinden, bir sonraki başarılı push'ta payload işlenir.
+            # ARQ başarısız olsa bile 200 dön — Apple retry storm önlenir.
             logger.error(
-                "[StoreNotif] Redis kuyruğuna yazılamadı | platform=%s | %s",
+                "[StoreNotif] ARQ enqueue başarısız | platform=%s | %s",
                 platform, exc,
             )

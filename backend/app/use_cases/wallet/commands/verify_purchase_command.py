@@ -114,12 +114,13 @@ class VerifyPurchaseCommand:
             {"amt": teqlik_amount, "uid": user_id},
         )
 
-        await self._session.execute(
+        tx_row = await self._session.execute(
             text(
                 "INSERT INTO teqlik_transactions "
                 "(user_id, amount, transaction_type, store_platform, "
                 " store_transaction_id, raw_payload, product_type) "
-                "VALUES (:uid, :amt, 'iap_purchase', :platform, :tx_id, :raw, 'consumable')"
+                "VALUES (:uid, :amt, 'iap_purchase', :platform, :tx_id, :raw, 'consumable') "
+                "RETURNING id"
             ),
             {
                 "uid": user_id,
@@ -127,6 +128,27 @@ class VerifyPurchaseCommand:
                 "platform": platform,
                 "tx_id": result.transaction_id,
                 "raw": result.raw_payload,
+            },
+        )
+        tx_id_db = tx_row.fetchone()[0]
+
+        balance_row = await self._session.execute(
+            text("SELECT teqlik_balance FROM users WHERE id = :uid"),
+            {"uid": user_id},
+        )
+        balance_after = balance_row.fetchone()[0]
+
+        await self._session.execute(
+            text(
+                "INSERT INTO wallet_ledger "
+                "(user_id, delta_teqlik, balance_after, tx_type, reference_id, reference_type) "
+                "VALUES (:uid, :delta, :bal, 'iap_purchase', :ref_id, 'teqlik_transaction')"
+            ),
+            {
+                "uid": user_id,
+                "delta": teqlik_amount,
+                "bal": balance_after,
+                "ref_id": tx_id_db,
             },
         )
 
@@ -163,18 +185,39 @@ class VerifyPurchaseCommand:
             },
         )
 
-        await self._session.execute(
+        sub_tx_row = await self._session.execute(
             text(
                 "INSERT INTO teqlik_transactions "
                 "(user_id, amount, transaction_type, store_platform, "
                 " store_transaction_id, raw_payload, product_type) "
-                "VALUES (:uid, 0, 'pro_subscription', :platform, :tx_id, :raw, 'subscription')"
+                "VALUES (:uid, 0, 'pro_subscription', :platform, :tx_id, :raw, 'subscription') "
+                "RETURNING id"
             ),
             {
                 "uid": user_id,
                 "platform": platform,
                 "tx_id": result.transaction_id,
                 "raw": result.raw_payload,
+            },
+        )
+        sub_tx_id = sub_tx_row.fetchone()[0]
+
+        sub_balance_row = await self._session.execute(
+            text("SELECT teqlik_balance FROM users WHERE id = :uid"),
+            {"uid": user_id},
+        )
+        sub_balance_after = sub_balance_row.fetchone()[0]
+
+        await self._session.execute(
+            text(
+                "INSERT INTO wallet_ledger "
+                "(user_id, delta_teqlik, balance_after, tx_type, reference_id, reference_type) "
+                "VALUES (:uid, 0, :bal, 'iap_purchase', :ref_id, 'teqlik_transaction')"
+            ),
+            {
+                "uid": user_id,
+                "bal": sub_balance_after,
+                "ref_id": sub_tx_id,
             },
         )
 

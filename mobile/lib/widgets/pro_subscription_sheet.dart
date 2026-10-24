@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/iap_service.dart';
 import '../services/localization_service.dart';
 import 'pro_badge_widget.dart';
@@ -198,6 +199,10 @@ class _ProSubscriptionSheetState extends State<ProSubscriptionSheet> {
               style: const TextStyle(color: Colors.white38, fontSize: 12),
             ),
           ),
+          const SizedBox(height: 4),
+
+          // EULA + Privacy Policy (Apple Guideline 3.1.2 zorunlu)
+          _LegalLinks(loc: loc),
         ],
       ),
     );
@@ -337,6 +342,48 @@ class _DummyProduct implements ProductDetails {
   @override double get rawPrice => 0;
   @override String get currencyCode => '';
   @override String get currencySymbol => '';
-  @override dynamic get skProduct => null;
-  @override dynamic get skuDetails => null;
+}
+
+/// EULA + Privacy Policy satırı (Apple Guideline 3.1.2 zorunlu)
+class _LegalLinks extends StatelessWidget {
+  final TranslationPack loc;
+  const _LegalLinks({required this.loc});
+
+  static const _kTermsUrl    = 'https://www.teqlif.com/kullanim-sartlari.html';
+  static const _kPrivacyUrl  = 'https://www.teqlif.com/gizlilik-politikasi';
+
+  Future<void> _launch(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const style = TextStyle(color: Colors.white38, fontSize: 10);
+    const linkStyle = TextStyle(
+      color: Colors.white54,
+      fontSize: 10,
+      decoration: TextDecoration.underline,
+      decorationColor: Colors.white54,
+    );
+    return Wrap(
+      alignment: WrapAlignment.center,
+      spacing: 2,
+      children: [
+        Text(loc.t('proLegalLine'), style: style),
+        GestureDetector(
+          onTap: () => _launch(_kTermsUrl),
+          child: Text(loc.t('proTermsLink'), style: linkStyle),
+        ),
+        Text(loc.t('proAndLabel'), style: style),
+        GestureDetector(
+          onTap: () => _launch(_kPrivacyUrl),
+          child: Text(loc.t('proPrivacyLink'), style: linkStyle),
+        ),
+        Text(loc.t('proLegalSuffix'), style: style),
+      ],
+    );
+  }
 }

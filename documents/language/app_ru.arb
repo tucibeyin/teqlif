@@ -1971,6 +1971,11 @@
   "proSubscribeButton": "Перейти на PRO",
   "proRestorePurchases": "Восстановить покупки",
   "proAutoRenewNotice": "Подписка автоматически продлевается, если не отменена минимум за 24 часа до окончания текущего периода.",
+  "proLegalLine": "Продолжая, вы соглашаетесь с нашими",
+  "proTermsLink": "Условиями использования",
+  "proAndLabel": "и",
+  "proPrivacyLink": "Политикой конфиденциальности",
+  "proLegalSuffix": ".",
   "proUpgradeCta": "Перейти на PRO",
   "giftSentHud": "🎉 {sender} отправил подарок!",
   "@giftSentHud": [

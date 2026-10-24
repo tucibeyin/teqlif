@@ -236,6 +236,11 @@
   "proSubscribeButton": "PRO'ya Geç",
   "proRestorePurchases": "Satın Alımları Geri Yükle",
   "proAutoRenewNotice": "Abonelik, iptal edilmezse otomatik olarak yenilenir. Mevcut dönem bitmeden en az 24 saat önce iptal edilebilir.",
+  "proLegalLine": "Devam ederek",
+  "proTermsLink": "Kullanım Koşulları",
+  "proAndLabel": "ve",
+  "proPrivacyLink": "Gizlilik Politikası",
+  "proLegalSuffix": "kabul etmiş olursunuz.",
   "proUpgradeCta": "PRO'ya Yükselt",
   "giftSentHud": "🎉 {sender} hediye gönderdi!",
   "@giftSentHud": [

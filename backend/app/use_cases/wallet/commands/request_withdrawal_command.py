@@ -151,6 +151,32 @@ class RequestWithdrawalCommand:
         )
         request_id = result.fetchone()[0]
 
+        avail_row = await self._session.execute(
+            text("SELECT available FROM user_wallet_earnings WHERE user_id = :uid"),
+            {"uid": user_id},
+        )
+        avail_after = avail_row.fetchone()[0]
+
+        await self._session.execute(
+            text(
+                "INSERT INTO wallet_ledger "
+                "(user_id, delta_teqlik, balance_after, try_equivalent, try_rate_used, "
+                " tcmb_rate_used, currency, tx_type, reference_id, reference_type) "
+                "VALUES (:uid, :delta, :bal, :try_eq, :try_rate, :tcmb, :cur, "
+                "        'withdrawal_request', :ref_id, 'withdrawal_request')"
+            ),
+            {
+                "uid": user_id,
+                "delta": -teqlik_amount,
+                "bal": int(avail_after),
+                "try_eq": float(try_amount),
+                "try_rate": float(try_rate),
+                "tcmb": float(tcmb_rate) if tcmb_rate else None,
+                "cur": currency,
+                "ref_id": request_id,
+            },
+        )
+
         logger.info(
             "[Withdrawal] Talep oluşturuldu | user=%s teqlik=%s try=%.2f currency=%s",
             user_id, teqlik_amount, float(try_amount), currency,

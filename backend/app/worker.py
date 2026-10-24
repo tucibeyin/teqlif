@@ -28,6 +28,13 @@ from app.tasks.stream_recording_tasks import expire_recordings_task, archive_rec
 from app.tasks.stream_concat_task import stream_concat_task
 from app.tasks.dm_archive_tasks import archive_old_dm_task
 from app.services.feed.foryou_worker import populate_foryou_feed_task
+from app.tasks.wallet_tasks import (
+    release_pending_earnings_task,
+    daily_financial_reconciliation_task,
+    reset_monthly_withdrawal_quota_task,
+    check_expired_pro_users_task,
+    process_store_notification_task,
+)
 from app.services.edge_orchestrator import orchestrator, ServiceType
 logger = get_logger(__name__)
 
@@ -4216,10 +4223,15 @@ _SCHEDULE_FUNCTIONS = {
     "train_churn_model_task":               train_churn_model_task,
     "train_feed_als_task":                   train_feed_als_task,
     "train_listing_quality_model_task":      train_listing_quality_model_task,
-    "compute_influence_scores_task":         compute_influence_scores_task,
-    "cleanup_old_exchange_rates_task":       cleanup_old_exchange_rates_task,
-    "cleanup_old_streams_task":             cleanup_old_streams_task,
-    "archive_old_dm_task":                  archive_old_dm_task,
+    "compute_influence_scores_task":               compute_influence_scores_task,
+    "cleanup_old_exchange_rates_task":             cleanup_old_exchange_rates_task,
+    "cleanup_old_streams_task":                   cleanup_old_streams_task,
+    "archive_old_dm_task":                        archive_old_dm_task,
+    # ── Wallet görevleri ─────────────────────────────────────────────────────
+    "daily_financial_reconciliation_task":        daily_financial_reconciliation_task,
+    "reset_monthly_withdrawal_quota_task":        reset_monthly_withdrawal_quota_task,
+    "release_pending_earnings_task":              release_pending_earnings_task,
+    "check_expired_pro_users_task":               check_expired_pro_users_task,
 }
 
 
@@ -4302,6 +4314,13 @@ class WorkerSettings:
         compute_analytics_cache_task,
         precompute_premium_user_analytics_task,
         sync_pg_to_clickhouse_task,
+
+        # ── Wallet görevleri ─────────────────────────────────────────────
+        release_pending_earnings_task,
+        daily_financial_reconciliation_task,
+        reset_monthly_withdrawal_quota_task,
+        check_expired_pro_users_task,
+        process_store_notification_task,
     ]
 
     cron_jobs = [

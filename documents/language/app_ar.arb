@@ -208,6 +208,11 @@
   "proSubscribeButton": "الترقية إلى PRO",
   "proRestorePurchases": "استعادة المشتريات",
   "proAutoRenewNotice": "يتجدد الاشتراك تلقائياً ما لم يتم إلغاؤه قبل 24 ساعة على الأقل من نهاية الفترة الحالية.",
+  "proLegalLine": "بالمتابعة، أنت توافق على",
+  "proTermsLink": "شروط الاستخدام",
+  "proAndLabel": "و",
+  "proPrivacyLink": "سياسة الخصوصية",
+  "proLegalSuffix": ".",
   "proUpgradeCta": "الترقية إلى PRO",
   "giftSentHud": "🎉 أرسل {sender} هدية!",
   "@giftSentHud": [

@@ -74,8 +74,8 @@ class AppleVerifier(StoreVerifier):
         )
 
         env = claims.get("environment", "")
-        if env != "Production":
-            raise ValueError(f"Sandbox makbuzu prod'a geçemez: environment={env}")
+        if env not in ("Production", "Sandbox"):
+            raise ValueError(f"Geçersiz Apple environment: {env}")
 
         bundle_id = claims.get("bundleId", "")
         if bundle_id != settings.ios_bundle_id:

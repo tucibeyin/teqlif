@@ -228,6 +228,11 @@
   "proSubscribeButton": "Zu PRO wechseln",
   "proRestorePurchases": "Käufe wiederherstellen",
   "proAutoRenewNotice": "Das Abonnement verlängert sich automatisch, wenn es nicht mindestens 24 Stunden vor Ablauf des aktuellen Zeitraums gekündigt wird.",
+  "proLegalLine": "Mit dem Fortfahren stimmst du unseren",
+  "proTermsLink": "Nutzungsbedingungen",
+  "proAndLabel": "und",
+  "proPrivacyLink": "Datenschutzrichtlinien",
+  "proLegalSuffix": "zu.",
   "proUpgradeCta": "Auf PRO upgraden",
   "giftSentHud": "🎉 {sender} hat ein Geschenk gesendet!",
   "@giftSentHud": [
