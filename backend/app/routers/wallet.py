@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Path
 from app.core.exceptions import NotFoundException, BadRequestException, InsufficientFundsException
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,6 +20,52 @@ from app.utils.redis_client import get_redis
 
 logger = logging.getLogger("teqlif")
 router = APIRouter(prefix="/api/wallet", tags=["wallet"])
+
+
+# ── IAP satın alma ─────────────────────────────────────────────────────────────
+
+class PurchaseVerifyRequest(BaseModel):
+    platform: str = Field(..., pattern="^(apple|google|web)$")
+    payload: str
+    product_id: str
+    device_id: str | None = None
+    try_amount: float = 0.0
+
+
+@router.post("/purchase/verify")
+async def verify_purchase(
+    body: PurchaseVerifyRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.use_cases.wallet.commands.verify_purchase_command import VerifyPurchaseCommand
+    return await VerifyPurchaseCommand(db).execute(
+        user_id=current_user.id,
+        platform=body.platform,
+        payload=body.payload,
+        product_id=body.product_id,
+        device_id=body.device_id,
+        try_amount=body.try_amount,
+    )
+
+
+# ── App Store Server Notifications ────────────────────────────────────────────
+
+class StoreNotificationRequest(BaseModel):
+    signedPayload: str
+
+
+@router.post("/store-notifications/{platform}", status_code=200)
+async def store_notifications(
+    body: StoreNotificationRequest,
+    platform: str = Path(..., pattern="^(apple|google|web)$"),
+):
+    from app.use_cases.wallet.commands.handle_store_notification_command import HandleStoreNotificationCommand
+    await HandleStoreNotificationCommand().execute(
+        platform=platform,
+        signed_payload=body.signedPayload,
+    )
+    return {"ok": True}
 
 _TYPE_LABELS = {
     "airdrop":            "Hoş geldin hediyesi",
