@@ -1,6 +1,7 @@
 from datetime import datetime
+from decimal import Decimal
 from typing import Optional
-from sqlalchemy import DateTime, ForeignKey, Integer, String, func, Index
+from sqlalchemy import DateTime, ForeignKey, Integer, Numeric, String, func, Index
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -38,3 +39,6 @@ class GiftEvent(Base):
     sent_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+    earnings_tl: Mapped[Decimal] = mapped_column(Numeric(10, 4), nullable=False, server_default='0.0000')
+    payout_status: Mapped[str] = mapped_column(String(20), nullable=False, server_default='pending')
+    released_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
