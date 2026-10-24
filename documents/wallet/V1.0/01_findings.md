@@ -588,6 +588,15 @@ INSERT INTO platform_config (key, value, description) VALUES
   -- cashout_enabled aynı zamanda Redis teqlif:config:cashout_enabled key'inde tutulur
   -- (mevcut OTA mekanizmasıyla uyumlu: SET teqlif:config:cashout_enabled 0/1)
 
+-- ⚠️ teqlik_try_rate DEĞİŞTİRME KURALI (hukuki + operasyonel):
+-- Kur DÜŞÜŞÜ yalnızca ileriye dönük (prospective) uygulanır. Uygulama adımları:
+--   1. Duyuru: platform içi bildirim + yayıncı e-postası — en az 14 gün önceden
+--   2. Bekleme: 14 gün boyunca mevcut available bakiyeler eski kurdan çekilebilir
+--   3. Geçiş: Duyurudan 14 gün sonra UPDATE platform_config SET value='{"rate":0.40}' + Redis invalidate
+-- Bu prosedür TKHK m.5 (tek taraflı aleyhe sözleşme değişikliği) ve TBK genel işlem
+-- koşulları kapsamındaki hukuki itirazları önler.
+-- Kur ARTIŞI için bekleme süresi gerekmez; anında uygulanabilir.
+
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 -- 3. user_wallet_earnings — kazanç deposu (teqlik birimi, users'dan ayrı)
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -604,17 +613,42 @@ CREATE TABLE user_wallet_earnings (
 -- user başına tek satır: JOIN yerine lookup; users kadar büyür ama bağımsız domain
 
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
--- 4. wallet_ledger — append-only denetim izi
+-- 4. sistem kullanıcısı — platform hazine hesabı
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
--- Her teqlik hareketi (IAP, hediye, T+14, cashout, refund, convert) buraya yazılır.
+-- wallet_ledger'da her satırın sahibi (user_id) olmalı; NULL finansal tablolarda bad practice.
+-- Platform payı (platform_revenue) ve teşvik bonusu (bonus_mint) bu hesaba yazılır.
+-- id=0: SERIAL sequence 1'den başladığı için gerçek kullanıcılarla çakışmaz.
+-- status='inactive' + 'LOCKED_SYSTEM_ACCOUNT' hash → login fiilen imkânsız.
+INSERT INTO users (
+  id, email, username, full_name, hashed_password,
+  status, email_verified, is_admin, teqlik_balance, token_version, locale
+) VALUES (
+  0, 'system@teqlif.internal', 'system', 'Teqlif Platform',
+  'LOCKED_SYSTEM_ACCOUNT_NO_LOGIN',
+  'inactive', false, false, 0, 0, 'tr'
+);
+-- Bu kullanıcının teqlik_balance'ı anlamlı değil; wallet_ledger kayıtları referans noktasıdır.
+
+-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+-- 5. wallet_ledger — append-only denetim izi (çift taraflı muhasebe)
+-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+-- Her teqlik hareketi (IAP, hediye, T+14, cashout, refund, convert, platform payı) buraya yazılır.
 -- Satır güncellenmez, silinmez — WORM semantiği.
 -- dispute, destek, reconciliation, tokenization altyapısı bu tablodan beslenir.
+--
+-- Çift taraflı yazım kuralı (her işlem en az 2 satır):
+--   IAP alımı:     user: +100 (iap_purchase)
+--   Hediye gönder: sender: -100 (gift_sent), host: +70 (gift_earned), system: +30 (platform_revenue)
+--   T+14 serbest:  user: 0 delta (earnings_released — bakiye değişimi user_wallet_earnings'de)
+--   Convert C:     user: -1000 available (convert_to_teqlik), user: +1100 balance (convert_to_teqlik),
+--                  system: -100 (bonus_mint — havadan basılan teşvik teqliği)
+--   Cashout:       user: -1000 (withdrawal)
 CREATE TABLE wallet_ledger (
   id              BIGSERIAL     PRIMARY KEY,
   user_id         INTEGER       NOT NULL REFERENCES users(id),
+  -- sistem işlemleri (platform_revenue, bonus_mint) için user_id = 0 (sistem kullanıcısı)
   delta_teqlik    INTEGER       NOT NULL,          -- pozitif = giriş, negatif = çıkış
-  balance_after   INTEGER       NOT NULL,          -- işlem sonrası toplam teqlik snapshot
-                                                   -- (teqlik_balance + available + pending)
+  balance_after   INTEGER       NOT NULL,          -- işlem sonrası ilgili bakiye snapshot
   -- fiat bilgisi — bilgi amaçlı, otorite değil; cashout anında kilitlenir
   try_equivalent  NUMERIC(12,4),                  -- delta_teqlik × try_rate_used
   try_rate_used   NUMERIC(10,6),                  -- teqlik→TRY kuru
@@ -622,15 +656,17 @@ CREATE TABLE wallet_ledger (
   currency        VARCHAR(3),                     -- hedef döviz (cashout ise EUR/USD, yoksa NULL)
   -- sınıflandırma
   tx_type         VARCHAR(40)   NOT NULL,
-  -- 'iap_purchase'       → teqlik satın alındı
-  -- 'iap_refunded'       → Apple/Google iade, teqlik geri alındı
-  -- 'gift_sent'          → teqlik gönderildi (sender için negatif)
-  -- 'gift_earned'        → hediye kazanıldı, pending'e düştü
-  -- 'earnings_released'  → T+14 geçti, pending → available
-  -- 'withdrawal'         → cashout, available azaldı
-  -- 'withdrawal_refund'  → admin iptal, available iade
-  -- 'convert_to_teqlik'  → available → teqlik_balance (+%10 bonus dahil)
-  -- 'boost_spent'        → teqlik harcandı (boost/blast/AI)
+  -- 'iap_purchase'      → kullanıcı teqlik satın aldı (+)
+  -- 'iap_refunded'      → Apple/Google iade, teqlik geri alındı (-)
+  -- 'gift_sent'         → teqlik gönderildi, sender'dan çıktı (-)
+  -- 'gift_earned'       → hediye kazanıldı, host pending'e düştü (+)
+  -- 'platform_revenue'  → hediye komisyonu platform kasasına (user_id=0) (+)
+  -- 'earnings_released' → T+14 geçti, pending → available (internal; delta=0, snapshot güncellenir)
+  -- 'withdrawal'        → cashout, available azaldı (-)
+  -- 'withdrawal_refund' → admin iptal, available iade (+)
+  -- 'convert_to_teqlik' → available → teqlik_balance dönüşümü (iki ayrı satır: - ve +)
+  -- 'bonus_mint'        → Seçenek C +%10 teşvik bonusu, sistem tarafından basıldı (user_id=0, -)
+  -- 'boost_spent'       → teqlik harcandı (boost/blast/AI) (-)
   reference_id    INTEGER,                        -- ilgili tablonun PK'si
   reference_type  VARCHAR(30),                    -- 'teqlik_transaction' | 'gift_event'
                                                    -- | 'withdrawal_request'
@@ -640,7 +676,7 @@ CREATE INDEX idx_wallet_ledger_user_time ON wallet_ledger (user_id, created_at D
 CREATE INDEX idx_wallet_ledger_type      ON wallet_ledger (tx_type, created_at DESC);
 
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
--- 5. gift_events — hediye kaydı (kazanç teqlik biriminde)
+-- 6. gift_events — hediye kaydı (kazanç teqlik biriminde)
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ALTER TABLE gift_events
   ADD COLUMN earned_teqlik  INTEGER      NOT NULL DEFAULT 0,
@@ -657,7 +693,7 @@ CREATE INDEX idx_gift_events_payout
   WHERE payout_status = 'pending';
 
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
--- 6. teqlik_transactions — IAP ve harcama kaydı (store platform-agnostic)
+-- 7. teqlik_transactions — IAP ve harcama kaydı (store platform-agnostic)
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 -- Apple/Google/Web transaction ID'leri çakışabilir → partial composite unique
 ALTER TABLE teqlik_transactions
@@ -673,7 +709,7 @@ CREATE UNIQUE INDEX uq_store_tx
 -- store_transaction_id NULL bırakanlar (manual_credit, convert vb.) kısıtlamadan muaf
 
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
--- 7. withdrawal_requests — cashout talepleri (tüm kurlar işlem anında kilitlenir)
+-- 8. withdrawal_requests — cashout talepleri (tüm kurlar işlem anında kilitlenir)
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 CREATE TABLE withdrawal_requests (
   id               SERIAL        PRIMARY KEY,
@@ -799,12 +835,19 @@ app/use_cases/wallet/
 
   Gönderenden:    teqlik_balance -= cost                                     (atomik)
   Kazanç hesabı: host_share_pct = 95 if host.user_type == 'pro' else 70
-                  earned_teqlik = FLOOR(cost × host_share_pct / 100)
+                  earned_teqlik    = FLOOR(cost × host_share_pct / 100)
+                  platform_teqlik  = cost - earned_teqlik
                   ── INTEGER; Decimal gerekmiyor, FLOOR tamsayı korur ──
   Yayıncıya:     user_wallet_earnings.pending += earned_teqlik               (atomik)
   gift_events:   earned_teqlik + host_share_pct kaydedilir
                  payout_status = 'pending'   ← T+14 cron başından işler
-  Platform net:  (cost - earned_teqlik) teqlik Teqlif kasasında
+  Platform net:  platform_teqlik Teqlif kasasında
+
+  wallet_ledger — her send_gift 3 satır yazar (çift taraflı defter):
+    1. user_id=sender,  tx_type='gift_sent',        delta=-cost
+    2. user_id=host,    tx_type='gift_earned',       delta=+earned_teqlik
+    3. user_id=0,       tx_type='platform_revenue',  delta=+platform_teqlik
+    → 3 delta toplamı = 0: -cost + earned_teqlik + platform_teqlik = 0 ✓
 
   host_share_pct gift_events'e kilitlenir: ileriki plan değişiklikleri geçmiş hediyeleri etkilemez.
 
@@ -885,6 +928,11 @@ POST /api/wallet/convert-to-teqlik  →  convert_to_teqlik_command.py  (Seçenek
     - total_teqlik  = teqlik_amount + bonus_teqlik
     - user_wallet_earnings.available -= teqlik_amount (atomik)
     - users.teqlik_balance += total_teqlik (atomik)
+  wallet_ledger — her convert_to_teqlik 3 satır yazar (çift taraflı defter):
+    1. user_id=user,   tx_type='convert_to_teqlik', delta=-teqlik_amount   (available çıkışı)
+    2. user_id=user,   tx_type='convert_to_teqlik', delta=+total_teqlik    (balance girişi)
+    3. user_id=0,      tx_type='bonus_mint',         delta=-bonus_teqlik   (sistem "basar"; negatif)
+    → 3 delta toplamı = 0: -teqlik_amount + total_teqlik - bonus_teqlik = 0 ✓
   Modal yasal uyarısı (kullanıcı onaylamadan işlem tamamlanmaz):
     "⚠️ Dönüştürülen teqlik'ler kalıcı olarak ilan güçlendirme ve mezat harcamaları
      için kullanılır; tekrar nakde çevrilemez veya tekrar earnings'e geri döndürülemez."
@@ -954,27 +1002,28 @@ async def reset_monthly_withdrawal_quota_task():
 async def daily_financial_reconciliation_task():
     """
     Sistemdeki tüm bakiyelerin matematiksel tutarlılığını doğrular.
-    1 kuruş (₺0.01) fark bile Critical Alert üretir — race condition,
-    Decimal hatası veya yetkisiz müdahale göstergesidir.
+    1 teqlik fark bile Critical Alert üretir — race condition,
+    INTEGER taşması veya yetkisiz müdahale göstergesidir.
 
-    Denklem (teqlik korunumu):
-      Toplam basılan teqlik
-      == Toplam dolaşımdaki teqlik + Toplam yakılan teqlik + Toplam cashout edilen teqlik
+    Bilanço eşitliği (otorite denklem):
+      Basılan (IAP + bonus_mint) = Dolaşımdaki + Platform Payı + Cashout
 
       SUM(teqlik_transactions.amount WHERE tx_type='iap_purchase')
+      + SUM(ABS(wallet_ledger.delta_teqlik) WHERE tx_type='bonus_mint' AND user_id=0)
       - SUM(teqlik_transactions.amount WHERE tx_type='iap_refunded')
-      == SUM(users.teqlik_balance)                              ← IAP'ten gelen, harcanabilir
+      == SUM(users.teqlik_balance WHERE id != 0)               ← IAP'ten gelen, harcanabilir
        + SUM(user_wallet_earnings.pending + available)          ← kazanılan, kilitli/serbest
-       + SUM(ABS(teqlik_transactions.amount) WHERE tx_type IN ('gift_sent','boost_spent',...))
+       + SUM(wallet_ledger.delta_teqlik WHERE tx_type='platform_revenue' AND user_id=0)
        + SUM(withdrawal_requests.teqlik_amount WHERE status='completed')
+       + SUM(ABS(teqlik_transactions.amount) WHERE tx_type IN ('boost_spent',...))
 
-      Wallet ledger tutarlılığı (ek kontrol):
-      SUM(wallet_ledger.delta_teqlik) == 0
-      (her giriş (+) karşılığında bir çıkış (-) olmalı; net sıfır)
+      Açıklamalar:
+        bonus_mint: sistem hesabında NEGATİF kayıt (sistem "öder"); ABS ile mutlak değer alınır
+        platform_revenue: sistem hesabında POZİTİF kayıt; hediyedeki platform payı
+        gift_sent/gift_earned çiftleri burada ayrıca sayılmaz — host kazançları
+          user_wallet_earnings'e, platform payı platform_revenue'ya düşer
 
       Fark != 0 → Telegram Critical Alert + admin_flags kaydı.
-
-    Fark != 0.00 TL → Telegram Critical Alert + admin_flags kaydı.
     0 satır sonuç → sessiz başarı (watchdog_m izler; cron çalışmazsa alarm).
     """
 ```
@@ -1487,10 +1536,10 @@ Tüm W1–W13 görevleri aşağıdaki ilkelere uygun geliştirilir:
 | W3 | `use_cases/wallet/commands/` + `services/store/` dizin yapısı | Backend | Evet | ⏳ Bekliyor |
 | W4 | **Store Abstraction katmanı** (`services/store/`): `StoreVerifier` ABC + `AppleVerifier` (JWS x5c doğrulama, leeway=60, env/bundleId hardcoded, velocity limit Redis ₺5.000/gün Fail-Closed) + `StoreVerifierFactory`; `verify_purchase_command.py`: `{platform, payload, product_id}` → factory → `PurchaseResult` → productId dispatch: `teqlik_pack_*` → consumable (teqlik_balance +=, store_transaction_id UNIQUE 409), `teqlif_pro_*` → subscription (user_type='pro', pro_expires_at, plan_type, store_subscription_id); `raw_payload` arşivi; router: `POST /api/wallet/purchase/verify` | Backend | Evet | ⏳ Bekliyor |
 | W4c | **Store Notification katmanı**: `StoreNotificationHandler` ABC + `AppleNotificationHandler` (DID_RENEW → pro_expires_at uzat; BILLING_RETRY → pro_grace_until; EXPIRED/GRACE_PERIOD_EXPIRED → standard; REVOKE → standard+refund); `handle_store_notification_command.py`: 200 OK hemen → ARQ kuyruğa → worker'da handler dispatch; router: `POST /api/wallet/store-notifications/{platform}` | Backend | Evet | ⏳ Bekliyor |
-| W5 | `send_gift_command.py`: `earned_teqlik = FLOOR(cost × host_share_pct / 100)` (INTEGER) + `host_share_pct` = 95 (PRO) / 70 (std) + `user_wallet_earnings.pending += earned_teqlik` + `payout_status='pending'` + atomik SQL + LEAST(sender,host) kilit sırası + Redis Token Bucket (2/sn) + 8 hediye tipi + `wallet_ledger` kaydı; **post-commit**: WebSocket broadcast + push notification UoW commit'ten SONRA, transaction bloğu dışında tetiklenir (kilit çakışmasını önler) | Backend | Evet |
+| W5 | `send_gift_command.py`: `earned_teqlik = FLOOR(cost × host_share_pct / 100)` (INTEGER) + `host_share_pct` = 95 (PRO) / 70 (std) + `user_wallet_earnings.pending += earned_teqlik` + `payout_status='pending'` + atomik SQL + LEAST(sender,host) kilit sırası + Redis Token Bucket (2/sn) + 8 hediye tipi + **wallet_ledger 3 satır**: sender -cost (gift_sent), host +earned_teqlik (gift_earned), user_id=0 +(cost-earned_teqlik) (platform_revenue); **post-commit**: WebSocket broadcast + push notification UoW commit'ten SONRA, transaction bloğu dışında tetiklenir (kilit çakışmasını önler) | Backend | Evet |
 | W6 | `get_wallet_summary_query.py`: teqlik_balance + earnings_pending_teqlik + earnings_available_teqlik + try_rate (platform_config) + **cashout_enabled: bool** döndürür; cashout_enabled + teqlik_try_rate Redis'ten okunur; Flutter bu değerleri API response'undan okur — statik sabit veya .env değil | Backend | Evet |
 | W7 | `request_withdrawal_command.py`: available atomik düşüm (UPDATE WHERE available >= teqlik_amount, 0 satır → 400) + kurları kilitle (try_rate + tcmb_rate) + aktif pending yok kontrolü (409) + withdrawal_requests INSERT — aynı transaction | Backend | Hayır |
-| W7b | `convert_to_teqlik_command.py`: Seçenek C (+%10 bonus): `available -= teqlik_amount`; `teqlik_balance += FLOOR(teqlik_amount × 1.10)` — modal yasal uyarısı zorunlu | Backend | Hayır |
+| W7b | `convert_to_teqlik_command.py`: Seçenek C (+%10 bonus): `available -= teqlik_amount`; `teqlik_balance += FLOOR(teqlik_amount × 1.10)` + **wallet_ledger 3 satır**: user -teqlik_amount (convert_to_teqlik), user +total_teqlik (convert_to_teqlik), user_id=0 -bonus_teqlik (bonus_mint; sistem basar) — modal yasal uyarısı zorunlu | Backend | Hayır |
 | W7c | `schedule.yaml`: `release_pending_earnings` (02:15 UTC, watchdog_m:30) + `daily_financial_reconciliation` (00:00 UTC, watchdog_m:10) + **`check_expired_pro_users` (03:00 UTC, watchdog_m:60)** — 02:15: Pazar 02:00 pg_basebackup çakışması önlenir; 03:00: webhook kaçırma sigortası; her fonksiyon `worker.py` `_SCHEDULE_FUNCTIONS` sözlüğüne eklenmeli + `await _agent_ok(ctx, "<task_name>")` son satır zorunlu (eksik → sahte alarm) | Backend | Hayır |
 | W7e | `cancel_withdrawal_request_command.py`: status='pending' → 'cancelled' + atomik bakiye iadesi + 403 yetki / 409 statü kontrolü; `DELETE /api/wallet/withdraw/{id}` | Backend | Hayır |
 | W8 | `handle_store_refund_command.py`: orantılı gift iptali (payout_status='cancelled_refund', `user_wallet_earnings.pending -= iptal_teqlik`) + negatif bakiye olabilir (CHECK constraint YOK — webhook retry storm önlemi) + `pending_refund=True` | Backend | Evet |
