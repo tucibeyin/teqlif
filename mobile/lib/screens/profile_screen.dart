@@ -385,8 +385,8 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                                   decoration: BoxDecoration(
                                     gradient: const LinearGradient(
                                       colors: [
-                                        Color(0xFF0891B2),
-                                        Color(0xFF06B6D4),
+                                        Color(0xFFD97706),
+                                        Color(0xFFFFD700),
                                       ],
                                     ),
                                     shape: BoxShape.circle,
@@ -1047,12 +1047,15 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
   /// StorageService'ten güncel PRO statüsünü çeker.
   /// Admin panelinden yapılan değişiklikler profil açılışında
   /// saveUserInfo ile kaydedildiğinden burada güncel değer okunur.
+  String? _settingsPlanType;
+
   Future<void> _loadPremiumStatus() async {
     final info = await StorageService.getUserInfo();
     if (mounted && info != null) {
       setState(() {
         _isPremium = info['user_type'] == 'pro';
         _isPrivate = info['is_private'] == true;
+        _settingsPlanType = info['plan_type'] as String?;
       });
     }
   }
@@ -1668,12 +1671,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
             items: [
               _SettingsTile(
                 icon: Icons.workspace_premium_outlined,
-                leadingWidget: const FaIcon(
-                  FontAwesomeIcons.crown,
-                  color: Color(0xFF06B6D4),
-                  size: 22,
-                ),
-                iconColor: const Color(0xFF06B6D4),
+                iconColor: const Color(0xFFD97706),
                 label: loc.t('proHubTitle'),
                 trailing: _isPremium
                     ? Container(
@@ -1683,17 +1681,28 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                         ),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [Color(0xFF1E1B4B), Color(0xFF4338CA)],
+                            colors: [Color(0xFFD97706), Color(0xFFFFD700)],
                           ),
                           borderRadius: BorderRadius.circular(4),
                         ),
-                        child: Text(
-                          loc.t('settingsProActive'),
-                          style: const TextStyle(
-                            fontSize: 9,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
-                          ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const FaIcon(
+                              FontAwesomeIcons.crown,
+                              size: 8,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              _settingsPlanType ?? loc.t('settingsProActive'),
+                              style: const TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
                         ),
                       )
                     : Container(
@@ -1703,7 +1712,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                         ),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [Color(0xFF0891B2), Color(0xFF06B6D4)],
+                            colors: [Color(0xFFD97706), Color(0xFFFFD700)],
                           ),
                           borderRadius: BorderRadius.circular(50),
                         ),
@@ -1826,17 +1835,28 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          colors: [Color(0xFF0891B2), Color(0xFF06B6D4)],
+                          colors: [Color(0xFFD97706), Color(0xFFFFD700)],
                         ),
                         borderRadius: BorderRadius.circular(4),
                       ),
-                      child: const Text(
-                        '👑 PRO',
-                        style: TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                        ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          FaIcon(
+                            FontAwesomeIcons.crown,
+                            size: 8,
+                            color: Colors.white,
+                          ),
+                          SizedBox(width: 3),
+                          Text(
+                            'PRO',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(width: 6),

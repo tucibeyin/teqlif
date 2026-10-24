@@ -844,7 +844,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [Color(0xFF0891B2), Color(0xFF06B6D4)],
+                colors: [Color(0xFFD97706), Color(0xFFFFD700)],
               ),
               shape: BoxShape.circle,
               border: Border.all(

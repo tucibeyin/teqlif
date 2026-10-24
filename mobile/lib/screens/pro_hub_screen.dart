@@ -16,6 +16,7 @@ import 'pro_stream_analytics_screen.dart';
 import 'retargeting_screen.dart';
 import 'live_stream_history_screen.dart';
 import 'my_recordings_screen.dart';
+import '../widgets/pro_subscription_sheet.dart';
 
 class ProHubScreen extends ConsumerStatefulWidget {
   final bool isPremium;
@@ -351,7 +352,7 @@ class _ProStatusCard extends ConsumerWidget {
               color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const FaIcon(FontAwesomeIcons.crown, color: Color(0xFF06B6D4), size: 28),
+            child: const FaIcon(FontAwesomeIcons.crown, color: Colors.white, size: 28),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -431,7 +432,7 @@ class _UpgradeBanner extends ConsumerWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF0B2535), Color(0xFF0D3D54)],
+          colors: [Color(0xFF92400E), Color(0xFFB45309)],
           begin: AlignmentDirectional.topStart,
           end: AlignmentDirectional.bottomEnd,
         ),
@@ -468,15 +469,21 @@ class _UpgradeBanner extends ConsumerWidget {
           ),
           const SizedBox(width: 10),
           GestureDetector(
-            onTap: () => launchUrl(
-              Uri.parse('https://www.teqlif.com/pro-plan.html'),
-              mode: LaunchMode.inAppWebView,
+            onTap: () => showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              useSafeArea: true,
+              backgroundColor: Colors.transparent,
+              builder: (_) => ProSubscriptionSheet(
+                loc: loc,
+                onPurchaseSuccess: () => Navigator.of(context).pop(),
+              ),
             ),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF0891B2), Color(0xFF06B6D4)],
+                  colors: [Color(0xFFD97706), Color(0xFFFFD700)],
                 ),
                 borderRadius: BorderRadius.circular(10),
               ),
@@ -560,10 +567,19 @@ class _ToolCard extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFB800),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFD97706), Color(0xFFFFD700)],
+                  ),
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: Text(ref.read(localizationProvider).t('pro'), style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white)),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const FaIcon(FontAwesomeIcons.crown, size: 7, color: Colors.white),
+                    const SizedBox(width: 3),
+                    Text(ref.read(localizationProvider).t('pro'), style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white)),
+                  ],
+                ),
               )
             else
               Icon(Icons.chevron_right, color: AppColors.textSecondary(context), size: 20),
@@ -699,7 +715,7 @@ class _UpgradeSheet extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 24),
-          const FaIcon(FontAwesomeIcons.crown, size: 48, color: Color(0xFFFFB800)),
+          const FaIcon(FontAwesomeIcons.crown, size: 48, color: Color(0xFFFFD700)),
           const SizedBox(height: 12),
           Text(
             loc.t('proUpgradeTitle'),
@@ -720,15 +736,21 @@ class _UpgradeSheet extends ConsumerWidget {
             width: double.infinity,
             child: DecoratedBox(
               decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [Color(0xFF0891B2), Color(0xFF06B6D4)]),
+                gradient: const LinearGradient(colors: [Color(0xFFD97706), Color(0xFFFFD700)]),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: TeqButton(
                 onPressed: () {
                   Navigator.pop(context);
-                  launchUrl(
-                    Uri.parse('https://www.teqlif.com/pro-plan.html'),
-                    mode: LaunchMode.inAppWebView,
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    useSafeArea: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (_) => ProSubscriptionSheet(
+                      loc: loc,
+                      onPurchaseSuccess: () => Navigator.of(context).pop(),
+                    ),
                   );
                 },
                 text: loc.t('proUpgradeBtn'),
