@@ -70,6 +70,9 @@ import 'viewmodels/profile_view_model.dart';
 import '../utils/snackbar_helper.dart';
 import '../widgets/consent_settings_modal.dart';
 import '../services/media_compressor.dart';
+import '../widgets/pro_badge_widget.dart';
+import '../widgets/pro_subscription_sheet.dart';
+import 'package:flutter/rendering.dart' show FontFeature;
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -3898,21 +3901,34 @@ class _TeqlikWalletSheet extends ConsumerWidget {
 class WalletScreen extends ConsumerStatefulWidget {
   final int? initialBalance;
   final List<dynamic> initialHistory;
+  final bool isPro;
 
   const WalletScreen({
     super.key,
     this.initialBalance,
     this.initialHistory = const [],
+    this.isPro = false,
   });
 
   @override
   ConsumerState<WalletScreen> createState() => _WalletScreenState();
 }
 
-class _WalletScreenState extends ConsumerState<WalletScreen> {
+class _WalletScreenState extends ConsumerState<WalletScreen>
+    with WidgetsBindingObserver {
   int? _balance;
   List<dynamic> _txns = [];
   bool _loading = false;
+
+  // Kart 1 — PRO durumu
+  late bool _isPro;
+
+  // Kart 2 — kazanç özeti
+  int _pendingTeqlik = 0;
+  int _availableTeqlik = 0;
+  bool _cashoutEnabled = false;
+  double _tryRate = 0.0;
+  int? _activeWithdrawalId;
 
   Map<String, String> _typeLabels(TranslationPack loc) => {
     'airdrop': loc.t('walletTxnAirdrop'),
@@ -3933,27 +3949,134 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
     'web_topup': loc.t('walletTxnWebTopup'),
     'referral_bonus': loc.t('walletTxnReferralBonus'),
     'welcome_bonus': loc.t('walletTxnWelcomeBonus'),
+    'iap_purchase': loc.t('walletTxnIapPurchase'),
   };
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _isPro = widget.isPro;
     _balance = widget.initialBalance;
     _txns = List.from(widget.initialHistory);
     _load();
   }
 
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  // App Store'dan dönünce bakiyeyi tazele (W9 — AppLifecycleState.resumed)
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _load();
+  }
+
   Future<void> _load() async {
     setState(() => _loading = true);
-    final data = await WalletService.getBalance(limit: 50);
+    final results = await Future.wait([
+      WalletService.getBalance(limit: 50),
+      WalletService.getSummary(),
+    ]);
     if (!mounted) return;
+    final balanceData = results[0] as Map<String, dynamic>?;
+    final summaryData = results[1] as Map<String, dynamic>?;
     setState(() {
       _loading = false;
-      if (data != null) {
-        _balance = data['balance'] as int?;
-        _txns = data['transactions'] as List? ?? [];
+      if (balanceData != null) {
+        _balance = balanceData['balance'] as int?;
+        _txns = balanceData['transactions'] as List? ?? [];
+      }
+      if (summaryData != null) {
+        _balance = summaryData['teqlik_balance'] as int? ?? _balance;
+        _pendingTeqlik = summaryData['earnings_pending_teqlik'] as int? ?? 0;
+        _availableTeqlik = summaryData['earnings_available_teqlik'] as int? ?? 0;
+        _cashoutEnabled = summaryData['cashout_enabled'] as bool? ?? false;
+        _tryRate = (summaryData['try_rate'] as num?)?.toDouble() ?? 0.0;
+        _activeWithdrawalId = summaryData['active_withdrawal_id'] as int?;
+        if (summaryData.containsKey('is_pro')) {
+          _isPro = summaryData['is_pro'] as bool? ?? false;
+        }
       }
     });
+  }
+
+  Future<void> _cancelWithdrawal(int id) async {
+    final ok = await WalletService.cancelWithdrawal(id);
+    if (!mounted) return;
+    if (ok) {
+      await _load();
+    }
+  }
+
+  void _showIbanSheet() {
+    final loc = ref.read(localizationProvider);
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => _IbanPreRegistrationSheet(
+        availableTeqlik: _availableTeqlik,
+        tryRate: _tryRate,
+        onSuccess: _load,
+        loc: loc,
+      ),
+    );
+  }
+
+  void _showProSheet() {
+    final loc = ref.read(localizationProvider);
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => ProSubscriptionSheet(
+        loc: loc,
+        onPurchaseSuccess: () {
+          setState(() => _isPro = true);
+          _load();
+        },
+      ),
+    );
+  }
+
+  Future<void> _convertToTeqlik() async {
+    if (_availableTeqlik <= 0) return;
+    final loc = ref.read(localizationProvider);
+    // Yasal uyarı modalı (W7b zorunluluğu)
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(loc.t('walletConvertToTeqlik')),
+        content: Text(loc.t('walletConvertLegalNotice')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(loc.t('cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(loc.t('confirm')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final result = await WalletService.convertToTeqlik(_availableTeqlik);
+    if (!mounted) return;
+    if (result['ok'] == true) {
+      await _load();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result['error'] as String? ?? loc.t('errorGeneric'))),
+      );
+    }
   }
 
   Widget _buildTxnRow(dynamic t, TranslationPack loc) {
@@ -4083,9 +4206,36 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
               ),
               child: Column(
                 children: [
-                  Text(
-                    loc.t('walletBalance'),
-                    style: const TextStyle(color: Colors.white70, fontSize: 13),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        loc.t('walletBalance'),
+                        style: const TextStyle(color: Colors.white70, fontSize: 13),
+                      ),
+                      if (_isPro)
+                        const ProBadgeWidget(fontSize: 11)
+                      else
+                        GestureDetector(
+                          onTap: _showProSheet,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: Colors.white30),
+                            ),
+                            child: Text(
+                              loc.t('proUpgradeCta'),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -4153,41 +4303,20 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
             ),
           ),
 
-          // ── Yakında bildirimi — sabit alt ─────────────────────────
+          // ── Kart 2 — Kazanç (yayıncı earnings) — sabit alt ──────
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFFBEB),
-                border: Border.all(color: const Color(0xFFFDE68A), width: 1.5),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Column(
-                children: [
-                  const Text('🔔', style: TextStyle(fontSize: 28)),
-                  const SizedBox(height: 8),
-                  Text(
-                    loc.t('walletComingSoonLabel'),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
-                      color: Color(0xFF92400E),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    loc.t('walletComingSoonDesc'),
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF78350F),
-                      height: 1.5,
-                    ),
-                  ),
-                ],
-              ),
+            child: _EarningsCard(
+              pendingTeqlik: _pendingTeqlik,
+              availableTeqlik: _availableTeqlik,
+              cashoutEnabled: _cashoutEnabled,
+              tryRate: _tryRate,
+              activeWithdrawalId: _activeWithdrawalId,
+              onConvert: _convertToTeqlik,
+              onIban: _showIbanSheet,
+              onCancelWithdrawal: _cancelWithdrawal,
+              onStartStream: () => Navigator.pop(context),
+              loc: loc,
             ),
           ),
         ],
@@ -4301,6 +4430,442 @@ class _TxnRow extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ─── Earnings Card (Kart 2 — W9) ─────────────────────────────────────────────
+
+class _EarningsCard extends StatelessWidget {
+  final int pendingTeqlik;
+  final int availableTeqlik;
+  final bool cashoutEnabled;
+  final double tryRate;
+  final int? activeWithdrawalId;
+  final VoidCallback onConvert;
+  final VoidCallback onIban;
+  final ValueChanged<int> onCancelWithdrawal;
+  final VoidCallback onStartStream;
+  final TranslationPack loc;
+
+  const _EarningsCard({
+    required this.pendingTeqlik,
+    required this.availableTeqlik,
+    required this.cashoutEnabled,
+    required this.tryRate,
+    required this.activeWithdrawalId,
+    required this.onConvert,
+    required this.onIban,
+    required this.onCancelWithdrawal,
+    required this.onStartStream,
+    required this.loc,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hasPendingWithdrawal = activeWithdrawalId != null;
+    final hasEarnings = pendingTeqlik > 0 || availableTeqlik > 0;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: cashoutEnabled
+              ? [const Color(0xFF064E3B), const Color(0xFF065F46), const Color(0xFF047857)]
+              : [const Color(0xFF1E293B), const Color(0xFF0F172A)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: (cashoutEnabled
+                    ? const Color(0xFF34D399)
+                    : const Color(0xFF6366F1))
+                .withValues(alpha: 0.2),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Başlık
+          Text(
+            loc.t('walletEarningsTitle'),
+            style: const TextStyle(color: Colors.white70, fontSize: 12, letterSpacing: .5),
+          ),
+          const SizedBox(height: 10),
+
+          // Pending + Available satırları
+          if (hasEarnings) ...[
+            _EarningsRow(
+              label: loc.t('walletPendingLabel'),
+              value: '$pendingTeqlik teqlik',
+              sub: tryRate > 0
+                  ? '≈ ₺${(pendingTeqlik * tryRate).toStringAsFixed(2)}'
+                  : null,
+              icon: Icons.lock_clock_outlined,
+            ),
+            const SizedBox(height: 6),
+            _EarningsRow(
+              label: loc.t('walletAvailableLabel'),
+              value: '$availableTeqlik teqlik',
+              sub: tryRate > 0
+                  ? '≈ ₺${(availableTeqlik * tryRate).toStringAsFixed(2)}'
+                  : null,
+              icon: Icons.check_circle_outline,
+              highlight: availableTeqlik > 0,
+            ),
+            const SizedBox(height: 14),
+          ] else ...[
+            Text(
+              loc.t('walletNoEarningsYet'),
+              style: const TextStyle(color: Colors.white38, fontSize: 13),
+            ),
+            const SizedBox(height: 14),
+          ],
+
+          // Aktif çekim talebi sıra kartı
+          if (hasPendingWithdrawal) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white24),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.list_alt_rounded, color: Colors.white70, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      loc.t('walletQueueNumber', {'id': activeWithdrawalId.toString()}),
+                      style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => onCancelWithdrawal(activeWithdrawalId!),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      foregroundColor: const Color(0xFFFCA5A5),
+                    ),
+                    child: Text(loc.t('cancel'), style: const TextStyle(fontSize: 12)),
+                  ),
+                  TextButton(
+                    onPressed: onConvert,
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      foregroundColor: const Color(0xFF6EE7B7),
+                    ),
+                    child: Text(loc.t('walletConvertToTeqlik'), style: const TextStyle(fontSize: 12)),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+          ] else if (!cashoutEnabled) ...[
+            // cashout_enabled=false → "Yayın Başlat" CTA
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: onStartStream,
+                icon: const Icon(Icons.play_circle_outline, size: 18),
+                label: Text(loc.t('walletStartStreamCta')),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF10B981),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+          ] else ...[
+            // cashout_enabled=true → İki CTA
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: availableTeqlik > 0 ? onConvert : null,
+                icon: const Icon(Icons.bolt, size: 18),
+                label: Text(loc.t('walletConvertToTeqlik')),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFFD97706),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: onIban,
+                icon: const Icon(Icons.account_balance_outlined, size: 18),
+                label: Text(loc.t('walletIbanPreRegistrationTitle')),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.white70,
+                  side: const BorderSide(color: Colors.white24),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _EarningsRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final String? sub;
+  final IconData icon;
+  final bool highlight;
+
+  const _EarningsRow({
+    required this.label,
+    required this.value,
+    this.sub,
+    required this.icon,
+    this.highlight = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 15, color: highlight ? const Color(0xFF6EE7B7) : Colors.white38),
+        const SizedBox(width: 6),
+        Text(label, style: const TextStyle(color: Colors.white60, fontSize: 12)),
+        const Spacer(),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              value,
+              style: TextStyle(
+                color: highlight ? const Color(0xFF6EE7B7) : Colors.white,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+            if (sub != null)
+              Text(sub!, style: const TextStyle(color: Colors.white38, fontSize: 11)),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+// ─── IBAN Ön Kayıt Bottom Sheet (W10) ────────────────────────────────────────
+
+class _IbanPreRegistrationSheet extends StatefulWidget {
+  final int availableTeqlik;
+  final double tryRate;
+  final VoidCallback onSuccess;
+  final TranslationPack loc;
+
+  const _IbanPreRegistrationSheet({
+    required this.availableTeqlik,
+    required this.tryRate,
+    required this.onSuccess,
+    required this.loc,
+  });
+
+  @override
+  State<_IbanPreRegistrationSheet> createState() => _IbanPreRegistrationSheetState();
+}
+
+class _IbanPreRegistrationSheetState extends State<_IbanPreRegistrationSheet> {
+  static const _chips = [500, 1000];
+  int? _selectedChip;
+  final _ibanCtrl = TextEditingController();
+  final _holderCtrl = TextEditingController();
+  bool _loading = false;
+
+  int get _effectiveAmount =>
+      _selectedChip ?? widget.availableTeqlik.clamp(500, widget.availableTeqlik);
+
+  double get _bonusTeqlik => (_effectiveAmount * 0.10).floorToDouble();
+  double get _tryEquiv => _effectiveAmount * widget.tryRate;
+
+  @override
+  void dispose() {
+    _ibanCtrl.dispose();
+    _holderCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit(TranslationPack loc) async {
+    final iban = _ibanCtrl.text.trim().replaceAll(' ', '');
+    final holder = _holderCtrl.text.trim();
+    if (iban.length < 15 || holder.isEmpty) return;
+
+    setState(() => _loading = true);
+    final result = await WalletService.requestWithdrawal(
+      teqlikAmount: _effectiveAmount,
+      iban: iban,
+      accountHolderName: holder,
+    );
+    if (!mounted) return;
+    setState(() => _loading = false);
+
+    if (result['ok'] == true) {
+      Navigator.pop(context);
+      widget.onSuccess();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(loc.t('walletIbanRegistrationSuccess'))),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result['error'] as String? ?? loc.t('errorGeneric'))),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final loc = widget.loc;
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+        left: 20, right: 20, top: 24,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Başlık
+            Text(
+              loc.t('walletIbanPreRegistrationTitle'),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              loc.t('walletIbanLegalNote'),
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600, height: 1.4),
+            ),
+            const SizedBox(height: 20),
+
+            // Tutar çipleri
+            Text(loc.t('walletWithdrawAmount'),
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: [
+                ..._chips.map((c) => ChoiceChip(
+                      label: Text('$c teqlik'),
+                      selected: _selectedChip == c,
+                      onSelected: widget.availableTeqlik >= c
+                          ? (_) => setState(() => _selectedChip = c)
+                          : null,
+                    )),
+                ChoiceChip(
+                  label: Text('${loc.t('walletAllLabel')} (${widget.availableTeqlik})'),
+                  selected: _selectedChip == null,
+                  onSelected: (_) => setState(() => _selectedChip = null),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+
+            // Seçenek C simülatörü
+            if (widget.tryRate > 0)
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0FDF4),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFBBF7D0)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '${loc.t('walletConvertToTeqlik')}: $_effectiveAmount + ${_bonusTeqlik.toInt()} bonus',
+                      style: const TextStyle(fontSize: 12, color: Color(0xFF065F46)),
+                    ),
+                    Text(
+                      '≈ ₺${_tryEquiv.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF065F46),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            const SizedBox(height: 16),
+
+            // IBAN alanı
+            TextField(
+              controller: _ibanCtrl,
+              decoration: InputDecoration(
+                labelText: 'IBAN (TR…)',
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.account_balance_outlined),
+              ),
+              textCapitalization: TextCapitalization.characters,
+              maxLength: 34,
+            ),
+            const SizedBox(height: 12),
+
+            // Hesap sahibi
+            TextField(
+              controller: _holderCtrl,
+              decoration: InputDecoration(
+                labelText: loc.t('walletAccountHolder'),
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.person_outline),
+              ),
+              textCapitalization: TextCapitalization.words,
+            ),
+            const SizedBox(height: 20),
+
+            // MASAK yasal uyarı panosu
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade50,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.amber.shade200),
+              ),
+              child: Text(
+                loc.t('walletMasakNotice'),
+                style: TextStyle(fontSize: 11, color: Colors.amber.shade900, height: 1.5),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // CTA butonu
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: _loading ? null : () => _submit(loc),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: _loading
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : Text(loc.t('walletSaveAndQueue')),
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
       ),
     );
   }

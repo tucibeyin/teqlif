@@ -14,6 +14,91 @@ class WalletService {
     return h;
   }
 
+  /// GET /api/wallet/summary — teqlik_balance + pending/available earnings + cashout_enabled
+  static Future<Map<String, dynamic>?> getSummary() async {
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return null;
+      final resp = await http.get(
+        Uri.parse('${providerContainer.read(apiClientProvider).config.baseUrl}/wallet/summary'),
+        headers: await _headers(token),
+      );
+      if (resp.statusCode == 200) {
+        return jsonDecode(resp.body) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// POST /api/wallet/convert-to-teqlik
+  static Future<Map<String, dynamic>> convertToTeqlik(int teqlikAmount) async {
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return {'ok': false, 'error': 'Oturum bulunamadı.'};
+      final resp = await http.post(
+        Uri.parse('${providerContainer.read(apiClientProvider).config.baseUrl}/wallet/convert-to-teqlik'),
+        headers: await _headers(token, json: true),
+        body: jsonEncode({'teqlik_amount': teqlikAmount}),
+      );
+      if (resp.statusCode == 200) {
+        return {'ok': true, ...(jsonDecode(resp.body) as Map<String, dynamic>)};
+      }
+      final body = jsonDecode(resp.body) as Map<String, dynamic>?;
+      final errMap = body?['error'] as Map?;
+      final msg = errMap?['message'] as String? ?? body?['detail'] as String? ?? 'Bir hata oluştu.';
+      return {'ok': false, 'error': msg, 'status_code': resp.statusCode};
+    } catch (_) {
+      return {'ok': false, 'error': 'Bağlantı hatası.'};
+    }
+  }
+
+  /// POST /api/wallet/withdraw
+  static Future<Map<String, dynamic>> requestWithdrawal({
+    required int teqlikAmount,
+    required String iban,
+    required String accountHolderName,
+    String currency = 'TRY',
+  }) async {
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return {'ok': false, 'error': 'Oturum bulunamadı.'};
+      final resp = await http.post(
+        Uri.parse('${providerContainer.read(apiClientProvider).config.baseUrl}/wallet/withdraw'),
+        headers: await _headers(token, json: true),
+        body: jsonEncode({
+          'teqlik_amount': teqlikAmount,
+          'currency': currency,
+          'iban': iban,
+          'account_holder_name': accountHolderName,
+        }),
+      );
+      if (resp.statusCode == 200) {
+        return {'ok': true, ...(jsonDecode(resp.body) as Map<String, dynamic>)};
+      }
+      final body = jsonDecode(resp.body) as Map<String, dynamic>?;
+      final errMap = body?['error'] as Map?;
+      final msg = errMap?['message'] as String? ?? body?['detail'] as String? ?? 'Bir hata oluştu.';
+      return {'ok': false, 'error': msg, 'status_code': resp.statusCode};
+    } catch (_) {
+      return {'ok': false, 'error': 'Bağlantı hatası.'};
+    }
+  }
+
+  /// DELETE /api/wallet/withdraw/{id}
+  static Future<bool> cancelWithdrawal(int requestId) async {
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return false;
+      final resp = await http.delete(
+        Uri.parse('${providerContainer.read(apiClientProvider).config.baseUrl}/wallet/withdraw/$requestId'),
+        headers: await _headers(token),
+      );
+      return resp.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
   static Future<Map<String, dynamic>> sendGift({
     required int streamId,
     required String receiverUsername,

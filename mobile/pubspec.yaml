@@ -64,6 +64,7 @@ dependencies:
   proximity_sensor: ^1.4.0
 
   flutter_cache_manager: ">=3.3.1 <4.0.0"
+  in_app_purchase: ^3.2.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
