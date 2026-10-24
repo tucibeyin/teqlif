@@ -3,7 +3,7 @@
 **Tarih:** 2026-10-24  
 **Kapsam:** iOS IAP entegrasyonu, fiyatlandırma stratejisi, UX mimarisi, Apple uyum gereksinimleri, yayıncı teqlik kazanç sistemi, IBAN çekim altyapısı (upfront — tüm V1.1 altyapısı dahil)  
 **Mimari:** Kapalı döngü teqlik ekonomisi — teqlik biriminde saklama, TRY dönüşümü cashout anında, `platform_config` tek kaynak  
-**Durum:** Mimari kararlar tamamlandı — implementasyon bekliyor (W1–W13)
+**Durum:** W1 tamamlandı (commit `302e4480`) — W2–W13 bekliyor
 
 ---
 
@@ -1813,8 +1813,8 @@ psql -U teqlif teqlif   ← YASAK
 
 | # | Görev | Yapan | Blokör mu? | Durum |
 |---|-------|-------|-----------|-------|
-| W1 | Migration `zzzzzx_wallet_v10`: `users` (pro_expires_at, pro_grace_until, store_subscription_id, store_subscription_platform) + `platform_config` (key-value JSONB, teqlik_try_rate / host_share_standard / host_share_pro / iap_velocity_limit / min_withdrawal_try / cashout_enabled seed data) + `user_wallet_earnings (user_id PK, pending INTEGER, available INTEGER)` + `wallet_ledger (BIGSERIAL, delta_teqlik, teqlik_after, try_equivalent, tx_type…)` + `gift_events` ALTER (earned_teqlik INTEGER, host_share_pct NUMERIC(5,2), payout_status, released_at) + `teqlik_transactions` ALTER (store_platform, store_transaction_id, raw_payload, product_type, **partial composite unique**) + `withdrawal_requests (teqlik_amount, try_amount, currency, fiat_amount, try_rate_used, tcmb_rate_used…)` + `idx_users_pro_expires` + `idx_gift_events_payout` + `idx_wallet_ledger_user_time` | Backend | Evet | ⏳ Bekliyor |
-| W2 | `idx_gift_events_payout` (W1 migration'ına dahil edildi) | Backend | Evet | ⏳ Bekliyor |
+| W1 | Migration `zzzzzx_wallet_v10`: `users` (pro_expires_at, pro_grace_until, store_subscription_id, store_subscription_platform) + `platform_config` (key-value JSONB, teqlik_try_rate / host_share_standard / host_share_pro / iap_velocity_limit / min_withdrawal_try / cashout_enabled seed data) + `user_wallet_earnings (user_id PK, pending INTEGER, available INTEGER)` + `wallet_ledger (BIGSERIAL, delta_teqlik, teqlik_after, try_equivalent, tx_type…)` + `gift_events` ALTER (earned_teqlik INTEGER, host_share_pct NUMERIC(5,2), payout_status, released_at) + `teqlik_transactions` ALTER (store_platform, store_transaction_id, raw_payload, product_type, **partial composite unique**) + `withdrawal_requests (teqlik_amount, try_amount, currency, fiat_amount, try_rate_used, tcmb_rate_used…)` + `idx_users_pro_expires` + `idx_gift_events_payout` + `idx_wallet_ledger_user_time` | Backend | Evet | ✅ `302e4480` |
+| W2 | `idx_gift_events_payout` (W1 migration'ına dahil edildi) | Backend | Evet | ✅ `302e4480` |
 | W3 | `use_cases/wallet/commands/` + `services/store/` dizin yapısı | Backend | Evet | ⏳ Bekliyor |
 | W4 | **Store Abstraction katmanı** (`services/store/`): `StoreVerifier` ABC + `AppleVerifier` (JWS x5c doğrulama, leeway=60, env/bundleId hardcoded, velocity limit Redis ₺5.000/gün Fail-Closed) + `StoreVerifierFactory`; `verify_purchase_command.py`: `{platform, payload, product_id}` → factory → `PurchaseResult` → productId dispatch: `teqlik_pack_*` → consumable (teqlik_balance +=, store_transaction_id UNIQUE 409), `teqlif_pro_*` → subscription (user_type='pro', pro_expires_at, plan_type, store_subscription_id); `raw_payload` arşivi; router: `POST /api/wallet/purchase/verify` | Backend | Evet | ⏳ Bekliyor |
 | W4c | **Store Notification katmanı**: `StoreNotificationHandler` ABC + `AppleNotificationHandler` (DID_RENEW → pro_expires_at uzat; BILLING_RETRY → pro_grace_until; EXPIRED/GRACE_PERIOD_EXPIRED → standard; REVOKE → standard+refund); `handle_store_notification_command.py`: 200 OK hemen → ARQ kuyruğa → worker'da handler dispatch; router: `POST /api/wallet/store-notifications/{platform}` | Backend | Evet | ⏳ Bekliyor |
