@@ -6662,5 +6662,10 @@
   "proMonthlyFull": "PRO شهري",
   "proQuarterlyFull": "PRO 3 أشهر",
   "proBiannualFull": "PRO 6 أشهر",
-  "proAnnualFull": "PRO سنوي"
+  "proAnnualFull": "PRO سنوي",
+  "iapProductsNotLoaded": "جارٍ تحميل معلومات المنتج، يرجى الانتظار.",
+  "iapPurchasePending": "الشراء في انتظار الموافقة…",
+  "walletProManageGooglePlay": "إدارة في Google Play",
+  "walletProManageWeb": "إدارة الاشتراك",
+  "walletNegativeBalanceNote": "رصيد سالب بسبب الاسترداد"
 }

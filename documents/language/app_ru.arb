@@ -6662,5 +6662,10 @@
   "proMonthlyFull": "Ежемесячный PRO",
   "proQuarterlyFull": "3-месячный PRO",
   "proBiannualFull": "6-месячный PRO",
-  "proAnnualFull": "Годовой PRO"
+  "proAnnualFull": "Годовой PRO",
+  "iapProductsNotLoaded": "Загрузка информации о продукте, пожалуйста, подождите.",
+  "iapPurchasePending": "Покупка ожидает подтверждения…",
+  "walletProManageGooglePlay": "Управление в Google Play",
+  "walletProManageWeb": "Управление подпиской",
+  "walletNegativeBalanceNote": "Отрицательный баланс из-за возврата"
 }

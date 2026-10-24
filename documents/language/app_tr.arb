@@ -6662,5 +6662,10 @@
   "proMonthlyFull": "Aylık PRO",
   "proQuarterlyFull": "3 Aylık PRO",
   "proBiannualFull": "6 Aylık PRO",
-  "proAnnualFull": "Yıllık PRO"
+  "proAnnualFull": "Yıllık PRO",
+  "iapProductsNotLoaded": "Ürün bilgileri yükleniyor, lütfen bekleyin.",
+  "iapPurchasePending": "Satın alma onay bekliyor…",
+  "walletProManageGooglePlay": "Google Play'de Yönet",
+  "walletProManageWeb": "Aboneliği Yönet",
+  "walletNegativeBalanceNote": "İade sebebiyle negatif bakiye"
 }

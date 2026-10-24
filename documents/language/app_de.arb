@@ -6734,5 +6734,10 @@
   "proMonthlyFull": "Monatliches PRO",
   "proQuarterlyFull": "3-Monats PRO",
   "proBiannualFull": "6-Monats PRO",
-  "proAnnualFull": "Jährliches PRO"
+  "proAnnualFull": "Jährliches PRO",
+  "iapProductsNotLoaded": "Produktinformationen werden geladen, bitte warten.",
+  "iapPurchasePending": "Kauf wartet auf Genehmigung…",
+  "walletProManageGooglePlay": "In Google Play verwalten",
+  "walletProManageWeb": "Abonnement verwalten",
+  "walletNegativeBalanceNote": "Negatives Guthaben durch Rückerstattung"
 }

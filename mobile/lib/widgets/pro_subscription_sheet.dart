@@ -69,6 +69,13 @@ class _ProSubscriptionSheetState extends State<ProSubscriptionSheet> {
 
   void _onPurchase(PurchaseDetails purchase) {
     if (!mounted) return;
+    if (purchase.status == PurchaseStatus.pending) {
+      // Ask to Buy / 3D provizyon — yükleniyor devam eder, snackbar göster
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(widget.loc.t('iapPurchasePending'))),
+      );
+      return;
+    }
     setState(() => _loading = false);
     if (purchase.status == PurchaseStatus.purchased ||
         purchase.status == PurchaseStatus.restored) {
@@ -78,6 +85,12 @@ class _ProSubscriptionSheetState extends State<ProSubscriptionSheet> {
   }
 
   Future<void> _subscribe() async {
+    if (_iap.products.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(widget.loc.t('iapProductsNotLoaded'))),
+      );
+      return;
+    }
     final product = _iap.products.firstWhere(
       (p) => p.id == _selectedPlanId,
       orElse: () => throw StateError('Ürün bulunamadı'),

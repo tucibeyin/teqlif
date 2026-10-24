@@ -4,19 +4,19 @@ import math
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import BadRequestException, ForbiddenException
+from app.core.exceptions import BadRequestException
 from app.core.logger import get_logger
 
 logger = get_logger(__name__)
 
-_REDIS_KEY_CASHOUT = "teqlif:config:cashout_enabled"
 _BONUS_PCT = 0.10   # +%10 bonus (Seçenek C)
 
 
 class ConvertToTeqlikCommand:
     """POST /api/wallet/convert-to-teqlik — Seçenek C, +%10 bonus.
 
-    available → teqlik_balance dönüşümü tek yönlüdür; nakde geri çevrilemez.
+    Kapalı döngü dönüşüm: available → teqlik_balance; nakde geri çevrilemez.
+    cashout_enabled flag'inden bağımsız — yayıncının kazancıdır, çekim değil.
     wallet_ledger 3 satır:
       1. user: -teqlik_amount (convert_to_teqlik, available çıkışı)
       2. user: +total_teqlik  (convert_to_teqlik, balance girişi)
@@ -30,11 +30,6 @@ class ConvertToTeqlikCommand:
     async def execute(self, user_id: int, teqlik_amount: int) -> dict:
         if teqlik_amount <= 0:
             raise BadRequestException(code="CONVERT_AMOUNT_POSITIVE")
-
-        # cashout_enabled kontrolü — V1.1'e kadar 403
-        cashout_enabled = await self._get_cashout_flag()
-        if not cashout_enabled:
-            raise ForbiddenException(code="CASHOUT_NOT_ENABLED")
 
         bonus_teqlik = math.floor(teqlik_amount * _BONUS_PCT)
         total_teqlik = teqlik_amount + bonus_teqlik
@@ -105,18 +100,3 @@ class ConvertToTeqlikCommand:
             "new_teqlik_balance": new_balance,
         }
 
-    async def _get_cashout_flag(self) -> bool:
-        try:
-            from app.utils.redis_client import get_redis
-            redis = await get_redis()
-            val = await redis.get(_REDIS_KEY_CASHOUT)
-            if val is not None:
-                return str(val) == "1"
-        except Exception:
-            pass
-        # DB fallback
-        row = await self._session.execute(
-            text("SELECT value FROM platform_config WHERE key = 'cashout_enabled' LIMIT 1")
-        )
-        r = row.fetchone()
-        return bool(r[0].get("enabled", False)) if r else False

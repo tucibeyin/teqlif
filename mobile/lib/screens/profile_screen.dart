@@ -7,6 +7,7 @@ import '../core/event_bus.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -73,7 +74,6 @@ import '../widgets/consent_settings_modal.dart';
 import '../services/media_compressor.dart';
 import '../widgets/pro_subscription_sheet.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
-import 'package:flutter/rendering.dart' show FontFeature;
 import '../services/iap_service.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -3938,6 +3938,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
   final _iap = IAPService();
   StreamSubscription<PurchaseDetails>? _iapSub;
   bool _iapLoading = false;
+  bool _isConverting = false;
 
   Map<String, String> _typeLabels(TranslationPack loc) => {
     'airdrop': loc.t('walletTxnAirdrop'),
@@ -3998,8 +3999,8 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
       WalletService.getSummary(),
     ]);
     if (!mounted) return;
-    final balanceData = results[0] as Map<String, dynamic>?;
-    final summaryData = results[1] as Map<String, dynamic>?;
+    final balanceData = results[0];
+    final summaryData = results[1];
     setState(() {
       _loading = false;
       if (balanceData != null) {
@@ -4066,7 +4067,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
   }
 
   Future<void> _convertToTeqlik() async {
-    if (_availableTeqlik <= 0) return;
+    if (_availableTeqlik <= 0 || _isConverting) return;
     final loc = ref.read(localizationProvider);
     // Yasal uyarı modalı (W7b zorunluluğu)
     final confirmed = await showDialog<bool>(
@@ -4087,19 +4088,32 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
       ),
     );
     if (confirmed != true || !mounted) return;
-    final result = await WalletService.convertToTeqlik(_availableTeqlik);
-    if (!mounted) return;
-    if (result['ok'] == true) {
-      await _load();
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result['error'] as String? ?? loc.t('errorGeneric'))),
-      );
+    setState(() => _isConverting = true);
+    try {
+      final result = await WalletService.convertToTeqlik(_availableTeqlik);
+      if (!mounted) return;
+      if (result['ok'] == true) {
+        await _load();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(result['error'] as String? ?? loc.t('errorGeneric'))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isConverting = false);
     }
   }
 
   void _onIapPurchase(PurchaseDetails purchase) {
     if (!mounted) return;
+    final loc = ref.read(localizationProvider);
+    if (purchase.status == PurchaseStatus.pending) {
+      // Ask to Buy / 3D provizyon bekleniyor — yükleniyor göstergesi kalsın
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(loc.t('iapPurchasePending'))),
+      );
+      return;
+    }
     setState(() => _iapLoading = false);
     if (purchase.status == PurchaseStatus.purchased ||
         purchase.status == PurchaseStatus.restored) {
@@ -4742,6 +4756,7 @@ class _WalletHeroCard extends StatelessWidget {
   }
 
   String _fmt(int n) {
+    if (n < 0) return '-${_fmt(-n)}';
     final s = n.toString();
     if (s.length <= 3) return s;
     final buf = StringBuffer();
@@ -5673,6 +5688,24 @@ class _ProTab extends ConsumerWidget {
     return isPro ? _buildActive(context, ref) : _buildPurchase();
   }
 
+  Uri _subscriptionManageUri() {
+    if (kIsWeb) return Uri.parse('https://teqlif.com/hesabim/abonelik');
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      return Uri.parse(
+        'https://play.google.com/store/account/subscriptions?package=com.teqlif.app',
+      );
+    }
+    return Uri.parse('itms-apps://apps.apple.com/account/subscriptions');
+  }
+
+  String _subscriptionManageLabel(TranslationPack loc) {
+    if (kIsWeb) return loc.t('walletProManageWeb');
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      return loc.t('walletProManageGooglePlay');
+    }
+    return loc.t('walletProManageAppStore');
+  }
+
   Widget _buildActive(BuildContext context, WidgetRef ref) {
     final hub = ref.watch(proHubProvider(true));
 
@@ -5742,7 +5775,7 @@ class _ProTab extends ConsumerWidget {
               const SizedBox(height: 14),
               GestureDetector(
                 onTap: () async {
-                  final uri = Uri.parse('itms-apps://apps.apple.com/account/subscriptions');
+                  final uri = _subscriptionManageUri();
                   if (await canLaunchUrl(uri)) {
                     launchUrl(uri, mode: LaunchMode.externalApplication);
                   }
@@ -5754,7 +5787,7 @@ class _ProTab extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
-                    loc.t('walletProManageAppStore'),
+                    _subscriptionManageLabel(loc),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 12,
@@ -6446,53 +6479,59 @@ class _EarningsCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 10),
-          ] else if (!cashoutEnabled) ...[
-            // cashout_enabled=false → "Yayın Başlat" CTA
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: onStartStream,
-                icon: const Icon(Icons.play_circle_outline, size: 18),
-                label: Text(loc.t('walletStartStreamCta')),
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF10B981),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-            ),
           ] else ...[
-            // cashout_enabled=true → İki CTA
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: availableTeqlik > 0 ? onConvert : null,
-                icon: const Icon(Icons.bolt, size: 18),
-                label: Text(loc.t('walletConvertToTeqlik')),
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFFD97706),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            // Convert: cashout_enabled bağımsız — kapalı döngü dönüşüm
+            if (availableTeqlik > 0) ...[
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: onConvert,
+                  icon: const Icon(Icons.bolt, size: 18),
+                  label: Text(loc.t('walletConvertToTeqlik')),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFD97706),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: onIban,
-                icon: const Icon(Icons.account_balance_outlined, size: 18),
-                label: Text(loc.t('walletIbanPreRegistrationTitle')),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.white70,
-                  side: const BorderSide(color: Colors.white24),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              const SizedBox(height: 8),
+            ],
+            // Nakit Çekim: yalnızca cashout_enabled=true
+            if (cashoutEnabled) ...[
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: onIban,
+                  icon: const Icon(Icons.account_balance_outlined, size: 18),
+                  label: Text(loc.t('walletIbanPreRegistrationTitle')),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white70,
+                    side: const BorderSide(color: Colors.white24),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
                 ),
               ),
-            ),
+            ],
+            // Henüz kazanç yok → Yayın Başlat CTA
+            if (!hasEarnings) ...[
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: onStartStream,
+                  icon: const Icon(Icons.play_circle_outline, size: 18),
+                  label: Text(loc.t('walletStartStreamCta')),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF10B981),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+            ],
           ],
         ],
       ),
