@@ -26,4 +26,18 @@
         <size>1000M</size>
         <count>7</count>
     </logger>
+
+    <!-- Backup diski — BACKUP DATABASE ... TO Disk('backups', ...) için zorunlu -->
+    <storage_configuration>
+        <disks>
+            <backups>
+                <type>local</type>
+                <path>/project/teqlif/backups/clickhouse/</path>
+            </backups>
+        </disks>
+    </storage_configuration>
+    <backups>
+        <allowed_disk>backups</allowed_disk>
+        <allowed_path>/project/teqlif/backups/clickhouse/</allowed_path>
+    </backups>
 </clickhouse>
