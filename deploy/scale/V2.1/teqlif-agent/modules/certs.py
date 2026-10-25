@@ -3,7 +3,7 @@
 İzlenen:
   TLS sertifika geçerlilik tarihleri (30/7 gün uyarısı)
   Kritik portların dinleme durumu
-  i18n pack tazeliği (Redis pack:tr/en/ar/ru)
+  i18n pack tazeliği (Redis i18n:{lang} — TTL 25 saat)
   MinIO bucket erişimi
   PostgreSQL replikasyon lag'i
   Redis bellek kullanımı
@@ -124,13 +124,12 @@ class CertWatcher:
             import redis.asyncio as aioredis
             r = await aioredis.from_url(self._cfg.redis_url, decode_responses=True)
             for lang in _I18N_LANGS:
-                pack    = await r.get(f"pack:{lang}")
-                version = await r.get(f"version:{lang}")
-                key     = f"i18n:{lang}"
-                if not pack or not version:
+                pack = await r.get(f"i18n:{lang}")
+                key  = f"i18n:{lang}"
+                if not pack:
                     await self._alert(
                         key,
-                        f"⚠️ <b>i18n</b> — pack:{lang} Redis'te eksik\n"
+                        f"⚠️ <b>i18n</b> — i18n:{lang} Redis'te eksik\n"
                         f"<code>sync_main.py</code> çalıştırılmalı"
                     )
                 else:

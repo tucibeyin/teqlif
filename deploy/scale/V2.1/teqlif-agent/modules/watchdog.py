@@ -96,10 +96,11 @@ class JobWatchdog:
             return
 
         for job_name, ts in data.items():
-            expected = registry.get(job_name, 60)
+            expected = registry.get(job_name)
+            if expected is None:
+                logger.debug("Registry'de tanımsız job atlandı: %s", job_name)
+                continue
             await self._db.mark_ok(job_name, last_ok_at=ts, expected_every_m=expected)
-            if job_name not in registry:
-                logger.debug("Yeni job tespit edildi: %s", job_name)
 
     async def _alert(self, row: dict, registry: dict[str, int]) -> None:
         job   = row["job_name"]

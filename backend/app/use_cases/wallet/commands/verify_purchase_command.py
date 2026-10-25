@@ -35,10 +35,10 @@ _IAP_VELOCITY_TTL_SEC   = 86400  # 24 saat
 # Mobil try_amount <= 0 gelirse fallback fiyat tablosu kullanılır
 # — direkt API çağrılarında client manipülasyonu önlenir
 _PRODUCT_TRY_PRICES: dict[str, float] = {
-    "teqlik_pack_100":   49.99,
-    "teqlik_pack_250":  119.99,
-    "teqlik_pack_500":  229.99,
-    "teqlik_pack_1000": 429.99,
+    "teqlik_pack_100":   149.99,
+    "teqlik_pack_250":   349.99,
+    "teqlik_pack_500":   599.99,
+    "teqlik_pack_1000":  999.99,
 }
 
 
