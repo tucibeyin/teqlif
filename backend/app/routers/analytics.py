@@ -755,8 +755,8 @@ async def pro_insights(
 
     if redis and cache_key:
         try:
-            import json as _json
-            await redis.setex(cache_key, 90000, _json.dumps(response_data))
+            import orjson as _orjson
+            await redis.setex(cache_key, 90000, _orjson.dumps(response_data).decode())
         except Exception as e:
             logger.warning("[ProInsights] Redis cache set hatası: %s", e)
 

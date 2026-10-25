@@ -339,18 +339,20 @@ async def get_hesitated_listings(
         signal = signal_map.get(lid, "detail_dwell")
         stored_bid_pp = bid_price_map.get(lid)
         stored_dwell_pp = dwell_price_map.get(lid)
+        stored_bid_pp_f = float(stored_bid_pp) if stored_bid_pp is not None else None
+        stored_dwell_pp_f = float(stored_dwell_pp) if stored_dwell_pp is not None else None
 
         # dwell fiyatı = ilanın o andaki liste fiyatı → mevcut fiyat düşmüş mü?
         price_dropped = bool(
             current_price is not None
-            and stored_dwell_pp is not None
-            and current_price < stored_dwell_pp * 0.99
+            and stored_dwell_pp_f is not None
+            and current_price < stored_dwell_pp_f * 0.99
         )
         # bid fiyatı = kullanıcının yazdığı teklif tutarı → fiyat teklife yaklaştı mı?
         price_near_offer = bool(
             current_price is not None
-            and stored_bid_pp is not None
-            and current_price <= stored_bid_pp * 1.05
+            and stored_bid_pp_f is not None
+            and current_price <= stored_bid_pp_f * 1.05
         )
 
         listings.append({
