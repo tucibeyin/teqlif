@@ -19,6 +19,8 @@ from app.database import AsyncSessionLocal
 
 logger = get_logger(__name__)
 
+_PENDING_HOLD_DAYS = 14
+
 
 async def release_pending_earnings_task(ctx: dict) -> None:
     """T+14 dolmuş gift_events kazançlarını available'a taşı.
