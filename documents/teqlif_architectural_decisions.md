@@ -34,6 +34,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 30. [teqlif-agent İzleme Düzeltmeleri — Redis/Backup/Cleaner/PG Replikasyon](#30-teqlif-agent-i̇zleme-düzeltmeleri--redisbackupcleaner-pg-replikasyon-commit-daa72d2b-dd206266-28836f45-9c6ecf18-ef2dcadc)
 31. [MinIO ILM Acil Freni + Off-site Sync Altyapısı](#31-minio-ilm-acil-freni--off-site-sync-altyapısı)
 40. [Merkezi CreditGate Sistemi — Tek Execution Noktası](#40-merkezi-creditgate-sistemi--tek-execution-noktası-commit-b0071cea)
+42. [teqlif-agent İzleme Düzeltmeleri — i18n Key Format + Watchdog Registry Guard](#42-teqlif-agent-i̇zleme-düzeltmeleri--i18n-key-format--watchdog-registry-guard-commit-7e15262a)
 
 ---
 
@@ -2891,3 +2892,46 @@ Tüm CreditGate feature'ları (boost, blast, aiDesc, reactivation) açılışta 
 |-------|-----------|
 | `mobile/lib/services/analytics_service.dart:646` | `/users/me` → `/auth/me` |
 | `backend/app/schemas/user.py` | `UserOut`'a `wallet_balance` eklendi |
+
+---
+
+## 42. teqlif-agent İzleme Düzeltmeleri — i18n Key Format + Watchdog Registry Guard (commit `7e15262a`)
+
+### Problem
+
+İki ayrı sahte alarm kaynağı:
+
+**1. i18n "pack eksik" uyarıları:** `certs.py._check_i18n()` eski `pack:{lang}` ve `version:{lang}` key'lerini arıyordu. Backend (`i18n.py`) çok önce `i18n:{lang}` (TTL 25 saat) formatına geçmişti. `pack:*` hiçbir zaman yazılmadığından her kontrol döngüsünde uyarı tetikleniyordu.
+
+**2. "Job yanıt vermiyor" uyarıları:** Wallet cron job'ları schedule.yaml'a 24 Ekim commit'iyle eklendi (`2504e505`) ama agent'lar `sudo teqlif-restart` olmadan güncellenmedi. Eski schedule.yaml bu job'ları içermediğinden `_load_batch_registry()` onları döndürmüyor; `_sync_from_redis()` her job için `registry.get(job_name, 60)` → default `expected_every_m=60` DB'ye yazıldı. 90 dakika sonra stale eşiği aşıldı. Redis restart (~03:40 UTC 25 Ekim) sırasında node2 geçici lider oldu → "her 60 dk" uyarısı gönderildi.
+
+Yapısal sorun: registry'de olmayan job'lar yine de `expected_every_m=60` ile DB'ye kaydediliyordu.
+
+### Karar
+
+**certs.py:** `pack:{lang}` → `i18n:{lang}`, `version:{lang}` kontrolü kaldırıldı.
+
+**watchdog.py:** `_sync_from_redis()` artık registry'de olmayan job'ları atlar — `expected_every_m` yalnızca schedule.yaml'da tanımlı job'lar için yazılır.
+
+```python
+# ÖNCE — her job için default 60 yazılıyor
+expected = registry.get(job_name, 60)
+await self._db.mark_ok(job_name, last_ok_at=ts, expected_every_m=expected)
+
+# SONRA — registry dışı job'lar atlanıyor
+expected = registry.get(job_name)
+if expected is None:
+    logger.debug("Registry'de tanımsız job atlandı: %s", job_name)
+    continue
+await self._db.mark_ok(job_name, last_ok_at=ts, expected_every_m=expected)
+```
+
+**verify_purchase_command.py:** IAP velocity limit fallback fiyat tablosu (`_PRODUCT_TRY_PRICES`) gerçek App Store fiyatlarıyla eşlendi (₺149.99/349.99/599.99/999.99). Önceki değerler ~3× düşüktü; `try_amount=0` gelen direkt API çağrılarında velocity limit etkin olmayabiliyordu.
+
+### Etkilenen Dosyalar
+
+| Dosya | Değişiklik |
+|-------|-----------|
+| `deploy/scale/V2.1/teqlif-agent/modules/certs.py` | `pack:{lang}` → `i18n:{lang}`, `version:{lang}` kaldırıldı |
+| `deploy/scale/V2.1/teqlif-agent/modules/watchdog.py` | Registry dışı job'lar DB'ye yazılmıyor |
+| `backend/app/use_cases/wallet/commands/verify_purchase_command.py` | Fallback fiyatlar güncellendi |
