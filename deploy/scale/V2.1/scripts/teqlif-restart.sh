@@ -82,6 +82,15 @@ agent_sync() {
     fi
   fi
 
+  # schedule.yaml her zaman sync et — code değişikliğinden bağımsız
+  local sched_src="$REPO/deploy/scale/V2.1/schedule.yaml"
+  if ! diff -q "$sched_src" "$agent_dst/schedule.yaml" >/dev/null 2>&1; then
+    cp "$sched_src" "$agent_dst/schedule.yaml"
+    chown teqlif-agent:teqlif-agent "$agent_dst/schedule.yaml"
+    changed=true
+    log "schedule.yaml güncellendi → /opt/teqlif-agent/schedule.yaml"
+  fi
+
   if $changed; then
     log "teqlif-agent kodu güncellendi — /opt/teqlif-agent sync ediliyor..."
     rsync -a --exclude '__pycache__' --exclude '*.pyc' \
