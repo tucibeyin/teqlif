@@ -28,16 +28,17 @@
     </logger>
 
     <!-- Backup diski — BACKUP DATABASE ... TO Disk('backups', ...) için zorunlu -->
+    <!-- /var/lib/clickhouse/backups/ clickhouse kullanıcısına ait; /project/... tucibeyin'e ait -->
     <storage_configuration>
         <disks>
             <backups>
                 <type>local</type>
-                <path>/project/teqlif/backups/clickhouse/</path>
+                <path>/var/lib/clickhouse/backups/</path>
             </backups>
         </disks>
     </storage_configuration>
     <backups>
         <allowed_disk>backups</allowed_disk>
-        <allowed_path>/project/teqlif/backups/clickhouse/</allowed_path>
+        <allowed_path>/var/lib/clickhouse/backups/</allowed_path>
     </backups>
 </clickhouse>

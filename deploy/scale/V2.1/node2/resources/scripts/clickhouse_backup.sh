@@ -10,7 +10,8 @@ CH_PASS="${CLICKHOUSE_PASSWORD:-}"
 CH_PASS_ARG=()
 [[ -n "${CH_PASS}" ]] && CH_PASS_ARG=(--password "${CH_PASS}")
 
-BACKUP_DIR=/project/teqlif/backups/clickhouse
+BACKUP_DIR=/project/teqlif/backups/clickhouse   # native fallback çıktısı (tucibeyin sahipli)
+CH_DISK_DIR=/var/lib/clickhouse/backups         # SQL BACKUP çıktısı (clickhouse sahipli)
 RETENTION_DAYS=7
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 DEST="${BACKUP_DIR}/${CH_DB}_${TIMESTAMP}"
@@ -46,9 +47,9 @@ else
     fi
 fi
 
-find "${BACKUP_DIR}" -name '*.tar.gz' -mtime +${RETENTION_DAYS} -delete
-find "${BACKUP_DIR}" -name '*.zip'    -mtime +${RETENTION_DAYS} -delete
-find "${BACKUP_DIR}" -mindepth 1 -maxdepth 1 -type d -mtime +${RETENTION_DAYS} -exec rm -rf {} +
+find "${BACKUP_DIR}"  -name '*.tar.gz' -mtime +${RETENTION_DAYS} -delete
+find "${BACKUP_DIR}"  -mindepth 1 -maxdepth 1 -type d -mtime +${RETENTION_DAYS} -exec rm -rf {} +
+find "${CH_DISK_DIR}" -name '*.zip'   -mtime +${RETENTION_DAYS} -delete 2>/dev/null || true
 
 TIMESTAMP_NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 redis-cli -h 10.10.0.1 -p 6379 -a "${CORE_REDIS_PASS}" --no-auth-warning \
