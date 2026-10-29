@@ -6,7 +6,7 @@ from datetime import datetime
 
 @dataclass
 class PurchaseResult:
-    transaction_id: str        # Apple: originalTransactionId
+    transaction_id: str        # consumable: tekil transactionId; subscription: originalTransactionId
     product_id: str            # teqlik_pack_100 | teqlif_pro_1m | ...
     environment: str           # "sandbox" | "production"
     purchased_at: datetime

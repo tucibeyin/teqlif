@@ -55,7 +55,9 @@ async def _check_velocity(redis, device_id: str, try_amount: float) -> None:
         raise BadRequestException(code="IAP_VELOCITY_LIMIT_EXCEEDED")
     pipe = redis.pipeline()
     pipe.incrbyfloat(key, try_amount)
-    pipe.expire(key, _IAP_VELOCITY_TTL_SEC)
+    if current is None:
+        # Fixed window: TTL yalnızca pencere açılırken set edilir; her alımda uzatılmaz
+        pipe.expire(key, _IAP_VELOCITY_TTL_SEC)
     await pipe.execute()
 
 
