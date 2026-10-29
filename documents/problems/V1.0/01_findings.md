@@ -194,7 +194,7 @@
 
 ### SRE-01 · 🔴 P0 (Kritik) · Canlı Yayın Birleştirmede Sonsuz Döngü ("Zehirli Hap" / Poison Pill)
 
-> ✅ **Çözüldü** — Commit `6534b23c` · 2026-10-29
+> ✅ **Çözüldü** — Commit `80352d6b` · 2026-10-29
 
 * **Etkilenen Dosya:** `backend/app/tasks/stream_concat_task.py`
 * **İlgili Satırlar:** 122–132, 23–33
@@ -223,7 +223,7 @@ Bu durum **sonsuz bir döngü** yaratır; sunucunun bant genişliği, CPU'su ve 
 
 ### SRE-02 · 🔴 P0 (Kritik) · FAISS Vektör İndeksinde Yarış Durumu (Race Condition) ve Canlıda Çökme
 
-> ✅ **Çözüldü** — Commit `6fd31711` · 2026-10-29
+> ✅ **Çözüldü** — Commit `80352d6b` · 2026-10-29
 
 * **Etkilenen Dosya:** `backend/app/services/ml/faiss_service.py`
 * **İlgili Satırlar:** 37–67, 152–165
@@ -251,7 +251,7 @@ Bu durum **sonsuz bir döngü** yaratır; sunucunun bant genişliği, CPU'su ve 
 
 ### SRE-03 · 🟠 P1 (Yüksek) · ARQ Worker Görev Zaman Aşımı (300sn) vs Uzun Video İşleme Süresi Çelişkisi
 
-> ✅ **Çözüldü** — Commit `e6ab1272` · 2026-10-29
+> ✅ **Çözüldü** — Commit `80352d6b` · 2026-10-29
 
 * **Etkilenen Dosyalar:** `backend/app/worker.py` (satır 4364–4367) ve `backend/app/tasks/stream_concat_task.py` (satır 12–14)
 
@@ -277,7 +277,7 @@ _LOCK_TTL_SEC = 3600  # 1 saat
 
 ### SRE-04 · 🟠 P1 (Yüksek) · Sınırsız Veri Çekimi (Unbounded Query) ve Bellek Tüketimi (OOM Riski)
 
-> ✅ **Çözüldü** — Commit `fb79bdaa` · 2026-10-29
+> ✅ **Çözüldü** — Commit `80352d6b` · 2026-10-29
 
 * **Etkilenen Dosyalar:**
   * `backend/app/services/ml/bpr_service.py` (satır 134–147)
