@@ -194,6 +194,8 @@
 
 ### SRE-01 · 🔴 P0 (Kritik) · Canlı Yayın Birleştirmede Sonsuz Döngü ("Zehirli Hap" / Poison Pill)
 
+> ✅ **Çözüldü** — Commit `6534b23c` · 2026-10-29
+
 * **Etkilenen Dosya:** `backend/app/tasks/stream_concat_task.py`
 * **İlgili Satırlar:** 122–132, 23–33
 * **Zamanlama:** `worker.py` satır 4346: `cron(stream_concat_task, minute=set(range(0, 60, 2)))` (Her 2 dakikada bir)
@@ -220,6 +222,8 @@ Bu durum **sonsuz bir döngü** yaratır; sunucunun bant genişliği, CPU'su ve 
 ---
 
 ### SRE-02 · 🔴 P0 (Kritik) · FAISS Vektör İndeksinde Yarış Durumu (Race Condition) ve Canlıda Çökme
+
+> ✅ **Çözüldü** — Commit `6fd31711` · 2026-10-29
 
 * **Etkilenen Dosya:** `backend/app/services/ml/faiss_service.py`
 * **İlgili Satırlar:** 37–67, 152–165
