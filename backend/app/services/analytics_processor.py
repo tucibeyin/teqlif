@@ -7,18 +7,25 @@ calculate_user_budgets():
   ve PostgreSQL'deki User.max_budget kolonunu toplu günceller.
 
 Çalıştırma zamanı: ARQ cron, her gece 02:00'da.
+
+Mimari not: tek uzun transaction yerine 500'lük bağımsız chunk'lar.
+  - Her chunk: tek SET-BASED UPDATE (500 round-trip → 1 round-trip)
+  - Her chunk kendi transaction'ını commit eder (lock süresi <1ms)
+  - Bir chunk hata alırsa geri kalanlar çalışmaya devam eder
 """
 
 import logging
-from datetime import datetime, timezone
+import math
 
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import AsyncSessionLocal
 from app.database_clickhouse import get_clickhouse_client
 
 logger = logging.getLogger(__name__)
+
+_CHUNK_SIZE = 500
+
 
 async def calculate_user_budgets() -> int:
     """
@@ -75,28 +82,47 @@ async def calculate_user_budgets() -> int:
 
     logger.info("[BudgetCalc] %d kullanıcı için p90 bütçe hesaplandı.", len(rows))
 
-    # Bulk update PostgreSQL
     updated = 0
-    async with AsyncSessionLocal() as db:
-        for user_id_raw, p90 in rows:
-            try:
-                uid = int(user_id_raw)
-                budget = float(p90)
-                await db.execute(
-                    text(
-                        "UPDATE users SET max_budget = :budget WHERE id = :uid"
-                    ),
-                    {"budget": budget, "uid": uid},
-                )
-                updated += 1
-            except Exception as row_exc:
-                logger.warning(
-                    "[BudgetCalc] user_id=%s güncellenemedi: %s", user_id_raw, row_exc
-                )
+    total_chunks = math.ceil(len(rows) / _CHUNK_SIZE)
 
-        await db.commit()
+    for chunk_idx in range(total_chunks):
+        chunk = rows[chunk_idx * _CHUNK_SIZE : (chunk_idx + 1) * _CHUNK_SIZE]
+
+        # Geçersiz değerleri filtrele (ClickHouse NaN/Inf edge case)
+        valid: list[tuple[int, float]] = []
+        for uid_raw, p90_raw in chunk:
+            try:
+                uid = int(uid_raw)
+                budget = float(p90_raw)
+                if math.isfinite(budget) and budget > 0:
+                    valid.append((uid, budget))
+            except (ValueError, TypeError) as e:
+                logger.warning("[BudgetCalc] Geçersiz satır atlandı | uid=%s p90=%s | %s", uid_raw, p90_raw, e)
+
+        if not valid:
+            continue
+
+        # SET-BASED UPDATE: 500 satır → tek round-trip, tek kısa transaction
+        # int() ve float() cast SQL injection'ı engeller
+        values_str = ", ".join(f"({uid}, {budget:.2f})" for uid, budget in valid)
+        try:
+            async with AsyncSessionLocal() as db:
+                await db.execute(text(f"""
+                    UPDATE users AS u
+                    SET max_budget = v.budget
+                    FROM (VALUES {values_str}) AS v(id, budget)
+                    WHERE u.id = v.id
+                """))
+                await db.commit()
+            updated += len(valid)
+        except Exception as chunk_exc:
+            logger.error(
+                "[BudgetCalc] Chunk %d/%d güncellenemedi (offset=%d): %s",
+                chunk_idx + 1, total_chunks, chunk_idx * _CHUNK_SIZE, chunk_exc,
+            )
 
     logger.info(
-        "[BudgetCalc] Tamamlandı. PostgreSQL'de %d kullanıcı güncellendi.", updated
+        "[BudgetCalc] Tamamlandı. PostgreSQL'de %d/%d kullanıcı güncellendi.",
+        updated, len(rows),
     )
     return updated
