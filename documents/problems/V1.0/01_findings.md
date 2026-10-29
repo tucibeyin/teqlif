@@ -4535,6 +4535,14 @@ async def get_listing_offers(
        await asyncio.gather(*tasks, return_exceptions=True)
    ```
 
+#### ✅ Çözüm Damgası
+* **Commit:** `43296288`
+* **Tarih:** 2026-10-29
+* **Uygulanan Değişiklikler:**
+  - `_get_client_from_public_url` kaldırıldı — CDN domain'i node_id ile eşleştiremediği için temelden bozuktu; tüm delete sessizce başarısız oluyordu
+  - `_get_all_storage_clients()` eklendi — orchestrator metrics → `edge_minio_urls` → `minio_endpoint` öncelikli fallback zinciri
+  - `delete_object` ve `delete_object_dm` fanout'a çevrildi — tüm storage node'larında `asyncio.gather` ile paralel silme, `NoSuchKey` görmezden geliniyor
+
 ---
 
 ### SRE-112 · 🔴 P0 (Kritik) · UoW Context Bloğu Dışında Kapatılmış Session ile DB Sorgusu Çalıştırma (`IllegalStateChangeError`)
