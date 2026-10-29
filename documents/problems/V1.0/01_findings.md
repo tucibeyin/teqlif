@@ -5219,6 +5219,11 @@ if [ -n "${SECRETS_FILE:-}" ]; then
 fi
 ```
 
+#### ✅ Çözüm Damgası
+* **Commit:** `6dbc6104` · 2026-10-29
+* **Değişiklik:** `bootstrap_node5.sh` — `apply_secrets` çağrısına `/etc/redis` eklendi (SRE-130); `install_postgresql_staging()` içine `postgresql-17-pgvector` eklendi (SRE-129 followup)
+* **Durum:** Tüm node'lara (node1–6 + nodeMonitor) deploy edildi.
+
 ---
 
 ### SRE-131 · 🔴 P0 (Kritik) · `capture_hype_highlight` İçinde Rastgele Node ile WHEP 404 Hatası ve MinIO Yerine Yerel Diske Kayıt
