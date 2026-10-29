@@ -209,15 +209,44 @@ async def _delayed_close_stream(room_name: str) -> None:
 
     # Fallback: ARQ pool yok
     await asyncio.sleep(60)
-    try:
-        from app.services.livekit_service import lk_list_all_rooms
-        active_rooms = await lk_list_all_rooms()
-        if room_name in active_rooms:
-            logger.info("[Webhooks] Oda hâlâ aktif, kapatma iptal | room=%s", room_name)
-            return
-    except Exception:
-        logger.warning("[Webhooks] LiveKit API kontrolü başarısız, kapatmaya devam | room=%s", room_name)
 
+    # 1. DB-first: yetkili kayıt yoksa zaten kapatılmış
+    try:
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(
+                select(LiveStream).where(
+                    LiveStream.room_name == room_name,
+                    LiveStream.is_live == True,  # noqa: E712
+                )
+            )
+            stream = result.scalar_one_or_none()
+    except Exception as exc:
+        logger.warning("[Webhooks] DB sorgusu başarısız, kapatma iptal | room=%s | %s", room_name, exc)
+        return
+
+    if stream is None:
+        logger.debug("[Webhooks] DB'de aktif kayıt yok | room=%s", room_name)
+        return
+
+    auth_url = stream.livekit_url or settings.livekit_url
+
+    # 2. Yalnızca yetkili node'a hedefli sorgu — Redis/edge:metrics bağımlılığı yok
+    try:
+        import aiohttp
+        from livekit.api.room_service import RoomService, ListRoomsRequest as _LRR
+        _timeout = aiohttp.ClientTimeout(total=5.0)
+        async with aiohttp.ClientSession(timeout=_timeout) as session:
+            svc = RoomService(session, auth_url, settings.livekit_api_key, settings.livekit_api_secret)
+            res = await svc.list_rooms(_LRR(names=[room_name]))
+            if any(r.name == room_name for r in res.rooms):
+                logger.info("[Webhooks] Oda hâlâ aktif, kapatma iptal | room=%s url=%s", room_name, auth_url)
+                return
+    except Exception as exc:
+        # Fail-safe: yetkili node'a erişilemedi → aktif yayını kapatma
+        logger.warning("[Webhooks] Yetkili node erişilemedi, fail-safe → kapatma iptal | room=%s | %s", room_name, exc)
+        return
+
+    # 3. Yetkili node'da oda yok → kapat
     async with AsyncSessionLocal() as db:
         from app.use_cases.streams.commands.force_close_stream import force_close_stream
         await force_close_stream(db, room_name)

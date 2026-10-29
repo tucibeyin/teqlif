@@ -126,7 +126,8 @@ async def _ffprobe_streams(path: str) -> dict:
     import json as _json
 
     proc = await asyncio.create_subprocess_exec(
-        "ffprobe", "-v", "quiet", "-print_format", "json", "-show_streams", path,
+        "ffprobe", "-v", "quiet", "-print_format", "json",
+        "-show_streams", "-show_format", path,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.DEVNULL,
     )
@@ -135,18 +136,27 @@ async def _ffprobe_streams(path: str) -> dict:
         "width": 0, "height": 0, "pix_fmt": "",
         "r_frame_rate": "", "time_base": "",
         "has_audio": False, "duration": 0.0,
+        "sample_rate": 0, "channels": 0,
     }
     try:
-        for s in _json.loads(out).get("streams", []):
+        data = _json.loads(out)
+        for s in data.get("streams", []):
             if s.get("codec_type") == "video":
-                info["width"]       = s.get("width", 0)
-                info["height"]      = s.get("height", 0)
-                info["pix_fmt"]     = s.get("pix_fmt", "")
+                info["width"]        = s.get("width", 0)
+                info["height"]       = s.get("height", 0)
+                info["pix_fmt"]      = s.get("pix_fmt", "")
                 info["r_frame_rate"] = s.get("r_frame_rate", "")
-                info["time_base"]   = s.get("time_base", "")
-                info["duration"]    = float(s.get("duration") or 0)
+                info["time_base"]    = s.get("time_base", "")
+                info["duration"]     = float(s.get("duration") or 0)
             elif s.get("codec_type") == "audio":
-                info["has_audio"] = True
+                info["has_audio"]   = True
+                info["sample_rate"] = int(s.get("sample_rate") or 0)
+                info["channels"]    = int(s.get("channels") or 0)
+        # format.duration: stream-level duration 0 ise container süresini kullan
+        if info["duration"] == 0.0:
+            fmt_dur = data.get("format", {}).get("duration")
+            if fmt_dur:
+                info["duration"] = float(fmt_dur)
     except Exception:
         pass
     return info
@@ -175,6 +185,8 @@ async def _ffmpeg_concat(
         and p["r_frame_rate"] == ref["r_frame_rate"]
         and p["time_base"] == ref["time_base"]
         and p["has_audio"] == ref["has_audio"]
+        and p["sample_rate"] == ref["sample_rate"]
+        and p["channels"] == ref["channels"]
         for p in probes[1:]
     )
 
@@ -226,9 +238,10 @@ async def _ffmpeg_concat(
                 f"[{i}:a]aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo[a{i}]"
             )
         else:
-            # Sessiz part: anullsrc ile uzun yeterli süre; concat filtresi video süresine kısaltır
+            # Sessiz part: video süresi kadar anullsrc üret (d=3600 → 1 saatlik donma riski)
+            dur = max(probe["duration"], 0.1)
             filter_parts.append(
-                f"anullsrc=r=48000:cl=stereo:d=3600[a{i}]"
+                f"anullsrc=r=48000:cl=stereo:d={dur:.3f}[a{i}]"
             )
 
     stream_labels = "".join(f"[v{i}][a{i}]" for i in range(n))
