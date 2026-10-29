@@ -5080,6 +5080,12 @@ for i in range(0, len(rows), CHUNK_SIZE):
         await db.commit()
 ```
 
+> **✅ Çözüldü** — Commit `894b71ca` · 2026-10-29
+> 50.000 sıralı tekil UPDATE (tek uzun transaction, 15-40dk row lock) → 500'lük chunk'larda `UPDATE users AS u SET max_budget = v.budget FROM (VALUES ...) AS v(id, budget) WHERE u.id = v.id` set-based sorgusuna dönüştürüldü.
+> Her chunk bağımsız kısa transaction; tek chunk hatası diğerlerini durdurmaz.
+> NaN/Inf/tip dönüşüm hataları chunk başında filtrelenerek Postgres'e geçersiz değer ulaşması engellendi.
+> PgBouncer connection starvation, deadlock ve WAL şişmesi riski kapatıldı.
+
 ---
 
 ### SRE-128 · 🔴 P0 (Kritik) · Doğrulanmış Hesaplarda Tavan Sınır (Hard Ceiling) Olmaması ve Müzayede Sabotajı (Troll Bid Bypass)
