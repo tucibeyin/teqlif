@@ -8,7 +8,6 @@ import asyncio
 import io
 import urllib.parse
 from datetime import timedelta
-from typing import Protocol, runtime_checkable
 
 from minio import Minio
 from minio.error import S3Error
@@ -41,29 +40,29 @@ def _get_client_for_internal_url(internal_url: str) -> Minio:
     return _clients_pool[internal_url]
 
 
-async def _get_client_from_public_url(public_url: str) -> Minio:
-    """URL'i parse edip hangi MinIO sunucusunda olduğunu bulur (Media Routing)."""
-    parsed = urllib.parse.urlparse(public_url)
-    domain = parsed.hostname  # strip port — "minio-staging.teqlif.com:9010" → "minio-staging.teqlif.com"
+async def _get_all_storage_clients() -> list[tuple[Minio, str]]:
+    """Orchestrator metrics'teki tüm aktif storage node client'larını döner (fanout delete için).
 
-    # Fallback to default internal edge if not absolute
-    if not domain:
-        if settings.edge_minio_urls:
-            return _get_client_for_internal_url(settings.edge_minio_urls[0])
-        raise ValueError("No Edge MinIO URLs configured")
-
-    metrics = await orchestrator.get_edge_metrics()
-    for m in metrics:
-        nid = m.get("node_id", "")
-        # Either exact match or live1.teqlif.com match
-        expected_nid = domain.replace("minio", "live")
-        if nid == expected_nid or nid == domain:
-            return _get_client_for_internal_url(m["minio_url"])
-    
-    # Fallback if node offline / deleted
+    Öncelik: 1) Canlı orchestrator metrics (minio_url'si olan node'lar)
+             2) settings.edge_minio_urls fallback
+             3) settings.minio_endpoint son çare
+    """
+    try:
+        metrics = await orchestrator.get_all_metrics()
+        clients = [
+            (_get_client_for_internal_url(m["minio_url"]), m.get("node_id", m["minio_url"]))
+            for m in metrics
+            if m.get("minio_url")
+        ]
+        if clients:
+            return clients
+    except Exception:
+        pass
     if settings.edge_minio_urls:
-        return _get_client_for_internal_url(settings.edge_minio_urls[0])
-    raise ValueError(f"Could not route media for domain: {domain}")
+        return [(_get_client_for_internal_url(u), u) for u in settings.edge_minio_urls]
+    if settings.minio_endpoint:
+        return [(_get_client_for_internal_url(settings.minio_endpoint), "default")]
+    return []
 
 
 def _build_public_url(node_id: str, bucket: str, key: str) -> str:
@@ -113,17 +112,24 @@ async def upload_file(key: str, path: str, content_type: str) -> str:
 
 
 async def delete_object(url_or_key: str) -> None:
-    """Public bucket'tan nesneyi siler (Media Routing)."""
-    try:
-        client = await _get_client_from_public_url(url_or_key)
-        key = url_to_key(url_or_key)
-        await asyncio.to_thread(client.remove_object, settings.minio_bucket, key)
-        logger.debug("[STORAGE] Silindi: %s", key)
-    except S3Error as e:
-        if e.code != "NoSuchKey":
-            logger.error("[STORAGE] Nesne silinemedi: key=%s | %s", url_or_key, e)
-    except Exception as exc:
-        logger.error("[STORAGE] Silme hatası: %s", exc)
+    """Public bucket'tan nesneyi tüm storage node'larında paralel siler."""
+    key = url_to_key(url_or_key)
+    storage_nodes = await _get_all_storage_clients()
+    if not storage_nodes:
+        logger.error("[STORAGE] Silme başarısız: storage node bulunamadı | key=%s", key)
+        return
+
+    async def _try_delete(client: Minio, node_label: str) -> None:
+        try:
+            await asyncio.to_thread(client.remove_object, settings.minio_bucket, key)
+            logger.debug("[STORAGE] Silindi: key=%s node=%s", key, node_label)
+        except S3Error as e:
+            if e.code != "NoSuchKey":
+                logger.warning("[STORAGE] Nesne silinemedi: key=%s node=%s | %s", key, node_label, e)
+        except Exception as exc:
+            logger.warning("[STORAGE] Silme hatası: key=%s node=%s | %s", key, node_label, exc)
+
+    await asyncio.gather(*[_try_delete(c, nid) for c, nid in storage_nodes])
 
 
 async def list_object_keys(prefix: str) -> list[str]:
@@ -224,16 +230,24 @@ async def upload_file_dm(key: str, path: str, content_type: str) -> str:
 
 
 async def delete_object_dm(url_or_key: str) -> None:
-    try:
-        client = await _get_client_from_public_url(url_or_key)
-        key = dm_url_to_key(url_or_key)
-        await asyncio.to_thread(client.remove_object, settings.minio_dm_bucket, key)
-        logger.debug("[STORAGE_DM] Silindi: %s", key)
-    except S3Error as e:
-        if e.code != "NoSuchKey":
-            logger.error("[STORAGE_DM] Nesne silinemedi: key=%s | %s", url_or_key, e)
-    except Exception as exc:
-        logger.error("[STORAGE_DM] Silme hatası: %s", exc)
+    """DM bucket'tan nesneyi tüm storage node'larında paralel siler."""
+    key = dm_url_to_key(url_or_key)
+    storage_nodes = await _get_all_storage_clients()
+    if not storage_nodes:
+        logger.error("[STORAGE_DM] Silme başarısız: storage node bulunamadı | key=%s", key)
+        return
+
+    async def _try_delete(client: Minio, node_label: str) -> None:
+        try:
+            await asyncio.to_thread(client.remove_object, settings.minio_dm_bucket, key)
+            logger.debug("[STORAGE_DM] Silindi: key=%s node=%s", key, node_label)
+        except S3Error as e:
+            if e.code != "NoSuchKey":
+                logger.warning("[STORAGE_DM] Nesne silinemedi: key=%s node=%s | %s", key, node_label, e)
+        except Exception as exc:
+            logger.warning("[STORAGE_DM] Silme hatası: key=%s node=%s | %s", key, node_label, exc)
+
+    await asyncio.gather(*[_try_delete(c, nid) for c, nid in storage_nodes])
 
 
 def _get_presign_client() -> Minio:
