@@ -59,7 +59,7 @@ main() {
     install_node_exporter
 
     if [ -n "${SECRETS_FILE:-}" ]; then
-        apply_secrets "${SECRETS_FILE}" /project/teqlif/config /etc/wireguard
+        apply_secrets "${SECRETS_FILE}" /project/teqlif/config /etc/wireguard /etc/redis
     fi
 
     print_summary "${NODE_ID}" "${WG_IP}" \
@@ -90,9 +90,12 @@ ufw_node5() {
 }
 
 install_postgresql_staging() {
-    log_step "PostgreSQL ${PG_VERSION} (staging)"
-    apt-get install -y -qq "postgresql-${PG_VERSION}" "postgresql-client-${PG_VERSION}"
-    log_ok "PostgreSQL ${PG_VERSION} kuruldu"
+    log_step "PostgreSQL ${PG_VERSION} + pgvector (staging)"
+    apt-get install -y -qq \
+        "postgresql-${PG_VERSION}" \
+        "postgresql-client-${PG_VERSION}" \
+        "postgresql-${PG_VERSION}-pgvector"
+    log_ok "PostgreSQL ${PG_VERSION} + pgvector kuruldu"
 }
 
 install_redis_staging() {
