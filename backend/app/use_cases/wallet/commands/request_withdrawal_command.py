@@ -99,20 +99,20 @@ class RequestWithdrawalCommand:
         fiat_amount = try_amount
 
         if currency != "TRY":
-            # ExchangeRates tablosundan anlık kur al
+            _CURRENCY_COL: dict[str, str] = {"USD": "usd_try", "EUR": "eur_try"}
+            col = _CURRENCY_COL.get(currency)
+            if col is None:
+                raise BadRequestException(code="UNSUPPORTED_CURRENCY")
+
+            # col whitelist'ten geldiği için f-string güvenli
             rate_row = await self._session.execute(
-                text(
-                    "SELECT rate FROM exchange_rates "
-                    "WHERE base = 'TRY' AND target = :cur "
-                    "ORDER BY fetched_at DESC LIMIT 1"
-                ),
-                {"cur": currency},
+                text(f"SELECT {col} FROM exchange_rates ORDER BY date DESC LIMIT 1")
             )
             rate_r = rate_row.fetchone()
-            if rate_r is None:
-                raise BadRequestException(code="UNSUPPORTED_CURRENCY")
+            if rate_r is None or rate_r[0] is None:
+                raise BadRequestException(code="EXCHANGE_RATE_NOT_AVAILABLE")
             tcmb_rate = Decimal(str(rate_r[0]))
-            fiat_amount = try_amount / tcmb_rate
+            fiat_amount = round(try_amount / tcmb_rate, 2)
 
         # Atomik bakiye düşümü — double-spend önlemi
         deduct = await self._session.execute(
