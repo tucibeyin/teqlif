@@ -107,9 +107,12 @@ ufw_node1() {
 }
 
 install_postgresql() {
-    log_step "PostgreSQL ${PG_VERSION}"
-    apt-get install -y -qq "postgresql-${PG_VERSION}" "postgresql-client-${PG_VERSION}"
-    log_ok "PostgreSQL ${PG_VERSION} kuruldu"
+    log_step "PostgreSQL ${PG_VERSION} + pgvector"
+    apt-get install -y -qq \
+        "postgresql-${PG_VERSION}" \
+        "postgresql-client-${PG_VERSION}" \
+        "postgresql-${PG_VERSION}-pgvector"
+    log_ok "PostgreSQL ${PG_VERSION} + pgvector kuruldu"
 }
 
 install_pgbouncer() {

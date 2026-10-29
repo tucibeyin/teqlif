@@ -37,13 +37,28 @@ class Base(DeclarativeBase):
 
 
 async def init_extensions() -> None:
-    """pgvector extension'ını aktifleştirir. Uygulama startup'ında bir kez çalışır.
-    DB kullanıcısının superuser yetkisi yoksa sessizce geçer (extension zaten kurulu olmalı)."""
+    """pgvector extension'ını aktifleştirir. Uygulama startup'ında bir kez çalışır."""
+    import logging
+    _log = logging.getLogger(__name__)
     try:
         async with engine.begin() as conn:
             await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
-    except Exception:
-        pass
+            row = await conn.execute(
+                text("SELECT 1 FROM pg_extension WHERE extname = 'vector'")
+            )
+            if not row.fetchone():
+                _log.critical(
+                    "[DB] pgvector extension aktif değil — "
+                    "'postgresql-17-pgvector' paketi eksik olabilir. "
+                    "Vector(384) sorguları çalışmayacak."
+                )
+    except Exception as exc:
+        _log.critical(
+            "[DB] pgvector extension oluşturulamadı: %s — "
+            "bootstrap_node1.sh'da 'postgresql-17-pgvector' kurulu olmalı. "
+            "Vector(384) sorguları 500 hatası verecek.",
+            exc,
+        )
 
 
 async def get_db():
