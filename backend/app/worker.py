@@ -4310,7 +4310,6 @@ class WorkerSettings:
         expire_recordings_task,
         archive_recordings_task,
         notify_new_recordings_task,
-        stream_concat_task,
         archive_old_dm_task,
         compute_analytics_cache_task,
         precompute_premium_user_analytics_task,
@@ -4343,7 +4342,6 @@ class WorkerSettings:
         cron(flush_interactions_to_db, minute={0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55}),
         # Her 2 dakikada
         cron(cleanup_stale_streams_task, minute=set(range(0, 60, 2))),
-        cron(stream_concat_task, minute=set(range(0, 60, 2))),
         # Her 30 dakikada — stream kayıt yaşam döngüsü
         cron(expire_recordings_task,        minute={0, 30}),
         cron(archive_recordings_task,       minute={15}),
@@ -4417,6 +4415,53 @@ class WorkerSettingsCritical:
     job_timeout = 30       # 30sn — push gönderimi uzun sürmez
     keep_result = 600
     max_tries = 5          # Kritik task'lar daha fazla retry
+
+    @staticmethod
+    async def on_startup(ctx: dict) -> None:
+        from app.logging_config import setup_logging
+        from app.core.task_queue import set_pool
+        from app.core.di import init_di
+        from app.utils.i18n import preload_i18n_cache
+        setup_logging()
+        init_di()
+        set_pool(ctx["redis"])
+        await preload_i18n_cache()
+
+    @staticmethod
+    async def on_shutdown(_ctx: dict) -> None:
+        from app.database import engine
+        await engine.dispose()
+
+
+class WorkerSettingsVideo:
+    """
+    Bulkhead — Video işleme worker'ı.
+
+    CPU-yoğun FFmpeg concat görevlerini default worker'dan izole eder.
+    max_jobs=2 ile aynı anda en fazla 2 FFmpeg süreci çalışır; sunucu CPU'su boğulmaz.
+    job_timeout=1800 (30 dk) ile uzun yayın concat işlemleri zamanında tamamlanır.
+
+    Başlatmak için ayrı bir process:
+        arq app.worker.WorkerSettingsVideo
+
+    Systemd: deploy/scale/V2.1/node1/systemd/teqlif-worker-video.service
+    """
+
+    functions = [
+        stream_concat_task,
+    ]
+
+    cron_jobs = [
+        cron(stream_concat_task, minute=set(range(0, 60, 2))),
+    ]
+
+    redis_settings = RedisSettings.from_dsn(settings.redis_url)
+    queue_name = "video"
+
+    max_jobs = 2           # FFmpeg CPU'yu boğmasın — aynı anda maks 2 concat
+    job_timeout = 1800     # 30 dakika — uzun yayın concat için yeterli
+    keep_result = 3600
+    max_tries = 2          # 1 retry yeterli; pahalı işlemi üçüncü kez denemek anlamsız
 
     @staticmethod
     async def on_startup(ctx: dict) -> None:
