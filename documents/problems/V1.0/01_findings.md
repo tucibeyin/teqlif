@@ -4332,6 +4332,14 @@ async def get_listing_offers(
    await db.commit()
    ```
 
+#### ✅ Çözüm Damgası
+* **Commit:** `PLACEHOLDER`
+* **Tarih:** 2026-10-29
+* **Uygulanan Değişiklikler:**
+  - `backend/app/routers/search_alerts.py:103` → `alert.status = 'passive'` → `alert.status = SearchAlertStatus.DELETED`
+  - Alembic migration gerekmedi — DB enum tipi zaten `deleted` değerini içeriyor
+  - Veri hasarı yok — hata her zaman commit öncesi patlıyordu
+
 ---
 
 ### SRE-106 · 🔴 P0 (Kritik) · HTTP Handler İçinde 10.000 Alıcı İçin Senkron ORM Obje Tahsisi ve 200 Sıralı FCM HTTP Çağrısı (60-120s Gateway Timeout / DoS)

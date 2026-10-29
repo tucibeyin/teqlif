@@ -100,5 +100,5 @@ async def delete_alert(
     if alert.user_id != current_user.id:
         raise ForbiddenException(code="ALARM_ACCESS_FORBIDDEN")
 
-    alert.status = 'passive'
+    alert.status = SearchAlertStatus.DELETED
     await db.commit()
