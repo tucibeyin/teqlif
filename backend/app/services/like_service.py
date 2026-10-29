@@ -206,14 +206,22 @@ class LikeService:
             is_live = None
 
         if is_live is None:
-            # Cache miss — DB'ye tek seferlik fallback
+            # Cache miss — DB fallback + write-back (Redis restart / 12h expire / gecikmeli kalp)
             stream_exists = await self.db.scalar(
                 select(LiveStream.id).where(
                     LiveStream.id == stream_id, LiveStream.is_live == True  # noqa: E712
                 )
             )
             if not stream_exists:
+                try:
+                    await redis.set(f"stream:is_live:{stream_id}", "0", ex=60)
+                except Exception:
+                    pass
                 raise NotFoundException(code="STREAM_NOT_FOUND")
+            try:
+                await redis.set(f"stream:is_live:{stream_id}", "1", ex=12 * 3600)
+            except Exception:
+                pass
         elif is_live == "0":
             raise NotFoundException(code="STREAM_NOT_FOUND")
 
