@@ -4097,7 +4097,7 @@ async def get_listing_offers(
 
 ---
 
-### SRE-100 · 🔴 P0 (Kritik) · Toplu Bildirimde (Blast) Önce Gönderim - Sonra Düşüm, `GREATEST(0, ...)` ile Negatif Bakiye Açığı ve Eksik Cache İptali
+### SRE-100 · ✅ Çözüldü (`492932f0` · 2026-10-29) · Toplu Bildirimde (Blast) Önce Gönderim - Sonra Düşüm, `GREATEST(0, ...)` ile Negatif Bakiye Açığı ve Eksik Cache İptali
 
 * **Etkilenen Dosya:** `backend/app/routers/listings.py`
 * **İlgili Satırlar:** 840–930 (`mass_notify_listing`)
