@@ -16,7 +16,7 @@ from app.models.listing import Listing
 from app.models.mass_notification import MassNotificationCampaign
 from app.models.teqlik_transaction import TeqlikTransaction
 from app.models.user import User
-from app.utils.auth import get_current_user, get_current_user_optional, bearer_scheme, decode_token
+from app.utils.auth import get_current_user, get_current_user_optional, bearer_scheme, decode_token, invalidate_user_session_cache
 from app.use_cases.listings.commands.create_listing import CreateListingCommand
 from app.use_cases.listings.commands.update_listing import UpdateListingCommand
 from app.use_cases.listings.commands.delete_listing import DeleteListingCommand
@@ -844,9 +844,6 @@ async def send_mass_notification(
     paid_count   = actual_count - free_used
     teqlik_cost    = paid_count * credit_service.cost_teqlik(CreditFeature.BLAST)
 
-    if teqlik_cost > 0 and current_user.teqlik_balance < teqlik_cost:
-        raise InsufficientFundsException()
-
     # Hedef kitleyi oluştur: doğrudan görüntüleyenler + kategori ilgisi olanlar
     candidate_ids = await _build_listing_audience(
         listing_id=listing_id,
@@ -889,28 +886,18 @@ async def send_mass_notification(
         except Exception as exc:
             logging.getLogger(__name__).warning("[MassNotif] Push başarısız: %s", exc)
 
-    sent = 0
-    for i in range(0, len(fcm_tokens), 50):
-        chunk = fcm_tokens[i: i + 50]
-        await asyncio.gather(*[_send_one(t) for t in chunk])
-        sent += len(chunk)
-
-    # Kampanya kaydı
-    campaign = MassNotificationCampaign(
-        user_id=current_user.id,
-        listing_id=listing_id,
-        target_count=len(fcm_tokens),
-        sent_count=sent,
-        spent_teqlik=teqlik_cost,
-        spent_free_credits=free_used,
-    )
-    db.add(campaign)
-
+    # Önce bakiyeyi atomik olarak düş, sonra FCM gönder
     if teqlik_cost > 0:
-        await db.execute(
-            sql_text("UPDATE users SET teqlik_balance = GREATEST(0, teqlik_balance - :cost) WHERE id = :uid"),
+        # Atomik: bakiye yeterliyse düş ve yeni bakiyeyi döndür; yetersizse 0 satır döner
+        upd = await db.execute(
+            sql_text(
+                "UPDATE users SET teqlik_balance = teqlik_balance - :cost "
+                "WHERE id = :uid AND teqlik_balance >= :cost RETURNING teqlik_balance"
+            ),
             {"cost": teqlik_cost, "uid": current_user.id},
         )
+        if upd.fetchone() is None:
+            raise InsufficientFundsException()
         db.add(TeqlikTransaction(
             user_id=current_user.id,
             amount=-teqlik_cost,
@@ -919,10 +906,29 @@ async def send_mass_notification(
             reference_type="listing",
         ))
 
+    # Kampanya kaydı
+    campaign = MassNotificationCampaign(
+        user_id=current_user.id,
+        listing_id=listing_id,
+        target_count=len(fcm_tokens),
+        sent_count=len(fcm_tokens),
+        spent_teqlik=teqlik_cost,
+        spent_free_credits=free_used,
+    )
+    db.add(campaign)
+
     await db.commit()
+    await invalidate_user_session_cache(current_user.id)
 
     if free_used > 0:
         await credit_service.increment(CreditFeature.BLAST, current_user.id, current_user.premium_since, count=free_used)
+
+    # FCM commit'ten SONRA gönderilir — bakiye kesinleşmeden bildirim gitmesin
+    sent = 0
+    for i in range(0, len(fcm_tokens), 50):
+        chunk = fcm_tokens[i: i + 50]
+        await asyncio.gather(*[_send_one(t) for t in chunk])
+        sent += len(chunk)
 
     logging.getLogger(__name__).info(
         "[MassNotif] Gönderildi | seller=%d | listing=%d | sent=%d | free=%d | paid=%d | cost=%d TEQlik",
