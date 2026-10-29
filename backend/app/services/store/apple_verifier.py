@@ -94,13 +94,9 @@ class AppleVerifier(StoreVerifier):
                 claims["expiresDate"] / 1000, tz=timezone.utc
             )
 
-        # Consumable: her alımda tekil transactionId (replay koruması doğru çalışır)
-        # Subscription: originalTransactionId (abonelik zinciri takibi için)
-        tx_id = (
-            claims["originalTransactionId"]
-            if product_id in VALID_SUBSCRIPTION_IDS
-            else claims.get("transactionId", claims["originalTransactionId"])
-        )
+        # Her fatura olayı (consumable, ilk abonelik, yenileme, upgrade) için tekil transactionId
+        # Abonelik zinciri takibi subscription_id = originalTransactionId üzerinden yürür
+        tx_id = claims.get("transactionId") or claims["originalTransactionId"]
         return PurchaseResult(
             transaction_id=str(tx_id),
             product_id=product_id,

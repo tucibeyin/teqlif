@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.exceptions import BadRequestException, ConflictException
 from app.core.logger import get_logger
 from app.services.store.base import PurchaseResult
-from app.services.store.apple_verifier import VALID_CONSUMABLE_IDS, VALID_SUBSCRIPTION_IDS
+from app.services.store.apple_verifier import VALID_CONSUMABLE_IDS
 from app.services.store.factory import StoreVerifierFactory
 
 logger = get_logger(__name__)
@@ -28,7 +28,7 @@ _PLAN_TYPE: dict[str, str] = {
     "teqlif_pro_12m": "annual",
 }
 
-# Redis velocity key: rate:iap:{device_id}  |  rolling 24h window (₺5.000/gün)
+# Redis velocity key: rate:iap:{device_id}  |  fixed 24h window (₺5.000/gün)
 _IAP_VELOCITY_LIMIT_TRY = 5000.0
 _IAP_VELOCITY_TTL_SEC   = 86400  # 24 saat
 
@@ -39,26 +39,44 @@ _PRODUCT_TRY_PRICES: dict[str, float] = {
     "teqlik_pack_250":   349.99,
     "teqlik_pack_500":   599.99,
     "teqlik_pack_1000":  999.99,
+    # Abonelikler: try_amount=0 gönderildiğinde velocity hesabına girer
+    "teqlif_pro_1m":     299.99,
+    "teqlif_pro_3m":     749.99,
+    "teqlif_pro_6m":    1299.99,
+    "teqlif_pro_12m":   1999.99,
 }
+
+# Atomik Lua: GET+limit kontrolü+INCRBYFLOAT+TTL guard tek round-trip'te
+# TTL < 0 kontrolü: key expire/yaratılma arasında race ile TTL=-1 olan key'leri onarır
+_VELOCITY_LUA = """
+local cur = tonumber(redis.call('GET', KEYS[1]) or '0')
+local add = tonumber(ARGV[1])
+local lim = tonumber(ARGV[2])
+if cur + add > lim then
+    return -1
+end
+redis.call('INCRBYFLOAT', KEYS[1], add)
+if redis.call('TTL', KEYS[1]) < 0 then
+    redis.call('EXPIRE', KEYS[1], tonumber(ARGV[3]))
+end
+return 1
+"""
 
 
 async def _check_velocity(redis, device_id: str, try_amount: float) -> None:
-    """Cihaz başına günlük ₺5.000 velocity limiti — Fail-Closed."""
+    """Cihaz başına günlük ₺5.000 velocity limiti — Fail-Closed, atomik Lua."""
     if redis is None:
-        # Redis bağlantısı yoksa Fail-Closed: reddet
         raise BadRequestException(code="IAP_VELOCITY_UNAVAILABLE")
     key = f"rate:iap:{device_id}"
-    current = await redis.get(key)
-    current_val = float(current or 0)
-    if current_val + try_amount > _IAP_VELOCITY_LIMIT_TRY:
-        logger.warning("[VerifyPurchase] Velocity limit aşıldı | device=%s total=%.2f", device_id, current_val + try_amount)
+    result = await redis.eval(
+        _VELOCITY_LUA, 1, key,
+        str(try_amount),
+        str(_IAP_VELOCITY_LIMIT_TRY),
+        str(_IAP_VELOCITY_TTL_SEC),
+    )
+    if result == -1:
+        logger.warning("[VerifyPurchase] Velocity limit aşıldı | device=%s", device_id)
         raise BadRequestException(code="IAP_VELOCITY_LIMIT_EXCEEDED")
-    pipe = redis.pipeline()
-    pipe.incrbyfloat(key, try_amount)
-    if current is None:
-        # Fixed window: TTL yalnızca pencere açılırken set edilir; her alımda uzatılmaz
-        pipe.expire(key, _IAP_VELOCITY_TTL_SEC)
-    await pipe.execute()
 
 
 class VerifyPurchaseCommand:
