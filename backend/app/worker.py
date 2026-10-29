@@ -265,6 +265,86 @@ async def send_stream_started_notifications(
         raise
 
 
+# ── Task: Lead Blast — Toplu In-App Bildirim + Firebase Multicast Push ───────
+
+async def process_lead_blast_task(
+    ctx: dict,
+    campaign_id: int,
+    recipient_ids: list[int],
+    fcm_tokens: list[str],
+    notif_title: str,
+    notif_body: str,
+    listing_id: int | None = None,
+    stream_id: int | None = None,
+) -> None:
+    """
+    HTTP handler'dan delege edilen lead blast işleyicisi.
+
+    1. Notification satırlarını 1.000'lik chunk'larla bulk INSERT eder (ORM obje yok).
+    2. Firebase multicast ile tüm tokenlara push gönderir.
+    3. Kampanya sent_count'unu günceller.
+    """
+    from sqlalchemy import insert, text
+    from app.database import AsyncSessionLocal
+    from app.models.notification import Notification
+    from app.core.di import container
+    from app.core.ports.push_notification_port import PushNotificationPort
+
+    logger.info(
+        "[LeadBlast] İşleniyor | campaign_id=%s recipients=%d push_tokens=%d",
+        campaign_id, len(recipient_ids), len(fcm_tokens),
+    )
+    try:
+        # ── 1. Bulk in-app bildirim INSERT ────────────────────────────────────
+        if recipient_ids:
+            mappings = [
+                {
+                    "user_id": uid,
+                    "type": "lead_blast",
+                    "title": notif_title,
+                    "body": notif_body,
+                    "related_id": listing_id,
+                }
+                for uid in recipient_ids
+            ]
+            CHUNK = 1000
+            async with AsyncSessionLocal() as session:
+                for i in range(0, len(mappings), CHUNK):
+                    await session.execute(insert(Notification), mappings[i : i + CHUNK])
+                await session.execute(
+                    text(
+                        "UPDATE mass_notification_campaigns "
+                        "SET sent_count = :sent WHERE id = :cid"
+                    ),
+                    {"sent": len(recipient_ids), "cid": campaign_id},
+                )
+                await session.commit()
+
+        # ── 2. Firebase multicast push ────────────────────────────────────────
+        if fcm_tokens:
+            data: dict[str, str] = {
+                "type": "lead_blast",
+                "campaign_id": str(campaign_id),
+            }
+            if listing_id:
+                data["listing_id"] = str(listing_id)
+            if stream_id:
+                data["stream_id"] = str(stream_id)
+            push_port = container.resolve(PushNotificationPort)
+            result = await push_port.send_multicast(fcm_tokens, notif_title, notif_body, data)
+            logger.info(
+                "[LeadBlast] Push tamamlandı | campaign_id=%s success=%d failure=%d",
+                campaign_id, result.get("success", 0), result.get("failure", 0),
+            )
+
+        logger.info("[LeadBlast] Tamamlandı | campaign_id=%s", campaign_id)
+
+    except Exception as exc:
+        logger.error("[LeadBlast] Hata | campaign_id=%s | %s", campaign_id, exc, exc_info=True)
+        capture_exception(exc)
+        raise
+
+
 # ── Task: Süresi Dolan Hikaye Temizliği ──────────────────────────────────────
 
 async def cleanup_expired_stories_task(ctx: dict) -> None:
@@ -4250,6 +4330,7 @@ class WorkerSettings:
         send_verification_email_task,
         send_welcome_email_task,
         send_push_notification_task,
+        process_lead_blast_task,
         cleanup_expired_stories_task,
         cleanup_old_notifications_task,
         cleanup_old_analytics_task,

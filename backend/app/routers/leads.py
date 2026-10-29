@@ -320,71 +320,37 @@ async def send_blast(
     if free_used > 0:
         await credit_service.increment(CreditFeature.BLAST, current_user.id, current_user.premium_since, count=free_used)
 
-    # ── In-app bildirim kayıtları (tüm alıcılar — push almayacaklar dahil) ─────
-    from app.models.notification import Notification
+    # ── Bildirim metnini hesapla, ARQ'ya devret ───────────────────────────────
     from app.utils.i18n import _get_t
-    
     lang = current_user.locale if current_user.locale else "tr"
     t = _get_t(lang)
-    
     notif_title = "lead_blast"
     if body.subcategory:
         sub_label = t.get(f"cat_{body.subcategory}", body.subcategory.upper())
         notif_body = f"[{sub_label}] {body.title}"
     else:
         notif_body = body.title
-    db.add_all([
-        Notification(
-            user_id=uid,
-            type="lead_blast",
-            title=notif_title,
-            body=notif_body,
-            related_id=body.listing_id,
+
+    from app.core.task_queue import get_pool
+    pool = get_pool()
+    if pool:
+        await pool.enqueue_job(
+            "process_lead_blast_task",
+            campaign_id=campaign.id,
+            recipient_ids=recipient_ids,
+            fcm_tokens=fcm_tokens,
+            notif_title=notif_title,
+            notif_body=notif_body,
+            listing_id=body.listing_id,
+            stream_id=body.stream_id,
         )
-        for uid in recipient_ids
-    ])
-    await db.commit()
-
-    # ── Firebase toplu push (push almak isteyenler için) ──────────────────────
-    from app.services.firebase_service import send_push, InvalidFCMTokenError
-
-    async def _send_one(token: str, cid: int) -> None:
-        try:
-            extra_data = {"campaign_id": str(cid)}
-            if body.listing_id:
-                extra_data["listing_id"] = str(body.listing_id)
-            if body.stream_id:
-                extra_data["stream_id"] = str(body.stream_id)
-            await send_push(
-                token=token,
-                title=notif_title,
-                body=notif_body,
-                notif_type="lead_blast",
-                extra_data=extra_data,
-            )
-        except InvalidFCMTokenError:
-            pass
-        except Exception:
-            pass
-
-    chunk_size = 50
-    sent = 0
-    for i in range(0, len(fcm_tokens), chunk_size):
-        chunk = fcm_tokens[i : i + chunk_size]
-        await asyncio.gather(*[_send_one(t, campaign.id) for t in chunk])
-        sent += len(chunk)
-
-    await db.execute(
-        sql_text("UPDATE mass_notification_campaigns SET sent_count = :sent WHERE id = :cid"),
-        {"sent": actual_count, "cid": campaign.id}
-    )
-    await db.commit()
+    else:
+        logger.warning("[Leads] ARQ pool yok — bildirim gönderilemedi | campaign_id=%s", campaign.id)
 
     return {
         "campaign_id": campaign.id,
-        "sent": actual_count,
-        "spent": teqlik_cost,
-        "sent_count": actual_count,
+        "status": "processing",
+        "recipient_count": actual_count,
     }
 
 
