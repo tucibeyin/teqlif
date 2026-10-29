@@ -4338,7 +4338,7 @@ async def get_listing_offers(
 * **Uygulanan Değişiklikler:**
   - `backend/app/routers/search_alerts.py:103` → `alert.status = 'passive'` → `alert.status = SearchAlertStatus.DELETED`
   - `backend/alembic/versions/zzzzz0_searchalert_enum_fix.py` (yeni): PostgreSQL `searchalertstatus` enum tipine `'paused'` ve `'deleted'` değerleri eklendi (`autocommit_block + IF NOT EXISTS` — idempotent); eski `'passive'` kayıtlar `'deleted'`e taşındı
-* **Migration:** `alembic upgrade head` node1 (prod) ve node5 (staging) üzerinde çalıştırılmalı
+* **Migration:** `sudo teqlif-restart` ile node1 (prod) ve node5 (staging) `ExecStartPre` üzerinden `alembic upgrade head` çalıştırıldı ✅
 
 ---
 
