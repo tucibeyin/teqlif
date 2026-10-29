@@ -277,6 +277,8 @@ _LOCK_TTL_SEC = 3600  # 1 saat
 
 ### SRE-04 · 🟠 P1 (Yüksek) · Sınırsız Veri Çekimi (Unbounded Query) ve Bellek Tüketimi (OOM Riski)
 
+> ✅ **Çözüldü** — Commit `fb79bdaa` · 2026-10-29
+
 * **Etkilenen Dosyalar:**
   * `backend/app/services/ml/bpr_service.py` (satır 134–147)
   * `backend/app/services/ml/feed_als_ml.py` (satır 122–143)
