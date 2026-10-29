@@ -469,11 +469,13 @@ class StoryService:
     # ── Hikaye görüntüleyenler listesi ────────────────────────────────────────
 
     async def get_story_viewers(
-        self, story_id: int, owner_id: int
+        self, story_id: int, owner_id: int,
+        limit: int = 50, offset: int = 0,
     ) -> StoryViewersResponse:
         """
         Belirtilen hikayeyi kimler gördü? Yalnızca hikaye sahibi görebilir.
         Görüntülemeleri en yeni → en eski (viewed_at DESC) sıralar.
+        Sayfalama: limit/offset ile; total tüm görüntüleme sayısını döner.
         """
         # Sahiplik kontrolü
         try:
@@ -495,13 +497,35 @@ class StoryService:
         if row != owner_id:
             raise ForbiddenException(code="STORY_VIEWERS_FORBIDDEN")
 
-        # Görüntüleyenleri çek
+        # Toplam görüntülenme sayısı (sayfalama için)
+        try:
+            count_result = await self.db.execute(
+                select(func.count()).where(StoryView.story_id == story_id)
+            )
+            total = count_result.scalar_one()
+        except Exception as exc:
+            logger.error(
+                "[STORY VIEWERS] Sayım getirilemedi | story_id=%s | %s",
+                story_id, exc, exc_info=True,
+            )
+            capture_exception(exc)
+            raise DatabaseException(code="STORY_LOAD_FAILED")
+
+        # Sayfalanmış sorgu — yalnızca ihtiyaç duyulan kolonlar seçilir
         try:
             query = (
-                select(StoryView, User)
+                select(
+                    StoryView.viewed_at,
+                    User.id.label("user_id"),
+                    User.username,
+                    User.full_name,
+                    User.profile_image_thumb_url,
+                )
                 .join(User, User.id == StoryView.viewer_id)
                 .where(StoryView.story_id == story_id)
                 .order_by(StoryView.viewed_at.desc())
+                .limit(limit)
+                .offset(offset)
             )
             result = await self.db.execute(query)
             rows = result.all()
@@ -515,19 +539,19 @@ class StoryService:
 
         viewers = [
             StoryViewerOut(
-                user_id=user.id,
-                username=user.username,
-                full_name=user.full_name,
-                profile_image_thumb_url=getattr(user, "profile_image_thumb_url", None),
-                viewed_at=sv.viewed_at,
+                user_id=row.user_id,
+                username=row.username,
+                full_name=row.full_name,
+                profile_image_thumb_url=row.profile_image_thumb_url,
+                viewed_at=row.viewed_at,
             )
-            for sv, user in rows
+            for row in rows
         ]
         logger.info(
-            "[STORY VIEWERS] Listelendi | story_id=%s | owner_id=%s | adet=%d",
-            story_id, owner_id, len(viewers),
+            "[STORY VIEWERS] Listelendi | story_id=%s | owner_id=%s | offset=%d | adet=%d | total=%d",
+            story_id, owner_id, offset, len(viewers), total,
         )
-        return StoryViewersResponse(story_id=story_id, viewers=viewers, total=len(viewers))
+        return StoryViewersResponse(story_id=story_id, viewers=viewers, total=total)
 
     # ── Hikaye silme (kullanıcı isteği) ───────────────────────────────────────
 

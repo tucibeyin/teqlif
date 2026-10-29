@@ -10,7 +10,7 @@ Her endpoint sadece:
 """
 from typing import List
 
-from fastapi import APIRouter, Depends, UploadFile, File, status
+from fastapi import APIRouter, Depends, Query, UploadFile, File, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -107,6 +107,8 @@ async def record_story_view(
 @router.get("/{story_id}/viewers", response_model=StoryViewersResponse)
 async def get_story_viewers(
     story_id: int,
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -114,7 +116,7 @@ async def get_story_viewers(
     Belirtilen hikayeyi görüntüleyen kullanıcıların listesini döner.
     Yalnızca hikaye sahibi bu endpoint'i çağırabilir.
     """
-    return await StoryService(db).get_story_viewers(story_id, current_user.id)
+    return await StoryService(db).get_story_viewers(story_id, current_user.id, limit=limit, offset=offset)
 
 
 @router.post("/cleanup", status_code=200)
