@@ -4810,12 +4810,13 @@ async def get_listing_offers(
    ```
 3. FFmpeg çağrısında `-c copy` yerine hızlı scale normalize filtresi eklenmeli veya fail durumunda re-encode fallback'i uygulanmalıdır.
 
-> **✅ Çözüldü** — Commit `b75776f7` + Followup `a563864b` · 2026-10-29
+> **✅ Çözüldü** — Commit `b75776f7` + Followup `a563864b` · 2026-10-29 | Followup-2 `e39b819f` · 2026-10-29
 > `_get_presign_client()` → `_get_client_for_internal_url(settings.minio_endpoint)` (127.0.0.1:9000); encoder mc cp hedefi ile aynı.
 > `_ffprobe_streams()` ile her part parametresi kontrol edilir. Birebir aynıysa `-c copy`; fark varsa `-filter_complex concat` + libx264 veryfast + first-part resolution (dikey yayını korur; sessiz part'ta `anullsrc` ile boş audio).
 > Aday sorgusu: `JOIN live_streams WHERE status='ended' + NOT EXISTS (pending parts)` — 3+ part yayınlarda erken concat ve orphan part riski kapatıldı.
 > `upload_file()` → `minio.fput_object()` doğrudan — orchestrator bypass (agent restart güveni).
 > DB commit sonrası part dosyaları MinIO'dan best-effort silinir.
+> Followup-2: `anullsrc=d=3600` → `d=probe["duration"]` (1 saatlik donma/CPU tuzağı kapatıldı). `_ffprobe_streams` `-show_format` + audio `sample_rate`/`channels` eklendi; `all_same` kontrolüne dahil edildi (44.1kHz mono + 48kHz stereo geçişinde `-c copy` bozulması engellendi).
 
 ---
 
@@ -4848,11 +4849,11 @@ async def get_listing_offers(
    ```
 3. Oda durumu yalnızca yayının bizzat barındırıldığı yetkili LiveKit node'undan sorgulanmalıdır.
 
-> **✅ Çözüldü** — Commit `d58be2d3` · 2026-10-29
+> **✅ Çözüldü** — Commit `d58be2d3` · 2026-10-29 | Followup `e39b819f` · 2026-10-29
 > `_delayed_close_stream` fallback'teki `orchestrator.allocate_node(ServiceType.MEDIA)` (rastgele tek node) kaldırıldı.
-> Yerine `lk_list_all_rooms()` kullanıldı — tüm media node'larını (node3+node4) sorgular, yayın hangisindeyse doğru sonucu döner.
-> `async for db in get_db()` → `async with AsyncSessionLocal() as db` (güvenli bağlam yöneticisi).
-> `aiohttp`, `RoomService`, `ListRoomsRequest`, `get_db` top-level importları temizlendi.
+> Followup: `lk_list_all_rooms()` → DB-first + yetkili node hedefli `ListRoomsRequest(names=[room])` yaklaşımı (`webhooks.py` + `worker.py:delayed_close_stream_task`).
+> Tek node HTTP timeout veya agent restart / edge:metrics TTL boşluğu: `stream.livekit_url` doğrudan kullanılır, Redis bağımlılığı yok.
+> `except Exception` fail-open kapatıldı: yetkili node hatası = fail-safe `return` (aktif yayın kapatılmaz). DB hatası da `return`.
 
 ---
 
