@@ -27,6 +27,7 @@ class LiveStream(Base):
     thumbnail_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     peak_viewer_count: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     status: Mapped[str] = mapped_column(String(10), default=StreamStatus.PENDING, nullable=False, server_default="pending")
+    total_likes: Mapped[int] = mapped_column(Integer, default=0, nullable=False, server_default="0")
     livekit_url: Mapped[Optional[str]] = mapped_column(String(300), nullable=True)  # Yayının açıldığı Edge node adresi (Orkestratör tarafından atanmış)
     source_node_id: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)  # Edge node kimliği (V1.7 failover takibi)
 

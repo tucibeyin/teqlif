@@ -21,6 +21,7 @@ from app.routers import search_alerts
 from app.routers import recordings
 from app.use_cases.auctions.auction_utils import pubsub_listener
 from app.routers.chat import chat_pubsub_listener, moderation_pubsub_listener
+from app.tasks.stream_like_ticker import stream_like_ticker
 from app.routers.messages import dm_pubsub_listener
 from app.use_cases.direct_sales.direct_sale_scheduler import direct_sale_scheduler
 from app.routers import notifications, messages, users, listings, follows, categories, upload, states, reports, favorites, search, ratings, analytics, leads, wallet
@@ -139,6 +140,7 @@ async def lifespan(app: FastAPI):
     mod_task = asyncio.create_task(moderation_pubsub_listener())
     dm_task = asyncio.create_task(dm_pubsub_listener())
     ds_scheduler_task = asyncio.create_task(direct_sale_scheduler())
+    like_ticker_task = asyncio.create_task(stream_like_ticker())
     # Hype Meter sönümleme döngüsü
     from app.core.hype_manager import hype_manager
     hype_manager.start_decay()
@@ -151,7 +153,8 @@ async def lifespan(app: FastAPI):
     mod_task.cancel()
     dm_task.cancel()
     ds_scheduler_task.cancel()
-    await asyncio.gather(task, chat_task, mod_task, dm_task, ds_scheduler_task, return_exceptions=True)
+    like_ticker_task.cancel()
+    await asyncio.gather(task, chat_task, mod_task, dm_task, ds_scheduler_task, like_ticker_task, return_exceptions=True)
     # Tüm açık WS bağlantılarını 1001 ile kapat (graceful shutdown)
     await ws_manager.shutdown()
     hype_manager.stop_decay()

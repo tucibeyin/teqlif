@@ -4,16 +4,20 @@ Like (Beğeni) servisi — Listing, Story ve LiveStream için.
 Kural Özeti:
   Listing  → toggle  (beğenilmemişse ekle, beğenilmişse kaldır)
   Story    → toggle  (aynı kural)
-  Stream   → add-only (art arda kalp — uniqueness kısıtı yoktur)
+  Stream   → add-only (art arda kalp — Redis INCRBY, DB'ye yazılmaz)
 
-Stream Beğenisi WebSocket Broadcast:
-  Beğeni eklendiğinde ws_manager üzerinden o anki tüm yayın izleyicilerine
-  `{"type": "stream_like", "user_id": ..., "username": ...}` sinyali gönderilir.
-  chat_broadcast kanalı kullanılır (mevcut Redis pub/sub altyapısı).
+Stream Kalp Mimarisi:
+  Her kalp için DB INSERT+COMMIT yoktur (bkz. SRE-105).
+  Redis'te iki sayaç tutulur:
+    stream:likes:{stream_id}          — toplam sayaç (okuma için)
+    stream:likes:pending:{stream_id}  — birikimli delta (ticker tüketir)
+  stream_like_ticker her ~1 saniyede pending key'i GETDEL ile alır ve
+  stream_like_batch WS sinyali olarak tüm odaya yayar.
+  Yayın sonlanırken total_likes DB sütununa yazılır (finalize_stream).
 
 Hata Yönetimi:
   DB hataları  → logger.error + capture_exception → DatabaseException (500)
-  Bulunamayan  → NotFoundException (404)
+  Bulunamadan  → NotFoundException (404)
 """
 from typing import Optional
 
@@ -21,13 +25,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, union_all, distinct
 
 from app.models.enums import ListingStatus
-from app.models.like import ListingLike, StoryLike, StreamLike
+from app.models.like import ListingLike, StoryLike
 from app.models.listing import Listing
 from app.models.story import Story
 from app.models.stream import LiveStream
 from app.core.exceptions import NotFoundException, DatabaseException
 from app.core.logger import get_logger, capture_exception
-from app.constants import ws_types as WS
 
 logger = get_logger(__name__)
 
@@ -182,12 +185,14 @@ class LikeService:
         stream_id: int,
         user_id: int,
         username: str,
+        count: int = 1,
     ) -> dict:
         """
         Canlı yayına kalp gönder (art arda gönderilebilir, toggle yok).
 
-        Beğeni kaydedildikten sonra o yayındaki tüm izleyicilere
-        `{"type": "stream_like", ...}` WebSocket sinyali yayımlanır.
+        DB'ye yazılmaz — yalnızca Redis sayaçları güncellenir.
+        stream_like_ticker her ~1 saniyede pending sayacı okuyup
+        stream_like_batch WS sinyali olarak yayar.
         Yayın aktif değilse 404 döner.
         """
         stream_exists = await self.db.scalar(
@@ -198,44 +203,22 @@ class LikeService:
         if not stream_exists:
             raise NotFoundException(code="STREAM_NOT_FOUND")
 
-        try:
-            self.db.add(StreamLike(stream_id=stream_id, user_id=user_id))
-            await self.db.commit()
-        except Exception as exc:
-            await self.db.rollback()
-            logger.error(
-                "[LIKES] Stream beğeni DB hatası | stream_id=%s user_id=%s | %s",
-                stream_id, user_id, exc, exc_info=True,
-            )
-            capture_exception(exc)
-            raise DatabaseException(code="LIKE_SEND_FAILED")
+        count = max(1, min(count, 50))  # istemci gönderimini sınırla
 
         try:
             from app.utils.redis_client import get_redis
             redis = await get_redis()
-            await redis.incr(f"stream:likes:{stream_id}")
-            await redis.expire(f"stream:likes:{stream_id}", 48 * 3600)
+            key = f"stream:likes:{stream_id}"
+            pending_key = f"stream:likes:pending:{stream_id}"
+            total = await redis.incrby(key, count)
+            await redis.incrby(pending_key, count)
+            # EXPIRE yalnızca ilk kez set edilir
+            if total == count:
+                await redis.expire(key, 48 * 3600)
+                await redis.expire(pending_key, 48 * 3600)
         except Exception:
             pass
 
-        # WebSocket broadcast — non-critical (hata yayını engellemesin)
-        try:
-            from app.use_cases.chat.chat_utils import publish_chat
-            await publish_chat(stream_id, {
-                "type": WS.STREAM_LIKE,
-                "user_id": user_id,
-                "username": username,
-            })
-        except Exception as exc:
-            logger.warning(
-                "[LIKES] Stream like WS broadcast başarısız | stream_id=%s | %s",
-                stream_id, exc,
-            )
-
-        logger.info(
-            "[LIKES] Yayın kalbi gönderildi | stream_id=%s user_id=%s",
-            stream_id, user_id,
-        )
         return {"ok": True}
 
     # ── Yardımcı: Batch Likes Count ───────────────────────────────────────────
@@ -369,11 +352,10 @@ class LikeService:
 
         if missing_ids:
             rows = await db.execute(
-                select(StreamLike.stream_id, func.count(StreamLike.id).label("cnt"))
-                .where(StreamLike.stream_id.in_(missing_ids))
-                .group_by(StreamLike.stream_id)
+                select(LiveStream.id, LiveStream.total_likes)
+                .where(LiveStream.id.in_(missing_ids))
             )
             for row in rows:
-                counts[row.stream_id] = row.cnt
+                counts[row.id] = row.total_likes or 0
 
         return counts

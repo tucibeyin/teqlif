@@ -21,7 +21,8 @@ MUTED            = "muted"
 UNMUTED          = "unmuted"
 KICKED           = "kicked"
 HOST_PIN         = "host_pin"
-STREAM_LIKE      = "stream_like"
+STREAM_LIKE       = "stream_like"
+STREAM_LIKE_BATCH = "stream_like_batch"  # Saniyede 1 toplu kalp sayısı
 
 # ── Moderasyon ────────────────────────────────────────────────────────────────
 MOD_STATUS        = "mod_status"        # WS bağlantısında mevcut mod durumu (bağlanan kullanıcıya)

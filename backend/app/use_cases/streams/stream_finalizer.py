@@ -88,10 +88,13 @@ async def finalize_stream(stream: LiveStream, db: AsyncSession) -> None:
     # 1. İstatistik snapshot — Redis silinmeden önce
     live_count = await redis.get(f"live:viewers:{stream.id}")
     peak_count = await redis.get(f"live:peak_viewers:{stream.id}")
+    likes_count = await redis.get(f"stream:likes:{stream.id}")
     if live_count is not None:
         stream.viewer_count = max(stream.viewer_count or 0, int(live_count))
     if peak_count is not None:
         stream.peak_viewer_count = int(peak_count)
+    if likes_count is not None:
+        stream.total_likes = int(likes_count)
 
     # 2. DB: stream kapat
     stream.is_live = False
@@ -131,6 +134,7 @@ async def finalize_stream(stream: LiveStream, db: AsyncSession) -> None:
             f"live:host_reconnect:{stream.id}",
             f"stream:stats:{stream.id}",
             f"stream:likes:{stream.id}",
+            f"stream:likes:pending:{stream.id}",
         ]
         if dump_ok:
             base_keys.append(chat_key(stream.id))
