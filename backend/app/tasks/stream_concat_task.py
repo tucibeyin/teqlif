@@ -359,9 +359,9 @@ async def _run_concat(stream_id: int) -> None:
 
         await session.execute(text("""
             INSERT INTO stream_recordings
-                (stream_id, host_id, minio_key, status, is_concat_result, created_at, updated_at)
+                (stream_id, host_id, minio_key, status, is_concat_result, available_at, created_at, updated_at)
             VALUES
-                (:stream_id, :host_id, :minio_key, 'available', TRUE, NOW(), NOW())
+                (:stream_id, :host_id, :minio_key, 'available', TRUE, NOW(), NOW(), NOW())
         """), {"stream_id": stream_id, "host_id": host_id, "minio_key": concat_key})
 
         await session.commit()

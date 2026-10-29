@@ -54,7 +54,7 @@ async def notify_new_recordings_task(ctx: dict) -> None:
                 JOIN users u         ON u.id  = ls.host_id
                 WHERE sr.status = 'available'
                   AND sr.host_notified_at IS NULL
-                  AND sr.available_at > NOW() - INTERVAL '6 hours'
+                  AND COALESCE(sr.available_at, sr.created_at) > NOW() - INTERVAL '6 hours'
             """))).fetchall()
 
         if not rows:
