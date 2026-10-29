@@ -48,6 +48,8 @@
   "HOST_CANNOT_BUY": "Der Stream-Host kann nicht aus seiner eigenen Auktion kaufen.",
   "STREAM_MUTED_BID": "Sie wurden in diesem Stream stummgeschaltet. Sie können keine Gebote abgeben.",
   "BID_BLOCKED_MUTE": "Sie wurden in diesem Stream stummgeschaltet. Sie können keine Gebote abgeben.",
+  "BID_EXCEEDS_MAX_PLATFORM_LIMIT": "Ihr Gebot überschreitet das Plattformlimit (₺500.000).",
+  "BID_MULTIPLIER_EXCEEDED": "Ihr Gebot darf das 15-fache des aktuellen Preises nicht überschreiten.",
   "STREAM_MUTED_PURCHASE": "Sie wurden in diesem Stream stummgeschaltet. Sie können keine Käufe tätigen.",
   "MESSAGING_FORBIDDEN": "Sie können diesem Benutzer keine Nachrichten senden.",
   "MESSAGE_DELETE_FORBIDDEN": "Sie können diese Nachricht nicht löschen.",

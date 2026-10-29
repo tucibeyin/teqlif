@@ -48,6 +48,8 @@
   "HOST_CANNOT_BUY": "The stream host cannot purchase from their own auction.",
   "STREAM_MUTED_BID": "You have been muted in this stream. You cannot place bids.",
   "BID_BLOCKED_MUTE": "You have been muted in this stream. You cannot place bids.",
+  "BID_EXCEEDS_MAX_PLATFORM_LIMIT": "Your bid exceeds the platform maximum limit (₺500,000).",
+  "BID_MULTIPLIER_EXCEEDED": "Your bid cannot exceed 15 times the current price.",
   "STREAM_MUTED_PURCHASE": "You have been muted in this stream. You cannot make purchases.",
   "MESSAGING_FORBIDDEN": "You cannot message this user.",
   "MESSAGE_DELETE_FORBIDDEN": "You cannot delete this message.",

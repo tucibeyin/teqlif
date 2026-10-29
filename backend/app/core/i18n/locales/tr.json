@@ -48,6 +48,8 @@
   "HOST_CANNOT_BUY": "Yayın sahibi kendi açık artırmasından satın alamaz.",
   "STREAM_MUTED_BID": "Bu yayında susturuldunuz. Teklif veremezsiniz.",
   "BID_BLOCKED_MUTE": "Bu yayında susturuldunuz. Teklif veremezsiniz.",
+  "BID_EXCEEDS_MAX_PLATFORM_LIMIT": "Teklifiniz platform azami sınırını (500.000 ₺) aşıyor.",
+  "BID_MULTIPLIER_EXCEEDED": "Teklifiniz mevcut fiyatın 15 katından fazla olamaz.",
   "STREAM_MUTED_PURCHASE": "Bu yayında susturuldunuz. Satın alma yapamazsınız.",
   "MESSAGING_FORBIDDEN": "Bu kullanıcıyla mesajlaşamazsınız.",
   "MESSAGE_DELETE_FORBIDDEN": "Bu mesajı silemezsiniz.",

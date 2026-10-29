@@ -3,11 +3,13 @@ Teklif doğrulama servisi - Troll teklif koruması ve temel limitleri yönetir.
 Clean Architecture gereği auction_commands içinden izole edilmiştir.
 """
 
+import asyncio
+import math
+
 from app.models.user import User
 from app.core.exceptions import BadRequestException, ForbiddenException
 from app.services.fraud_detection_service import _log_fraud_attempt
 from app.database_clickhouse import track_user_event
-import asyncio
 
 # ── Mutlak tavan (doğrulanmış/doğrulanmamış ayrımı olmaksızın her kullanıcı için) ──
 _ABSOLUTE_MAX_BID_TL  = 500_000.0   # platform teklif tavanı (TL)
@@ -44,7 +46,7 @@ class BidValidationService:
            - Eşik kontrolü ve katlama kontrolü
         """
         # ── Katman 1: Mutlak tavan — doğrulanmış olsa dahi geçerli ──
-        if data_amount > _ABSOLUTE_MAX_BID_TL:
+        if not math.isfinite(data_amount) or data_amount > _ABSOLUTE_MAX_BID_TL:
             await _log_fraud_attempt(
                 "troll_bid_exceeds_platform_limit",
                 stream_id=stream_id,
@@ -54,13 +56,17 @@ class BidValidationService:
             )
             raise BadRequestException(code="BID_EXCEEDS_MAX_PLATFORM_LIMIT")
 
-        if current_bid >= _MULTIPLIER_MIN_BASE_TL and data_amount > current_bid * _MAX_MULTIPLIER_HARD:
+        # effective_base: current_bid < 500 TL olan müzayedelerde (1 TL başlangıç fiyatı vb.)
+        # _MULTIPLIER_MIN_BASE_TL tabanı kullanılır; böylece 100 TL'lik ürüne
+        # max(100, 500) × 15 = 7.500 TL üzerindeki teklifler engellenir.
+        effective_base = max(current_bid, _MULTIPLIER_MIN_BASE_TL)
+        if data_amount > effective_base * _MAX_MULTIPLIER_HARD:
             await _log_fraud_attempt(
                 "troll_bid_exceeds_hard_multiplier",
                 stream_id=stream_id,
                 user_id=user.id,
                 username=user.username,
-                extra={"amount": data_amount, "current_bid": current_bid, "multiplier": _MAX_MULTIPLIER_HARD, "is_verified": user.is_verified},
+                extra={"amount": data_amount, "current_bid": current_bid, "effective_base": effective_base, "multiplier": _MAX_MULTIPLIER_HARD, "is_verified": user.is_verified},
             )
             raise BadRequestException(code="BID_MULTIPLIER_EXCEEDED")
 
