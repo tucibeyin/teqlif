@@ -532,8 +532,22 @@ async def get_suggested_streamers(
       - Yayın sıklığı              → 0.10  (LOG normalize)
 
     Önce takip edilmeyenler (yeni keşif), veri yoksa takip edilenler dahil edilir.
+    Sonuçlar 5 dakika Redis'te önbelleklenir (cache:suggested_streamers:{uid}:{limit}).
     """
+    import json
     from sqlalchemy import text as sa_text
+    from app.utils.redis_client import get_redis
+
+    _CACHE_TTL = 300  # 5 dakika
+    cache_key = f"cache:suggested_streamers:{current_user.id}:{limit}"
+
+    try:
+        redis = await get_redis()
+        cached = await redis.get(cache_key)
+        if cached:
+            return json.loads(cached)
+    except Exception:
+        pass
 
     # Kullanıcının top-3 ilgi kategorisini skor ile birlikte çek
     interest_result = await db.execute(
@@ -565,6 +579,8 @@ async def get_suggested_streamers(
         cat_params = {}
         cat_affinity_expr = "0.0"
 
+    # follower_count: skaler alt sorgu — tablo geneli GROUP BY yerine
+    # yalnızca sonuç setindeki yayıncılar için ix_follows_followed_id kullanır
     base_query = f"""
         WITH streamer_stats AS (
             SELECT
@@ -576,7 +592,7 @@ async def get_suggested_streamers(
                 u.user_type,
                 COUNT(ls.id)                                    AS stream_count,
                 COALESCE(AVG(ls.viewer_count), 0)               AS avg_viewers,
-                COALESCE(fol.follower_count, 0)                 AS follower_count,
+                (SELECT COUNT(*) FROM follows WHERE followed_id = u.id) AS follower_count,
                 -- Şu an canlı mı? (ended_at IS NULL = aktif yayın)
                 COALESCE(live_now.is_live, FALSE)               AS is_live,
                 -- Kullanıcının ilgi kategorileriyle normalize edilmiş affinity skoru (0.0–1.0)
@@ -584,10 +600,6 @@ async def get_suggested_streamers(
             FROM users u
             INNER JOIN live_streams ls ON ls.host_id = u.id
                 AND ls.started_at >= NOW() - INTERVAL '90 days'
-            LEFT JOIN (
-                SELECT followed_id, COUNT(*) AS follower_count
-                FROM follows GROUP BY followed_id
-            ) fol ON fol.followed_id = u.id
             LEFT JOIN (
                 SELECT DISTINCT host_id, TRUE AS is_live
                 FROM live_streams
@@ -609,7 +621,7 @@ async def get_suggested_streamers(
               )
             {{follow_filter}}
             GROUP BY u.id, u.username, u.full_name, u.profile_image_url,
-                     u.email_verified, u.phone_verified, u.user_type, fol.follower_count,
+                     u.email_verified, u.phone_verified, u.user_type,
                      live_now.is_live, cat_match.cat_affinity_score
             HAVING COUNT(ls.id) >= 1
         )
@@ -631,22 +643,22 @@ async def get_suggested_streamers(
 
     base_params = {"uid": current_user.id, "lim": limit, **cat_params}
 
-    result = await db.execute(
+    db_result = await db.execute(
         sa_text(base_query.format(
             follow_filter="AND u.id NOT IN (SELECT followed_id FROM follows WHERE follower_id = :uid)"
         )),
         base_params,
     )
-    rows = result.fetchall()
+    rows = db_result.fetchall()
 
     if not rows:
-        result = await db.execute(
+        db_result = await db.execute(
             sa_text(base_query.format(follow_filter="")),
             base_params,
         )
-        rows = result.fetchall()
+        rows = db_result.fetchall()
 
-    return [
+    out = [
         {
             "id": row[0],
             "username": row[1],
@@ -661,6 +673,14 @@ async def get_suggested_streamers(
         }
         for row in rows
     ]
+
+    try:
+        redis = await get_redis()
+        await redis.setex(cache_key, _CACHE_TTL, json.dumps(out, ensure_ascii=False))
+    except Exception:
+        pass
+
+    return out
 
 
 @router.get("/following/live", response_model=list[StreamOut])
