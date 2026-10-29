@@ -1,5 +1,4 @@
 import asyncio
-import aiohttp
 import logging
 import time
 from datetime import datetime, timedelta, timezone
@@ -9,9 +8,8 @@ from app.core.exceptions import UnauthorizedException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from livekit.api import WebhookReceiver, TokenVerifier
-from livekit.api.room_service import RoomService, ListRoomsRequest
 
-from app.database import get_db, AsyncSessionLocal
+from app.database import AsyncSessionLocal
 from app.models.stream import LiveStream
 from app.utils.redis_client import get_redis
 from app.config import settings
@@ -212,24 +210,15 @@ async def _delayed_close_stream(room_name: str) -> None:
     # Fallback: ARQ pool yok
     await asyncio.sleep(60)
     try:
-        from app.services.edge_orchestrator import orchestrator, ServiceType
-        node = await orchestrator.allocate_node(ServiceType.MEDIA)
-        api_url = node["livekit_url"]
-        async with aiohttp.ClientSession() as session:
-            svc = RoomService(
-                session,
-                api_url,
-                settings.livekit_api_key,
-                settings.livekit_api_secret,
-            )
-            res = await svc.list_rooms(ListRoomsRequest())
-            if any(r.name == room_name for r in res.rooms):
-                logger.info("LiveKit webhook: %s odası hala/yeniden aktif, kapatma iptal edildi.", room_name)
-                return
+        from app.services.livekit_service import lk_list_all_rooms
+        active_rooms = await lk_list_all_rooms()
+        if room_name in active_rooms:
+            logger.info("[Webhooks] Oda hâlâ aktif, kapatma iptal | room=%s", room_name)
+            return
     except Exception:
-        logger.warning("LiveKit API check failed for %s, proceeding to close stream", room_name)
+        logger.warning("[Webhooks] LiveKit API kontrolü başarısız, kapatmaya devam | room=%s", room_name)
 
-    async for db in get_db():
+    async with AsyncSessionLocal() as db:
         from app.use_cases.streams.commands.force_close_stream import force_close_stream
         await force_close_stream(db, room_name)
 
