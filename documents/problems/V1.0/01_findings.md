@@ -5255,9 +5255,14 @@ await _insert_highlight_record(room_id, host_id, str(output))
 2. Çekilen MP4 dosyası derhal `storage_service.upload_file` ile MinIO `highlights` bucket'ına yüklenmeli, veritabanına CDN URL'i kaydedilmeli ve yerel geçici dosya temizlenmelidir.
 
 #### ✅ Çözüm Damgası
-* **Commit:** `9de8f281` · 2026-10-29
-* **Değişiklik:** `video_tasks.py` — `allocate_node(MEDIA)` kaldırıldı; `_get_stream_livekit_url(room_id)` eklendi: `live_streams.livekit_url` DB'den okunur, bulunamazsa `settings.edge_livekit_urls[0]` fallback + warning log. MinIO upload zaten mevcuttu.
-* **Durum:** Tüm node'lara (node1–6 + nodeMonitor) deploy edildi; node1 servisleri sağlıklı.
+* **Commit:** `9de8f281` · 2026-10-29 (node seçimi — DB-first)
+* **Commit:** `03f570f7` · 2026-10-30 (Seçenek A — gerçek implementasyon)
+* **Değişiklik:**
+  * `livekit_subscriber.py` — `--stop-after N` parametresi eklendi; N saniye sonra `stop_evt.set()` çağrılır
+  * `video_tasks.py` — FFmpeg WHEP yaklaşımı tamamen kaldırıldı; yerine `livekit_subscriber.py` subprocess (`/opt/teqlif-agent/venv/bin/python`, `--stop-after 15`) + FFmpeg `libx264+AAC+faststart` MKV→MP4 encode pipeline'ı geldi; `capture_hype_highlight` ARQ task (ctx: dict) olarak dönüştürüldü
+  * `chat.py` — `asyncio.create_task()` kaldırıldı; `get_pool().enqueue_job(_queue_name="video", _job_id="highlight:{stream_id}")` ile ARQ'ya delege edildi
+  * `worker.py` — `WorkerSettingsVideo.functions`'a `capture_hype_highlight` eklendi
+* **Durum:** Tüm node'lara (node1–6 + nodeMonitor) deploy edildi.
 
 ---
 
