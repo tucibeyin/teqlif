@@ -26,6 +26,7 @@ async def stream_concat_task(ctx: dict) -> None:
                 WHERE is_concat_result = FALSE
                   AND part_number IS NOT NULL
                   AND status = 'available'
+                  AND retry_count < 3
                 GROUP BY stream_id
                 HAVING COUNT(*) > 1
                 ORDER BY stream_id
@@ -127,7 +128,31 @@ async def _run_concat(stream_id: int) -> None:
         )
         _, stderr = await proc.communicate()
         if proc.returncode != 0:
-            logger.error("_run_concat: ffmpeg hata stream_id=%s: %s", stream_id, stderr.decode()[-500:])
+            error_msg = stderr.decode()[-500:]
+            logger.error("_run_concat: ffmpeg hata stream_id=%s: %s", stream_id, error_msg)
+            async with AsyncSessionLocal() as session:
+                result = await session.execute(text("""
+                    UPDATE stream_recordings
+                    SET retry_count = retry_count + 1,
+                        error_message = :error,
+                        updated_at = NOW()
+                    WHERE stream_id = :sid
+                      AND is_concat_result = FALSE
+                      AND part_number IS NOT NULL
+                      AND status = 'available'
+                    RETURNING retry_count
+                """), {"sid": stream_id, "error": error_msg})
+                max_retry = max((r[0] for r in result.fetchall()), default=0)
+                if max_retry >= 3:
+                    await session.execute(text("""
+                        UPDATE stream_recordings
+                        SET status = 'concat_failed', updated_at = NOW()
+                        WHERE stream_id = :sid
+                          AND is_concat_result = FALSE
+                          AND part_number IS NOT NULL
+                    """), {"sid": stream_id})
+                    logger.warning("_run_concat: stream_id=%s kalıcı hata (3 deneme), concat_failed yapıldı", stream_id)
+                await session.commit()
             return
 
         # Sonucu MinIO'ya yükle
