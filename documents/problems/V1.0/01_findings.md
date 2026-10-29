@@ -5134,6 +5134,12 @@ if current_bid >= _MULTIPLIER_MIN_BASE_TL and data_amount > current_bid * MAX_MU
     raise BadRequestException(code="BID_MULTIPLIER_EXCEEDED")
 ```
 
+> **✅ Çözüldü** — Commit `c2f5bd6e` · 2026-10-29
+> `validate_troll_bid` iki katmanlı yapıya dönüştürüldü.
+> Katman 1 (herkese, telefon doğrulaması bypass etmez): `_ABSOLUTE_MAX_BID_TL=500_000` → `BID_EXCEEDS_MAX_PLATFORM_LIMIT`; `_MAX_MULTIPLIER_HARD=15×` → `BID_MULTIPLIER_EXCEEDED`. Her iki kontrol `_log_fraud_attempt` ile kayıt altına alınır.
+> Katman 2 (değişmedi): telefon doğrulaması olmayanlar için mevcut soft ceiling.
+> Önceki durum: doğrulanmış hesap → hard ceiling yok → 1 milyar TL teklif kabul ediliyordu.
+
 ---
 
 ### SRE-129 · 🔴 P0 (Kritik) · Node1 Kurulum Scriptinde `postgresql-17-pgvector` Paketinin Eksik Olması ve Vektör Extension Çökmesi
