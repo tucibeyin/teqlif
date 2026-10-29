@@ -114,6 +114,13 @@ const Chat = (() => {
                     if (_onStreamLike && (!_myUserId || senderId !== _myUserId)) {
                         _onStreamLike(senderId, msg.username || '');
                     }
+                } else if (msg.type === 'stream_like_batch') {
+                    if (_onStreamLike) {
+                        const n = Math.min(msg.count || 1, 8);
+                        for (let i = 0; i < n; i++) {
+                            setTimeout(() => _onStreamLike(0, ''), i * 100);
+                        }
+                    }
                 } else if (msg.type === 'cohost_invite') {
                     if (_onCoHostInvite) _onCoHostInvite(msg.host_username || '', msg.target_username || '');
                 } else if (msg.type === 'cohost_removed') {

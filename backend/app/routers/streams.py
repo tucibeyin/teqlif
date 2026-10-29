@@ -406,15 +406,16 @@ async def join_stream(
 @router.post("/{stream_id}/like", status_code=status.HTTP_200_OK)
 async def like_stream(
     stream_id: int,
+    count: int = Query(1, ge=1, le=50),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """
     Canlı yayına kalp gönder (add-only, toggle yok).
-    Aynı yayına art arda birden fazla kez çağrılabilir.
-    Tüm izleyicilere WebSocket ile `stream_like` sinyali yayımlanır.
+    count: istemci throttle ettiği toplam kalp sayısını tek istekte gönderir (max 50).
+    stream_like_ticker tarafından saniyede 1 kez stream_like_batch olarak yayılır.
     """
-    return await LikeService(db).add_stream_like(stream_id, current_user.id, current_user.username)
+    return await LikeService(db).add_stream_like(stream_id, current_user.id, current_user.username, count=count)
 
 
 @router.delete("/{stream_id}/leave", status_code=status.HTTP_204_NO_CONTENT)

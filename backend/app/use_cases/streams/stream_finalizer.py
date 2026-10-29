@@ -135,6 +135,7 @@ async def finalize_stream(stream: LiveStream, db: AsyncSession) -> None:
             f"stream:stats:{stream.id}",
             f"stream:likes:{stream.id}",
             f"stream:likes:pending:{stream.id}",
+            f"stream:is_live:{stream.id}",
         ]
         if dump_ok:
             base_keys.append(chat_key(stream.id))

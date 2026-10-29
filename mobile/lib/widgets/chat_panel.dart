@@ -535,6 +535,14 @@ class ChatPanelState extends ConsumerState<ChatPanel> {
             if (_myUserId == null || likeUserId != _myUserId) {
               eventType = 'stream_like:$likeUserId:$likeUsername';
             }
+          } else if (json['type'] == 'stream_like_batch') {
+            final batchCount = (json['count'] as num?)?.toInt() ?? 1;
+            final heartsToShow = batchCount.clamp(1, 8);
+            for (var i = 0; i < heartsToShow; i++) {
+              Future.delayed(Duration(milliseconds: i * 100), () {
+                if (mounted) widget.onStreamLike?.call(0, '');
+              });
+            }
           } else if (json['type'] == 'cohost_invite') {
             final hostUsername = json['host_username'] as String? ?? '';
             final targetUsername = json['target_username'] as String? ?? '';

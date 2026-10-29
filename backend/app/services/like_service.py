@@ -195,26 +195,37 @@ class LikeService:
         stream_like_batch WS sinyali olarak yayar.
         Yayın aktif değilse 404 döner.
         """
-        stream_exists = await self.db.scalar(
-            select(LiveStream.id).where(
-                LiveStream.id == stream_id, LiveStream.is_live == True  # noqa: E712
-            )
-        )
-        if not stream_exists:
-            raise NotFoundException(code="STREAM_NOT_FOUND")
-
         count = max(1, min(count, 50))  # istemci gönderimini sınırla
 
+        # is_live kontrolü — Redis önbellekten (DB'ye gitmez)
         try:
             from app.utils.redis_client import get_redis
             redis = await get_redis()
+            is_live = await redis.get(f"stream:is_live:{stream_id}")
+        except Exception:
+            is_live = None
+
+        if is_live is None:
+            # Cache miss — DB'ye tek seferlik fallback
+            stream_exists = await self.db.scalar(
+                select(LiveStream.id).where(
+                    LiveStream.id == stream_id, LiveStream.is_live == True  # noqa: E712
+                )
+            )
+            if not stream_exists:
+                raise NotFoundException(code="STREAM_NOT_FOUND")
+        elif is_live == "0":
+            raise NotFoundException(code="STREAM_NOT_FOUND")
+
+        try:
             key = f"stream:likes:{stream_id}"
             pending_key = f"stream:likes:pending:{stream_id}"
             total = await redis.incrby(key, count)
-            await redis.incrby(pending_key, count)
-            # EXPIRE yalnızca ilk kez set edilir
+            pending = await redis.incrby(pending_key, count)
+            # EXPIRE: key yeni oluştuğunda veya pending yeni oluştuğunda set et
             if total == count:
                 await redis.expire(key, 48 * 3600)
+            if pending == count:
                 await redis.expire(pending_key, 48 * 3600)
         except Exception:
             pass

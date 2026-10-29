@@ -66,6 +66,14 @@ class ConfirmLiveCommand:
                     pass  # webhook 2dk'da temizler
                 raise DatabaseException(code="CONFIRM_LIVE_FAILED") from exc
 
+        # is_live Redis cache — kalp yolundaki Postgres SELECT'i kaldırır
+        try:
+            from app.utils.redis_client import get_redis
+            _redis = await get_redis()
+            await _redis.set(f"stream:is_live:{stream.id}", "1", ex=12 * 3600)
+        except Exception:
+            pass
+
         from app.use_cases.streams.stream_utils import notify_followers_task
         background_tasks.add_task(
             notify_followers_task,
