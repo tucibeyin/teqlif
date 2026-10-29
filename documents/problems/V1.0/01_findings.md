@@ -4781,6 +4781,10 @@ async def get_listing_offers(
    ```
 2. `_check_velocity` içinde `expire` yalnızca anahtar yeni oluşturulduğunda (`current is None`) set edilmeli veya Redis sliding log (zset) kullanılmalıdır.
 
+> **✅ Çözüldü** — Commit `f9b8a018` · 2026-10-29
+> `apple_verifier.py`: Consumable'larda `transactionId` (tekil), subscription'larda `originalTransactionId` kullanılıyor; artık 2. alım `IAP_ALREADY_PROCESSED` almaz.
+> `verify_purchase_command.py`: `_check_velocity` içinde `pipe.expire()` yalnızca `current is None` (yeni pencere) durumunda çağrılır; TTL sliding window bug'ı kapatıldı.
+
 ---
 
 ### SRE-118 · 🔴 P0 (Kritik) · Concat Görevinde Yanlış MinIO Node'u, Yetim Part Dosyaları ve Bozuk MP4 Transcode Açığı
