@@ -156,6 +156,12 @@ async def capture_hype_highlight(room_name: str, room_id: int, host_id: int) -> 
             await _insert_highlight_record(room_id, host_id, video_url)
         except Exception as exc:
             logger.warning("[Highlight] DB kaydı başarısız | room_id=%s | %s", room_id, exc)
+            # MinIO rollback: DB yoksa nesne yetim kalır (GC DB kayıtlarından gezdiği için göremez)
+            try:
+                from app.services import storage_service as storage
+                await storage.delete_object(video_url)
+            except Exception:
+                pass
     finally:
         try:
             os.unlink(tmp_path)
