@@ -4282,18 +4282,14 @@ async def get_listing_offers(
    Her kalp sinyali için odadaki tüm izleyicilere tekil bir WebSocket paketi yayımlanmaktadır. 1.000 izleyici × saniyede 5.000 kalp = **saniyede 5.000.000 WebSocket paketi**! Bu hacim Uvicorn event loop'unu ve Redis Pub/Sub buffer'larını anında şişirir; bellek tükenmesi (OOM kill) ve tüm aktif WebSocket bağlantılarının kopması kaçınılmazdır.
 
 #### 2. Çözüm / Refactoring Reçetesi
-1. **DB'ye Her Kalpte Yazım Kaldırılmalı:** Kalpler bir etkileşim sinyalidir, finansal işlem değildir. İstemci tarafında kalpler 1 saniye throttle edilmeli (`count: N` olarak gönderilmeli).
-2. **Redis In-Memory Toplama:** Sunucu tarafında `add_stream_like` yalnızca Redis'te `INCRBY f"stream:likes:{stream_id}" count` yapmalı; PostgreSQL'e yazım ya tamamen kaldırılmalı ya da yayın sonlandığında (`end_stream`) Redis'teki toplam sayı tek bir UPDATE ile `live_streams.total_likes` sütununa yazılmalıdır.
-3. **WebSocket Batch Yayını:** Her kalp için ayrı WS yayını yapılmamalı; Redis'e biriken kalpler oda yöneticisi veya arka plan tick döngüsü tarafından saniyede 1 kez `{"type": "stream_like_batch", "count": N}` formatında topluca duyurulmalıdır:
-   ```python
-   async def add_stream_like(self, stream_id: int, user_id: int, count: int = 1) -> dict:
-       redis = await get_redis()
-       key = f"stream:likes:{stream_id}"
-       total = await redis.incrby(key, count)
-       if total == count:
-           await redis.expire(key, 48 * 3600)
-       return {"ok": True, "total_likes": total}
-   ```
+
+> ✅ **Çözüldü** — commit `3a939bd1` · 2026-10-29
+> - `like_service.py` `add_stream_like`: DB INSERT+COMMIT kaldırıldı. `INCRBY stream:likes:{id}` + `INCRBY stream:likes:pending:{id}`; EXPIRE yalnızca ilk kez; `count` parametresi eklendi (max 50).
+> - `stream_like_ticker.py` (yeni): lifespan background task — saniyede 1 kez `stream:likes:pending:*` key'lerini SCAN+GETDEL, `stream_like_batch {count}` WS sinyali olarak yayar.
+> - `stream_finalizer.py`: yayın kapanışında Redis sayacını `total_likes` DB sütununa yazar; `stream:likes:pending:{id}` key'i temizlenir.
+> - `like_service.py` `batch_stream_likes`: `COUNT(stream_likes)` yerine `live_streams.total_likes` sütununu okur.
+> - `ws_types.py`: `STREAM_LIKE_BATCH` sabiti eklendi.
+> - Alembic `zzzzzz_stream_total_likes`: `live_streams.total_likes INTEGER NOT NULL DEFAULT 0`.
 
 ---
 
