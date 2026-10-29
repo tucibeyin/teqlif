@@ -4198,7 +4198,7 @@ async def get_listing_offers(
 
 ---
 
-### SRE-103 · 🟡 P2 (Orta) · Hikaye Görüntüleyenler Endpoint'inde (`get_story_viewers`) Sayfalama Eksikliği ve OOM Riski
+### SRE-103 · ✅ Çözüldü (`e3be467d` · 2026-10-29) · Hikaye Görüntüleyenler Endpoint'inde (`get_story_viewers`) Sayfalama Eksikliği ve OOM Riski
 
 * **Etkilenen Dosya:** `backend/app/services/story_service.py`
 * **İlgili Satırlar:** 471–515 (`get_story_viewers`)
