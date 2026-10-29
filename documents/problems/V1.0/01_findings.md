@@ -2845,6 +2845,8 @@ Böylece yanıt süresi 40ms'den 0.5ms'ye iner, DB yükü sıfırlanır.
 
 ### SRE-72 · 🔴 P0 (Kritik) · `notifications.py` İçinde Eksik `AsyncSessionLocal` Import'u Nedeniyle Tüm Canlı Bildirim WebSocket'lerinin Çökmesi
 
+> ✅ **Çözüldü** — Commit `3aaeab50` · 2026-10-29
+
 * **Etkilenen Dosya:** `backend/app/routers/notifications.py` (satırlar 9, 121, 155)
 * **İlgili Endpoint:** `WebSocket /api/notifications/ws`
 
