@@ -4542,6 +4542,7 @@ async def get_listing_offers(
   - `_get_client_from_public_url` kaldırıldı — CDN domain'i node_id ile eşleştiremediği için temelden bozuktu; tüm delete sessizce başarısız oluyordu
   - `_get_all_storage_clients()` eklendi — orchestrator metrics → `edge_minio_urls` → `minio_endpoint` öncelikli fallback zinciri
   - `delete_object` ve `delete_object_dm` fanout'a çevrildi — tüm storage node'larında `asyncio.gather` ile paralel silme, `NoSuchKey` görmezden geliniyor
+* **Followup Commit:** `013a3819` — `url_to_key` / `dm_url_to_key` idempotent hale getirildi; ham key verildiğinde ilk klasör segmenti kesiliyordu → 13/15 silme noktasında NoSuchKey ile sessizce başarısız oluyordu
 
 ---
 
