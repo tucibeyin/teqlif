@@ -8,7 +8,8 @@ from passlib.context import CryptContext
 from fastapi import Cookie, Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, DateTime as _SA_DateTime
+from decimal import Decimal
+from sqlalchemy import select, DateTime as _SA_DateTime, Numeric as _SA_Numeric
 
 from app.models.enums import UserStatus
 from app.config import settings
@@ -95,6 +96,7 @@ def _decode_token_version(token: str) -> int:
 
 _USER_SESSION_TTL = 900  # 15 dakika
 _USER_DATETIME_COLS: frozenset[str] | None = None
+_USER_NUMERIC_COLS: frozenset[str] | None = None
 
 
 def _get_datetime_col_names() -> frozenset[str]:
@@ -109,6 +111,18 @@ def _get_datetime_col_names() -> frozenset[str]:
     return _USER_DATETIME_COLS
 
 
+def _get_numeric_col_names() -> frozenset[str]:
+    """User modelindeki tüm Numeric sütun adlarını döner — ilk çağrıda hesaplanır."""
+    global _USER_NUMERIC_COLS
+    if _USER_NUMERIC_COLS is None:
+        from app.models.user import User as _User
+        _USER_NUMERIC_COLS = frozenset(
+            col.name for col in _User.__table__.columns
+            if isinstance(col.type, _SA_Numeric)
+        )
+    return _USER_NUMERIC_COLS
+
+
 def _serialize_user(user) -> dict:
     data = {}
     for col in user.__table__.columns:
@@ -120,6 +134,8 @@ def _serialize_user(user) -> dict:
             data[col.name] = val.isoformat()
         elif isinstance(val, UserStatus):
             data[col.name] = val.value
+        elif isinstance(val, Decimal):
+            data[col.name] = str(val)
         else:
             data[col.name] = val
     return data
@@ -142,6 +158,13 @@ async def _fetch_and_cache_user(db: AsyncSession, user_id: int):
                         data[dt_col] = datetime.fromisoformat(val.replace("Z", "+00:00"))
                     except (ValueError, TypeError):
                         data[dt_col] = None
+            for num_col in _get_numeric_col_names():
+                val = data.get(num_col)
+                if val is not None and isinstance(val, str):
+                    try:
+                        data[num_col] = Decimal(val)
+                    except Exception:
+                        data[num_col] = None
             if data.get("status"):
                 try:
                     data["status"] = UserStatus(data["status"])
