@@ -5178,6 +5178,11 @@ apt-get install -y -qq "postgresql-${PG_VERSION}" "postgresql-client-${PG_VERSIO
 ```
 2. `database.py` içindeki `init_extensions()` sessiz `pass` yerine hatayı loglamalı veya startup'ta exception fırlatarak eksik paketin hemen fark edilmesini sağlamalıdır.
 
+> **✅ Çözüldü** — Commit `d652c1ba` · 2026-10-29
+> `bootstrap_node1.sh:install_postgresql`: `postgresql-${PG_VERSION}-pgvector` eklendi (fresh node1 kurulumunda paket eksik kalıyordu).
+> `database.py:init_extensions`: `except Exception: pass` → `CRITICAL` log + `pg_extension` doğrulama sorgusu. Extension oluşturulamaz veya aktif değilse paket eksikliğini açıkça loglar; sessiz hata yutma kapatıldı.
+> Mevcut prod DB'de extension zaten aktif (`vector 0.8.6` — `teqlif` DB'de doğrulandı).
+
 ---
 
 ### SRE-130 · 🔴 P0 (Kritik) · Staging Redis Konfigürasyonunun `/etc/redis` Dizinine Yazılması ve `apply_secrets` Tarafından Atlanması
