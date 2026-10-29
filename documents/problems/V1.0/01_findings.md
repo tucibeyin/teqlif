@@ -4172,7 +4172,7 @@ async def get_listing_offers(
 
 ---
 
-### SRE-102 · 🟠 P1 (Yüksek) · `get_suggested_streamers` İçinde Her İstekte Milyonluk `follows` ve `live_streams` Full Tablo Taranması
+### SRE-102 · ✅ Çözüldü (`916de451` · 2026-10-29) · `get_suggested_streamers` İçinde Her İstekte Milyonluk `follows` ve `live_streams` Full Tablo Taranması
 
 * **Etkilenen Dosya:** `backend/app/routers/streams.py`
 * **İlgili Satırlar:** 518–665 (`get_suggested_streamers`)
