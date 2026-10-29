@@ -4137,7 +4137,7 @@ async def get_listing_offers(
 
 ---
 
-### SRE-101 · 🟠 P1 (Yüksek) · Direkt Satışta Eşzamanlı Alımlarda Kilitsiz Stok Güncellemesi (Lost Update) ve İptal Sonrası Sipariş
+### SRE-101 · ✅ Çözüldü (`8eb02c9e` · 2026-10-29) · Direkt Satışta Eşzamanlı Alımlarda Kilitsiz Stok Güncellemesi (Lost Update) ve İptal Sonrası Sipariş
 
 * **Etkilenen Dosya:** `backend/app/use_cases/direct_sales/commands/direct_sale_commands.py`
 * **İlgili Satırlar:** 370–455 (`purchase_sale`), 280–327 (`cancel_sale`), 54–59 (`_get_sale`)
