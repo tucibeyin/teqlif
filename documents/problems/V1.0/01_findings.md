@@ -251,6 +251,8 @@ Bu durum **sonsuz bir döngü** yaratır; sunucunun bant genişliği, CPU'su ve 
 
 ### SRE-03 · 🟠 P1 (Yüksek) · ARQ Worker Görev Zaman Aşımı (300sn) vs Uzun Video İşleme Süresi Çelişkisi
 
+> ✅ **Çözüldü** — Commit `e6ab1272` · 2026-10-29
+
 * **Etkilenen Dosyalar:** `backend/app/worker.py` (satır 4364–4367) ve `backend/app/tasks/stream_concat_task.py` (satır 12–14)
 
 #### 1. Sorunun Tanımı ve Arıza Modu
