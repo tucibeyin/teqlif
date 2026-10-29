@@ -228,7 +228,10 @@ async def _delayed_close_stream(room_name: str) -> None:
         logger.debug("[Webhooks] DB'de aktif kayıt yok | room=%s", room_name)
         return
 
-    auth_url = stream.livekit_url or settings.livekit_url
+    auth_url = stream.livekit_url or (settings.edge_livekit_urls[0] if settings.edge_livekit_urls else "")
+    if not auth_url:
+        logger.warning("[Webhooks] Yetkili node URL yok, kapatma iptal | room=%s", room_name)
+        return
 
     # 2. Yalnızca yetkili node'a hedefli sorgu — Redis/edge:metrics bağımlılığı yok
     try:
