@@ -4333,7 +4333,7 @@ async def get_listing_offers(
    ```
 
 #### ✅ Çözüm Damgası
-* **Commit:** `PLACEHOLDER`
+* **Commit:** `0f5477c9`
 * **Tarih:** 2026-10-29
 * **Uygulanan Değişiklikler:**
   - `backend/app/routers/search_alerts.py:103` → `alert.status = 'passive'` → `alert.status = SearchAlertStatus.DELETED`
