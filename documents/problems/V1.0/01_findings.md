@@ -4584,6 +4584,14 @@ async def get_listing_offers(
        )
    ```
 
+#### ✅ Çözüm Damgası
+* **Commit:** `4ca62de5`
+* **Tarih:** 2026-10-29
+* **Uygulanan Değişiklikler:**
+  - `session` referans takibi kaldırıldı; `hard_deleted` flag eklendi
+  - `async with self.uow:` kapandıktan sonra `AsyncSessionLocal()` ile taze bağımsız session açılıyor
+  - `_purge_media` URL'leri doğrudan geçecek şekilde sadeleştirildi (url_to_key/dm_url_to_key artık idempotent)
+
 ---
 
 ### SRE-113 · 🟠 P1 (Yüksek) · Herkesten Silinen Mesajlarda MinIO DM Dosyasının Silinmemesi ve KVKK/Gizlilik İhlali
