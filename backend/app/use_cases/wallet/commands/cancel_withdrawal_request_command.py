@@ -16,10 +16,11 @@ class CancelWithdrawalRequestCommand:
         self._session = session
 
     async def execute(self, user_id: int, request_id: int) -> dict:
+        # FOR UPDATE: satır kilidi — çift iptal ve approve-cancel yarışını önler
         row = await self._session.execute(
             text(
                 "SELECT user_id, teqlik_amount, status "
-                "FROM withdrawal_requests WHERE id = :rid"
+                "FROM withdrawal_requests WHERE id = :rid FOR UPDATE"
             ),
             {"rid": request_id},
         )
@@ -35,7 +36,19 @@ class CancelWithdrawalRequestCommand:
         if status != "pending":
             raise ConflictException(code="WITHDRAWAL_NOT_CANCELLABLE")
 
-        # available iade + status güncelleme — aynı transaction
+        # Atomik güncelleme: AND status='pending' — başka tx geçmişse RETURNING boş döner
+        upd = await self._session.execute(
+            text(
+                "UPDATE withdrawal_requests "
+                "SET status = 'cancelled', cancelled_at = NOW() "
+                "WHERE id = :rid AND status = 'pending' RETURNING id"
+            ),
+            {"rid": request_id},
+        )
+        if upd.fetchone() is None:
+            raise ConflictException(code="WITHDRAWAL_ALREADY_PROCESSED")
+
+        # Yalnızca status değiştiyse iade et
         await self._session.execute(
             text(
                 "UPDATE user_wallet_earnings "
@@ -43,14 +56,6 @@ class CancelWithdrawalRequestCommand:
                 "WHERE user_id = :uid"
             ),
             {"amt": teqlik_amount, "uid": user_id},
-        )
-        await self._session.execute(
-            text(
-                "UPDATE withdrawal_requests "
-                "SET status = 'cancelled', cancelled_at = NOW() "
-                "WHERE id = :rid"
-            ),
-            {"rid": request_id},
         )
 
         avail_after_row = await self._session.execute(

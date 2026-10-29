@@ -33,10 +33,11 @@ class ProcessWithdrawalCommand:
             from app.core.exceptions import BadRequestException
             raise BadRequestException(code="INVALID_WITHDRAWAL_ACTION")
 
+        # FOR UPDATE: satır kilidi — approve-cancel yarışını ve çift onayı önler
         row = await self._session.execute(
             text(
                 "SELECT id, user_id, teqlik_amount, status "
-                "FROM withdrawal_requests WHERE id = :rid"
+                "FROM withdrawal_requests WHERE id = :rid FOR UPDATE"
             ),
             {"rid": request_id},
         )
@@ -51,14 +52,17 @@ class ProcessWithdrawalCommand:
 
         new_status = "approved" if action == "approve" else "rejected"
 
-        await self._session.execute(
+        # Atomik güncelleme: AND status='pending' — kilitleme sonrası ek güvence
+        upd = await self._session.execute(
             text(
                 "UPDATE withdrawal_requests "
                 "SET status = :status, processed_at = NOW(), admin_note = :note "
-                "WHERE id = :rid"
+                "WHERE id = :rid AND status = 'pending' RETURNING id"
             ),
             {"status": new_status, "note": admin_note, "rid": request_id},
         )
+        if upd.fetchone() is None:
+            raise ConflictException(code="WITHDRAWAL_NOT_PENDING")
 
         if action == "reject":
             await self._session.execute(
