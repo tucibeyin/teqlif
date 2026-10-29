@@ -83,6 +83,7 @@ setup_livekit() {
     local node_dir="${1}"
     log_step "LiveKit config"
     mkdir -p /project/teqlif/config /project/teqlif/logs/livekit
+    chown tucibeyin:tucibeyin /project/teqlif/logs/livekit
     cp "${node_dir}/resources/livekit/livekit.yaml" /project/teqlif/config/livekit.yaml
     cp "${node_dir}/systemd/teqlif-livekit.service" /etc/systemd/system/
     systemctl daemon-reload

@@ -59,7 +59,7 @@ main() {
     install_node_exporter
 
     if [ -n "${SECRETS_FILE:-}" ]; then
-        apply_secrets "${SECRETS_FILE}" /project/teqlif/config /etc/wireguard /etc/redis
+        apply_secrets "${SECRETS_FILE}" /project/teqlif/config /etc/wireguard
     fi
 
     print_summary "${NODE_ID}" "${WG_IP}" \
@@ -101,8 +101,10 @@ install_postgresql_staging() {
 install_redis_staging() {
     log_step "Redis (staging — tek instance :6379)"
     apt-get install -y -qq redis-server
-    # Staging için tek Redis (staging_redis_pass ile)
-    cat > /etc/redis/redis-staging.conf <<'EOF'
+    # Config node1 mimarisiyle uyumlu: /project/teqlif/config/redis/
+    # (apply_secrets /etc/redis'e erişemez; /etc/redis 2750 redis:redis — Bulgu 1)
+    mkdir -p /project/teqlif/config/redis /project/teqlif/data/redis
+    cat > /project/teqlif/config/redis/redis-staging.conf <<'EOF'
 bind 127.0.0.1
 port 6379
 requirepass <staging_redis_pass>
@@ -115,8 +117,8 @@ save 900 1
 maxmemory 512mb
 maxmemory-policy allkeys-lru
 EOF
-    mkdir -p /project/teqlif/data/redis
-    chown tucibeyin:tucibeyin /project/teqlif/data/redis
+    chown -R tucibeyin:tucibeyin /project/teqlif/config/redis /project/teqlif/data/redis
+    chmod 600 /project/teqlif/config/redis/redis-staging.conf
     systemctl disable --now redis-server 2>/dev/null || true
     cat > /etc/systemd/system/teqlif-redis-staging.service <<'EOF'
 [Unit]
@@ -125,7 +127,7 @@ After=network.target
 [Service]
 Type=simple
 User=tucibeyin
-ExecStart=/usr/bin/redis-server /etc/redis/redis-staging.conf
+ExecStart=/usr/bin/redis-server /project/teqlif/config/redis/redis-staging.conf
 Restart=always
 RestartSec=3
 LimitNOFILE=65535

@@ -103,6 +103,7 @@ setup_teqlif_directories() {
     chmod 755 /project/teqlif/logs
     chown -R tucibeyin:tucibeyin \
         /var/www/teqlif.com \
+        /project/teqlif/config \
         /project/teqlif/data \
         /project/teqlif/logs
     log_ok "teqlif dizinleri hazır (/project/teqlif/config, /project/teqlif/data, /project/teqlif/logs)"
@@ -461,12 +462,17 @@ apply_secrets() {
         key="${key#"${key%%[![:space:]]*}"}"; key="${key%"${key##*[![:space:]]}"}"
         value="${value#"${value%%[![:space:]]*}"}"; value="${value%"${value##*[![:space:]]}"}"
 
+        # Sed replacement'ta özel karakterleri kaçır (& \ |)
+        local escaped_val="${value//\\/\\\\}"
+        escaped_val="${escaped_val//&/\\&}"
+        escaped_val="${escaped_val//|/\\|}"
+
         local found=0
         for dir in "${config_dirs[@]}"; do
             [ -d "${dir}" ] || continue
             while IFS= read -r -d '' file; do
                 if grep -qF "<${key}>" "${file}" 2>/dev/null; then
-                    sed -i "s|<${key}>|${value}|g" "${file}"
+                    sed -i "s|<${key}>|${escaped_val}|g" "${file}"
                     found=1
                 fi
             done < <(find "${dir}" -type f -print0)
@@ -481,6 +487,14 @@ apply_secrets() {
     done < "${secrets_file}"
 
     log_ok "Secrets uygulandı: ${applied} başarılı, ${skipped} atlandı"
+
+    # Config dosyaları normalize: tucibeyin sahipliği + 700/600 izinleri
+    if [ -d /project/teqlif/config ]; then
+        chown -R tucibeyin:tucibeyin /project/teqlif/config
+        find /project/teqlif/config -type d -exec chmod 700 {} +
+        find /project/teqlif/config -type f -exec chmod 600 {} +
+        log_ok "Config dosyaları normalize edildi (tucibeyin 700/600)"
+    fi
 
     if command -v shred &>/dev/null; then
         shred -u "${secrets_file}"
