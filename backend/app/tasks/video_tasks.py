@@ -47,6 +47,20 @@ def _make_livekit_recorder_token(room_name: str, room_id: int) -> str:
     return token.to_jwt()
 
 
+async def _get_stream_livekit_url(room_id: int) -> str | None:
+    """DB'den odanın yetkili LiveKit node URL'ini döner (live_streams.livekit_url)."""
+    from app.database import AsyncSessionLocal
+    from sqlalchemy import text
+
+    async with AsyncSessionLocal() as db:
+        row = await db.execute(
+            text("SELECT livekit_url FROM live_streams WHERE id = :id"),
+            {"id": room_id},
+        )
+        r = row.fetchone()
+        return r[0] if r else None
+
+
 async def _upload_highlight(local_path: str, room_id: int) -> str:
     """Yerel MP4 dosyasını MinIO'ya yükler ve public URL döner."""
     from app.services import storage_service as storage
@@ -93,11 +107,18 @@ async def capture_hype_highlight(room_name: str, room_id: int, host_id: int) -> 
     Bu fonksiyon asyncio.create_task() ile arka planda çağrılır.
     """
     try:
-        from app.services.edge_orchestrator import orchestrator, ServiceType
         from app.config import settings
-        node = await orchestrator.allocate_node(ServiceType.MEDIA)
-        lk_http = node["livekit_url"] if node else (settings.edge_livekit_urls[0] if settings.edge_livekit_urls else "")
-        whep_url = f"{lk_http}/rooms/{room_name}/whep"
+        lk_url = await _get_stream_livekit_url(room_id)
+        if not lk_url:
+            lk_url = settings.edge_livekit_urls[0] if settings.edge_livekit_urls else ""
+            logger.warning(
+                "[Highlight] DB'de livekit_url yok, fallback | room_id=%s url=%s",
+                room_id, lk_url,
+            )
+        if not lk_url:
+            logger.warning("[Highlight] Yetkili LiveKit URL bulunamadı | room_id=%s", room_id)
+            return
+        whep_url = f"{lk_url}/rooms/{room_name}/whep"
         token = _make_livekit_recorder_token(room_name, room_id)
     except Exception as exc:
         logger.warning("[Highlight] Token/URL oluşturulamadı | room_id=%s | %s", room_id, exc)
