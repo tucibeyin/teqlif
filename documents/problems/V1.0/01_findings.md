@@ -3835,6 +3835,8 @@ def _send_multicast_batch(self, tokens: list[str], ...):
 
 ### SRE-94 · 🔴 P0 (Kritik) · Para Çekim İptalinde Eksik `FOR UPDATE` ile Çift İade ve Çekim-İptal Yarışı (Double Refund & Free Cash Exploit)
 
+> ✅ **Çözüldü** — Commit `b4290d35` · 2026-10-29
+
 * **Etkilenen Dosyalar:**
   * `backend/app/use_cases/wallet/commands/cancel_withdrawal_request_command.py` (satırlar 19–55)
   * `backend/app/use_cases/wallet/commands/process_withdrawal_command.py` (satırlar 36–62)
