@@ -5257,12 +5257,14 @@ await _insert_highlight_record(room_id, host_id, str(output))
 #### ✅ Çözüm Damgası
 * **Commit:** `9de8f281` · 2026-10-29 (node seçimi — DB-first)
 * **Commit:** `03f570f7` · 2026-10-30 (Seçenek A — gerçek implementasyon)
+* **Commit:** `2d2b7319` · 2026-10-30 (followup — DUPLICATE_IDENTITY + log sızıntısı + stop_after zamanlama + node1 bootstrap)
 * **Değişiklik:**
-  * `livekit_subscriber.py` — `--stop-after N` parametresi eklendi; N saniye sonra `stop_evt.set()` çağrılır
-  * `video_tasks.py` — FFmpeg WHEP yaklaşımı tamamen kaldırıldı; yerine `livekit_subscriber.py` subprocess (`/opt/teqlif-agent/venv/bin/python`, `--stop-after 15`) + FFmpeg `libx264+AAC+faststart` MKV→MP4 encode pipeline'ı geldi; `capture_hype_highlight` ARQ task (ctx: dict) olarak dönüştürüldü
-  * `chat.py` — `asyncio.create_task()` kaldırıldı; `get_pool().enqueue_job(_queue_name="video", _job_id="highlight:{stream_id}")` ile ARQ'ya delege edildi
+  * `livekit_subscriber.py` — `--stop-after N` ve `--identity` parametreleri eklendi; `_make_token` identity desteği; `_stop_after_open` `open_evt.wait()` sonrası sayacı başlatır ve `all_tasks`'a eklenir
+  * `video_tasks.py` — FFmpeg WHEP tamamen kaldırıldı; `livekit_subscriber.py` subprocess (`/opt/teqlif-agent/venv/bin/python`) + FFmpeg MKV→MP4 pipeline; benzersiz `--identity hl-{room_id}-{hex}` ile DUPLICATE_IDENTITY önlendi; `.log` yetim dosya temizliği eklendi; `capture_hype_highlight` ARQ task
+  * `chat.py` — `asyncio.create_task()` → `get_pool().enqueue_job(_queue_name="video", _job_id="highlight:{stream_id}")`
   * `worker.py` — `WorkerSettingsVideo.functions`'a `capture_hype_highlight` eklendi
-* **Durum:** Tüm node'lara (node1–6 + nodeMonitor) deploy edildi.
+  * `setup_recorder.sh` — node1 kapsama eklendi; node1'de `livekit==1.1.20 av>=17.0.0 numpy>=2.0` kuruldu
+* **Durum:** Tüm node'lara (node1–6 + nodeMonitor) deploy edildi; tüm servisler sağlıklı.
 
 ---
 
