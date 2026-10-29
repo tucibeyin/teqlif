@@ -4849,11 +4849,12 @@ async def get_listing_offers(
    ```
 3. Oda durumu yalnızca yayının bizzat barındırıldığı yetkili LiveKit node'undan sorgulanmalıdır.
 
-> **✅ Çözüldü** — Commit `d58be2d3` · 2026-10-29 | Followup `e39b819f` · 2026-10-29
+> **✅ Çözüldü** — Commit `d58be2d3` · 2026-10-29 | Followup `e39b819f` · 2026-10-29 | Followup-2 `9a5756ea` · 2026-10-29
 > `_delayed_close_stream` fallback'teki `orchestrator.allocate_node(ServiceType.MEDIA)` (rastgele tek node) kaldırıldı.
 > Followup: `lk_list_all_rooms()` → DB-first + yetkili node hedefli `ListRoomsRequest(names=[room])` yaklaşımı (`webhooks.py` + `worker.py:delayed_close_stream_task`).
 > Tek node HTTP timeout veya agent restart / edge:metrics TTL boşluğu: `stream.livekit_url` doğrudan kullanılır, Redis bağımlılığı yok.
 > `except Exception` fail-open kapatıldı: yetkili node hatası = fail-safe `return` (aktif yayın kapatılmaz). DB hatası da `return`.
+> Followup-2: `settings.livekit_url` (mevcut değil) → `settings.edge_livekit_urls[0]`; `auth_url` boşsa fail-safe `return` (AttributeError kapatıldı).
 
 ---
 
@@ -5080,11 +5081,12 @@ for i in range(0, len(rows), CHUNK_SIZE):
         await db.commit()
 ```
 
-> **✅ Çözüldü** — Commit `894b71ca` · 2026-10-29
+> **✅ Çözüldü** — Commit `894b71ca` · 2026-10-29 | Followup `9a5756ea` · 2026-10-29
 > 50.000 sıralı tekil UPDATE (tek uzun transaction, 15-40dk row lock) → 500'lük chunk'larda `UPDATE users AS u SET max_budget = v.budget FROM (VALUES ...) AS v(id, budget) WHERE u.id = v.id` set-based sorgusuna dönüştürüldü.
 > Her chunk bağımsız kısa transaction; tek chunk hatası diğerlerini durdurmaz.
 > NaN/Inf/tip dönüşüm hataları chunk başında filtrelenerek Postgres'e geçersiz değer ulaşması engellendi.
 > PgBouncer connection starvation, deadlock ve WAL şişmesi riski kapatıldı.
+> Followup: `_MAX_BUDGET_CAP=9_999_999_999.99` (NUMERIC(12,2)) + `_MAX_USER_ID=2_147_483_647` (32-bit INT) sınırları; `min(round(budget, 2), cap)` ile tek poison-pill değer chunk'ı düşüremez. `res.rowcount` ile gerçek güncellenen satır sayısı loglanır.
 
 ---
 
