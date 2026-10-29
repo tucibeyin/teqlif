@@ -172,6 +172,13 @@ async def send_blast(
     3. PostgreSQL → FCM tokenları al.
     4. Firebase → toplu push gönder.
     """
+    # ── ARQ pool erken kontrol: pool yoksa bakiye/cooldown dokunmadan hata dön ──
+    from app.core.task_queue import get_pool
+    pool = get_pool()
+    if pool is None:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=503, detail="WORKER_UNAVAILABLE")
+
     # ── 24 saatlik cooldown: aynı kullanıcı 24 saat içinde tekrar lead blast gönderemesin ──
     from app.models.mass_notification import MassNotificationCampaign as _MNC
     from datetime import datetime as _dt, timedelta as _td
@@ -331,26 +338,25 @@ async def send_blast(
     else:
         notif_body = body.title
 
-    from app.core.task_queue import get_pool
-    pool = get_pool()
-    if pool:
-        await pool.enqueue_job(
-            "process_lead_blast_task",
-            campaign_id=campaign.id,
-            recipient_ids=recipient_ids,
-            fcm_tokens=fcm_tokens,
-            notif_title=notif_title,
-            notif_body=notif_body,
-            listing_id=body.listing_id,
-            stream_id=body.stream_id,
-        )
-    else:
-        logger.warning("[Leads] ARQ pool yok — bildirim gönderilemedi | campaign_id=%s", campaign.id)
+    await pool.enqueue_job(
+        "process_lead_blast_task",
+        campaign_id=campaign.id,
+        recipient_ids=recipient_ids,
+        fcm_tokens=fcm_tokens,
+        notif_title=notif_title,
+        notif_body=notif_body,
+        listing_id=body.listing_id,
+        stream_id=body.stream_id,
+    )
 
     return {
         "campaign_id": campaign.id,
         "status": "processing",
         "recipient_count": actual_count,
+        # Geriye dönük uyumluluk: mobil + web istemcileri bu alanları okur
+        "sent": actual_count,
+        "spent": teqlik_cost,
+        "sent_count": actual_count,
     }
 
 

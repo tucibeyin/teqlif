@@ -295,7 +295,7 @@ async def process_lead_blast_task(
         campaign_id, len(recipient_ids), len(fcm_tokens),
     )
     try:
-        # ── 1. Bulk in-app bildirim INSERT ────────────────────────────────────
+        # ── 1. Bulk in-app bildirim INSERT (idempotent) ───────────────────────
         if recipient_ids:
             mappings = [
                 {
@@ -309,15 +309,24 @@ async def process_lead_blast_task(
             ]
             CHUNK = 1000
             async with AsyncSessionLocal() as session:
-                for i in range(0, len(mappings), CHUNK):
-                    await session.execute(insert(Notification), mappings[i : i + CHUNK])
-                await session.execute(
+                # Atomik kilit: sent_count = 0 ise al ve güncelle; ARQ retry'da
+                # sent_count zaten > 0 olacağı için claim None döner → erken çık.
+                claim = await session.execute(
                     text(
                         "UPDATE mass_notification_campaigns "
-                        "SET sent_count = :sent WHERE id = :cid"
+                        "SET sent_count = :sent WHERE id = :cid AND sent_count = 0 "
+                        "RETURNING id"
                     ),
                     {"sent": len(recipient_ids), "cid": campaign_id},
                 )
+                if claim.fetchone() is None:
+                    logger.warning(
+                        "[LeadBlast] Kampanya zaten işlenmiş, retry atlanıyor | campaign_id=%s",
+                        campaign_id,
+                    )
+                    return
+                for i in range(0, len(mappings), CHUNK):
+                    await session.execute(insert(Notification), mappings[i : i + CHUNK])
                 await session.commit()
 
         # ── 2. Firebase multicast push ────────────────────────────────────────
