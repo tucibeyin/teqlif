@@ -3228,6 +3228,8 @@ await remove_from_recent_feed_cache(listing_id)
 
 ### SRE-81 · 🔴 P0 (Kritik) · `request_withdrawal_command.py` İçindeki SQL Sorgusunun `exchange_rates` Tablosunda Olmayan Sütunları Araması ve Tüm Dövizli Para Çekimlerinin Patlaması
 
+> ✅ **Çözüldü** — Commit `96efef80` · 2026-10-29
+
 * **Etkilenen Dosyalar:**
   * `backend/app/use_cases/wallet/commands/request_withdrawal_command.py` (satırlar 103–115)
   * `backend/app/models/market_index.py` (satırlar 6–13)
