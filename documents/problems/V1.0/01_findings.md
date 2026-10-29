@@ -5220,8 +5220,11 @@ fi
 ```
 
 #### ✅ Çözüm Damgası
-* **Commit:** `6dbc6104` · 2026-10-29
-* **Değişiklik:** `bootstrap_node5.sh` — `apply_secrets` çağrısına `/etc/redis` eklendi (SRE-130); `install_postgresql_staging()` içine `postgresql-17-pgvector` eklendi (SRE-129 followup)
+* **Commit:** `6dbc6104` · 2026-10-29 — `apply_secrets` `/etc/redis` eklendi; pgvector staging
+* **Followup commit:** `359f4286` · 2026-10-29 — İzin + sed kaçış düzeltmeleri:
+  * `_common.sh`: `setup_teqlif_directories` chown listesine `/project/teqlif/config` eklendi; `apply_secrets` sed `& \ |` kaçışı + post-secrets `700/600` normalizasyon bloğu
+  * `bootstrap_node5.sh`: Redis conf `/etc/redis` → `/project/teqlif/config/redis/redis-staging.conf` (Debian `2750 redis:redis` çakışması giderildi)
+  * `bootstrap_node3.sh` + `bootstrap_node4.sh`: `setup_livekit` sonrası `logs/livekit` `chown tucibeyin`
 * **Durum:** Tüm node'lara (node1–6 + nodeMonitor) deploy edildi.
 
 ---
