@@ -2,12 +2,15 @@
 Auto-Highlights — Hype skoru 90'ı aştığında canlı yayından 15 saniyelik kesit kaydeder.
 
 Akış:
-  1. LiveKit WHEP endpoint'inden 15 saniye FFmpeg ile çek
-  2. Geçici yerel dosyaya yaz, MinIO'ya yükle, geçici dosyayı sil
-  3. Listings tablosuna geçici highlight kaydı ekle (expires_at = +2 saat)
+  1. DB'den odanın yetkili LiveKit URL'ini al (live_streams.livekit_url)
+  2. livekit_subscriber.py'yi /opt/teqlif-agent/venv/bin/python ile subprocess olarak çalıştır
+     — --stop-after 15 ile 15 saniye VP8+Opus MKV üretir
+  3. FFmpeg ile MKV → libx264+AAC+faststart MP4 encode
+  4. MinIO'ya yükle, geçici dosyaları sil
+  5. Listings tablosuna geçici highlight kaydı ekle (expires_at = +2 saat)
 
+ARQ video kuyruğunda çalışır (WorkerSettingsVideo, node1).
 Tüm hatalar yumuşak yakalanır — yayın hiçbir zaman bu görev yüzünden etkilenmez.
-Requires FFmpeg 6+ (WHEP input support).
 """
 
 from __future__ import annotations
@@ -16,35 +19,18 @@ import asyncio
 import os
 import tempfile
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 from app.core.logger import get_logger
 
 logger = get_logger(__name__)
 
-_CAPTURE_SECONDS = 15
-_FFMPEG_TIMEOUT = 60   # saniye — 15s çekim + buffer
-
-
-def _make_livekit_recorder_token(room_name: str, room_id: int) -> str:
-    """Yalnızca abone olan (can_publish=False) geçici bir LiveKit token üretir."""
-    from livekit.api import AccessToken, VideoGrants
-    from app.config import settings
-
-    grant = VideoGrants(
-        room_join=True,
-        room=room_name,
-        can_publish=False,
-        can_subscribe=True,
-        can_publish_data=False,
-    )
-    token = (
-        AccessToken(settings.livekit_api_key, settings.livekit_api_secret)
-        .with_identity(f"recorder-{room_id}")
-        .with_name("Auto-Highlight Recorder")
-        .with_grants(grant)
-        .with_ttl(timedelta(minutes=5))
-    )
-    return token.to_jwt()
+_CAPTURE_SECONDS    = 15
+_SUBSCRIBER_TIMEOUT = _CAPTURE_SECONDS + 45   # bağlanma + kayıt + kapanış payı
+_ENCODE_TIMEOUT     = 120
+# teqlif-agent venv — livekit.rtc + av + numpy burada kurulu
+_SUBSCRIBER_PYTHON  = "/opt/teqlif-agent/venv/bin/python"
+_SUBSCRIBER_SCRIPT  = Path("/var/www/teqlif.com/deploy/scale/V2.1/teqlif-agent/livekit_subscriber.py")
 
 
 async def _get_stream_livekit_url(room_id: int) -> str | None:
@@ -59,6 +45,101 @@ async def _get_stream_livekit_url(room_id: int) -> str | None:
         )
         r = row.fetchone()
         return r[0] if r else None
+
+
+async def _run_livekit_subscriber(
+    ws_url: str, room_name: str, room_id: int, mkv_path: str,
+) -> bool:
+    """livekit_subscriber.py'yi teqlif-agent venv ile subprocess olarak çalıştırır."""
+    from app.config import settings
+
+    if not _SUBSCRIBER_SCRIPT.is_file():
+        logger.warning("[Highlight] livekit_subscriber.py bulunamadı: %s", _SUBSCRIBER_SCRIPT)
+        return False
+
+    cmd = [
+        _SUBSCRIBER_PYTHON, str(_SUBSCRIBER_SCRIPT),
+        "--room",       room_name,
+        "--ws-url",     ws_url,
+        "--api-key",    settings.livekit_api_key,
+        "--api-secret", settings.livekit_api_secret,
+        "--output",     mkv_path,
+        "--stop-after", str(_CAPTURE_SECONDS),
+    ]
+
+    logger.info("[Highlight] Subscriber başlatılıyor | room_id=%s ws=%s", room_id, ws_url)
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        _, stderr = await asyncio.wait_for(proc.communicate(), timeout=_SUBSCRIBER_TIMEOUT)
+        if proc.returncode != 0:
+            err = (stderr or b"").decode(errors="replace")[-500:]
+            logger.warning(
+                "[Highlight] Subscriber başarısız | room_id=%s rc=%s | %s",
+                room_id, proc.returncode, err,
+            )
+            return False
+    except asyncio.TimeoutError:
+        logger.warning("[Highlight] Subscriber timeout | room_id=%s", room_id)
+        try:
+            proc.kill()
+        except Exception:
+            pass
+        return False
+    except Exception as exc:
+        logger.warning("[Highlight] Subscriber hata | room_id=%s | %s", room_id, exc)
+        return False
+
+    if not Path(mkv_path).exists() or Path(mkv_path).stat().st_size < 1024:
+        logger.warning("[Highlight] MKV dosyası boş veya yok | room_id=%s", room_id)
+        return False
+
+    logger.info("[Highlight] MKV kaydedildi | room_id=%s", room_id)
+    return True
+
+
+async def _encode_highlight(mkv_path: str, mp4_path: str, room_id: int) -> bool:
+    """VP8+Opus MKV → libx264+AAC+faststart MP4 encode."""
+    cmd = [
+        "nice", "-n", "19",
+        "ffmpeg", "-hide_banner", "-loglevel", "warning",
+        "-i", mkv_path,
+        "-vf", "scale=-2:720",
+        "-c:v", "libx264", "-crf", "23", "-preset", "fast",
+        "-c:a", "aac", "-b:a", "128k",
+        "-movflags", "+faststart",
+        "-y", mp4_path,
+    ]
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        _, stderr = await asyncio.wait_for(proc.communicate(), timeout=_ENCODE_TIMEOUT)
+        if proc.returncode != 0:
+            err = (stderr or b"").decode(errors="replace")[-300:]
+            logger.warning(
+                "[Highlight] FFmpeg encode başarısız | room_id=%s rc=%s | %s",
+                room_id, proc.returncode, err,
+            )
+            return False
+    except asyncio.TimeoutError:
+        logger.warning("[Highlight] FFmpeg encode timeout | room_id=%s", room_id)
+        try:
+            proc.kill()
+        except Exception:
+            pass
+        return False
+    except Exception as exc:
+        logger.warning("[Highlight] FFmpeg encode hata | room_id=%s | %s", room_id, exc)
+        return False
+
+    logger.info("[Highlight] MP4 encode tamam | room_id=%s", room_id)
+    return True
 
 
 async def _upload_highlight(local_path: str, room_id: int) -> str:
@@ -99,15 +180,16 @@ async def _insert_highlight_record(room_id: int, host_id: int, video_url: str) -
     logger.info("[Highlight] DB kaydı eklendi | room_id=%s expires=%s", room_id, expires)
 
 
-async def capture_hype_highlight(room_name: str, room_id: int, host_id: int) -> None:
+async def capture_hype_highlight(ctx: dict, room_name: str, room_id: int, host_id: int) -> None:
     """
     LiveKit odasından 15 saniyelik kesit çeker, MinIO'ya yükler ve DB'ye kaydeder.
 
+    ARQ video kuyruğunda (WorkerSettingsVideo, node1) çalışır.
     Herhangi bir adımda hata olursa sadece log bırakır, exception fırlatmaz.
-    Bu fonksiyon asyncio.create_task() ile arka planda çağrılır.
     """
+    from app.config import settings
+
     try:
-        from app.config import settings
         lk_url = await _get_stream_livekit_url(room_id)
         if not lk_url:
             lk_url = settings.edge_livekit_urls[0] if settings.edge_livekit_urls else ""
@@ -118,57 +200,24 @@ async def capture_hype_highlight(room_name: str, room_id: int, host_id: int) -> 
         if not lk_url:
             logger.warning("[Highlight] Yetkili LiveKit URL bulunamadı | room_id=%s", room_id)
             return
-        whep_url = f"{lk_url}/rooms/{room_name}/whep"
-        token = _make_livekit_recorder_token(room_name, room_id)
     except Exception as exc:
-        logger.warning("[Highlight] Token/URL oluşturulamadı | room_id=%s | %s", room_id, exc)
+        logger.warning("[Highlight] URL elde edilemedi | room_id=%s | %s", room_id, exc)
         return
 
-    tmp_fd, tmp_path = tempfile.mkstemp(suffix=".mp4", prefix=f"highlight_{room_id}_")
-    os.close(tmp_fd)
+    mkv_fd, mkv_path = tempfile.mkstemp(suffix=".mkv", prefix=f"highlight_{room_id}_")
+    os.close(mkv_fd)
+    mp4_fd, mp4_path = tempfile.mkstemp(suffix=".mp4", prefix=f"highlight_{room_id}_")
+    os.close(mp4_fd)
+
     try:
-        cmd = [
-            "ffmpeg", "-y",
-            "-headers", f"Authorization: Bearer {token}\r\n",
-            "-i", whep_url,
-            "-t", str(_CAPTURE_SECONDS),
-            "-c", "copy",
-            tmp_path,
-        ]
-
-        logger.info("[Highlight] FFmpeg başlatıldı | room_id=%s whep=%s", room_id, whep_url)
-        try:
-            proc = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.DEVNULL,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            _, stderr = await asyncio.wait_for(proc.communicate(), timeout=_FFMPEG_TIMEOUT)
-            if proc.returncode != 0:
-                err = (stderr or b"").decode(errors="replace")[-500:]
-                logger.warning(
-                    "[Highlight] FFmpeg başarısız | room_id=%s rc=%s | %s",
-                    room_id, proc.returncode, err,
-                )
-                return
-        except asyncio.TimeoutError:
-            logger.warning("[Highlight] FFmpeg timeout | room_id=%s", room_id)
-            try:
-                proc.kill()
-            except Exception:
-                pass
-            return
-        except FileNotFoundError:
-            logger.warning("[Highlight] FFmpeg bulunamadı — kurulu mu? | room_id=%s", room_id)
-            return
-        except Exception as exc:
-            logger.warning("[Highlight] FFmpeg beklenmeyen hata | room_id=%s | %s", room_id, exc)
+        if not await _run_livekit_subscriber(lk_url, room_name, room_id, mkv_path):
             return
 
-        logger.info("[Highlight] Video kaydedildi (geçici) | room_id=%s", room_id)
+        if not await _encode_highlight(mkv_path, mp4_path, room_id):
+            return
 
         try:
-            video_url = await _upload_highlight(tmp_path, room_id)
+            video_url = await _upload_highlight(mp4_path, room_id)
         except Exception as exc:
             logger.warning("[Highlight] MinIO yükleme başarısız | room_id=%s | %s", room_id, exc)
             return
@@ -177,14 +226,14 @@ async def capture_hype_highlight(room_name: str, room_id: int, host_id: int) -> 
             await _insert_highlight_record(room_id, host_id, video_url)
         except Exception as exc:
             logger.warning("[Highlight] DB kaydı başarısız | room_id=%s | %s", room_id, exc)
-            # MinIO rollback: DB yoksa nesne yetim kalır (GC DB kayıtlarından gezdiği için göremez)
             try:
                 from app.services import storage_service as storage
                 await storage.delete_object(video_url)
             except Exception:
                 pass
     finally:
-        try:
-            os.unlink(tmp_path)
-        except OSError:
-            pass
+        for p in (mkv_path, mp4_path):
+            try:
+                os.unlink(p)
+            except OSError:
+                pass

@@ -411,6 +411,7 @@ async def _main_async() -> None:
     parser.add_argument("--api-secret",    required=True)
     parser.add_argument("--output",        required=True)
     parser.add_argument("--host-identity", default=None, help="Sadece bu identity ayrılınca kayıt durur")
+    parser.add_argument("--stop-after",    type=int, default=0, help="N saniye sonra kaydı otomatik durdur (0=sınırsız)")
     args = parser.parse_args()
 
     output = Path(args.output)
@@ -433,6 +434,13 @@ async def _main_async() -> None:
 
     for sig in (signal.SIGTERM, signal.SIGINT):
         loop.add_signal_handler(sig, _on_signal)
+
+    if args.stop_after > 0:
+        async def _auto_stop_after() -> None:
+            await asyncio.sleep(args.stop_after)
+            logger.info("--stop-after %ds doldu, kayıt durduruluyor", args.stop_after)
+            stop_evt.set()
+        asyncio.ensure_future(_auto_stop_after())
 
     try:
         await _run(

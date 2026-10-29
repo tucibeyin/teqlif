@@ -218,12 +218,18 @@ async def _handle_chat_message(
 
         # Auto-Highlight: oda için ilk kez 90 barajı geçildiyse 15s video çek
         if room_name and host_id and hype_manager.should_highlight(stream_id, new_score):
-            from app.tasks.video_tasks import capture_hype_highlight
-            asyncio.create_task(
-                capture_hype_highlight(room_name, stream_id, host_id),
-                name=f"highlight-{stream_id}",
-            )
-            logger.info("[Highlight] Video görevi tetiklendi | stream_id=%s room=%s", stream_id, room_name)
+            from app.core.task_queue import get_pool
+            _pool = get_pool()
+            if _pool:
+                await _pool.enqueue_job(
+                    "capture_hype_highlight",
+                    room_name, stream_id, host_id,
+                    _queue_name="video",
+                    _job_id=f"highlight:{stream_id}",
+                )
+                logger.info("[Highlight] Video görevi kuyruğa alındı | stream_id=%s room=%s", stream_id, room_name)
+            else:
+                logger.warning("[Highlight] ARQ pool hazır değil, görev atlandı | stream_id=%s", stream_id)
 
         # Host uyarısı: eşik geçildiyse ve cooldown dolduysa
         if host_id and hype_manager.should_alert(stream_id):
