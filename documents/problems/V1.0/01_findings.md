@@ -4810,6 +4810,12 @@ async def get_listing_offers(
    ```
 3. FFmpeg çağrısında `-c copy` yerine hızlı scale normalize filtresi eklenmeli veya fail durumunda re-encode fallback'i uygulanmalıdır.
 
+> **✅ Çözüldü** — Commit `b75776f7` · 2026-10-29
+> `_get_presign_client()` → `_get_client_for_internal_url(settings.minio_endpoint)` ile değiştirildi; `minio_endpoint` (127.0.0.1:9000) encoder'ın mc cp hedefidir.
+> `asyncio.get_event_loop() + run_in_executor` → `asyncio.to_thread()` ile değiştirildi.
+> `_ffmpeg_concat()`: Önce `-c copy` (hızlı yol); başarısız → libx264 veryfast + 1280×720 scale re-encode (mixed-resolution düzeltir).
+> DB commit sonrası part dosyaları MinIO'dan best-effort silinir; silme hatası concat başarısını bozmaz.
+
 ---
 
 ### SRE-119 · 🔴 P0 (Kritik) · `_delayed_close_stream` Fallback'inde Yanlış Node Sorgulanması Nedeniyle Aktif Yayınların Kapatılması
