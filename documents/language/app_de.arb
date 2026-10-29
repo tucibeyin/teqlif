@@ -6573,6 +6573,8 @@
   "directSaleSuggestionApply": "Anwenden",
   "notifDirectSalePurchased": "Kauf abgeschlossen",
   "notifDirectSalePurchasedBody": "Zahlung von {price} für {item} erhalten.",
+  "notifDirectSaleCancelled": "Verkauf abgebrochen",
+  "notifDirectSaleCancelledBody": "{item} Verkauf wurde abgebrochen, Ihre Bestellung wurde storniert.",
   "announcementAuctionWinner": "{winner} hat mit {price} gewonnen",
   "announcementAuctionWinnerBids": "{bidCount} Gebote · {startPrice}→{price} · {winner} hat gewonnen",
   "announcementBinAccepted": "{buyer} hat sofort gekauft · {price}",

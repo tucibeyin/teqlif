@@ -6501,6 +6501,8 @@
   "directSaleSuggestionApply": "Применить",
   "notifDirectSalePurchased": "Покупка завершена",
   "notifDirectSalePurchasedBody": "Получена оплата {price} за {item}.",
+  "notifDirectSaleCancelled": "Продажа отменена",
+  "notifDirectSaleCancelledBody": "Продажа {item} отменена, ваш заказ аннулирован.",
   "announcementAuctionWinner": "{winner} победил · {price}",
   "announcementAuctionWinnerBids": "{bidCount} ставок · {startPrice}→{price} · {winner} победил",
   "announcementBinAccepted": "{buyer} купил сразу · {price}",

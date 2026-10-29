@@ -6501,6 +6501,8 @@
   "directSaleSuggestionApply": "تطبيق",
   "notifDirectSalePurchased": "اكتملت عملية الشراء",
   "notifDirectSalePurchasedBody": "تم استلام دفعة {price} مقابل {item}.",
+  "notifDirectSaleCancelled": "تم إلغاء البيع",
+  "notifDirectSaleCancelledBody": "تم إلغاء بيع {item}، وتم إلغاء طلبك.",
   "announcementAuctionWinner": "فاز {winner} بـ{price}",
   "announcementAuctionWinnerBids": "{bidCount} عروض · {startPrice}→{price} · فاز {winner}",
   "announcementBinAccepted": "{buyer} اشترى فوراً · {price}",

@@ -6573,6 +6573,8 @@
   "directSaleSuggestionApply": "Apply",
   "notifDirectSalePurchased": "Purchase Completed",
   "notifDirectSalePurchasedBody": "Payment of {price} received for {item}.",
+  "notifDirectSaleCancelled": "Sale Cancelled",
+  "notifDirectSaleCancelledBody": "{item} sale was cancelled, your order has been voided.",
   "announcementAuctionWinner": "{winner} won at {price}",
   "announcementAuctionWinnerBids": "{bidCount} bids · {startPrice}→{price} · {winner} won",
   "announcementBinAccepted": "{buyer} bought it now · {price}",

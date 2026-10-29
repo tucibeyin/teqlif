@@ -51,8 +51,11 @@ async def _require_host(stream_id: int, user: User, session: AsyncSession) -> Li
     return stream
 
 
-async def _get_sale(sale_id: int, session: AsyncSession) -> DirectSale:
-    sale = await session.scalar(select(DirectSale).where(DirectSale.id == sale_id))
+async def _get_sale(sale_id: int, session: AsyncSession, for_update: bool = False) -> DirectSale:
+    q = select(DirectSale).where(DirectSale.id == sale_id)
+    if for_update:
+        q = q.with_for_update()
+    sale = await session.scalar(q)
     if not sale:
         raise DirectSaleNotFoundException()
     return sale
@@ -274,7 +277,8 @@ async def cancel_sale(sale_id: int, data: DirectSaleCancelIn,
         "[DIRECT_SALE][CANCEL] ENTRY | sale_id=%s host=%s orders_voided=%s",
         sale_id, user.id, data.orders_voided,
     )
-    sale = await _get_sale(sale_id, uow.session)
+    # FOR UPDATE: satır kilidi — cancel+purchase yarışını ve çift iptali önler
+    sale = await _get_sale(sale_id, uow.session, for_update=True)
     await _require_host(sale.stream_id, user, uow.session)
 
     if sale.status not in ("active", "paused"):
@@ -287,7 +291,8 @@ async def cancel_sale(sale_id: int, data: DirectSaleCancelIn,
     sale.orders_voided = data.orders_voided
     sale.ended_at = datetime.now(timezone.utc)
 
-    # Sipariş iptali isteniyorsa tüm order'ları cancelled yap
+    # Sipariş iptali: order'ları iptal et, her benzersiz alıcıya DM hazırla
+    cancel_dm_data: list[tuple[int, DirectMessage, str]] = []
     if data.orders_voided:
         orders = await uow.session.scalars(
             select(DirectSaleOrder).where(
@@ -295,10 +300,65 @@ async def cancel_sale(sale_id: int, data: DirectSaleCancelIn,
                 DirectSaleOrder.status == "completed",
             )
         )
+        seen_buyers: set[int] = set()
         for order in orders.all():
             order.status = "cancelled"
+            if order.buyer_id not in seen_buyers:
+                seen_buyers.add(order.buyer_id)
+                dm_content = (
+                    f"😔 Üzgünüz, '{sale.title}' satışı iptal edildi.\n"
+                    f"Siparişiniz geçersiz sayılmıştır.\n"
+                    f"📋 teqlif://direct-sale/{sale_id}"
+                )
+                dm = DirectMessage(
+                    sender_id=sale.host_id,
+                    receiver_id=order.buyer_id,
+                    content=dm_content,
+                )
+                uow.session.add(dm)
+                cancel_dm_data.append((order.buyer_id, dm, dm_content))
+
+    await uow.session.flush()  # dm.id'leri al
+
+    # flush sonrası id'leri yakala (commit öncesi)
+    cancel_dm_payloads: list[tuple[int, int, str]] = [
+        (buyer_id, dm.id, dm_content)
+        for buyer_id, dm, dm_content in cancel_dm_data
+    ]
 
     await uow.session.commit()
+
+    # Post-commit: alıcılara WS DM broadcast + push notification
+    if cancel_dm_payloads:
+        from datetime import datetime, timezone as _tz
+        from app.services.notification_service import push_notification
+        now_iso = datetime.now(_tz.utc).isoformat()
+        for buyer_id, dm_id, dm_content in cancel_dm_payloads:
+            dm_payload = {
+                "type": "message",
+                "id": dm_id,
+                "sender_id": sale.host_id,
+                "receiver_id": buyer_id,
+                "sender_username": user.username,
+                "content": dm_content,
+                "is_read": False,
+                "created_at": now_iso,
+            }
+            fire_and_forget(ws_manager.publish(_DM_CHANNEL, f"dm:{buyer_id}", dm_payload))
+            fire_and_forget(ws_manager.publish(_DM_CHANNEL, f"dm:{sale.host_id}", dm_payload))
+            fire_and_forget(push_notification(
+                buyer_id,
+                {
+                    "type": "direct_sale_cancelled",
+                    "i18n": {
+                        "title_key": "notifDirectSaleCancelled",
+                        "body_key": "notifDirectSaleCancelledBody",
+                        "body_params": {"item": sale.title},
+                    },
+                    "sale_id": sale_id,
+                },
+                pref_key="direct_sale_cancelled",
+            ))
 
     cancelled_payload = {
         "type": WS.DIRECT_SALE_CANCELLED,
@@ -321,8 +381,8 @@ async def cancel_sale(sale_id: int, data: DirectSaleCancelIn,
         orders_voided=data.orders_voided,
     ))
     logger.info(
-        "[DIRECT_SALE][CANCEL] OK | sale_id=%s stream=%s orders_voided=%s",
-        sale_id, sale.stream_id, data.orders_voided,
+        "[DIRECT_SALE][CANCEL] OK | sale_id=%s stream=%s orders_voided=%s notified_buyers=%d",
+        sale_id, sale.stream_id, data.orders_voided, len(cancel_dm_payloads),
     )
 
 
@@ -373,7 +433,8 @@ async def purchase_sale(sale_id: int, data: DirectSalePurchaseIn,
         "[DIRECT_SALE][PURCHASE] ENTRY | sale_id=%s buyer=%s qty=%s",
         sale_id, user.id, data.quantity,
     )
-    sale = await _get_sale(sale_id, uow.session)
+    # FOR UPDATE: satır kilidi — eşzamanlı alımlar arasında Lost Update'i önler
+    sale = await _get_sale(sale_id, uow.session, for_update=True)
 
     if sale.status != "active":
         logger.warning(

@@ -6501,6 +6501,8 @@
   "directSaleSuggestionApply": "Uygula",
   "notifDirectSalePurchased": "Satın Alma Tamamlandı",
   "notifDirectSalePurchasedBody": "{item} için {price} ödeme alındı.",
+  "notifDirectSaleCancelled": "Satış İptal Edildi",
+  "notifDirectSaleCancelledBody": "{item} satışı iptal edildi, siparişiniz geçersiz sayıldı.",
   "announcementAuctionWinner": "{winner} {price}'ye kazandı",
   "announcementAuctionWinnerBids": "{bidCount} teklif · {startPrice}→{price} · {winner} kazandı",
   "announcementBinAccepted": "{buyer} hemen satın aldı · {price}",
