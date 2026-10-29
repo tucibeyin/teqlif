@@ -5594,6 +5594,13 @@ await session.execute(text("""
 AND COALESCE(sr.available_at, sr.created_at) > NOW() - INTERVAL '6 hours'
 ```
 
+#### ✅ Çözüm Damgası
+* **Commit:** `e8315cad` · 2026-10-30
+* **Değişiklik:**
+  * `stream_concat_task.py:362` — INSERT kolon listesine `available_at`, VALUES listesine `NOW()` eklendi
+  * `stream_recording_tasks.py:57` — `COALESCE(sr.available_at, sr.created_at)` savunmacı fallback eklendi (mevcut NULL kayıtlar ve gelecek regresyonlar için)
+* **Durum:** Tüm node'lara (node1–6 + nodeMonitor) deploy edildi; node1 servisleri sağlıklı.
+
 ---
 
 ### SRE-140 · 🔴 P0 (Kritik) · `_get_t` İçinde Senkron `create_engine` ile Havuz Sızıntısı ve 3s Uvicorn Event Loop Donması
