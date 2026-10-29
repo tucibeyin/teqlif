@@ -6,7 +6,7 @@ from sqlalchemy import select, update, delete, func
 import asyncio
 
 from app.models.enums import UserStatus
-from app.database import get_db
+from app.database import get_db, AsyncSessionLocal
 from app.models.user import User
 from app.models.notification import Notification
 from app.schemas.notification import NotificationOut, UnreadCountOut
