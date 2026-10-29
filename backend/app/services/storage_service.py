@@ -114,6 +114,8 @@ async def upload_file(key: str, path: str, content_type: str) -> str:
 async def delete_object(url_or_key: str) -> None:
     """Public bucket'tan nesneyi tüm storage node'larında paralel siler."""
     key = url_to_key(url_or_key)
+    if not key:
+        return
     storage_nodes = await _get_all_storage_clients()
     if not storage_nodes:
         logger.error("[STORAGE] Silme başarısız: storage node bulunamadı | key=%s", key)
@@ -175,11 +177,22 @@ async def get_object_bytes(key: str) -> bytes | None:
         return None
 
 
-def url_to_key(url: str) -> str:
-    """http://minio1.teqlif.com:9010/teqlif/stories/foo.mp4  →  stories/foo.mp4"""
-    parsed = urllib.parse.urlparse(url)
-    parts = parsed.path.lstrip('/').split('/', 1)
-    return parts[1] if len(parts) > 1 else parsed.path
+def url_to_key(url_or_key: str) -> str:
+    """Tam URL veya ham key → public bucket nesne key'i (idempotent).
+
+    Tam URL:  http://minio1:9010/teqlif/stories/foo.mp4  → stories/foo.mp4
+    Ham key:  stories/foo.mp4                            → stories/foo.mp4
+    Bucket prefix:  teqlif/stories/foo.mp4               → stories/foo.mp4
+    """
+    parsed = urllib.parse.urlparse(url_or_key)
+    path = parsed.path.lstrip("/")
+    if parsed.scheme:
+        parts = path.split("/", 1)
+        return parts[1] if len(parts) > 1 else path
+    bucket_prefix = f"{settings.minio_bucket}/"
+    if path.startswith(bucket_prefix):
+        return path[len(bucket_prefix):]
+    return path
 
 
 # ── Eski sync alias (Backward compat'ı kapattığımız için asyncio wrap) ─────────
@@ -232,6 +245,8 @@ async def upload_file_dm(key: str, path: str, content_type: str) -> str:
 async def delete_object_dm(url_or_key: str) -> None:
     """DM bucket'tan nesneyi tüm storage node'larında paralel siler."""
     key = dm_url_to_key(url_or_key)
+    if not key:
+        return
     storage_nodes = await _get_all_storage_clients()
     if not storage_nodes:
         logger.error("[STORAGE_DM] Silme başarısız: storage node bulunamadı | key=%s", key)
@@ -281,8 +296,7 @@ async def presign_get(url_or_key: str, expires: timedelta = timedelta(minutes=30
     url_or_key: tam URL (https://…/bucket/key) veya ham key (messages/img/x.jpg).
     Presigned URL her zaman public endpoint üzerinden imzalanır (mobil erişebilir).
     """
-    parsed = urllib.parse.urlparse(url_or_key)
-    key = dm_url_to_key(url_or_key) if parsed.scheme else url_or_key
+    key = dm_url_to_key(url_or_key)
     client = _get_presign_client()
     return await asyncio.to_thread(
         client.presigned_get_object,
@@ -299,8 +313,19 @@ def is_dm_url(url: str | None) -> bool:
     return parsed.path.startswith(f"/{settings.minio_dm_bucket}/")
 
 
-def dm_url_to_key(url: str) -> str:
-    """http://minio1.teqlif.com:9010/teqlif-dm/messages/img/xxx.jpg  →  messages/img/xxx.jpg"""
-    parsed = urllib.parse.urlparse(url)
-    parts = parsed.path.lstrip('/').split('/', 1)
-    return parts[1] if len(parts) > 1 else parsed.path
+def dm_url_to_key(url_or_key: str) -> str:
+    """Tam URL veya ham key → DM bucket nesne key'i (idempotent).
+
+    Tam URL:  http://minio1:9010/teqlif-dm/messages/img/x.jpg → messages/img/x.jpg
+    Ham key:  messages/img/x.jpg                              → messages/img/x.jpg
+    Bucket prefix:  teqlif-dm/messages/img/x.jpg              → messages/img/x.jpg
+    """
+    parsed = urllib.parse.urlparse(url_or_key)
+    path = parsed.path.lstrip("/")
+    if parsed.scheme:
+        parts = path.split("/", 1)
+        return parts[1] if len(parts) > 1 else path
+    bucket_prefix = f"{settings.minio_dm_bucket}/"
+    if path.startswith(bucket_prefix):
+        return path[len(bucket_prefix):]
+    return path
