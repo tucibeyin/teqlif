@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Tüm recording node'ları (node3/node4/node5) — Python paket kurulumu
+# Tüm recording node'ları (node1/node3/node4/node5) — Python paket kurulumu
+# node1: WorkerSettingsVideo, capture_hype_highlight → livekit_subscriber.py subprocess
 # Çalıştır: sudo bash deploy/scale/V2.1/node5/setup/setup_recorder.sh
 set -euo pipefail
 

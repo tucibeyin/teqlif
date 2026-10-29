@@ -43,7 +43,7 @@ _QUALITY_TIMEOUT_S = 3.0   # HIGH layer bu kadar içinde gelmezse mevcut kalitey
 
 # ── JWT ───────────────────────────────────────────────────────────────────────
 
-def _make_token(room: str, api_key: str, api_secret: str) -> str:
+def _make_token(room: str, api_key: str, api_secret: str, identity: str | None = None) -> str:
     def b64url(data: bytes) -> str:
         return base64.urlsafe_b64encode(data).rstrip(b"=").decode()
 
@@ -51,7 +51,7 @@ def _make_token(room: str, api_key: str, api_secret: str) -> str:
     header  = b64url(json.dumps({"alg": "HS256", "typ": "JWT"}, separators=(",", ":")).encode())
     payload = b64url(json.dumps({
         "iss": api_key,
-        "sub": f"rec-{room[:12]}",
+        "sub": identity if identity else f"rec-{room[:12]}",
         "iat": now,
         "exp": now + 86400,
         "video": {
@@ -202,10 +202,12 @@ async def _run(
     output: Path,
     host_identity: str | None = None,
     stop_evt: asyncio.Event | None = None,
+    identity: str | None = None,
+    stop_after: int = 0,
 ) -> None:
     if stop_evt is None:
         stop_evt = asyncio.Event()
-    token    = _make_token(room_name, api_key, api_secret)
+    token    = _make_token(room_name, api_key, api_secret, identity)
     writer   = MKVWriter(output)
     room     = rtc.Room()
     open_evt = asyncio.Event()   # container açıldıktan sonra set
@@ -382,6 +384,14 @@ async def _run(
     all_tasks.append(asyncio.ensure_future(_monitor()))
     all_tasks.append(asyncio.ensure_future(_timeout()))
 
+    if stop_after > 0:
+        async def _stop_after_open() -> None:
+            await open_evt.wait()
+            await asyncio.sleep(stop_after)
+            logger.info("stop_after %ds doldu (container açılışından itibaren), durduruluyor", stop_after)
+            stop_evt.set()
+        all_tasks.append(asyncio.ensure_future(_stop_after_open()))
+
     await stop_evt.wait()
 
     # ── Temizlik ──────────────────────────────────────────────────────────
@@ -411,7 +421,8 @@ async def _main_async() -> None:
     parser.add_argument("--api-secret",    required=True)
     parser.add_argument("--output",        required=True)
     parser.add_argument("--host-identity", default=None, help="Sadece bu identity ayrılınca kayıt durur")
-    parser.add_argument("--stop-after",    type=int, default=0, help="N saniye sonra kaydı otomatik durdur (0=sınırsız)")
+    parser.add_argument("--stop-after",    type=int, default=0, help="Container açıldıktan N saniye sonra kaydı durdur (0=sınırsız)")
+    parser.add_argument("--identity",      default=None, help="Oda içinde kullanılacak subscriber kimliği (varsayılan: rec-<room>)")
     args = parser.parse_args()
 
     output = Path(args.output)
@@ -435,13 +446,6 @@ async def _main_async() -> None:
     for sig in (signal.SIGTERM, signal.SIGINT):
         loop.add_signal_handler(sig, _on_signal)
 
-    if args.stop_after > 0:
-        async def _auto_stop_after() -> None:
-            await asyncio.sleep(args.stop_after)
-            logger.info("--stop-after %ds doldu, kayıt durduruluyor", args.stop_after)
-            stop_evt.set()
-        asyncio.ensure_future(_auto_stop_after())
-
     try:
         await _run(
             room_name     = args.room,
@@ -451,6 +455,8 @@ async def _main_async() -> None:
             output        = output,
             host_identity = args.host_identity,
             stop_evt      = stop_evt,
+            identity      = args.identity,
+            stop_after    = args.stop_after,
         )
     except Exception as exc:
         logger.error("Hata: %s", exc)

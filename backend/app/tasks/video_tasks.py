@@ -57,6 +57,7 @@ async def _run_livekit_subscriber(
         logger.warning("[Highlight] livekit_subscriber.py bulunamadı: %s", _SUBSCRIBER_SCRIPT)
         return False
 
+    identity = f"hl-{room_id}-{os.urandom(3).hex()}"
     cmd = [
         _SUBSCRIBER_PYTHON, str(_SUBSCRIBER_SCRIPT),
         "--room",       room_name,
@@ -65,6 +66,7 @@ async def _run_livekit_subscriber(
         "--api-secret", settings.livekit_api_secret,
         "--output",     mkv_path,
         "--stop-after", str(_CAPTURE_SECONDS),
+        "--identity",   identity,
     ]
 
     logger.info("[Highlight] Subscriber başlatılıyor | room_id=%s ws=%s", room_id, ws_url)
@@ -232,7 +234,8 @@ async def capture_hype_highlight(ctx: dict, room_name: str, room_id: int, host_i
             except Exception:
                 pass
     finally:
-        for p in (mkv_path, mp4_path):
+        mkv_log = str(Path(mkv_path).with_suffix(".log"))
+        for p in (mkv_path, mp4_path, mkv_log):
             try:
                 os.unlink(p)
             except OSError:
