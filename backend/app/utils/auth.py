@@ -8,7 +8,7 @@ from passlib.context import CryptContext
 from fastapi import Cookie, Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, DateTime as _SA_DateTime
 
 from app.models.enums import UserStatus
 from app.config import settings
@@ -94,7 +94,19 @@ def _decode_token_version(token: str) -> int:
 
 
 _USER_SESSION_TTL = 900  # 15 dakika
-_USER_DATETIME_COLS = ("voip_token_updated_at", "created_at", "premium_since", "referral_code_expires_at", "locale_updated_at")
+_USER_DATETIME_COLS: frozenset[str] | None = None
+
+
+def _get_datetime_col_names() -> frozenset[str]:
+    """User modelindeki tüm DateTime sütun adlarını döner — ilk çağrıda hesaplanır."""
+    global _USER_DATETIME_COLS
+    if _USER_DATETIME_COLS is None:
+        from app.models.user import User as _User
+        _USER_DATETIME_COLS = frozenset(
+            col.name for col in _User.__table__.columns
+            if isinstance(col.type, _SA_DateTime)
+        )
+    return _USER_DATETIME_COLS
 
 
 def _serialize_user(user) -> dict:
@@ -123,7 +135,7 @@ async def _fetch_and_cache_user(db: AsyncSession, user_id: int):
         cached = await redis.get(f"session:user:{user_id}")
         if cached:
             data = json.loads(cached)
-            for dt_col in _USER_DATETIME_COLS:
+            for dt_col in _get_datetime_col_names():
                 val = data.get(dt_col)
                 if val and isinstance(val, str):
                     try:

@@ -14,7 +14,7 @@ from app.models.listing import Listing
 from app.models.stream import LiveStream
 from app.models.gift_event import GiftEvent
 from app.use_cases.chat.chat_utils import publish_chat
-from app.utils.auth import get_current_user
+from app.utils.auth import get_current_user, invalidate_user_session_cache
 from app.utils.redis_client import get_redis
 
 logger = logging.getLogger("teqlif")
@@ -38,7 +38,7 @@ async def verify_purchase(
     db: AsyncSession = Depends(get_db),
 ):
     from app.use_cases.wallet.commands.verify_purchase_command import VerifyPurchaseCommand
-    return await VerifyPurchaseCommand(db).execute(
+    result = await VerifyPurchaseCommand(db).execute(
         user_id=current_user.id,
         platform=body.platform,
         payload=body.payload,
@@ -46,6 +46,8 @@ async def verify_purchase(
         device_id=body.device_id,
         try_amount=body.try_amount,
     )
+    await invalidate_user_session_cache(current_user.id)
+    return result
 
 
 # ── App Store Server Notifications ────────────────────────────────────────────
@@ -152,6 +154,7 @@ async def convert_to_teqlik(
         teqlik_amount=body.teqlik_amount,
     )
     await db.commit()
+    await invalidate_user_session_cache(current_user.id)
     return result
 
 
@@ -222,11 +225,14 @@ async def transfer_teqlik(
 ):
     from app.use_cases.wallet.commands.transfer_teqlik import TransferTeqlikCommand
 
-    return await TransferTeqlikCommand(uow).execute(
+    result = await TransferTeqlikCommand(uow).execute(
         sender_id=current_user.id,
         receiver_id=data.recipient_id,
         amount=data.amount
     )
+    await invalidate_user_session_cache(current_user.id)
+    await invalidate_user_session_cache(data.recipient_id)
+    return result
 
 
 @router.get("/transaction/{txn_id}")
@@ -369,5 +375,6 @@ async def send_gift(
     except Exception as _redis_exc:
         logger.warning("[WALLET] Gift log Redis yazılamadı | stream_id=%s | %s", body.stream_id, _redis_exc)
 
+    await invalidate_user_session_cache(current_user.id)
     await db.refresh(current_user)
     return {"ok": True, "new_balance": current_user.teqlik_balance}
