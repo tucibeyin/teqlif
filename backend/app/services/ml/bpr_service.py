@@ -141,8 +141,10 @@ async def train_bpr(db_session) -> int:
             ])
               AND user_id IS NOT NULL
               AND item_type = 'listing'
-              AND created_at >= NOW() - INTERVAL '120 days'
+              AND created_at >= NOW() - INTERVAL '45 days'
             GROUP BY user_id, item_id, interaction_type
+            HAVING COUNT(*) >= 2
+            LIMIT 1000000
         """))
         interactions = rows.fetchall()
     except Exception as exc:

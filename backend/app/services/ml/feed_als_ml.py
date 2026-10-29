@@ -134,6 +134,7 @@ async def train_feed_als(db_session=None) -> None:
           AND listing_id != 0
         GROUP BY user_id, listing_id
         HAVING (clicks + long_dwells + short_dwells + skips) > 0
+        LIMIT 1000000
     """)
 
     rows = result.result_rows
