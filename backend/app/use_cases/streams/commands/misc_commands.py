@@ -18,6 +18,7 @@ class EndStreamCommand:
         self.uow = uow
 
     async def execute(self, stream_id: int, user: User) -> dict:
+        highlight_video_urls: list[str] = []
         async with self.uow:
             stream = await self.uow.session.scalar(select(LiveStream).where(LiveStream.id == stream_id))
             if not stream:
@@ -28,8 +29,13 @@ class EndStreamCommand:
             if stream.status != StreamStatus.LIVE:
                 return {"message": "Yayın zaten sonlandırılmış"}
 
-            # Clear highlights
+            # Clear highlights — video URL'leri commit öncesi topla (MinIO temizliği için)
             try:
+                rows = await self.uow.session.execute(
+                    text("SELECT video_url FROM listings WHERE active_room_id = :rid AND is_highlight = TRUE"),
+                    {"rid": stream_id},
+                )
+                highlight_video_urls = [r[0] for r in rows if r[0]]
                 await self.uow.session.execute(
                     text("DELETE FROM listings WHERE active_room_id = :rid AND is_highlight = TRUE"),
                     {"rid": stream_id},
@@ -39,6 +45,15 @@ class EndStreamCommand:
 
             from app.use_cases.streams.stream_finalizer import finalize_stream
             await finalize_stream(stream, self.uow.session)
+
+        # Commit sonrası: MinIO'dan highlight videolarını sil
+        for url in highlight_video_urls:
+            try:
+                from app.services import storage_service as storage
+                await storage.delete_object(url)
+                logger.info("[EndStream] MinIO highlight silindi | url=%s", url)
+            except Exception as exc:
+                logger.warning("[EndStream] MinIO highlight silinemedi | url=%s | %s", url, exc)
 
         return {"message": "Yayın sonlandırıldı"}
 

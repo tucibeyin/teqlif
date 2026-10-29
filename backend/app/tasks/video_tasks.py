@@ -3,7 +3,7 @@ Auto-Highlights — Hype skoru 90'ı aştığında canlı yayından 15 saniyelik
 
 Akış:
   1. LiveKit WHEP endpoint'inden 15 saniye FFmpeg ile çek
-  2. backend/static/highlights/highlight_{room_id}.mp4 üzerine yaz
+  2. Geçici yerel dosyaya yaz, MinIO'ya yükle, geçici dosyayı sil
   3. Listings tablosuna geçici highlight kaydı ekle (expires_at = +2 saat)
 
 Tüm hatalar yumuşak yakalanır — yayın hiçbir zaman bu görev yüzünden etkilenmez.
@@ -14,20 +14,15 @@ from __future__ import annotations
 
 import asyncio
 import os
-import pathlib
+import tempfile
 from datetime import datetime, timedelta, timezone
 
 from app.core.logger import get_logger
 
 logger = get_logger(__name__)
 
-_HIGHLIGHTS_DIR = pathlib.Path(__file__).resolve().parents[2] / "static" / "highlights"
 _CAPTURE_SECONDS = 15
 _FFMPEG_TIMEOUT = 60   # saniye — 15s çekim + buffer
-
-
-def _highlight_path(room_id: int) -> pathlib.Path:
-    return _HIGHLIGHTS_DIR / f"highlight_{room_id}.mp4"
 
 
 def _make_livekit_recorder_token(room_name: str, room_id: int) -> str:
@@ -52,7 +47,16 @@ def _make_livekit_recorder_token(room_name: str, room_id: int) -> str:
     return token.to_jwt()
 
 
-async def _insert_highlight_record(room_id: int, host_id: int, video_path: str) -> None:
+async def _upload_highlight(local_path: str, room_id: int) -> str:
+    """Yerel MP4 dosyasını MinIO'ya yükler ve public URL döner."""
+    from app.services import storage_service as storage
+    key = f"highlights/highlight_{room_id}.mp4"
+    url = await storage.upload_file(key, local_path, "video/mp4")
+    logger.info("[Highlight] MinIO'ya yüklendi | room_id=%s key=%s", room_id, key)
+    return url
+
+
+async def _insert_highlight_record(room_id: int, host_id: int, video_url: str) -> None:
     """Listings tablosuna geçici highlight satırı ekler."""
     from app.database import AsyncSessionLocal
     from sqlalchemy import text
@@ -72,7 +76,7 @@ async def _insert_highlight_record(room_id: int, host_id: int, video_path: str) 
             {
                 "uid": host_id,
                 "title": f"Live Stream Highlight — Room {room_id}",
-                "vurl": f"/highlights/highlight_{room_id}.mp4",
+                "vurl": video_url,
                 "rid": room_id,
                 "exp": expires,
             },
@@ -83,14 +87,11 @@ async def _insert_highlight_record(room_id: int, host_id: int, video_path: str) 
 
 async def capture_hype_highlight(room_name: str, room_id: int, host_id: int) -> None:
     """
-    LiveKit odasından 15 saniyelik kesit çeker ve DB'ye kaydeder.
+    LiveKit odasından 15 saniyelik kesit çeker, MinIO'ya yükler ve DB'ye kaydeder.
 
     Herhangi bir adımda hata olursa sadece log bırakır, exception fırlatmaz.
     Bu fonksiyon asyncio.create_task() ile arka planda çağrılır.
     """
-    _HIGHLIGHTS_DIR.mkdir(parents=True, exist_ok=True)
-    output = _highlight_path(room_id)
-
     try:
         from app.services.edge_orchestrator import orchestrator, ServiceType
         from app.config import settings
@@ -102,47 +103,61 @@ async def capture_hype_highlight(room_name: str, room_id: int, host_id: int) -> 
         logger.warning("[Highlight] Token/URL oluşturulamadı | room_id=%s | %s", room_id, exc)
         return
 
-    cmd = [
-        "ffmpeg", "-y",
-        "-headers", f"Authorization: Bearer {token}\r\n",
-        "-i", whep_url,
-        "-t", str(_CAPTURE_SECONDS),
-        "-c", "copy",
-        str(output),
-    ]
-
-    logger.info("[Highlight] FFmpeg başlatıldı | room_id=%s whep=%s", room_id, whep_url)
+    tmp_fd, tmp_path = tempfile.mkstemp(suffix=".mp4", prefix=f"highlight_{room_id}_")
+    os.close(tmp_fd)
     try:
-        proc = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.DEVNULL,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        _, stderr = await asyncio.wait_for(proc.communicate(), timeout=_FFMPEG_TIMEOUT)
-        if proc.returncode != 0:
-            err = (stderr or b"").decode(errors="replace")[-500:]
-            logger.warning(
-                "[Highlight] FFmpeg başarısız | room_id=%s rc=%s | %s",
-                room_id, proc.returncode, err,
-            )
-            return
-    except asyncio.TimeoutError:
-        logger.warning("[Highlight] FFmpeg timeout | room_id=%s", room_id)
+        cmd = [
+            "ffmpeg", "-y",
+            "-headers", f"Authorization: Bearer {token}\r\n",
+            "-i", whep_url,
+            "-t", str(_CAPTURE_SECONDS),
+            "-c", "copy",
+            tmp_path,
+        ]
+
+        logger.info("[Highlight] FFmpeg başlatıldı | room_id=%s whep=%s", room_id, whep_url)
         try:
-            proc.kill()
-        except Exception:
+            proc = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            _, stderr = await asyncio.wait_for(proc.communicate(), timeout=_FFMPEG_TIMEOUT)
+            if proc.returncode != 0:
+                err = (stderr or b"").decode(errors="replace")[-500:]
+                logger.warning(
+                    "[Highlight] FFmpeg başarısız | room_id=%s rc=%s | %s",
+                    room_id, proc.returncode, err,
+                )
+                return
+        except asyncio.TimeoutError:
+            logger.warning("[Highlight] FFmpeg timeout | room_id=%s", room_id)
+            try:
+                proc.kill()
+            except Exception:
+                pass
+            return
+        except FileNotFoundError:
+            logger.warning("[Highlight] FFmpeg bulunamadı — kurulu mu? | room_id=%s", room_id)
+            return
+        except Exception as exc:
+            logger.warning("[Highlight] FFmpeg beklenmeyen hata | room_id=%s | %s", room_id, exc)
+            return
+
+        logger.info("[Highlight] Video kaydedildi (geçici) | room_id=%s", room_id)
+
+        try:
+            video_url = await _upload_highlight(tmp_path, room_id)
+        except Exception as exc:
+            logger.warning("[Highlight] MinIO yükleme başarısız | room_id=%s | %s", room_id, exc)
+            return
+
+        try:
+            await _insert_highlight_record(room_id, host_id, video_url)
+        except Exception as exc:
+            logger.warning("[Highlight] DB kaydı başarısız | room_id=%s | %s", room_id, exc)
+    finally:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
             pass
-        return
-    except FileNotFoundError:
-        logger.warning("[Highlight] FFmpeg bulunamadı — kurulu mu? | room_id=%s", room_id)
-        return
-    except Exception as exc:
-        logger.warning("[Highlight] FFmpeg beklenmeyen hata | room_id=%s | %s", room_id, exc)
-        return
-
-    logger.info("[Highlight] Video kaydedildi | %s", output)
-
-    try:
-        await _insert_highlight_record(room_id, host_id, str(output))
-    except Exception as exc:
-        logger.warning("[Highlight] DB kaydı başarısız | room_id=%s | %s", room_id, exc)

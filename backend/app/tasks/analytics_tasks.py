@@ -15,9 +15,6 @@ Mantık:
 from __future__ import annotations
 
 import asyncio
-import os
-import pathlib
-import time
 from app.core.logger import get_logger, capture_exception
 
 logger = get_logger(__name__)
@@ -344,45 +341,36 @@ async def process_churn_and_airdrop(ctx: dict) -> None:
 
 # ── Highlight GC ───────────────────────────────────────────────────────────────
 
-_HIGHLIGHTS_DIR = pathlib.Path(__file__).resolve().parents[2] / "static" / "highlights"
-_HIGHLIGHT_MAX_AGE_SECS = 7_200   # 2 saat
-
 async def cleanup_hype_highlights_task(ctx: dict) -> None:
     """
     ARQ cron görevi — her saat çalışır.
 
-    1. backend/static/highlights/ içindeki 2 saatten eski .mp4 dosyalarını siler.
-    2. DB'de expires_at süresi dolmuş highlight listing kayıtlarını temizler.
+    DB'de expires_at süresi dolmuş highlight listing kayıtlarını temizler ve
+    MinIO'daki ilgili video dosyalarını siler.
 
-    Güvenlik ağı: yayıncı internetten düşerse stream_service.end() çağrılmaz;
+    Güvenlik ağı: yayıncı internetten düşerse EndStream çağrılmaz;
     bu görev garanti temizliği sağlar.
     """
     logger.info("[HighlightGC] Görev başlatıldı.")
-    deleted_files = 0
     deleted_rows = 0
 
-    # 1. Disk temizliği
-    try:
-        if _HIGHLIGHTS_DIR.exists():
-            now = time.time()
-            for f in _HIGHLIGHTS_DIR.glob("*.mp4"):
-                try:
-                    age = now - f.stat().st_mtime
-                    if age > _HIGHLIGHT_MAX_AGE_SECS:
-                        os.remove(f)
-                        deleted_files += 1
-                        logger.info("[HighlightGC] Dosya silindi | %s (yaş=%.0fs)", f.name, age)
-                except Exception as exc:
-                    logger.warning("[HighlightGC] Dosya silinemedi | %s | %s", f, exc)
-    except Exception as exc:
-        logger.error("[HighlightGC] Disk tarama hatası | %s", exc, exc_info=True)
-
-    # 2. DB temizliği
     try:
         from app.database import AsyncSessionLocal
+        from app.services import storage_service as storage
         from sqlalchemy import text
 
         async with AsyncSessionLocal() as db:
+            # video URL'leri DELETE'ten önce topla
+            rows = await db.execute(
+                text("""
+                    SELECT video_url FROM listings
+                    WHERE is_highlight = TRUE
+                      AND expires_at IS NOT NULL
+                      AND expires_at < NOW()
+                """)
+            )
+            video_urls = [r[0] for r in rows if r[0]]
+
             result = await db.execute(
                 text("""
                     DELETE FROM listings
@@ -393,12 +381,18 @@ async def cleanup_hype_highlights_task(ctx: dict) -> None:
             )
             deleted_rows = result.rowcount
             await db.commit()
-    except Exception as exc:
-        logger.error("[HighlightGC] DB temizliği hatası | %s", exc, exc_info=True)
 
-    logger.info(
-        "[HighlightGC] Tamamlandı | silinen_dosya=%d silinen_kayıt=%d",
-        deleted_files, deleted_rows,
-    )
+        # Commit sonrası: MinIO temizliği
+        for url in video_urls:
+            try:
+                await storage.delete_object(url)
+                logger.info("[HighlightGC] MinIO silindi | url=%s", url)
+            except Exception as exc:
+                logger.warning("[HighlightGC] MinIO silinemedi | url=%s | %s", url, exc)
+
+    except Exception as exc:
+        logger.error("[HighlightGC] Görev hatası | %s", exc, exc_info=True)
+
+    logger.info("[HighlightGC] Tamamlandı | silinen_kayıt=%d", deleted_rows)
     from app.worker import _agent_ok
     await _agent_ok(ctx, "cleanup_hype_highlights_task")
