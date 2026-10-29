@@ -4243,6 +4243,12 @@ async def get_listing_offers(
 5. Eğer yayın anormal kapanırsa veya webhook tarafından temizlenirse, hem veritabanındaki listing satırı hem de diskteki MP4 dosyası sonsuza dek yetim kalır; yüzlerce GB disk alanı tükenir.
 
 #### 2. Çözüm / Refactoring Reçetesi
+
+> ✅ **Çözüldü** — commit `b23b8e3a` · 2026-10-29
+> - `video_tasks.py`: `tempfile.mkstemp` → FFmpeg → `storage.upload_file("highlights/highlight_{room_id}.mp4")` → `finally: os.unlink(tmp)`. Yerel `_HIGHLIGHTS_DIR` ve `_highlight_path()` kaldırıldı.
+> - `misc_commands.py` `EndStreamCommand`: `DELETE` öncesi `SELECT video_url` ile URL'leri topla; commit sonrası `storage.delete_object(url)` ile MinIO temizliği.
+> - `analytics_tasks.py` `cleanup_hype_highlights_task`: disk scan kaldırıldı; `SELECT video_url` → `DELETE` → commit → MinIO cleanup akışı eklendi.
+
 ---
 
 ### SRE-105 · 🔴 P0 (Kritik) · Canlı Yayın Kalplerinde Senkron DB Commit, Her Kalpte Expire ve Bireysel WS Broadcast Patlaması (C10K/Postgres Crash)
