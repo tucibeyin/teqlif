@@ -59,6 +59,7 @@ _ALL_SERVICES = [
     "teqlif",
     "teqlif-worker",
     "teqlif-worker-critical",
+    "teqlif-worker-video",             # node1 — CPU-yoğun concat bulkhead
     "teqlif-ai-proxy",
     "teqlif-agent",
     "teqlif-livekit",                  # node3/node4 — paket adı "livekit" değil
@@ -69,6 +70,7 @@ _ALL_SERVICES = [
     "teqlif-staging",                  # node5
     "teqlif-worker-staging",           # node5
     "teqlif-worker-critical-staging",  # node5
+    "teqlif-worker-video-staging",     # node5
     "minio",
     "clickhouse-server",
     "haproxy",
@@ -174,17 +176,19 @@ class HealthMonitor:
             "teqlif":                 "teqlif API",
             "teqlif-worker":          "ARQ Worker (default)",
             "teqlif-worker-critical": "ARQ Worker (critical)",
+            "teqlif-worker-video":    "ARQ Worker (video)",
             "teqlif-ai-proxy":        "AI Proxy",
             "teqlif-agent":           "teqlif Agent",
             "teqlif-livekit":         "LiveKit",
             "postgresql":             "PostgreSQL",
             "teqlif-redis-core":      "Redis Core",
             "teqlif-redis-replica":   "Redis Replica",
-            "teqlif-redis-staging":          "Redis Staging",
-            "teqlif-staging":                "teqlif Staging API",
-            "teqlif-worker-staging":         "ARQ Worker Staging (default)",
-            "teqlif-worker-critical-staging":"ARQ Worker Staging (critical)",
-            "minio":                         "MinIO",
+            "teqlif-redis-staging":              "Redis Staging",
+            "teqlif-staging":                    "teqlif Staging API",
+            "teqlif-worker-staging":             "ARQ Worker Staging (default)",
+            "teqlif-worker-critical-staging":    "ARQ Worker Staging (critical)",
+            "teqlif-worker-video-staging":       "ARQ Worker Staging (video)",
+            "minio":                             "MinIO",
             "clickhouse-server":      "ClickHouse",
             "haproxy":                "HAProxy",
             "stalwart-mail":          "Stalwart Mail",

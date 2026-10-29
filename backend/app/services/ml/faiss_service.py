@@ -10,7 +10,7 @@ Strateji:
   - Index dosyaya yazılır, worker lazy yükler (mtime kontrolü)
 
 Worker: rebuild_faiss_index_task — 00:30 + 12:30 (günde 2x)
-Index: /var/www/teqlif.com/faiss/listings_384.index
+Index: settings.faiss_index_dir/listings_384.index
 """
 from __future__ import annotations
 
@@ -28,6 +28,10 @@ _DIM = 384
 _NLIST = 100
 _NPROBE = 10
 _MTIME_CHECK_INTERVAL = 30.0  # disk stat syscall'ı en fazla 30 sn'de bir
+
+# Eşzamanlı yükleme koruması: ilk açılışta onlarca isteğin aynı anda
+# faiss.read_index başlatmasını önler.
+_load_lock = asyncio.Lock()
 
 
 def _index_path() -> str:
@@ -55,6 +59,13 @@ def _load_index_sync(index_path: str, id_map_path: str):
         if hasattr(idx, "nprobe"):  # IVFFlat only — IndexFlatIP has no nprobe
             idx.nprobe = _NPROBE
         ids = np.load(id_map_path)
+        # Vektör sayısı ile ID haritası tutarlı değilse yüklemeyi reddet
+        if idx.ntotal != len(ids):
+            logger.error(
+                "[FAISS] Index/ID desync: ntotal=%d ids=%d — yükleme reddedildi",
+                idx.ntotal, len(ids),
+            )
+            return None
         logger.info("[FAISS] Index yüklendi | ntotal=%d", idx.ntotal)
         return idx, ids
     except Exception as exc:
@@ -65,28 +76,34 @@ def _load_index_sync(index_path: str, id_map_path: str):
 async def _ensure_index() -> None:
     """Index'i lazy yükle; disk versiyonu daha yeniyse reload et.
 
-    mtime kontrolü en fazla 30 sn'de bir yapılır — her search isteğinde
-    disk stat syscall'ı fırlatmak yoğun trafikte I/O darboğazı yaratır.
+    - mtime kontrolü en fazla 30 sn'de bir (disk stat fırtınasını önler)
+    - asyncio.Lock ile eşzamanlı yükleme koruması
     """
     global _index, _id_map, _index_mtime, _last_mtime_check
     now = time.monotonic()
     if _index is not None and (now - _last_mtime_check) < _MTIME_CHECK_INTERVAL:
         return
-    _last_mtime_check = now
 
-    ipath = _index_path()
-    mpath = _id_map_path()
-    try:
-        mtime = os.path.getmtime(ipath) if os.path.exists(ipath) else 0.0
-    except OSError:
-        mtime = 0.0
+    async with _load_lock:
+        # Lock alındıktan sonra başka coroutine zaten yüklemiş olabilir
+        now = time.monotonic()
+        if _index is not None and (now - _last_mtime_check) < _MTIME_CHECK_INTERVAL:
+            return
+        _last_mtime_check = now
 
-    if _index is None or mtime > _index_mtime:
-        loop = asyncio.get_running_loop()
-        result = await loop.run_in_executor(None, _load_index_sync, ipath, mpath)
-        if result is not None:
-            _index, _id_map = result
-            _index_mtime = mtime
+        ipath = _index_path()
+        mpath = _id_map_path()
+        try:
+            mtime = os.path.getmtime(ipath) if os.path.exists(ipath) else 0.0
+        except OSError:
+            mtime = 0.0
+
+        if _index is None or mtime > _index_mtime:
+            loop = asyncio.get_running_loop()
+            result = await loop.run_in_executor(None, _load_index_sync, ipath, mpath)
+            if result is not None:
+                _index, _id_map = result
+                _index_mtime = mtime
 
 
 async def faiss_search(query_vec: list[float] | np.ndarray, k: int = 80) -> list[int]:
@@ -164,11 +181,14 @@ async def rebuild_index() -> None:
     ipath = _index_path()
     mpath = _id_map_path()
 
-    def _build_and_save(vecs: np.ndarray, ids: np.ndarray) -> None:
+    def _build_and_save(vecs: np.ndarray, ids: np.ndarray):
         """CPU-bound index build — executor'da çalışır, event loop bloklamaz.
 
-        Atomik yazım: önce .tmp dosyalarına yaz, sonra os.replace ile değiştir.
-        Böylece eşzamanlı arama isteği yarım yazılmış index okuyamaz.
+        Atomik yazım protokolü:
+          1. ID haritasını .tmp dosyasına yaz (file handle ile — np.save uzantı eklemez)
+          2. FAISS index'i .tmp dosyasına yaz
+          3. ID haritasını atomik olarak yerine taşı
+          4. Index'i atomik olarak yerine taşı (mtime tetikleyici — en son)
         """
         faiss.normalize_L2(vecs)
         n = len(vecs)
@@ -180,12 +200,19 @@ async def rebuild_index() -> None:
             idx.train(vecs)
         idx.add(vecs)
         os.makedirs(os.path.dirname(ipath), exist_ok=True)
+
         tmp_idx = ipath + ".tmp"
         tmp_ids = mpath + ".tmp"
+
+        # np.save'e string path verilirse otomatik .npy uzantısı ekler!
+        # File handle kullanılırsa uzantı eklenmez.
+        with open(tmp_ids, "wb") as f:
+            np.save(f, ids)
         faiss.write_index(idx, tmp_idx)
-        np.save(tmp_ids, ids)
-        os.replace(tmp_idx, ipath)
+
+        # ID haritası önce yerine gelsin, sonra mtime tetikleyici index
         os.replace(tmp_ids, mpath)
+        os.replace(tmp_idx, ipath)
         return idx
 
     loop = asyncio.get_running_loop()

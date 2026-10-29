@@ -212,11 +212,11 @@ EOF
 setup_staging_services() {
     local node_dir="${1}"
     log_step "Staging uygulama servisleri"
-    for svc in teqlif-staging.service teqlif-worker-staging.service teqlif-worker-critical-staging.service; do
+    for svc in teqlif-staging.service teqlif-worker-staging.service teqlif-worker-critical-staging.service teqlif-worker-video-staging.service; do
         cp "${node_dir}/systemd/${svc}" /etc/systemd/system/
     done
     systemctl daemon-reload
-    systemctl enable teqlif-staging teqlif-worker-staging teqlif-worker-critical-staging
+    systemctl enable teqlif-staging teqlif-worker-staging teqlif-worker-critical-staging teqlif-worker-video-staging
     log_ok "Staging servisleri enable edildi"
 }
 

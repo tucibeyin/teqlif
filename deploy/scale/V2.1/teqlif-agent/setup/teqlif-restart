@@ -123,7 +123,7 @@ case "$NODE" in
     log "teqlif.service yeniden başlatılıyor (alembic ExecStartPre'de çalışır)..."
     systemctl restart teqlif.service
     log "teqlif.service aktif — workerlar başlatılıyor..."
-    systemctl restart teqlif-worker.service teqlif-worker-critical.service
+    systemctl restart teqlif-worker.service teqlif-worker-critical.service teqlif-worker-video.service
     log "Tüm servisler hazır"
     echo ""
     log "Son loglar:"
@@ -154,7 +154,7 @@ case "$NODE" in
     log "teqlif-staging.service yeniden başlatılıyor (alembic ExecStartPre'de çalışır)..."
     systemctl restart teqlif-staging.service
     log "teqlif-staging.service aktif — worker'lar başlatılıyor..."
-    systemctl restart teqlif-worker-staging.service teqlif-worker-critical-staging.service
+    systemctl restart teqlif-worker-staging.service teqlif-worker-critical-staging.service teqlif-worker-video-staging.service
     log "Tüm servisler hazır"
     echo ""
     log "Son loglar:"

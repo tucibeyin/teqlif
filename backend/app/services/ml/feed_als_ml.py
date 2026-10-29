@@ -134,6 +134,7 @@ async def train_feed_als(db_session=None) -> None:
           AND listing_id != 0
         GROUP BY user_id, listing_id
         HAVING (clicks + long_dwells + short_dwells + skips) > 0
+        ORDER BY max(timestamp) DESC
         LIMIT 1000000
     """)
 
@@ -153,6 +154,8 @@ async def train_feed_als(db_session=None) -> None:
               AND timestamp >= now() - INTERVAL 30 DAY
               AND user_id != 0
             GROUP BY user_id, item_id
+            ORDER BY max(timestamp) DESC
+            LIMIT 500000
         """)
         for uid_s, lid_s, cnt in hes_result.result_rows:
             try:

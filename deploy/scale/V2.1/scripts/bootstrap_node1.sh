@@ -231,11 +231,11 @@ install_postgres_exporter() {
 setup_core_services() {
     local node_dir="${1}"
     log_step "teqlif uygulama servisleri"
-    for svc in teqlif.service teqlif-worker.service teqlif-worker-critical.service; do
+    for svc in teqlif.service teqlif-worker.service teqlif-worker-critical.service teqlif-worker-video.service; do
         cp "${node_dir}/systemd/${svc}" /etc/systemd/system/
     done
     systemctl daemon-reload
-    systemctl enable teqlif teqlif-worker teqlif-worker-critical
+    systemctl enable teqlif teqlif-worker teqlif-worker-critical teqlif-worker-video
     log_ok "teqlif servisleri enable edildi"
 }
 

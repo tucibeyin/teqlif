@@ -143,7 +143,18 @@ async def train_bpr(db_session) -> int:
               AND item_type = 'listing'
               AND created_at >= NOW() - INTERVAL '45 days'
             GROUP BY user_id, item_id, interaction_type
-            HAVING COUNT(*) >= 2
+            HAVING COUNT(*) * (CASE interaction_type
+                WHEN 'listing_offer_submit' THEN 10.0
+                WHEN 'listing_chat_open'    THEN  6.0
+                WHEN 'listing_favorite'     THEN  5.0
+                WHEN 'listing_share'        THEN  4.0
+                WHEN 'listing_like'         THEN  3.0
+                WHEN 'detail_dwell'         THEN  2.0
+                WHEN 'listing_view'         THEN  1.0
+                WHEN 'listing_impression'   THEN  0.3
+                ELSE 0.0
+            END) >= 1.0
+            ORDER BY MAX(created_at) DESC
             LIMIT 1000000
         """))
         interactions = rows.fetchall()

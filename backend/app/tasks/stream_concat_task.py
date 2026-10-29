@@ -2,6 +2,10 @@
 
 Her 2 dakikada bir çalışır; bitişik part'ları olan bitmiş yayınları
 MinIO'dan indirir, ffmpeg ile birleştirir ve sonucu yeniden yükler.
+
+Bulkhead: WorkerSettingsVideo — queue=video, job_timeout=1800, max_jobs=2.
+Bu görev her çalışmasında LIMIT 2 yayın işler; cron başına 1800sn tavanı
+tek yayına değil toplam işleme süresine uygulanır.
 """
 from __future__ import annotations
 
@@ -11,6 +15,7 @@ logger = get_logger(__name__)
 
 _LOCK_PREFIX = "lock:concat:"
 _LOCK_TTL_SEC = 3600  # maks 1 saat — ffmpeg için yeterli
+_MAX_RETRY = 3
 
 
 async def stream_concat_task(ctx: dict) -> None:
@@ -26,12 +31,12 @@ async def stream_concat_task(ctx: dict) -> None:
                 WHERE is_concat_result = FALSE
                   AND part_number IS NOT NULL
                   AND status = 'available'
-                  AND retry_count < 3
+                  AND retry_count < :max_retry
                 GROUP BY stream_id
                 HAVING COUNT(*) > 1
                 ORDER BY stream_id
-                LIMIT 20
-            """))).mappings().all()
+                LIMIT 2
+            """), {"max_retry": _MAX_RETRY})).mappings().all()
 
         for row in rows:
             stream_id = row["stream_id"]
@@ -57,7 +62,6 @@ async def _do_concat(stream_id: int) -> None:
     redis = await get_redis()
     lock_key = f"{_LOCK_PREFIX}{stream_id}"
 
-    # Dağıtık kilit — nx=True ile atomik
     acquired = await redis.set(lock_key, "1", nx=True, ex=_LOCK_TTL_SEC)
     if not acquired:
         logger.debug("_do_concat: stream_id=%s için kilit alınamadı, atlanıyor", stream_id)
@@ -67,6 +71,45 @@ async def _do_concat(stream_id: int) -> None:
         await _run_concat(stream_id)
     finally:
         await redis.delete(lock_key)
+
+
+async def _mark_retry(stream_id: int, error_msg: str) -> None:
+    """FFmpeg veya MinIO hatalarında retry_count artır; limit aşılınca concat_failed yap."""
+    from app.database import AsyncSessionLocal
+    from sqlalchemy import text
+
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(text("""
+            UPDATE stream_recordings
+            SET retry_count   = retry_count + 1,
+                error_message = :error,
+                updated_at    = NOW()
+            WHERE stream_id        = :sid
+              AND is_concat_result = FALSE
+              AND part_number      IS NOT NULL
+              AND status           = 'available'
+            RETURNING retry_count
+        """), {"sid": stream_id, "error": error_msg[:500]})
+        max_retry = max((r[0] for r in result.fetchall()), default=0)
+
+        if max_retry >= _MAX_RETRY:
+            await session.execute(text("""
+                UPDATE stream_recordings
+                SET status     = 'concat_failed',
+                    updated_at = NOW()
+                WHERE stream_id        = :sid
+                  AND is_concat_result = FALSE
+                  AND part_number      IS NOT NULL
+                  AND status           = 'available'
+            """), {"sid": stream_id})
+            logger.warning(
+                "_run_concat: stream_id=%s kalıcı hata (%d deneme) → concat_failed",
+                stream_id, max_retry,
+            )
+            capture_exception(
+                RuntimeError(f"stream_concat kalıcı hata stream_id={stream_id}: {error_msg[:200]}")
+            )
+        await session.commit()
 
 
 async def _run_concat(stream_id: int) -> None:
@@ -83,12 +126,13 @@ async def _run_concat(stream_id: int) -> None:
         parts = (await session.execute(text("""
             SELECT id, minio_key, part_number, host_id
             FROM stream_recordings
-            WHERE stream_id = :stream_id
+            WHERE stream_id        = :stream_id
               AND is_concat_result = FALSE
-              AND part_number IS NOT NULL
-              AND status = 'available'
+              AND part_number      IS NOT NULL
+              AND status           = 'available'
+              AND retry_count      < :max_retry
             ORDER BY part_number ASC
-        """), {"stream_id": stream_id})).mappings().all()
+        """), {"stream_id": stream_id, "max_retry": _MAX_RETRY})).mappings().all()
 
     if len(parts) < 2:
         return
@@ -99,18 +143,26 @@ async def _run_concat(stream_id: int) -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         part_files: list[str] = []
 
-        # Part'ları indir
+        # Part'ları indir — MinIO hatası da retry_count artırır
         for p in parts:
             key = p["minio_key"]
             if not key:
-                logger.warning("_run_concat: stream_id=%s part=%s minio_key yok", stream_id, p["part_number"])
+                error = f"part={p['part_number']} minio_key yok"
+                logger.warning("_run_concat: stream_id=%s %s", stream_id, error)
+                await _mark_retry(stream_id, error)
                 return
             local_path = os.path.join(tmpdir, f"part_{p['part_number']}.mp4")
             loop = asyncio.get_event_loop()
-            await loop.run_in_executor(
-                None,
-                lambda k=key, lp=local_path: minio.fget_object(settings.minio_bucket, k, lp),
-            )
+            try:
+                await loop.run_in_executor(
+                    None,
+                    lambda k=key, lp=local_path: minio.fget_object(settings.minio_bucket, k, lp),
+                )
+            except Exception as exc:
+                error = f"MinIO indirme hatası part={p['part_number']}: {exc}"
+                logger.error("_run_concat: stream_id=%s %s", stream_id, error)
+                await _mark_retry(stream_id, error)
+                return
             part_files.append(local_path)
 
         # ffmpeg concat list
@@ -126,33 +178,21 @@ async def _run_concat(stream_id: int) -> None:
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
-        _, stderr = await proc.communicate()
+        try:
+            _, stderr = await proc.communicate()
+        except (asyncio.CancelledError, Exception):
+            # ARQ job_timeout veya başka bir iptal — ffmpeg orphan'ı öldür
+            try:
+                proc.kill()
+                await proc.wait()
+            except Exception:
+                pass
+            raise
+
         if proc.returncode != 0:
             error_msg = stderr.decode()[-500:]
             logger.error("_run_concat: ffmpeg hata stream_id=%s: %s", stream_id, error_msg)
-            async with AsyncSessionLocal() as session:
-                result = await session.execute(text("""
-                    UPDATE stream_recordings
-                    SET retry_count = retry_count + 1,
-                        error_message = :error,
-                        updated_at = NOW()
-                    WHERE stream_id = :sid
-                      AND is_concat_result = FALSE
-                      AND part_number IS NOT NULL
-                      AND status = 'available'
-                    RETURNING retry_count
-                """), {"sid": stream_id, "error": error_msg})
-                max_retry = max((r[0] for r in result.fetchall()), default=0)
-                if max_retry >= 3:
-                    await session.execute(text("""
-                        UPDATE stream_recordings
-                        SET status = 'concat_failed', updated_at = NOW()
-                        WHERE stream_id = :sid
-                          AND is_concat_result = FALSE
-                          AND part_number IS NOT NULL
-                    """), {"sid": stream_id})
-                    logger.warning("_run_concat: stream_id=%s kalıcı hata (3 deneme), concat_failed yapıldı", stream_id)
-                await session.commit()
+            await _mark_retry(stream_id, f"ffmpeg: {error_msg}")
             return
 
         # Sonucu MinIO'ya yükle
