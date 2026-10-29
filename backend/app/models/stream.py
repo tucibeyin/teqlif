@@ -11,6 +11,7 @@ class LiveStream(Base):
     __tablename__ = "live_streams"
     __table_args__ = (
         Index("ix_live_streams_is_live_started_at", "is_live", "started_at"),
+        Index("ix_live_streams_host_id_started_at", "host_id", "started_at"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
