@@ -4061,6 +4061,8 @@ async def get_listing_offers(
 
 ### SRE-99 · 🔴 P0 (Kritik) · Redis Oturum Önbelleğinde Eksik Tarih Deserializasyonu (`TypeError` Çökmesi) ve Cüzdan Bakiyesi Desenkronizasyonu
 
+> ✅ **Çözüldü** — Commit `975457aa` · 2026-10-29
+
 * **Etkilenen Dosyalar:** `backend/app/utils/auth.py`, `backend/app/models/user.py`, `backend/app/routers/wallet.py`
 * **İlgili Satırlar:** `auth.py:96-153` (`_USER_DATETIME_COLS`, `_fetch_and_cache_user`), `user.py:62-71`, `wallet.py:100-380`
 
