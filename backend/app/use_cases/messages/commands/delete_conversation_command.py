@@ -16,9 +16,9 @@ async def _purge_media(urls: list[str]) -> None:
     for url in urls:
         try:
             if storage.is_dm_url(url):
-                await storage.delete_object_dm(storage.dm_url_to_key(url))
+                await storage.delete_object_dm(url)
             else:
-                await storage.delete_object(storage.url_to_key(url))
+                await storage.delete_object(url)
         except Exception as exc:
             logger.error("[DeleteConversation] MinIO silme hatası: url=%s | %s", url, exc)
 
@@ -31,8 +31,7 @@ class DeleteConversationCommand:
         user_a_id = min(uid, other_user_id)
         user_b_id = max(uid, other_user_id)
         media_urls: list[str] = []
-        rel_state = None
-        session = None
+        hard_deleted = False
 
         async with self.uow:
             result = await self.uow.session.execute(
@@ -61,7 +60,7 @@ class DeleteConversationCommand:
                 user_a_id, user_b_id,
             )
 
-            # Medya URL'lerini topla
+            # Medya URL'lerini commit öncesi topla
             media_rows = await self.uow.session.execute(
                 select(DirectMessage.media_url, DirectMessage.thumbnail_url).where(
                     or_(
@@ -87,16 +86,21 @@ class DeleteConversationCommand:
                 )
             )
 
-            # Thread'i hard-delete et
             await self.uow.session.delete(thread)
-            session = self.uow.session  # commit sonrası recompute için referansı sakla
+            hard_deleted = True
 
-        # ── Commit sonrası: thread silinmiş, recompute + MinIO + WS broadcast ──
-        if rel_state is None and session is not None:
-            # Hard-delete tamamlandı; thread artık DB'de yok — recompute "no thread" döner
+        # ── Commit sonrası — UoW session kapalı, taze session aç ──
+        if not hard_deleted:
+            return
+
+        # Taze bağımsız session: kapalı UoW session'ını asla kullanma (IllegalStateChangeError)
+        from app.database import AsyncSessionLocal
+        rel_state = None
+        async with AsyncSessionLocal() as fresh_session:
             rel_state = await RelationshipStateService.recompute_and_cache(
-                user_a_id, user_b_id, session
+                user_a_id, user_b_id, fresh_session
             )
+
         if media_urls:
             asyncio.create_task(_purge_media(media_urls))
             logger.info("[DeleteConversation] %d medya dosyası silinmek üzere kuyruğa alındı", len(media_urls))
