@@ -4395,6 +4395,10 @@ async def get_listing_offers(
    return {"campaign_id": campaign.id, "status": "processing", "recipient_count": actual_count}
    ```
 
+> **✅ Çözüldü** — Commit `1f13485a` · 2026-10-29
+> `leads.py`: 10.000 ORM objesi + 200-iter FCM döngüsü kaldırıldı → ARQ `process_lead_blast_task` kuyruğuna devredildi; HTTP 202 anında döner.
+> `worker.py`: `process_lead_blast_task` eklendi — bulk INSERT (1.000'lik chunk) + `send_multicast` (500-token batch); `WorkerSettings.functions`'a kayıtlı.
+
 ---
 
 ### SRE-108 · 🟠 P1 (Yüksek) · Anlık Çağrı Meşguliyetinin (`user_busy`) Statik 1 Saatlik İlişki Önbelleğine Gömülmesi ve 3. Kişilerin 1 Saat Kilitlenmesi
