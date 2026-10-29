@@ -4333,12 +4333,12 @@ async def get_listing_offers(
    ```
 
 #### ✅ Çözüm Damgası
-* **Commit:** `0f5477c9`
+* **Commit:** `0f5477c9` + followup `fccdd252`
 * **Tarih:** 2026-10-29
 * **Uygulanan Değişiklikler:**
   - `backend/app/routers/search_alerts.py:103` → `alert.status = 'passive'` → `alert.status = SearchAlertStatus.DELETED`
-  - Alembic migration gerekmedi — DB enum tipi zaten `deleted` değerini içeriyor
-  - Veri hasarı yok — hata her zaman commit öncesi patlıyordu
+  - `backend/alembic/versions/zzzzz0_searchalert_enum_fix.py` (yeni): PostgreSQL `searchalertstatus` enum tipine `'paused'` ve `'deleted'` değerleri eklendi (`autocommit_block + IF NOT EXISTS` — idempotent); eski `'passive'` kayıtlar `'deleted'`e taşındı
+* **Migration:** `alembic upgrade head` node1 (prod) ve node5 (staging) üzerinde çalıştırılmalı
 
 ---
 
