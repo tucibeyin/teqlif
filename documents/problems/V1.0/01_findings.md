@@ -5254,6 +5254,11 @@ await _insert_highlight_record(room_id, host_id, str(output))
 1. Canlı yayının hangi LiveKit node'unda barındığı `LiveStream.livekit_url` veya Redis `stream:{id}:node` üzerinden deterministik olarak okunmalıdır.
 2. Çekilen MP4 dosyası derhal `storage_service.upload_file` ile MinIO `highlights` bucket'ına yüklenmeli, veritabanına CDN URL'i kaydedilmeli ve yerel geçici dosya temizlenmelidir.
 
+#### ✅ Çözüm Damgası
+* **Commit:** `9de8f281` · 2026-10-29
+* **Değişiklik:** `video_tasks.py` — `allocate_node(MEDIA)` kaldırıldı; `_get_stream_livekit_url(room_id)` eklendi: `live_streams.livekit_url` DB'den okunur, bulunamazsa `settings.edge_livekit_urls[0]` fallback + warning log. MinIO upload zaten mevcuttu.
+* **Durum:** Tüm node'lara (node1–6 + nodeMonitor) deploy edildi; node1 servisleri sağlıklı.
+
 ---
 
 ### SRE-132 · 🟠 P1 (Yüksek) · Global `fraud_log` Redis ZSET'ine Her Olayda JSON Yazılması ve Her Seferinde `zremrangebyscore` Kilitlenmesi
