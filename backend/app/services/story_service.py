@@ -523,7 +523,7 @@ class StoryService:
                 )
                 .join(User, User.id == StoryView.viewer_id)
                 .where(StoryView.story_id == story_id)
-                .order_by(StoryView.viewed_at.desc())
+                .order_by(StoryView.viewed_at.desc(), StoryView.id.desc())
                 .limit(limit)
                 .offset(offset)
             )
