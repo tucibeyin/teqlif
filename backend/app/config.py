@@ -63,6 +63,9 @@ class Settings(BaseSettings):
     uploads_host: str = ""
     upload_presign_ttl: int = 900
 
+    # FAISS vektör arama index dizini
+    faiss_index_dir: str = "/var/www/teqlif.com/faiss"
+
     # ClickHouse analytics
     clickhouse_host: str = "localhost"
     clickhouse_port: int = 8123

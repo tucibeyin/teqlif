@@ -17,32 +17,44 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import time
 from typing import Optional
 
 import numpy as np
 
 logger = logging.getLogger(__name__)
 
-_INDEX_PATH = "/var/www/teqlif.com/faiss/listings_384.index"
-_ID_MAP_PATH = "/var/www/teqlif.com/faiss/listings_384.ids.npy"
 _DIM = 384
 _NLIST = 100
 _NPROBE = 10
+_MTIME_CHECK_INTERVAL = 30.0  # disk stat syscall'ı en fazla 30 sn'de bir
+
+
+def _index_path() -> str:
+    from app.config import settings
+    return os.path.join(settings.faiss_index_dir, "listings_384.index")
+
+
+def _id_map_path() -> str:
+    from app.config import settings
+    return os.path.join(settings.faiss_index_dir, "listings_384.ids.npy")
+
 
 _index = None
 _id_map: Optional[np.ndarray] = None
 _index_mtime: float = 0.0
+_last_mtime_check: float = 0.0
 
 
-def _load_index_sync():
+def _load_index_sync(index_path: str, id_map_path: str):
     try:
         import faiss  # type: ignore
-        if not os.path.exists(_INDEX_PATH) or not os.path.exists(_ID_MAP_PATH):
+        if not os.path.exists(index_path) or not os.path.exists(id_map_path):
             return None
-        idx = faiss.read_index(_INDEX_PATH)
+        idx = faiss.read_index(index_path)
         if hasattr(idx, "nprobe"):  # IVFFlat only — IndexFlatIP has no nprobe
             idx.nprobe = _NPROBE
-        ids = np.load(_ID_MAP_PATH)
+        ids = np.load(id_map_path)
         logger.info("[FAISS] Index yüklendi | ntotal=%d", idx.ntotal)
         return idx, ids
     except Exception as exc:
@@ -51,16 +63,27 @@ def _load_index_sync():
 
 
 async def _ensure_index() -> None:
-    """Index'i lazy yükle; disk versiyonu daha yeniyse reload et."""
-    global _index, _id_map, _index_mtime
+    """Index'i lazy yükle; disk versiyonu daha yeniyse reload et.
+
+    mtime kontrolü en fazla 30 sn'de bir yapılır — her search isteğinde
+    disk stat syscall'ı fırlatmak yoğun trafikte I/O darboğazı yaratır.
+    """
+    global _index, _id_map, _index_mtime, _last_mtime_check
+    now = time.monotonic()
+    if _index is not None and (now - _last_mtime_check) < _MTIME_CHECK_INTERVAL:
+        return
+    _last_mtime_check = now
+
+    ipath = _index_path()
+    mpath = _id_map_path()
     try:
-        mtime = os.path.getmtime(_INDEX_PATH) if os.path.exists(_INDEX_PATH) else 0.0
+        mtime = os.path.getmtime(ipath) if os.path.exists(ipath) else 0.0
     except OSError:
         mtime = 0.0
 
     if _index is None or mtime > _index_mtime:
         loop = asyncio.get_running_loop()
-        result = await loop.run_in_executor(None, _load_index_sync)
+        result = await loop.run_in_executor(None, _load_index_sync, ipath, mpath)
         if result is not None:
             _index, _id_map = result
             _index_mtime = mtime
@@ -138,8 +161,15 @@ async def rebuild_index() -> None:
 
     vectors = np.array([_parse_embedding(r[1]) for r in rows], dtype=np.float32)
 
+    ipath = _index_path()
+    mpath = _id_map_path()
+
     def _build_and_save(vecs: np.ndarray, ids: np.ndarray) -> None:
-        """CPU-bound index build — executor'da çalışır, event loop bloklamaz."""
+        """CPU-bound index build — executor'da çalışır, event loop bloklamaz.
+
+        Atomik yazım: önce .tmp dosyalarına yaz, sonra os.replace ile değiştir.
+        Böylece eşzamanlı arama isteği yarım yazılmış index okuyamaz.
+        """
         faiss.normalize_L2(vecs)
         n = len(vecs)
         if n < _NLIST * 39:
@@ -149,9 +179,13 @@ async def rebuild_index() -> None:
             idx = faiss.IndexIVFFlat(quantizer, _DIM, _NLIST, faiss.METRIC_INNER_PRODUCT)
             idx.train(vecs)
         idx.add(vecs)
-        os.makedirs(os.path.dirname(_INDEX_PATH), exist_ok=True)
-        faiss.write_index(idx, _INDEX_PATH)
-        np.save(_ID_MAP_PATH, ids)
+        os.makedirs(os.path.dirname(ipath), exist_ok=True)
+        tmp_idx = ipath + ".tmp"
+        tmp_ids = mpath + ".tmp"
+        faiss.write_index(idx, tmp_idx)
+        np.save(tmp_ids, ids)
+        os.replace(tmp_idx, ipath)
+        os.replace(tmp_ids, mpath)
         return idx
 
     loop = asyncio.get_running_loop()
@@ -161,6 +195,6 @@ async def rebuild_index() -> None:
         new_index.nprobe = _NPROBE
     _index = new_index
     _id_map = listing_ids
-    _index_mtime = os.path.getmtime(_INDEX_PATH)
+    _index_mtime = os.path.getmtime(ipath)
 
     logger.info("[FAISS] Index yeniden kuruldu | listings=%d", len(rows))
