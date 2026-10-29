@@ -4848,6 +4848,12 @@ async def get_listing_offers(
    ```
 3. Oda durumu yalnızca yayının bizzat barındırıldığı yetkili LiveKit node'undan sorgulanmalıdır.
 
+> **✅ Çözüldü** — Commit `d58be2d3` · 2026-10-29
+> `_delayed_close_stream` fallback'teki `orchestrator.allocate_node(ServiceType.MEDIA)` (rastgele tek node) kaldırıldı.
+> Yerine `lk_list_all_rooms()` kullanıldı — tüm media node'larını (node3+node4) sorgular, yayın hangisindeyse doğru sonucu döner.
+> `async for db in get_db()` → `async with AsyncSessionLocal() as db` (güvenli bağlam yöneticisi).
+> `aiohttp`, `RoomService`, `ListRoomsRequest`, `get_db` top-level importları temizlendi.
+
 ---
 
 ### SRE-120 · 🟠 P1 (Yüksek) · Mobil Hata Loglarında IP Sahtelemesi/Global Drop ve `entry.details` Log Injection (CWE-117)
