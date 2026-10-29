@@ -26,15 +26,23 @@ async def stream_concat_task(ctx: dict) -> None:
 
         async with AsyncSessionLocal() as session:
             rows = (await session.execute(text("""
-                SELECT stream_id, COUNT(*) AS part_count
-                FROM stream_recordings
-                WHERE is_concat_result = FALSE
-                  AND part_number IS NOT NULL
-                  AND status = 'available'
-                  AND retry_count < :max_retry
-                GROUP BY stream_id
+                SELECT sr.stream_id, COUNT(*) AS part_count
+                FROM stream_recordings sr
+                JOIN live_streams ls ON ls.id = sr.stream_id
+                WHERE ls.status = 'ended'
+                  AND sr.is_concat_result = FALSE
+                  AND sr.part_number IS NOT NULL
+                  AND sr.status = 'available'
+                  AND sr.retry_count < :max_retry
+                  AND NOT EXISTS (
+                      SELECT 1 FROM stream_recordings pending
+                      WHERE pending.stream_id = sr.stream_id
+                        AND pending.is_concat_result = FALSE
+                        AND pending.status IN ('recording', 'encoding', 'encoded', 'transferring')
+                  )
+                GROUP BY sr.stream_id
                 HAVING COUNT(*) > 1
-                ORDER BY stream_id
+                ORDER BY sr.stream_id
                 LIMIT 2
             """), {"max_retry": _MAX_RETRY})).mappings().all()
 
@@ -112,20 +120,67 @@ async def _mark_retry(stream_id: int, error_msg: str) -> None:
         await session.commit()
 
 
-async def _ffmpeg_concat(list_path: str, out_path: str) -> tuple[bool, str]:
+async def _ffprobe_streams(path: str) -> dict:
+    """Part dosyasının video/audio stream parametrelerini döner."""
+    import asyncio
+    import json as _json
+
+    proc = await asyncio.create_subprocess_exec(
+        "ffprobe", "-v", "quiet", "-print_format", "json", "-show_streams", path,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.DEVNULL,
+    )
+    out, _ = await proc.communicate()
+    info: dict = {
+        "width": 0, "height": 0, "pix_fmt": "",
+        "r_frame_rate": "", "time_base": "",
+        "has_audio": False, "duration": 0.0,
+    }
+    try:
+        for s in _json.loads(out).get("streams", []):
+            if s.get("codec_type") == "video":
+                info["width"]       = s.get("width", 0)
+                info["height"]      = s.get("height", 0)
+                info["pix_fmt"]     = s.get("pix_fmt", "")
+                info["r_frame_rate"] = s.get("r_frame_rate", "")
+                info["time_base"]   = s.get("time_base", "")
+                info["duration"]    = float(s.get("duration") or 0)
+            elif s.get("codec_type") == "audio":
+                info["has_audio"] = True
+    except Exception:
+        pass
+    return info
+
+
+async def _ffmpeg_concat(
+    list_path: str,
+    part_files: list[str],
+    out_path: str,
+) -> tuple[bool, str]:
     """ffmpeg ile concat uygular.
 
-    Önce -c copy (hızlı, tüm part'lar aynı codec/çözünürlükteyse yeterli).
-    Başarısız olursa libx264 re-encode fallback ile çözünürlük normalize eder.
+    Hızlı yol: tüm part'lar birebir aynı video/audio parametresinde → -c copy.
+    Yavaş yol: farklı çözünürlük/FPS/audio → filter_complex concat ile normalize.
     """
     import asyncio
     import os
 
-    async def _run(*extra_args: str) -> tuple[int, str]:
+    probes = [await _ffprobe_streams(pf) for pf in part_files]
+    ref = probes[0]
+
+    all_same = all(
+        p["width"] == ref["width"]
+        and p["height"] == ref["height"]
+        and p["pix_fmt"] == ref["pix_fmt"]
+        and p["r_frame_rate"] == ref["r_frame_rate"]
+        and p["time_base"] == ref["time_base"]
+        and p["has_audio"] == ref["has_audio"]
+        for p in probes[1:]
+    )
+
+    async def _run_proc(*cmd: str) -> tuple[int, str]:
         proc = await asyncio.create_subprocess_exec(
-            "ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", list_path,
-            *extra_args,
-            out_path,
+            *cmd,
             stdout=asyncio.subprocess.DEVNULL,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -140,30 +195,60 @@ async def _ffmpeg_concat(list_path: str, out_path: str) -> tuple[bool, str]:
             raise
         return proc.returncode, (stderr or b"").decode(errors="replace")[-500:]
 
-    # Hızlı yol: tüm part'lar aynı codec ve çözünürlükteyse doğrudan kopyala
-    rc, err = await _run("-c", "copy")
-    if rc == 0:
-        return True, ""
+    if all_same and ref["has_audio"]:
+        # Hızlı yol: aynı codec, çözünürlük, FPS, audio — doğrudan kopyala
+        rc, err = await _run_proc(
+            "ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", list_path,
+            "-c", "copy", "-movflags", "+faststart", out_path,
+        )
+        if rc == 0:
+            return True, ""
+        logger.warning(
+            "_ffmpeg_concat: -c copy başarısız, filter_complex yoluna geçiliyor | %s", err[-200:]
+        )
+        if os.path.exists(out_path):
+            os.unlink(out_path)
 
-    logger.warning("_ffmpeg_concat: -c copy başarısız (codec/çözünürlük farkı?), re-encode | %s", err[-200:])
+    # Yavaş yol: filter_complex concat — mixed resolution / FPS / eksik audio
+    # Hedef çözünürlük: 1. part boyutu (çift sayıya yuvarlanmış; dikey yayını korur)
+    tw = ref["width"] + (ref["width"] % 2)
+    th = ref["height"] + (ref["height"] % 2)
+    n = len(part_files)
 
-    # Yavaş yol: 1280×720'ye normalize, libx264 re-encode
-    # WebRTC adaptive bitrate nedeniyle farklı çözünürlüklü part'ları birleştirir
-    if os.path.exists(out_path):
-        os.unlink(out_path)
+    filter_parts: list[str] = []
+    for i, probe in enumerate(probes):
+        filter_parts.append(
+            f"[{i}:v]scale={tw}:{th}:force_original_aspect_ratio=decrease,"
+            f"pad={tw}:{th}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=30,format=yuv420p[v{i}]"
+        )
+        if probe["has_audio"]:
+            filter_parts.append(
+                f"[{i}:a]aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo[a{i}]"
+            )
+        else:
+            # Sessiz part: anullsrc ile uzun yeterli süre; concat filtresi video süresine kısaltır
+            filter_parts.append(
+                f"anullsrc=r=48000:cl=stereo:d=3600[a{i}]"
+            )
 
-    rc, err = await _run(
-        "-vf", (
-            "scale=1280:720:force_original_aspect_ratio=decrease,"
-            "pad=1280:720:(ow-iw)/2:(oh-ih)/2,setsar=1"
-        ),
+    stream_labels = "".join(f"[v{i}][a{i}]" for i in range(n))
+    filter_complex = ";".join(filter_parts) + f";{stream_labels}concat=n={n}:v=1:a=1[vout][aout]"
+
+    cmd: list[str] = ["ffmpeg", "-y"]
+    for pf in part_files:
+        cmd += ["-i", pf]
+    cmd += [
+        "-filter_complex", filter_complex,
+        "-map", "[vout]", "-map", "[aout]",
         "-c:v", "libx264", "-preset", "veryfast", "-crf", "23",
         "-c:a", "aac", "-b:a", "128k",
         "-movflags", "+faststart",
-    )
+        out_path,
+    ]
+
+    rc, err = await _run_proc(*cmd)
     if rc == 0:
         return True, ""
-
     return False, err
 
 
@@ -174,7 +259,7 @@ async def _run_concat(stream_id: int) -> None:
 
     from app.database import AsyncSessionLocal
     from app.config import settings
-    from app.services.storage_service import _get_client_for_internal_url, upload_file
+    from app.services.storage_service import _get_client_for_internal_url
     from sqlalchemy import text
 
     async with AsyncSessionLocal() as session:
@@ -193,7 +278,7 @@ async def _run_concat(stream_id: int) -> None:
         return
 
     host_id = parts[0]["host_id"]
-    # cluster.yaml → minio_endpoint (teqlif-livekit: 10.10.0.1:9000 / 127.0.0.1:9000 on node1)
+    # cluster.yaml → minio_endpoint (127.0.0.1:9000 on node1)
     # Tüm part'lar encoder tarafından bu endpoint'e mc cp ile yüklenmektedir.
     minio = _get_client_for_internal_url(settings.minio_endpoint)
 
@@ -220,23 +305,27 @@ async def _run_concat(stream_id: int) -> None:
                 return
             part_files.append(local_path)
 
-        # ffmpeg concat listesi
+        # ffmpeg concat listesi (fast-path için; complex path part_files kullanır)
         list_path = os.path.join(tmpdir, "concat_list.txt")
         with open(list_path, "w") as f:
             for pf in part_files:
                 f.write(f"file '{pf}'\n")
 
         out_path = os.path.join(tmpdir, "concat_output.mp4")
-        success, error_msg = await _ffmpeg_concat(list_path, out_path)
+        success, error_msg = await _ffmpeg_concat(list_path, part_files, out_path)
         if not success:
             logger.error("_run_concat: ffmpeg hata stream_id=%s: %s", stream_id, error_msg)
             await _mark_retry(stream_id, f"ffmpeg: {error_msg}")
             return
 
-        # Concat sonucunu storage orchestrator üzerinden yükle
+        # Concat sonucunu aynı MinIO endpoint'ine yükle (orchestrator bypass — agent restart güveni)
         concat_key = f"recordings/{stream_id}/concat.mp4"
         try:
-            await upload_file(concat_key, out_path, "video/mp4")
+            await asyncio.to_thread(
+                minio.fput_object,
+                settings.minio_bucket, concat_key, out_path,
+                content_type="video/mp4",
+            )
         except Exception as exc:
             error = f"MinIO yükleme hatası: {exc}"
             logger.error("_run_concat: stream_id=%s %s", stream_id, error)
@@ -273,6 +362,8 @@ async def _run_concat(stream_id: int) -> None:
             await asyncio.to_thread(minio.remove_object, settings.minio_bucket, key)
             logger.debug("_run_concat: part silindi | stream_id=%s key=%s", stream_id, key)
         except Exception as exc:
-            logger.warning("_run_concat: part silinemedi | stream_id=%s key=%s | %s", stream_id, key, exc)
+            logger.warning(
+                "_run_concat: part silinemedi | stream_id=%s key=%s | %s", stream_id, key, exc
+            )
 
     logger.info("_run_concat: stream_id=%s concat tamamlandı → %s", stream_id, concat_key)
