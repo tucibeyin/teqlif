@@ -6638,6 +6638,12 @@ if active_call:
     )
 ```
 
+#### ✅ Çözüm Damgası
+- **Commit:** `92405f59` — `fix(sre-159): advisory lock kanonik çift sıralamasına (min,max) geçirildi`
+- **Tarih:** 2026-10-30
+- **Değişen Dosya:** `backend/app/routers/calls.py`
+- **Yapılan:** `pg_advisory_xact_lock(42, callee_id)` → `pg_advisory_xact_lock(min(caller,callee), max(caller,callee))` — A→B ve B→A istekleri artık aynı kilit üzerinde serialize ediliyor
+
 ---
 
 ### SRE-160 · 🟡 P2 (Orta) · `create_campaign` Endpoint'inde `total_budget` ve `cpc_bid` Üzerinde Tavan Kontrolü Olmaması Nedeniyle Bütçe Enflasyonu
