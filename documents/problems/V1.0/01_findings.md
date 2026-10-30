@@ -5825,6 +5825,15 @@ WHERE created_at >= NOW() - INTERVAL '7 days'
 GROUP BY 1 ORDER BY 1;
 ```
 
+#### ✅ Çözüm Damgası
+- **Commit:** `0387d0cf` — `fix(sre-143,sre-144): admin dashboard 16 sıralı sorgu paralele alındı, analytics zaman sınırlandırıldı`
+- **Tarih:** 2026-10-30
+- **Değişen Dosya:** `backend/app/routers/admin_data.py`
+- **Yapılan:**
+  - `get_dashboard` `db: AsyncSession` bağımlılığı kaldırıldı; 6 ayrı `_user_stats / _listing_count / _stream_count / _report_count / _teqlik_spent / _growth` coroutine'i `asyncio.gather` ile paralel çalıştırılıyor
+  - 7-gün döngüsü yerine tek `GROUP BY created_at::date` sorgusu; sıfır kayıtlı günler Python'da dolduruldu
+  - Sonuç 60 s Redis TTL ile `admin:dashboard:metrics` anahtarına yazıldı
+
 ---
 
 ### SRE-144 · 🟠 P1 (Yüksek) · Analytics Summary Endpoint'inde ClickHouse Yerine PostgreSQL'de `COUNT(DISTINCT)` Kirlenmesi
@@ -5860,6 +5869,18 @@ FROM user_events
 GROUP BY device_type;
 ```
 2. Rapor sonuçları 5 dakikalık Redis önbelleği ile korunmalıdır (`analytics:admin:summary`).
+
+#### ✅ Çözüm Damgası
+- **Commit:** `0387d0cf` — `fix(sre-143,sre-144): admin dashboard 16 sıralı sorgu paralele alındı, analytics zaman sınırlandırıldı`
+- **Tarih:** 2026-10-30
+- **Değişen Dosya:** `backend/app/routers/admin_data.py`
+- **Mimari Not:** ClickHouse `user_events` tablosunda `session_id`, `device_type`, `url` kolonları bulunmuyor (yalnızca öneri sinyali: `user_id, item_id, event_type, …`). Şema migrasyonu yapmadan ClickHouse'a taşımak mümkün değildi; PostgreSQL'de zaman sınırı + Redis önbelleği ile hedef P95 süre sağlandı.
+- **Yapılan:**
+  - `total_events` + `unique_sessions` tek `SELECT … count(DISTINCT session_id) … WHERE created_at >= :cutoff` sorgusuna birleştirildi
+  - `device_type GROUP BY` ve ana sayım sorgusuna 30 günlük `cutoff` eklendi; `ix_analytics_events_type_created` indeksini kullanıyor
+  - ORM `LIMIT 500 → 100` düşürüldü
+  - Sonuçlar 5 dk Redis TTL ile `analytics:admin:summary` anahtarına yazıldı
+  - `from app.models.analytics import AnalyticsEvent` dosya gövdesinden modül üstüne taşındı
 
 ---
 
