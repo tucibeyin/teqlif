@@ -40,7 +40,7 @@ main() {
     setup_sysctl       "${NODE_DIR}"
     setup_hdd_io_scheduler
     ufw_node2
-    install_pg_client
+    install_pg_server
     install_clickhouse
     setup_clickhouse   "${NODE_DIR}"
     setup_backup_services "${NODE_DIR}"
@@ -97,10 +97,15 @@ ufw_node2() {
     ufw_enable
 }
 
-install_pg_client() {
-    log_step "PostgreSQL client (pg_dump, pg_receivewal)"
-    apt-get install -y -qq "postgresql-client-${PG_VERSION}"
-    log_ok "pg_client-${PG_VERSION} kuruldu"
+install_pg_server() {
+    log_step "PostgreSQL ${PG_VERSION} Server + Client (Standby/DR node)"
+    apt-get install -y -qq "postgresql-${PG_VERSION}" "postgresql-client-${PG_VERSION}"
+    # Cluster standby/DR modunda: servis otomatik başlamayacak
+    systemctl disable --now postgresql 2>/dev/null || true
+    # conf.d dizinini hazırla (runbook.sh recovery.conf için ihtiyaç duyar)
+    mkdir -p "/etc/postgresql/${PG_VERSION}/main/conf.d"
+    chown -R postgres:postgres "/etc/postgresql/${PG_VERSION}/main/conf.d"
+    log_ok "postgresql-${PG_VERSION} kuruldu, standby modda durduruldu"
 }
 
 install_clickhouse() {

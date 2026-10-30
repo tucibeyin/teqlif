@@ -139,6 +139,10 @@ if [ "${RESTORE_MODE}" = "PITR" ]; then
     log_ok "WAL dizini: ${WAL_DIR}"
     sudo -u postgres mkdir -p "${PG_DATA}/pg_wal"
 
+    # conf.d dizini yoksa oluştur (pg_basebackup data dizini oluşturur, conf dizini ayrı)
+    mkdir -p "${PG_CONF}/conf.d"
+    chown postgres:postgres "${PG_CONF}/conf.d"
+
     # restore_command yapılandır
     cat > "${PG_CONF}/conf.d/recovery.conf" <<EOF
 restore_command = 'cp ${WAL_DIR}/%f %p'
