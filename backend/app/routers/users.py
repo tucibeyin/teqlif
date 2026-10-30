@@ -275,9 +275,9 @@ async def get_user_profile(
     uow: SqlAlchemyUnitOfWork = Depends(get_uow),
 ):
     _cache_params = {"username": username, "viewer_id": current_user.id if current_user else 0}
-    cached = await cache_get("user_profile", _cache_params)
+    cached = await cache_get("user_profile", _cache_params, prefix_key=username)
     if cached is not None:
         return cached
     result = await GetUserProfileQuery(uow).execute(username, current_user)
-    await cache_set("user_profile", _cache_params, result, ttl=300)
+    await cache_set("user_profile", _cache_params, result, ttl=300, prefix_key=username)
     return result

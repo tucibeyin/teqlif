@@ -32,18 +32,20 @@ logger = get_logger(__name__)
 _PREFIX = "cqrs"
 
 
-def _make_key(namespace: str, params: dict) -> str:
+def _make_key(namespace: str, params: dict, prefix_key: str | None = None) -> str:
     params_hash = hashlib.md5(
         json.dumps(params, sort_keys=True, default=str).encode()
     ).hexdigest()[:12]
+    if prefix_key:
+        return f"{_PREFIX}:{namespace}:{prefix_key}:{params_hash}"
     return f"{_PREFIX}:{namespace}:{params_hash}"
 
 
-async def cache_get(namespace: str, params: dict) -> Any | None:
+async def cache_get(namespace: str, params: dict, prefix_key: str | None = None) -> Any | None:
     """Cache miss → None, hit → deserialize edilmiş veri."""
     try:
         redis = await get_redis()
-        raw = await redis.get(_make_key(namespace, params))
+        raw = await redis.get(_make_key(namespace, params, prefix_key))
         if raw:
             logger.debug("[CQRS] Cache HIT | ns=%s", namespace)
             return json.loads(raw)
@@ -52,12 +54,12 @@ async def cache_get(namespace: str, params: dict) -> Any | None:
     return None
 
 
-async def cache_set(namespace: str, params: dict, data: Any, ttl: int = 30) -> None:
+async def cache_set(namespace: str, params: dict, data: Any, ttl: int = 30, prefix_key: str | None = None) -> None:
     """Veriyi Redis'e yazar."""
     try:
         redis = await get_redis()
         await redis.set(
-            _make_key(namespace, params),
+            _make_key(namespace, params, prefix_key),
             json.dumps(data, default=str),
             ex=ttl,
         )
@@ -82,3 +84,16 @@ async def invalidate_cache(namespace: str) -> int:
     except Exception as exc:
         logger.warning("[CQRS] Cache invalidate hatası | ns=%s | %s", namespace, exc)
     return 0
+
+
+async def invalidate_user_profile_cache(username: str) -> None:
+    """Tek bir kullanıcının profil cache'ini siler (global stampede önleme)."""
+    try:
+        redis = await get_redis()
+        pattern = f"{_PREFIX}:user_profile:{username}:*"
+        keys = [k async for k in redis.scan_iter(pattern)]
+        if keys:
+            await redis.delete(*keys)
+            logger.info("[CQRS] Cache INVALIDATE | user_profile username=%s | %d key silindi", username, len(keys))
+    except Exception as exc:
+        logger.warning("[CQRS] invalidate_user_profile_cache hatası | username=%s | %s", username, exc)

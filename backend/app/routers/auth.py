@@ -529,8 +529,8 @@ async def update_me(
         await invalidate_user_session_cache(current_user.id)
 
     try:
-        from app.core.read_cache import invalidate_cache
-        await invalidate_cache("user_profile")
+        from app.core.read_cache import invalidate_user_profile_cache
+        await invalidate_user_profile_cache(current_user.username)
     except Exception:
         pass
 
@@ -1623,6 +1623,7 @@ async def delete_account(
     current_user.referral_code           = None
     current_user.pending_referred_by     = None
     current_user.status                  = UserStatus.DELETED
+    current_user.token_version           = (current_user.token_version or 0) + 1
 
     await db.execute(
         sa_update(Listing)
@@ -1630,6 +1631,11 @@ async def delete_account(
         .values(status="passive")
     )
     await db.commit()
+
+    try:
+        await invalidate_user_session_cache(uid)
+    except Exception:
+        pass
 
     try:
         if old_avatar:

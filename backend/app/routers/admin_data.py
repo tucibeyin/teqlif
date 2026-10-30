@@ -511,8 +511,14 @@ async def purge_user(
     user.fcm_token    = None
     user.status = UserStatus.DELETED
     user.email_verified = False
+    user.token_version = (user.token_version or 0) + 1
 
     await db.commit()
+
+    try:
+        await invalidate_user_session_cache(user_id)
+    except Exception:
+        pass
 
     try:
         redis = await get_redis()
