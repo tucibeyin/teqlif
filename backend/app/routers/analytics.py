@@ -2,6 +2,7 @@ import json
 import logging
 import math
 import asyncio
+from datetime import datetime as _dt, timedelta as _td
 from fastapi import APIRouter, Depends, Request, BackgroundTasks, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import select, func, text as sql_text
@@ -722,7 +723,6 @@ async def pro_insights(
     7 bölüm: KPI özeti · dönüşüm hunisi · sıcak talepler · fiyat zekası ·
              yayın performansı · pik saatler · akıllı öneriler
     """
-    from datetime import datetime as _dt, timedelta as _td
     from app.use_cases.analytics.pro_insights_use_case import ProInsightsUseCase
 
     if current_user.user_type != 'pro':
