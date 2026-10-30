@@ -6056,6 +6056,15 @@ WHERE sr.status = 'available'
 ```
 2. Bildirim gönderimi başarısız olsa veya kayıt 6 saati geçmiş olsa bile, `expires_at IS NULL` olan tüm `available` kayıtlara güvenli bir son kullanma tarihi set edilerek yaşam döngüsü zincirinin kilitlenmesi önlenmelidir.
 
+#### ✅ Çözüm Damgası
+- **Commit:** `0fc91a1c` — `fix(sre-148): notify_new_recordings_task 6 saatlik pencere filtresi kaldırıldı`
+- **Tarih:** 2026-10-30
+- **Değişen Dosya:** `backend/app/tasks/stream_recording_tasks.py`
+- **Yapılan:**
+  - `AND COALESCE(sr.available_at, sr.created_at) > NOW() - INTERVAL '6 hours'` satırı SELECT sorgusundan kaldırıldı; tüm unnotified `available` kayıtlar artık işleniyor
+  - Bildirim döngüsü sonuna fallback UPDATE eklendi: `status='available' AND expires_at IS NULL AND host_notified_at IS NOT NULL` olan kayıtlar 14 gün ile kapatılıyor (önceki run koruması)
+  - `expire_recordings_task` ve `archive_recordings_task` değişmedi; düzeltilen `expires_at` atamasıyla zincir artık doğal akışta ilerleyecek
+
 ---
 
 ### SRE-149 · 🟠 P1 (Yüksek) · Canlı Sohbet WebSocket El Sıkışmasında Çift DB Oturumu ve Bilateral Block Sorgusunda mute_key TTL Sızıntısı
