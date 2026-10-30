@@ -4707,7 +4707,7 @@ async def get_listing_offers(
 
 ---
 
-### SRE-115 · 🟡 P2 (Orta) · Her İzleyici Girişinde Tüm Odaya `system_join` WS Yayını ile Chat Soket DoS'u
+### SRE-115 · 🟡 P2 (Orta) · Her İzleyici Girişinde Tüm Odaya `system_join` WS Yayını ile Chat Soket DoS'u ✅ Çözüldü (93dc5432 · 2026-10-31)
 
 * **Etkilenen Dosya:** `backend/app/routers/chat.py`
 * **İlgili Satırlar:** [chat.py:418-424](file:///Users/tucibeyin/Desktop/teqlif/backend/app/routers/chat.py#L418-L424)
