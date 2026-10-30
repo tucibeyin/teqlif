@@ -4663,7 +4663,7 @@ async def get_listing_offers(
 
 ---
 
-### SRE-114 · 🟠 P1 (Yüksek) · IPv6 Kullanıcılarında `mask_ip`'nin None Dönmesi ve Shill Bidding Korumasının %100 By-pass Olması
+### SRE-114 · 🟠 P1 (Yüksek) · IPv6 Kullanıcılarında `mask_ip`'nin None Dönmesi ve Shill Bidding Korumasının %100 By-pass Olması ✅ Çözüldü (781e1c33 · 2026-10-31)
 
 * **Etkilenen Dosyalar:** `backend/app/core/ip_utils.py`, `backend/app/services/fraud_detection_service.py`
 * **İlgili Satırlar:** [ip_utils.py:4-12](file:///Users/tucibeyin/Desktop/teqlif/backend/app/core/ip_utils.py#L4-L12), [fraud_detection_service.py:97-99](file:///Users/tucibeyin/Desktop/teqlif/backend/app/services/fraud_detection_service.py#L97-L99)
