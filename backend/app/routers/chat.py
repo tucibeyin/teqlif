@@ -306,7 +306,7 @@ async def chat_ws(stream_id: int, websocket: WebSocket):
         return
     user_id_var.set(str(user_id))
 
-    # ── 3. DB doğrulama ───────────────────────────────────────────────────────
+    # ── 3. Doğrulama: Redis session cache → DB fallback ─────────────────────────
     is_host = False
     room_name = None
     username: str | None = None
@@ -314,18 +314,48 @@ async def chat_ws(stream_id: int, websocket: WebSocket):
     host_id: int | None = None
 
     try:
+        # Kullanıcı verisini Redis session cache'den oku (DB connection'ı korur).
+        # Cache miss → aşağıda DB'de sorgulanır.
+        _need_db_user = True
+        try:
+            _rc = await get_redis()
+            _raw_session = await _rc.get(f"session:user:{user_id}")
+            if _raw_session:
+                _ud = json.loads(_raw_session)
+                _status_val = _ud.get("status", "")
+                try:
+                    _cached_status = UserStatus(_status_val)
+                except ValueError:
+                    _cached_status = None
+                _cached_tv = _ud.get("token_version")
+                if _cached_status == UserStatus.ACTIVE and _cached_tv is not None:
+                    if _decode_token_version(token) != _cached_tv:
+                        logger.warning("[CHAT WS] Geçersiz token_version (cache) | user_id=%s stream_id=%s", user_id, stream_id)
+                        await websocket.close(code=_WS_CODE_UNAUTHORIZED)
+                        return
+                    username = _ud.get("username")
+                    profile_image_url = _ud.get("profile_image_thumb_url") or _ud.get("profile_image_url")
+                    _need_db_user = False
+                elif _cached_status is not None and _cached_status != UserStatus.ACTIVE:
+                    await websocket.close(code=_WS_CODE_UNAUTHORIZED)
+                    return
+        except Exception:
+            pass  # Redis erişim hatası → DB fallback'e düş
+
+        # Stream + bilateral block + (cache miss ise user) tek DB oturumunda
         async with AsyncSessionLocal() as db:
-            result = await db.execute(select(User).where(User.id == user_id))
-            user = result.scalar_one_or_none()
-            if not user or user.status != UserStatus.ACTIVE:
-                await websocket.close(code=_WS_CODE_UNAUTHORIZED)
-                return
-            if _decode_token_version(token) != user.token_version:
-                logger.warning("[CHAT WS] Geçersiz token_version | user_id=%s stream_id=%s", user_id, stream_id)
-                await websocket.close(code=_WS_CODE_UNAUTHORIZED)
-                return
-            username = user.username
-            profile_image_url = user.profile_image_thumb_url or user.profile_image_url
+            if _need_db_user:
+                result = await db.execute(select(User).where(User.id == user_id))
+                user = result.scalar_one_or_none()
+                if not user or user.status != UserStatus.ACTIVE:
+                    await websocket.close(code=_WS_CODE_UNAUTHORIZED)
+                    return
+                if _decode_token_version(token) != user.token_version:
+                    logger.warning("[CHAT WS] Geçersiz token_version | user_id=%s stream_id=%s", user_id, stream_id)
+                    await websocket.close(code=_WS_CODE_UNAUTHORIZED)
+                    return
+                username = user.username
+                profile_image_url = user.profile_image_thumb_url or user.profile_image_url
 
             stream_result = await db.execute(
                 select(LiveStream).where(LiveStream.id == stream_id)
@@ -342,6 +372,31 @@ async def chat_ws(stream_id: int, websocket: WebSocket):
             else:
                 await websocket.close(code=_WS_CODE_UNAUTHORIZED)
                 return
+
+            # Bilateral block → auto-mute, aynı DB oturumunda (ikinci bağlantı yok)
+            if not is_host and host_id:
+                block = await db.scalar(
+                    select(UserBlock).where(
+                        (UserBlock.blocker_id == host_id) & (UserBlock.blocked_id == user_id)
+                        | (UserBlock.blocker_id == user_id) & (UserBlock.blocked_id == host_id)
+                    ).limit(1)
+                )
+                if block:
+                    try:
+                        _mrc = await get_redis()
+                        _mk = mute_key(stream_id)
+                        await _mrc.sadd(_mk, str(user_id))
+                        await _mrc.expire(_mk, 86400)  # TTL: yayın bitince otomatik temizlenir
+                        logger.info(
+                            "[CHAT WS] Auto-mute uygulandı | stream_id=%s user_id=%s host_id=%s",
+                            stream_id, user_id, host_id,
+                        )
+                    except Exception as exc:
+                        logger.warning(
+                            "[CHAT WS] Auto-mute Redis yazma başarısız | stream_id=%s user_id=%s | %s",
+                            stream_id, user_id, exc,
+                        )
+
     except Exception as exc:
         logger.error(
             "[CHAT WS] DB doğrulama hatası | stream_id=%s user_id=%s | %s",
@@ -367,30 +422,6 @@ async def chat_ws(stream_id: int, websocket: WebSocket):
         except Exception as exc:
             logger.warning(
                 "[CHAT WS] Kick Redis kontrolü başarısız | stream_id=%s user_id=%s | %s",
-                stream_id, user_id, exc,
-            )
-
-    # ── 4.5. Block → auto-mute (bilateral) ──────────────────────────────────
-    # Host viewer'ı blockladıysa ya da viewer host'u blockladıysa → muted
-    if not is_host and host_id:
-        try:
-            async with AsyncSessionLocal() as _db:
-                block = await _db.scalar(
-                    select(UserBlock).where(
-                        (UserBlock.blocker_id == host_id) & (UserBlock.blocked_id == user_id)
-                        | (UserBlock.blocker_id == user_id) & (UserBlock.blocked_id == host_id)
-                    ).limit(1)
-                )
-                if block:
-                    _redis = await get_redis()
-                    await _redis.sadd(mute_key(stream_id), str(user_id))
-                    logger.info(
-                        "[CHAT WS] Auto-mute uygulandı | stream_id=%s user_id=%s host_id=%s",
-                        stream_id, user_id, host_id,
-                    )
-        except Exception as exc:
-            logger.warning(
-                "[CHAT WS] Auto-mute block kontrolü başarısız | stream_id=%s user_id=%s | %s",
                 stream_id, user_id, exc,
             )
 
