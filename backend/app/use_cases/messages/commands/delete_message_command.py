@@ -1,9 +1,11 @@
+import asyncio
 from datetime import datetime, timezone
 from sqlalchemy import select
 from app.core.uow import AbstractUnitOfWork
 from app.core.exceptions import NotFoundException, ForbiddenException
 from app.models.message import DirectMessage
 from app.services.dm_broadcast import broadcast_dm
+from app.services import storage_service as _storage
 
 _48H = 48 * 3600
 
@@ -15,6 +17,7 @@ class DeleteMessageCommand:
     async def execute(self, message_id: int, current_user_id: int, scope: str = "everyone") -> None:
         other_user_id: int | None = None
         broadcast_delete = False
+        media_to_delete: list[str] = []
 
         async with self.uow:
             result = await self.uow.session.execute(
@@ -44,9 +47,13 @@ class DeleteMessageCommand:
                 if (now - created).total_seconds() > _48H:
                     raise ForbiddenException(code="MESSAGE_DELETE_EXPIRED")
                 other_user_id = msg.receiver_id
+                media_to_delete = [u for u in (msg.media_url, msg.thumbnail_url) if u]
                 await self.uow.session.delete(msg)
                 broadcast_delete = True
 
         if broadcast_delete and other_user_id:
             await broadcast_dm(current_user_id, {"type": "message_deleted", "id": message_id})
             await broadcast_dm(other_user_id, {"type": "message_deleted", "id": message_id})
+
+        for url in media_to_delete:
+            asyncio.create_task(_storage.delete_object_dm(url))
