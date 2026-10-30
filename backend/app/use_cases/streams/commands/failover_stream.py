@@ -59,12 +59,26 @@ class FailoverStreamCommand:
             stream.source_node_id = node.get("node_id")
             await self.uow.session.commit()
 
-        # room_to_stream mapping güncelle
+        # room_to_stream + stream:meta güncelle; izleyicileri yeni odaya yönlendir
         try:
             redis = await get_redis()
-            await redis.set(f"live:room_to_stream:{new_room}", f"{stream_id}:{host_id}", ex=48 * 3600)
+            pipe = redis.pipeline()
+            pipe.set(f"live:room_to_stream:{new_room}", f"{stream_id}:{host_id}", ex=48 * 3600)
+            pipe.hset(f"stream:meta:{stream_id}", mapping={
+                "room_name": new_room,
+                "livekit_url": node["livekit_url"],
+                "source_node_id": node.get("node_id", ""),
+            })
+            failover_msg = json.dumps({
+                "type": "stream_failover",
+                "stream_id": stream_id,
+                "new_room_name": new_room,
+                "new_livekit_url": node["livekit_url"],
+            })
+            pipe.publish(f"chat:{stream_id}", failover_msg)
+            await pipe.execute()
         except Exception as exc:
-            logger.warning("[Failover] room_to_stream mapping güncellenemedi: %s", exc)
+            logger.warning("[Failover] Redis metadata ve broadcast güncellenemedi: %s", exc)
 
         logger.info(
             "[Failover] stream_id=%s old_node=%s new_node=%s new_room=%s",
