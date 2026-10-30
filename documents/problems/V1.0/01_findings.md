@@ -6863,6 +6863,12 @@ final_price = float(msg)
             user.fcm_token = None
 ```
 
+#### ✅ Çözüm Damgası
+- **Commit:** `2b549b49` — `fix(sre-163): admin ban/delete durumlarında token_version artırıldı, FCM temizlendi`
+- **Tarih:** 2026-10-30
+- **Değişen Dosya:** `backend/app/routers/admin_data.py`
+- **Yapılan:** `if new_status == UserStatus.PASSIVE` → `if new_status in (PASSIVE, BANNED, DELETED)`; tüm pasifleştirme ve yasaklama durumlarında token_version artırılıyor ve fcm_token temizleniyor
+
 ---
 
 ### SRE-164 · 🟠 P1 (Yüksek) · `ProInsightsUseCase` İçinde `auctions` ve `bids` Tablolarının Çarpımsal Join Edilmesi Nedeniyle Şişirilmiş `bid_count` Raporlanması (Multiplied Cartesian Metric Skew in Stream Analytics)
