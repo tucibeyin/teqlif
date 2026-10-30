@@ -267,15 +267,6 @@ class RelationshipStateService:
             state.can_message_ba = False
             state.reason_msg_ba = _REASON_BLOCKED
 
-        # Call presence override: hedef aramadaysa can_call → False + user_busy
-        from app.services.call_presence import is_busy as _is_busy
-        if state.can_call_ab and await _is_busy(b):
-            state.can_call_ab = False
-            state.reason_ab = _REASON_USER_BUSY
-        if state.can_call_ba and await _is_busy(a):
-            state.can_call_ba = False
-            state.reason_ba = _REASON_USER_BUSY
-
         await RelationshipStateService.cache(state)
         return state
 

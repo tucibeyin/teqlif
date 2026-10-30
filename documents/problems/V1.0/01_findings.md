@@ -4435,7 +4435,7 @@ async def get_listing_offers(
 
 ---
 
-### SRE-108 · 🟠 P1 (Yüksek) · Anlık Çağrı Meşguliyetinin (`user_busy`) Statik 1 Saatlik İlişki Önbelleğine Gömülmesi ve 3. Kişilerin 1 Saat Kilitlenmesi
+### SRE-108 · ✅ Çözüldü (`COMMIT_PLACEHOLDER` · 2026-10-31) · Anlık Çağrı Meşguliyetinin (`user_busy`) Statik 1 Saatlik İlişki Önbelleğine Gömülmesi ve 3. Kişilerin 1 Saat Kilitlenmesi
 
 * **Etkilenen Dosyalar:** `backend/app/services/relationship_service.py`, `backend/app/services/call_presence.py`
 * **İlgili Satırlar:** [relationship_service.py:271-280](file:///Users/tucibeyin/Desktop/teqlif/backend/app/services/relationship_service.py#L271-L280), [call_presence.py:25-60](file:///Users/tucibeyin/Desktop/teqlif/backend/app/services/call_presence.py#L25-L60)
