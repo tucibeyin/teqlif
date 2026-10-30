@@ -31,11 +31,11 @@ _CAMPAIGN_TTL = 48 * 3600  # 48 saat — kampanya silinse bile key otomatik temi
 
 # Lua script: atomik check-and-decrement (teqlik, integer).
 # Döndürdüğü değer:
-#   nil    → key yok (kampanya Redis'te kayıtlı değil)
-#   yeni int string → düşme başarılı (negatife geçmiş olabilir — caller kontrol eder)
+#   nil          → key yok VEYA bütçe zaten ≤ 0 (tıklama reddedildi)
+#   yeni int str → düşme başarılı
 _DEDUCT_SCRIPT = """
 local current = tonumber(redis.call('GET', KEYS[1]))
-if not current then return nil end
+if not current or current <= 0 then return nil end
 local bid = tonumber(ARGV[1])
 local new_val = math.floor(current - bid)
 redis.call('SET', KEYS[1], tostring(new_val))
@@ -184,10 +184,11 @@ async def record_ad_click(campaign_id: int, user_id: int) -> bool:
             completed_row = update_result.fetchone()
 
         if completed_row:
-            # Sadece bu worker başarıyla güncelledi — key'leri temizle
+            # Sadece bu worker başarıyla güncelledi — key'leri ve aktif seti temizle
             pipe = redis.pipeline()
             pipe.delete(budget_key)
             pipe.delete(cpc_key)
+            pipe.srem("ad_campaigns:active", str(campaign_id))
             await pipe.execute()
             logger.info(
                 "[AdService] Kampanya tamamlandı (bütçe tükendi): id=%d", campaign_id
@@ -220,6 +221,7 @@ async def pause_campaign(campaign_id: int, seller_id: int) -> bool:
         pipe = redis.pipeline()
         pipe.delete(_BUDGET_KEY.format(campaign_id))
         pipe.delete(_CPC_KEY.format(campaign_id))
+        pipe.srem("ad_campaigns:active", str(campaign_id))
         await pipe.execute()
         return True
     return False
@@ -258,6 +260,8 @@ async def resume_campaign(campaign_id: int, seller_id: int) -> bool:
         pipe = redis.pipeline()
         pipe.setex(_BUDGET_KEY.format(campaign_id), _CAMPAIGN_TTL, str(remaining))
         pipe.setex(_CPC_KEY.format(campaign_id), _CAMPAIGN_TTL, str(campaign.cpc_bid))
+        pipe.sadd("ad_campaigns:active", str(campaign_id))
+        pipe.expire("ad_campaigns:active", _CAMPAIGN_TTL)
         await pipe.execute()
 
     return True
