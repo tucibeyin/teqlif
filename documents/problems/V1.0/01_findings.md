@@ -7442,6 +7442,8 @@ async def convert_to_teqlik(
             logger.warning("[CreateListingOfferCommand] Bildirim gönderilemedi: %s", _ne)
 ```
 
+> ✅ **Çözüldü** — commit `2ab7eb6c`, 2026-10-30
+
 ---
 
 ## 🎯 Master Eylem Planı (Uçtan Uca Sıralı Mühendislik Yol Haritası)
