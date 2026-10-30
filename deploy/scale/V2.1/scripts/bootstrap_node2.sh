@@ -48,10 +48,11 @@ main() {
     setup_promtail "${NODE_DIR}" "${NODE_ID}"
     install_node_exporter
     setup_redis_failover "${NODE_DIR}"
+    setup_dr_app "${NODE_DIR}"
 
     if [ -n "${SECRETS_FILE:-}" ]; then
         apply_secrets "${SECRETS_FILE}" \
-            /project/teqlif/config /etc/wireguard /etc/clickhouse-server
+            /project/teqlif/config /etc/wireguard /etc/clickhouse-server /etc/ssl/teqlif
     fi
 
     print_summary "${NODE_ID}" "${WG_IP}" \
@@ -131,6 +132,30 @@ setup_clickhouse() {
         /etc/clickhouse-server/users.d/teqlif.xml
     systemctl enable clickhouse-server
     log_ok "ClickHouse config kopyalandı"
+}
+
+setup_dr_app() {
+    local node_dir="${1}"
+    log_step "DR uygulama sunucusu (nginx DR config + teqlif-dr.service)"
+
+    # nginx conf güncelle
+    cp "${node_dir}/resources/nginx/nginx.conf" /etc/nginx/nginx.conf
+    cp "${node_dir}/resources/nginx/conf.d/"*.conf /etc/nginx/conf.d/
+
+    # CF cert dizinini hazırla (apply_secrets doldurur)
+    mkdir -p /etc/ssl/teqlif
+
+    # teqlif-dr.service yükle (disabled — sadece DR runbook'u aktif eder)
+    cp "${node_dir}/systemd/teqlif-dr.service" /etc/systemd/system/
+    systemctl daemon-reload
+    # nginx de disabled — sadece DR runbook'u aktif eder
+    systemctl disable nginx 2>/dev/null || true
+
+    log_ok "DR nginx config + teqlif-dr.service kuruldu (devre dışı)"
+    log_warn ".env.dr eksik: runbook öncesinde /project/teqlif/config/.env.dr dosyasını oluşturun"
+    log_warn "  Gerekli değişkenler: DATABASE_URL (127.0.0.1:5432), REDIS_URL, SECRET_KEY vb."
+    log_warn "CF origin sertifikası eksik: apply_secrets ile veya manuel olarak yerleştirin:"
+    log_warn "  /etc/ssl/teqlif/cf-origin.crt ve cf-origin.key"
 }
 
 setup_redis_failover() {

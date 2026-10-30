@@ -199,7 +199,75 @@ if [ "${RESTORE_MODE}" = "PITR" ]; then
 fi
 
 # ────────────────────────────────────────────────────────────────────────────
-log_step "6. DNS Değişikliği (MANUEL)"
+log_step "6. Uygulama Sunucusu (nginx + FastAPI DR)"
+# ────────────────────────────────────────────────────────────────────────────
+
+REPO_DIR="/var/www/teqlif.com"
+DR_ENV="/project/teqlif/config/.env.dr"
+CF_CERT="/etc/ssl/teqlif/cf-origin.crt"
+CF_KEY="/etc/ssl/teqlif/cf-origin.key"
+APP_OK=false
+
+prereq_ok=true
+if [ ! -f "${DR_ENV}" ]; then
+    log_err ".env.dr bulunamadı: ${DR_ENV}"
+    echo "  FastAPI DR için bu dosya zorunludur. İçermesi gereken değişkenler:"
+    echo "  DATABASE_URL=postgresql://teqlif:<şifre>@127.0.0.1:5432/teqlif"
+    echo "  REDIS_URL=redis://:${CORE_REDIS_PASS:-<redis_şifre>}@127.0.0.1:6379/0"
+    echo "  SECRET_KEY=<üretim_secret_key>"
+    echo "  (Diğer değişkenler için /var/www/teqlif.com'daki .env.production referans alın)"
+    prereq_ok=false
+fi
+if [ ! -f "${CF_CERT}" ] || [ ! -f "${CF_KEY}" ]; then
+    log_err "Cloudflare origin sertifikası eksik: /etc/ssl/teqlif/"
+    echo "  nginx HTTPS için gereklidir. Başka bir node'dan kopyalayın:"
+    echo "  mkdir -p /etc/ssl/teqlif"
+    echo "  scp node3:/etc/ssl/teqlif/cf-origin.crt /etc/ssl/teqlif/"
+    echo "  scp node3:/etc/ssl/teqlif/cf-origin.key /etc/ssl/teqlif/"
+    prereq_ok=false
+fi
+
+if $prereq_ok; then
+    REPO_NODE2="${REPO_DIR}/deploy/scale/V2.1/node2"
+
+    # nginx config güncelle ve başlat
+    cp "${REPO_NODE2}/resources/nginx/nginx.conf"       /etc/nginx/nginx.conf
+    cp "${REPO_NODE2}/resources/nginx/conf.d/"*.conf    /etc/nginx/conf.d/
+    if nginx -t 2>&1; then
+        systemctl enable --now nginx
+        log_ok "nginx başlatıldı"
+    else
+        log_err "nginx config hatası — 'nginx -t' çıktısını kontrol et"
+        prereq_ok=false
+    fi
+fi
+
+if $prereq_ok; then
+    # teqlif-dr.service kur ve başlat
+    cp "${REPO_NODE2}/systemd/teqlif-dr.service" /etc/systemd/system/
+    systemctl daemon-reload
+    systemctl enable --now teqlif-dr.service
+    sleep 8
+
+    if systemctl is-active teqlif-dr.service > /dev/null 2>&1; then
+        log_ok "teqlif-dr.service aktif"
+        APP_OK=true
+    else
+        log_err "teqlif-dr.service başlatılamadı"
+        echo "  Detay: journalctl -u teqlif-dr.service -n 30 --no-pager"
+    fi
+fi
+
+if ! $prereq_ok && ! $APP_OK; then
+    echo ""
+    log_warn "Uygulama sunucusu hazır DEĞİL — yukarıdaki hataları giderin."
+    log_warn "DNS değişikliği yapılırsa tüm kullanıcılar 502/ERR_CONNECTION_REFUSED alacak."
+    echo ""
+    confirm "Uygulama sunucusu hazır olmadan DNS adımına geçmek istiyor musun?"
+fi
+
+# ────────────────────────────────────────────────────────────────────────────
+log_step "7. DNS Değişikliği (MANUEL)"
 # ────────────────────────────────────────────────────────────────────────────
 
 echo ""
@@ -208,33 +276,43 @@ echo ""
 echo -e "  ${YELLOW}teqlif.com${NC}         A  →  ${NODE2_IP}  (Proxied)"
 echo -e "  ${YELLOW}www.teqlif.com${NC}     A  →  ${NODE2_IP}  (Proxied)"
 echo -e "  ${YELLOW}api.teqlif.com${NC}     A  →  ${NODE2_IP}  (Proxied)"
-echo -e "  ${YELLOW}uploads.teqlif.com${NC} A  →  ${NODE2_IP}  (DNS Only)"
+echo ""
+echo -e "  ${RED}⚠ uploads.teqlif.com: MinIO node1'de — bu DNS kaydını DEĞİŞTİRME${NC}"
+echo -e "     Node1 recovery tamamlanana kadar medya yüklemeleri çalışmayacak."
+echo -e "     Bu beklenen bir degradation'dır; DNS'i değiştirirsen node2'de de 502 alırsın."
 echo ""
 echo -e "  URL: ${CYAN}https://dash.cloudflare.com → teqlif.com → DNS${NC}"
 echo ""
 confirm "DNS değişikliklerini yaptın mı?"
 
 # ────────────────────────────────────────────────────────────────────────────
-log_step "7. Özet"
+log_step "8. Özet"
 # ────────────────────────────────────────────────────────────────────────────
 
 echo ""
 log_ok "PostgreSQL: çalışıyor (node2 local, 127.0.0.1:5432)"
 log_ok "Kurtarma modu: ${RESTORE_MODE}"
-log_ok "DNS: node2'ye (${NODE2_IP}) yönlendirildi"
+if $APP_OK; then
+    log_ok "nginx + teqlif-dr.service: aktif"
+else
+    log_warn "nginx + teqlif-dr.service: BAŞLATILMADI (ön koşullar eksikti)"
+fi
+log_ok "DNS: teqlif.com/www/api → node2'ye (${NODE2_IP}) yönlendirildi"
+log_warn "DNS: uploads.teqlif.com → değiştirilmedi (MinIO node1'de, erişilemez)"
 log_ok "Log dosyası: ${LOG}"
 echo ""
 echo -e "${YELLOW}  NOTLAR:${NC}"
 echo "  • node2 HDD (~445 IOPS) — node1 NVMe'ye kıyasla %5-15 PG performansı"
-echo "  • ML batch job'ları ve analytics pipeline'ı çalışmasın (${YELLOW}sudo systemctl stop teqlif-worker${NC})"
-echo "  • FastAPI node2'de çalışmıyor — kullanıcı trafiği node2'ye ulaşıyor ama API cevap veremez"
-echo -e "  ${RED}• FastAPI kurulumu bu runbook kapsamında değil — node1'i kurtarmak öncelik!${NC}"
+echo "  • Medya yüklemeleri (hikaye/DM video) çalışmayacak — MinIO node1'de"
+echo "  • Arka plan worker'ları (teqlif-worker) başlatılmadı — HDD'yi zorlamasın"
+echo "  • teqlif-redis-replica node2'de aktif; node1 çökmüşse auto-promote olmuş olmalı"
 echo ""
 echo -e "${BOLD}  GERİ DÖNÜŞ (node1 kurtarıldığında):${NC}"
-echo "  1. node1 bootstrap: sudo teqlif-restart"
+echo "  1. node1 bootstrap + sudo teqlif-restart"
 echo "  2. node2'den pg_dump al: pg_dump -h 127.0.0.1 -U teqlif -Fc teqlif > /tmp/recovery.dump"
 echo "  3. node1'e restore: scp /tmp/recovery.dump node1:/tmp/ && ssh node1 pg_restore ..."
-echo "  4. DNS'i node1'e geri al"
-echo "  5. pg_receivewal yeniden başlat: sudo systemctl start teqlif-pg-receivewal"
+echo "  4. DNS'i node1'e geri al (tüm kayıtlar dahil uploads.teqlif.com)"
+echo "  5. node2 DR kapat: sudo systemctl disable --now teqlif-dr.service nginx"
+echo "  6. pg_receivewal yeniden başlat: sudo systemctl start teqlif-pg-receivewal"
 echo ""
 echo -e "${GREEN}  Runbook tamamlandı — $(date -u +%Y-%m-%dT%H:%M:%SZ)${NC}"
