@@ -53,6 +53,7 @@ _MAX_HISTORY = _WS_HISTORY_LIMIT  # geriye dönük uyumluluk
 
 # ── Viewer count ─────────────────────────────────────────────────────────────
 _VIEWER_TTL = 48 * 3600  # 48 saat — yayın crash'lansa bile key otomatik silinir
+_SYSTEM_JOIN_THRESHOLD = 50  # SRE-115: bu eşiğin üstünde system_join yayını bastırılır
 
 
 
@@ -143,8 +144,12 @@ class ChatCommands:
         redis = await get_redis()
         return bool(await redis.sismember(mod_key(stream_id), str(user_id)))
 
-    async def add_viewer(self, stream_id: int, room_name: str, username: str) -> None:
-        """viewer_set'e ekler ve sayacı artırır."""
+    async def add_viewer(self, stream_id: int, room_name: str, username: str) -> int:
+        """viewer_set'e ekler, sayacı artırır ve yeni izleyici sayısını döner.
+
+        Dönen count caller'ın system_join eşiği kararı ile VIEWER_COUNT
+        mesajı için reuse edilebilir — ekstra Redis round-trip gerekmez.
+        """
         try:
             redis = await get_redis()
             await redis.sadd(f"live:viewer_set:{stream_id}", username)
@@ -157,8 +162,10 @@ class ChatCommands:
             if count > current_peak:
                 await redis.setex(peak_key, _VIEWER_TTL, count)
             await publish_chat(stream_id, {"type": WS.VIEWER_COUNT, "count": int(count)})
+            return int(count)
         except Exception as exc:
             logger.warning("[CHAT] add_viewer başarısız | stream_id=%s | %s", stream_id, exc)
+            return 0
 
     async def remove_viewer(self, stream_id: int, room_name: str, username: str) -> None:
         """viewer_set'ten çıkarır ve sayacı azaltır."""

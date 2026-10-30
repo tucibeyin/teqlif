@@ -31,7 +31,7 @@ from app.use_cases.chat.chat_utils import (
     chat_pubsub_listener,        # noqa: F401 — main.py bu ismi buradan import eder
     moderation_pubsub_listener,  # noqa: F401 — main.py bu ismi buradan import eder
 )
-from app.use_cases.chat.commands.chat_commands import ChatCommands
+from app.use_cases.chat.commands.chat_commands import ChatCommands, _SYSTEM_JOIN_THRESHOLD
 from app.models.block import UserBlock
 from app.services.moderation_service import kick_key, mute_key
 from app.utils.auth import decode_token, _decode_token_version
@@ -451,9 +451,11 @@ async def chat_ws(stream_id: int, websocket: WebSocket):
 
     try:
         # ── 7. İzleyici sayacı ve katılma bildirimi ───────────────────────────
+        current_viewer_count: int | None = None
         if not is_host and room_name:
-            await svc.add_viewer(stream_id, room_name, username)
-            await publish_chat(stream_id, {"type": WS.SYSTEM_JOIN, "username": username})
+            current_viewer_count = await svc.add_viewer(stream_id, room_name, username)
+            if current_viewer_count < _SYSTEM_JOIN_THRESHOLD:
+                await publish_chat(stream_id, {"type": WS.SYSTEM_JOIN, "username": username})
             if host_id:
                 asyncio.create_task(
                     _check_whale_status(user_id, username, stream_id, host_id)
@@ -471,7 +473,7 @@ async def chat_ws(stream_id: int, websocket: WebSocket):
                 await safe_send_json(websocket, {"type": WS.HISTORY, "messages": history})
 
             if room_name:
-                count = await svc.get_viewer_count(stream_id)
+                count = current_viewer_count if current_viewer_count is not None else await svc.get_viewer_count(stream_id)
                 await safe_send_json(websocket, {"type": WS.VIEWER_COUNT, "count": count})
 
             if not is_host:
