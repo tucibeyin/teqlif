@@ -108,6 +108,45 @@ agent_sync() {
   fi
 }
 
+# ── sync_nginx: nginx conf.d dosyaları değiştiyse /etc/nginx/conf.d/ güncelle ─
+# nginx -t başarısız olursa backup'tan geri döner, restart iptal edilir.
+sync_nginx() {
+  local node_dir="$1"
+  local conf_dir="$node_dir/resources/nginx/conf.d"
+  [ -d "$conf_dir" ] || return 0
+  local reloaded=""
+  for conf in "$conf_dir"/*.conf; do
+    [ -f "$conf" ] || continue
+    local fname dst
+    fname=$(basename "$conf")
+    dst="/etc/nginx/conf.d/$fname"
+    if ! diff -q "$conf" "$dst" > /dev/null 2>&1; then
+      [ -f "$dst" ] && cp "$dst" "${dst}.bak"
+      cp "$conf" "$dst"
+      log "Nginx config güncellendi: $fname"
+      reloaded="yes"
+    fi
+  done
+  if [ -n "$reloaded" ]; then
+    if nginx -t 2>/dev/null; then
+      systemctl reload nginx
+      log "nginx reload tamamlandı"
+    else
+      warn "nginx -t başarısız — backup'tan geri yükleniyor..."
+      for conf in "$conf_dir"/*.conf; do
+        [ -f "$conf" ] || continue
+        local fname dst
+        fname=$(basename "$conf")
+        dst="/etc/nginx/conf.d/$fname"
+        [ -f "${dst}.bak" ] && cp "${dst}.bak" "$dst"
+      done
+      nginx -t 2>/dev/null && systemctl reload nginx
+      err "Nginx config hatası — restart iptal edildi"
+    fi
+  fi
+  return 0
+}
+
 # ── sync_services: servis dosyaları değiştiyse /etc/systemd/system/ güncelle ─
 # Repo'daki .service dosyaları kaynak; bootstrap dışında güncelleme bu fonksiyonla yapılır.
 sync_services() {
@@ -163,6 +202,7 @@ case "$NODE" in
     pip_sync
     agent_sync
     sync_services "$REPO/deploy/scale/V2.1/node1"
+    sync_nginx "$REPO/deploy/scale/V2.1/node1"
     alembic_and_sync /project/teqlif/config/.env.production
     log "teqlif.service yeniden başlatılıyor..."
     systemctl restart teqlif.service
@@ -196,6 +236,7 @@ case "$NODE" in
     pip_sync
     agent_sync
     sync_services "$REPO/deploy/scale/V2.1/node5"
+    sync_nginx "$REPO/deploy/scale/V2.1/node5"
     alembic_and_sync /project/teqlif/config/.env.staging
     log "teqlif-staging.service yeniden başlatılıyor..."
     systemctl restart teqlif-staging.service

@@ -1528,6 +1528,8 @@ Uygulamanın en temel vitrin özelliği olan Story (Hikaye) video paylaşımı, 
      ```
 2. Değişiklik sonrası `nginx -t` test edilip Nginx yeniden yüklenmelidir (`systemctl reload nginx`).
 
+> ✅ **Çözüldü** — commit PLACEHOLDER, 2026-10-30
+
 ---
 
 ### SRE-40 · 🔴 P0 (Kritik) · Node1 Çöküş Kurtarma Runbook'unun (`runbook.sh`) Tüm Üretim DNS Trafiğini FastAPI/Nginx/MinIO Olmayan Node2'ye Yönlendirip Sistemi Çökertmesi
