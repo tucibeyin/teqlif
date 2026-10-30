@@ -7164,6 +7164,8 @@ from datetime import datetime as _dt, timedelta as _td
 ```
 ve fonksiyon içlerindeki dağınık yerel import'ları kaldırarak tüm tarih ayrıştırma mantığını modül seviyesindeki standart alias'lar üzerinden yürütün.
 
+> ✅ **Çözüldü** — commit `41cc28ab`, 2026-10-30
+
 ---
 
 ### SRE-170 · 🟠 P1 (Yüksek) · `worker.py:cleanup_ghost_calls_task` İçinde Eksik `ws_manager` Import'u Nedeniyle Hayalet Arama WebSocket Bildirimlerinin Düşmesi ve Kullanıcıların Arama Ekranında Kilitli Kalması (Missing `ws_manager` Import in Ghost Call Cleanup Task & Stalled Client Call Screens)
