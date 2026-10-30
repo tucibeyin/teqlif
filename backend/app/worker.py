@@ -943,8 +943,9 @@ async def flush_interactions_to_db(ctx: dict) -> None:
             await db.execute(sa_insert(UserInteraction), pg_rows)
             await db.commit()
 
-        # PG commit başarılı — artık Redis kuyruğundan o batch'i kaldırabiliriz.
-        await redis.ltrim(QUEUE_KEY, BATCH_LIMIT, -1)
+        # PG commit başarılı — yalnızca DB'ye yazılan eleman sayısı kadar trim et.
+        # BATCH_LIMIT sabit kullanımı: liste <2000 ise tüm kuyruğu silerdi (Redis LTRIM spek).
+        await redis.ltrim(QUEUE_KEY, len(raw_items), -1)
 
         # CH insert kaldırıldı — gece sync_pg_to_clickhouse_task PG→CH aktarımını yapar.
 
