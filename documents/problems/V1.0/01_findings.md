@@ -2939,6 +2939,8 @@ Node2 üzerinde **yalnızca istemci paketi (`postgresql-client-17`)** kurulmakta
 2. `/etc/postgresql/17/main/conf.d` dizini oluşturulmalı ve yetkileri `postgres:postgres` yapılmalıdır.
 3. Böylece felaket anında `runbook.sh` hazır sunucu üzerinde WAL replay işlemini 2 dakika içinde tamamlayabilir.
 
+> ✅ **Çözüldü** — commit `40c02937`, 2026-10-30
+
 ---
 
 ### SRE-74 · 🟠 P1 (Yüksek) · `search_alerts.py:delete_alert` İçinde Tanımsız Enum Değeri (`'passive'`) Ataması Nedeniyle HTTP 500 Çökmesi
