@@ -5722,6 +5722,14 @@ await db.commit()
 await invalidate_user_session_cache(user.id)
 ```
 
+#### ✅ Çözüm Damgası
+* **Commit:** `9e1c3cb3` · 2026-10-30
+* **Değişiklik:**
+  * `auth.py: request_phone_verification` — `current_user.phone = data.phone` + `phone_verified = False` + `db.commit()` DB write satırları kaldırıldı; telefon artık yalnızca onay sonrası DB'ye yazılıyor. Duplicate check `User.phone_verified == True` filtresine daraltıldı — doğrulanmamış claim'ler gerçek sahibin talebini engelleyemiyor.
+  * `auth.py: confirm_phone_verification (action=yes)` — race condition koruması eklendi (`verified_by_other` kontrolü); `sa_update` ile doğrulanmamış sahipsiz talepler temizlendi (unique constraint koruması); `user.phone = phone` + `phone_verified = True` yalnızca e-posta onayı sonrası yazılıyor.
+  * `auth.py: confirm_phone_verification (action=no)` — DB write kaldırıldı (telefon hiç yazılmamıştı); sadece token siliniyor.
+* **Durum:** Tüm node'lara deploy edildi; servisler sağlıklı.
+
 ---
 
 ### SRE-142 · 🟠 P1 (Yüksek) · İlan Videosu Yüklemede Senkron FFmpeg/FFprobe ile 504 Timeout ve CPU %100 Açlığı
