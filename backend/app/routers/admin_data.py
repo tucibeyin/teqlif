@@ -218,8 +218,9 @@ async def update_user_info(user_id: int, data: AdminUserUpdate, db: AsyncSession
     if data.status is not None:
         new_status = UserStatus(data.status)
         user.status = new_status
-        if new_status == UserStatus.PASSIVE:
+        if new_status in (UserStatus.PASSIVE, UserStatus.BANNED, UserStatus.DELETED):
             user.token_version = (user.token_version or 0) + 1
+            user.fcm_token = None
     await db.commit()
     try:
         await invalidate_user_session_cache(user_id)
