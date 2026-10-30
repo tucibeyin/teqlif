@@ -7262,6 +7262,8 @@ async def cleanup_ghost_calls_task(ctx: dict):
         await redis.ltrim(QUEUE_KEY, len(raw_items), -1)
 ```
 
+> ✅ **Çözüldü** — commit `96411c73`, 2026-10-30
+
 ---
 
 ### SRE-172 · 🔴 P0 (Kritik) · Canlı Yayın Düğüm Arızasında (`failover_stream`) Yeni Odaya Taşınan Yayının İzleyicilere WebSocket veya Redis Üzerinden Bildirilmemesi ve Tüm İzleyicilerin Ölü Düğümde Kilitli Kalması (Silent Stream Failover Desync & Orphaned Viewers on Node Crash)
@@ -7327,6 +7329,8 @@ async def cleanup_ghost_calls_task(ctx: dict):
             logger.warning("[Failover] Redis metadata ve broadcast güncellenemedi: %s", exc)
 ```
 
+> ✅ **Çözüldü** — commit `603776be`, 2026-10-30
+
 ---
 
 ### SRE-173 · 🟠 P1 (Yüksek) · Kazanç Bakiyesini TEQlik'e Dönüştürmede (`convert-to-teqlik`) Redis Oturum Önbelleğinin Geçersiz Kılınmaması Nedeniyle Bakiye Tutarsızlığı ve Hatalı Yetersiz Bakiye Reddi (Stale Session Cache on Earnings-to-Teqlik Conversion)
@@ -7372,6 +7376,8 @@ async def convert_to_teqlik(
         logger.warning("[Wallet] Session cache invalidation failed: %s", _ce)
     return result
 ```
+
+> ✅ **Çözüldü** — önceden uygulanmış (wallet.py:158), 2026-10-30
 
 ---
 
