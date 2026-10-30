@@ -72,6 +72,9 @@ main() {
         "MinIO staging bucket oluştur: teqlif-staging, teqlif-dm-staging" \
         "certbot certonly --nginx -d staging.uploads.teqlif.com (LE cert)" \
         "Cloudflare origin cert → /etc/ssl/teqlif/cf-origin.{crt,key}" \
+        "Credential JSON kopyala: scp firebase-service-account.json node5:/var/www/teqlif.com/backend/" \
+        "Credential JSON kopyala: scp google-play-service-account.json node5:/var/www/teqlif.com/backend/" \
+        "chmod 600 /var/www/teqlif.com/backend/{firebase,google-play}-service-account.json" \
         "systemctl start teqlif-staging teqlif-worker-staging teqlif-ai-proxy"
 }
 
