@@ -8,8 +8,6 @@ Type=simple
 User=tucibeyin
 WorkingDirectory=/var/www/teqlif.com/backend
 EnvironmentFile=/project/teqlif/config/.env.staging
-ExecStartPre=/var/www/teqlif.com/.venv/bin/alembic upgrade head
-ExecStartPre=/var/www/teqlif.com/.venv/bin/python scripts/sync_main.py
 ExecStart=/var/www/teqlif.com/.venv/bin/uvicorn main:app \
     --host 10.10.0.5 \
     --port 8000 \

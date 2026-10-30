@@ -2,11 +2,11 @@
 # /usr/local/sbin/teqlif-restart
 #
 # Her node'da ne yapılır:
-#   node1  — git pull → pip sync → teqlif + workers restart (alembic ExecStartPre'de)
+#   node1  — git pull → pip sync → servis güncelle → alembic + sync → teqlif + workers restart
 #   node2  — git pull (backup node, uygulama yok)
 #   node3  — git pull; --livekit ile LiveKit restart (aktif yayınları keser)
 #   node4  — git pull; --livekit ile LiveKit restart (aktif yayınları keser)
-#   node5  — git pull → pip sync → teqlif-staging + worker-staging restart
+#   node5  — git pull → pip sync → servis güncelle → alembic + sync → teqlif-staging + workers restart
 #   node6  — git pull → teqlif-ai-proxy restart
 #
 # Kullanım:
@@ -111,13 +111,54 @@ agent_sync() {
   fi
 }
 
+# ── sync_services: servis dosyaları değiştiyse /etc/systemd/system/ güncelle ─
+sync_services() {
+  local node_dir="$1"
+  local reloaded=""
+  for svc in "$node_dir/systemd/"*.service; do
+    [ -f "$svc" ] || continue
+    local fname
+    fname=$(basename "$svc")
+    if ! diff -q "$svc" "/etc/systemd/system/$fname" > /dev/null 2>&1; then
+      cp "$svc" "/etc/systemd/system/$fname"
+      log "Servis dosyası güncellendi: $fname"
+      reloaded="yes"
+    fi
+  done
+  [ -n "$reloaded" ] && systemctl daemon-reload && log "systemctl daemon-reload tamamlandı"
+  return 0
+}
+
+# ── alembic_and_sync: migration + veri sync (deployment anında, her restart'ta değil) ─
+alembic_and_sync() {
+  local env_file="$1"
+  log "alembic upgrade head..."
+  systemd-run \
+    --uid=tucibeyin --gid=tucibeyin \
+    --wait --collect \
+    --working-directory="$REPO/backend" \
+    --property="EnvironmentFile=$env_file" \
+    -- "$REPO/.venv/bin/alembic" upgrade head \
+    || err "alembic upgrade başarısız — restart iptal edildi"
+  log "sync_main.py (kategori/lokasyon/i18n/feed cache)..."
+  systemd-run \
+    --uid=tucibeyin --gid=tucibeyin \
+    --wait --collect \
+    --working-directory="$REPO/backend" \
+    --property="EnvironmentFile=$env_file" \
+    -- "$REPO/.venv/bin/python" scripts/sync_main.py \
+    || warn "sync_main.py hata verdi — devam ediliyor"
+}
+
 # ── 3. node'a göre restart ────────────────────────────────────────────────────
 case "$NODE" in
 
   node1)
     pip_sync
     agent_sync
-    log "teqlif.service yeniden başlatılıyor (alembic ExecStartPre'de çalışır)..."
+    sync_services "$REPO/deploy/scale/V2.1/node1"
+    alembic_and_sync /project/teqlif/config/.env.production
+    log "teqlif.service yeniden başlatılıyor..."
     systemctl restart teqlif.service
     log "teqlif.service aktif — workerlar başlatılıyor..."
     systemctl restart teqlif-worker.service teqlif-worker-critical.service teqlif-worker-video.service
@@ -148,7 +189,9 @@ case "$NODE" in
   node5)
     pip_sync
     agent_sync
-    log "teqlif-staging.service yeniden başlatılıyor (alembic ExecStartPre'de çalışır)..."
+    sync_services "$REPO/deploy/scale/V2.1/node5"
+    alembic_and_sync /project/teqlif/config/.env.staging
+    log "teqlif-staging.service yeniden başlatılıyor..."
     systemctl restart teqlif-staging.service
     log "teqlif-staging.service aktif — worker'lar başlatılıyor..."
     systemctl restart teqlif-worker-staging.service teqlif-worker-critical-staging.service teqlif-worker-video-staging.service
