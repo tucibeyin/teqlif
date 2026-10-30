@@ -1,7 +1,3 @@
-import asyncio
-import os
-import shutil
-import tempfile
 import uuid
 
 from fastapi import APIRouter, Depends, Request, UploadFile, File
@@ -11,12 +7,12 @@ from app.utils.auth import get_current_user
 from app.core.exceptions import BadRequestException
 from app.core.logger import get_logger, capture_exception
 from app.core.rate_limit import limiter
+from app.core.task_queue import get_pool
 from app.services import storage_service as storage
-from app.constants.media_limits import IMAGE_MAX_BYTES, LISTING_VIDEO_MAX_BYTES, LISTING_VIDEO_MAX_SECS
+from app.constants.media_limits import IMAGE_MAX_BYTES, LISTING_VIDEO_MAX_BYTES
 from app.utils.media_processor import (
     detect_image_type as _detect_image_type,
     detect_video_type as _detect_video_type,
-    get_video_duration as _get_video_duration,
     make_thumbnail as _make_thumbnail,
     IMAGE_CONTENT_TYPES as _IMAGE_CONTENT_TYPES,
 )
@@ -43,52 +39,6 @@ async def _read_streaming(file: UploadFile, max_bytes: int) -> bytes:
     return b"".join(chunks)
 
 
-async def _process_listing_video(src: str, out_dir: str) -> tuple[str, str | None]:
-    """ffmpeg ile remux + thumbnail. Dönüş: (video_local_path, thumb_local_path|None)."""
-    video_path = os.path.join(out_dir, f"{uuid.uuid4().hex}.mp4")
-    thumb_path = os.path.join(out_dir, f"{uuid.uuid4().hex}_vthumb.jpg")
-
-    if shutil.which("ffmpeg"):
-        compress_cmd = [
-            "ffmpeg", "-y", "-i", src,
-            "-c:v", "copy",
-            "-c:a", "aac", "-b:a", "128k",
-            "-movflags", "+faststart",
-            "-t", str(int(LISTING_VIDEO_MAX_SECS)),
-            video_path,
-        ]
-        try:
-            proc = await asyncio.create_subprocess_exec(
-                *compress_cmd,
-                stdout=asyncio.subprocess.DEVNULL,
-                stderr=asyncio.subprocess.DEVNULL,
-            )
-            await asyncio.wait_for(proc.communicate(), timeout=60)
-            if proc.returncode != 0 or not os.path.exists(video_path):
-                raise RuntimeError("ffmpeg_failed")
-        except Exception:
-            shutil.copy2(src, video_path)
-
-        thumb_cmd = [
-            "ffmpeg", "-y", "-i", video_path,
-            "-ss", "0", "-frames:v", "1", "-q:v", "2",
-            thumb_path,
-        ]
-        try:
-            proc = await asyncio.create_subprocess_exec(
-                *thumb_cmd,
-                stdout=asyncio.subprocess.DEVNULL,
-                stderr=asyncio.subprocess.DEVNULL,
-            )
-            await asyncio.wait_for(proc.communicate(), timeout=30)
-        except Exception:
-            pass
-    else:
-        shutil.copy2(src, video_path)
-
-    return video_path, thumb_path if os.path.exists(thumb_path) else None
-
-
 @router.post("/listing-video")
 @limiter.limit("10/minute")
 async def upload_listing_video(
@@ -106,27 +56,25 @@ async def upload_listing_video(
     if _detect_video_type(data) is None:
         raise BadRequestException(code="INVALID_VIDEO_FORMAT")
 
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        tmp_path = os.path.join(tmp_dir, f"src_{uuid.uuid4().hex}.mp4")
-        with open(tmp_path, "wb") as f:
-            f.write(data)
+    # Ham videoyu MinIO'ya yükle — FFmpeg işlemi HTTP bağlantısını tutmaz
+    video_key = f"listings/video/{uuid.uuid4().hex}.mp4"
+    video_url = await storage.upload_bytes_async(video_key, data, "video/mp4")
 
-        duration = await _get_video_duration(tmp_path)
-        if duration is not None and duration > LISTING_VIDEO_MAX_SECS:
-            raise BadRequestException(code="VIDEO_TOO_LONG")
+    # ARQ video kuyruğuna devret: remux + thumbnail arka planda işlenir
+    pool = get_pool()
+    if pool:
+        await pool.enqueue_job(
+            "process_listing_video_task",
+            video_key,
+            _queue_name="video",
+            _job_id=f"proc_video:{video_key}",
+        )
 
-        video_local, thumb_local = await _process_listing_video(tmp_path, tmp_dir)
-
-        video_key = f"{uuid.uuid4().hex}.mp4"
-        video_url = await storage.upload_file_async(video_key, video_local, "video/mp4")
-
-        thumb_url = None
-        if thumb_local:
-            thumb_key = f"{uuid.uuid4().hex}_vthumb.jpg"
-            thumb_url = await storage.upload_file_async(thumb_key, thumb_local, "image/jpeg")
-
-    logger.info("[UPLOAD] İlan videosu yüklendi | user_id=%s | video=%s", current_user.id, video_url)
-    return {"video_url": video_url, "thumb_url": thumb_url}
+    logger.info(
+        "[UPLOAD] İlan videosu yüklendi (ham) | user_id=%s | key=%s",
+        current_user.id, video_key,
+    )
+    return {"video_url": video_url, "thumb_url": None}
 
 
 @router.post("")

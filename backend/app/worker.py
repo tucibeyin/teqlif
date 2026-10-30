@@ -26,7 +26,7 @@ from app.tasks.analytics_tasks import process_churn_and_airdrop, cleanup_hype_hi
 from app.tasks.listing_tasks import deactivate_expired_listings_task, delete_expired_inactive_listings_task
 from app.tasks.stream_recording_tasks import expire_recordings_task, archive_recordings_task, notify_new_recordings_task
 from app.tasks.stream_concat_task import stream_concat_task
-from app.tasks.video_tasks import capture_hype_highlight
+from app.tasks.video_tasks import capture_hype_highlight, process_listing_video_task
 from app.tasks.dm_archive_tasks import archive_old_dm_task
 from app.services.feed.foryou_worker import populate_foryou_feed_task
 from app.tasks.wallet_tasks import (
@@ -4585,6 +4585,7 @@ class WorkerSettingsVideo:
     functions = [
         stream_concat_task,
         capture_hype_highlight,
+        process_listing_video_task,
     ]
 
     cron_jobs = [

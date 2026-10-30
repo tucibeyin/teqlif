@@ -182,6 +182,126 @@ async def _insert_highlight_record(room_id: int, host_id: int, video_url: str) -
     logger.info("[Highlight] DB kaydı eklendi | room_id=%s expires=%s", room_id, expires)
 
 
+async def process_listing_video_task(ctx: dict, video_key: str) -> None:
+    """
+    Ham ilan videosunu ARQ arka planında işler.
+
+    Adımlar: MinIO indir → FFmpeg remux+AAC+faststart+60s → thumbnail →
+    aynı key'e yeniden yükle → thumbnail key'e yükle →
+    listings.thumbnail_url best-effort güncelle.
+
+    ARQ video kuyruğunda çalışır (WorkerSettingsVideo, node1).
+    """
+    import os
+    import shutil
+    from app.services import storage_service as storage
+    from app.constants.media_limits import LISTING_VIDEO_MAX_SECS
+
+    logger.info("[VideoTask] İşleniyor | key=%s", video_key)
+
+    raw_bytes = await storage.get_object_bytes(video_key)
+    if not raw_bytes:
+        logger.warning("[VideoTask] MinIO'da bulunamadı | key=%s", video_key)
+        return
+
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        raw_path = os.path.join(tmp_dir, "src.mp4")
+        with open(raw_path, "wb") as f:
+            f.write(raw_bytes)
+        del raw_bytes
+
+        out_path = os.path.join(tmp_dir, "out.mp4")
+        thumb_path = os.path.join(tmp_dir, "thumb.jpg")
+
+        if not shutil.which("ffmpeg"):
+            logger.warning("[VideoTask] ffmpeg bulunamadı | key=%s", video_key)
+            return
+
+        compress_cmd = [
+            "nice", "-n", "10",
+            "ffmpeg", "-y", "-i", raw_path,
+            "-c:v", "copy",
+            "-c:a", "aac", "-b:a", "128k",
+            "-movflags", "+faststart",
+            "-t", str(int(LISTING_VIDEO_MAX_SECS)),
+            out_path,
+        ]
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                *compress_cmd,
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.DEVNULL,
+            )
+            await asyncio.wait_for(proc.communicate(), timeout=120)
+            if proc.returncode != 0 or not os.path.exists(out_path):
+                logger.warning("[VideoTask] FFmpeg remux başarısız | key=%s rc=%s", video_key, proc.returncode)
+                return
+        except Exception as exc:
+            logger.warning("[VideoTask] FFmpeg remux hata | key=%s | %s", video_key, exc)
+            return
+
+        thumb_cmd = [
+            "ffmpeg", "-y", "-i", out_path,
+            "-ss", "0", "-frames:v", "1", "-q:v", "2",
+            thumb_path,
+        ]
+        thumb_ok = False
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                *thumb_cmd,
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.DEVNULL,
+            )
+            await asyncio.wait_for(proc.communicate(), timeout=30)
+            thumb_ok = os.path.exists(thumb_path)
+        except Exception:
+            pass
+
+        try:
+            await storage.upload_file(video_key, out_path, "video/mp4")
+            logger.info("[VideoTask] İşlenmiş video yüklendi | key=%s", video_key)
+        except Exception as exc:
+            logger.error("[VideoTask] İşlenmiş video yüklenemedi | key=%s | %s", video_key, exc)
+            return
+
+        thumb_url = None
+        if thumb_ok:
+            key_stem = video_key.rsplit(".", 1)[0]
+            thumb_key = f"{key_stem}_vthumb.jpg"
+            try:
+                thumb_url = await storage.upload_file(thumb_key, thumb_path, "image/jpeg")
+                logger.info("[VideoTask] Thumbnail yüklendi | key=%s", thumb_key)
+            except Exception as exc:
+                logger.warning("[VideoTask] Thumbnail yüklenemedi | key=%s | %s", thumb_key, exc)
+
+        # listings.thumbnail_url best-effort güncelle (listing henüz oluşturulmamışsa 0 satır etkilenir)
+        if thumb_url:
+            video_uuid = os.path.basename(video_key).split(".")[0]
+            try:
+                from app.database import AsyncSessionLocal
+                from sqlalchemy import text
+                async with AsyncSessionLocal() as db:
+                    result = await db.execute(
+                        text(
+                            "UPDATE listings "
+                            "SET thumbnail_url = :thumb "
+                            "WHERE video_url LIKE :pattern "
+                            "AND thumbnail_url IS NULL"
+                        ),
+                        {"thumb": thumb_url, "pattern": f"%{video_uuid}%"},
+                    )
+                    await db.commit()
+                    logger.info(
+                        "[VideoTask] thumbnail_url güncellendi | listings=%d | key=%s",
+                        result.rowcount, video_key,
+                    )
+            except Exception as exc:
+                logger.warning("[VideoTask] thumbnail_url güncellenemedi | key=%s | %s", video_key, exc)
+
+    logger.info("[VideoTask] Tamamlandı | key=%s", video_key)
+
+
 async def capture_hype_highlight(ctx: dict, room_name: str, room_id: int, host_id: int) -> None:
     """
     LiveKit odasından 15 saniyelik kesit çeker, MinIO'ya yükler ve DB'ye kaydeder.
