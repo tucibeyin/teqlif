@@ -4632,7 +4632,7 @@ async def get_listing_offers(
 
 ---
 
-### SRE-113 · 🟠 P1 (Yüksek) · Herkesten Silinen Mesajlarda MinIO DM Dosyasının Silinmemesi ve KVKK/Gizlilik İhlali
+### SRE-113 · 🟠 P1 (Yüksek) · Herkesten Silinen Mesajlarda MinIO DM Dosyasının Silinmemesi ve KVKK/Gizlilik İhlali ✅ Çözüldü (542edc79 · 2026-10-31)
 
 * **Etkilenen Dosya:** `backend/app/use_cases/messages/commands/delete_message_command.py`
 * **İlgili Satırlar:** [delete_message_command.py:38-53](file:///Users/tucibeyin/Desktop/teqlif/backend/app/use_cases/messages/commands/delete_message_command.py#L38-L53)
