@@ -40,12 +40,17 @@ async def notify_new_recordings_task(ctx: dict) -> None:
     Standart host → "recording_upsell"    bildirim + expires_at = NOW() + 14 days (hukuki arşiv)
 
     host_notified_at IS NULL → henüz bildirim gönderilmemiş.
+
+    SRE-148: 6 saatlik pencere filtresi kaldırıldı — tüm unnotified available kayıtlar işlenir.
+    Fallback: bildirim gönderilmiş ama expires_at hâlâ NULL olan kayıtlar 14 gün ile kapatılır
+    (önceki run'larda notify başarılı ama UPDATE yarıda kalan edge-case'ler için).
     """
     try:
         from app.database import AsyncSessionLocal
         from app.services.notification_service import push_notification
         from sqlalchemy import text
 
+        # ─── 1. Bildirim gönderilmemiş tüm available kayıtları seç (zaman sınırı yok)
         async with AsyncSessionLocal() as session:
             rows = (await session.execute(text("""
                 SELECT sr.id, sr.stream_id, ls.host_id, u.user_type
@@ -54,13 +59,10 @@ async def notify_new_recordings_task(ctx: dict) -> None:
                 JOIN users u         ON u.id  = ls.host_id
                 WHERE sr.status = 'available'
                   AND sr.host_notified_at IS NULL
-                  AND COALESCE(sr.available_at, sr.created_at) > NOW() - INTERVAL '6 hours'
             """))).fetchall()
 
-        if not rows:
-            return
-
-        for rec_id, stream_id, host_id, user_type in rows:
+        notified = 0
+        for rec_id, stream_id, host_id, user_type in (rows or []):
             is_pro = user_type == 'pro'
             try:
                 if is_pro:
@@ -101,8 +103,30 @@ async def notify_new_recordings_task(ctx: dict) -> None:
                     WHERE id = :id
                 """), {"id": rec_id})
                 await session.commit()
+            notified += 1
 
-        logger.info("notify_new_recordings_task: %d kayıt için bildirim işlendi", len(rows))
+        # ─── 2. Fallback: önceki çalışmada notify gönderilmiş ama expires_at hâlâ NULL olanlar
+        async with AsyncSessionLocal() as session:
+            fallback_result = await session.execute(text("""
+                UPDATE stream_recordings
+                SET expires_at = NOW() + INTERVAL '14 days',
+                    updated_at = NOW()
+                WHERE status = 'available'
+                  AND expires_at IS NULL
+                  AND host_notified_at IS NOT NULL
+            """))
+            await session.commit()
+            fallback_count = fallback_result.rowcount
+
+        if fallback_count:
+            logger.warning(
+                "notify_new_recordings_task: fallback expires_at düzeltmesi | %d zombi kayıt kapatıldı",
+                fallback_count,
+            )
+
+        if notified:
+            logger.info("notify_new_recordings_task: %d kayıt için bildirim işlendi", notified)
+
     except Exception as exc:
         capture_exception(exc)
         logger.error("notify_new_recordings_task hata: %s", exc)
