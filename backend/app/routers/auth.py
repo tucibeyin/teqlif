@@ -181,7 +181,7 @@ async def verify(request: Request, data: VerifyEmail, response: Response, db: As
 
     token = create_access_token(user.id, user.token_version)
     refresh = create_refresh_token()
-    await redis.setex(f"refresh:{refresh}", REFRESH_TOKEN_TTL, str(user.id))
+    await redis.setex(f"refresh:{refresh}", REFRESH_TOKEN_TTL, f"{user.id}:{user.token_version}")
     set_auth_cookies(response, token, refresh)
     return TokenOut(access_token=token, refresh_token=refresh, user=UserOut.model_validate(user))
 
@@ -223,7 +223,7 @@ async def login(request: Request, data: UserLogin, response: Response, db: Async
     redis = await get_redis()
     token = create_access_token(user.id, user.token_version)
     refresh = create_refresh_token()
-    await redis.setex(f"refresh:{refresh}", REFRESH_TOKEN_TTL, str(user.id))
+    await redis.setex(f"refresh:{refresh}", REFRESH_TOKEN_TTL, f"{user.id}:{user.token_version}")
     set_auth_cookies(response, token, refresh)
     return TokenOut(access_token=token, refresh_token=refresh, user=UserOut.model_validate(user))
 
@@ -1001,19 +1001,28 @@ async def refresh_token(
 
     redis = await get_redis()
     # GETDEL: atomik GET + DELETE — iki eş zamanlı istek aynı token'ı kullanamaz.
-    # redis.get() + redis.delete() arasında race window vardır; GETDEL yoktur.
-    user_id_str = await redis.getdel(f"refresh:{token}")
-    if not user_id_str:
+    raw_data = await redis.getdel(f"refresh:{token}")
+    if not raw_data:
         raise UnauthorizedException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrTokenInvalid", "Geçersiz veya süresi dolmuş refresh token"))
+
+    # Format: "{user_id}:{token_version}" — version ile imzalandı
+    parts = raw_data.split(":", 1)
+    user_id_str = parts[0]
+    stored_version = int(parts[1]) if len(parts) == 2 else None
 
     result = await db.execute(select(User).where(User.id == int(user_id_str)))
     user = result.scalar_one_or_none()
     if not user or user.status != UserStatus.ACTIVE:
         raise UnauthorizedException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrUserNotFound", "Kullanıcı bulunamadı"))
 
+    # token_version uyuşmazlığı → token şifre sıfırlama/oturum düşürme sonrası revoke edildi
+    if stored_version is not None and user.token_version != stored_version:
+        logger.warning("[AUTH] Token version mismatch on refresh | user=%s (token=%s db=%s)", user.id, stored_version, user.token_version)
+        raise UnauthorizedException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrTokenInvalid", "Oturum süresi doldu, tekrar giriş yapın"), code="TOKEN_REVOKED")
+
     new_access = create_access_token(user.id, user.token_version)
     new_refresh = create_refresh_token()
-    await redis.setex(f"refresh:{new_refresh}", REFRESH_TOKEN_TTL, str(user.id))
+    await redis.setex(f"refresh:{new_refresh}", REFRESH_TOKEN_TTL, f"{user.id}:{user.token_version}")
     set_auth_cookies(response, new_access, new_refresh)
 
     return {"access_token": new_access, "refresh_token": new_refresh, "token_type": "bearer"}
@@ -1035,9 +1044,9 @@ async def logout(
     user_id: int | None = None
     if refresh:
         redis = await get_redis()
-        user_id_str = await redis.getdel(f"refresh:{refresh}")
-        if user_id_str:
-            user_id = int(user_id_str)
+        raw_logout = await redis.getdel(f"refresh:{refresh}")
+        if raw_logout:
+            user_id = int(raw_logout.split(":", 1)[0])
     if user_id is None and current_user is not None:
         user_id = current_user.id
     if user_id is not None:
