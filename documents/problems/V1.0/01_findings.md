@@ -6021,6 +6021,8 @@ if user.token_version != int(token_ver_str):
 ```
 3. Ayrıca `User` başına aktif refresh token ID'lerini tutan bir Redis Set (`user:refresh_tokens:{user_id}`) tanımlanarak, şifre değişiminde veya hesap kapatmada tüm refresh token'lar topluca silinmelidir.
 
+> ✅ **Çözüldü** — commit `27acfe56`, 2026-10-30
+
 ---
 
 ### SRE-148 · 🟠 P1 (Yüksek) · notify_new_recordings_task İçindeki 6 Saatlik Sınır Nedeniyle Geciken Kayıtların Askıda Kalması ve MinIO Sızıntısı
