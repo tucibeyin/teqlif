@@ -46,7 +46,7 @@ async def verify_purchase(
         device_id=body.device_id,
         try_amount=body.try_amount,
     )
-    # SRE-31: await db.commit() buraya eklenecek (commit önce, sonra cache temizliği)
+    await db.commit()
     await invalidate_user_session_cache(current_user.id)
     return result
 

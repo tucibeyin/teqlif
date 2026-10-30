@@ -36,6 +36,8 @@ class Settings(BaseSettings):
     firebase_service_account: str = ""  # path to service account JSON
     sentry_backend_dsn: str | None = None
     google_client_id: str = ""
+    google_play_package_name: str = "com.teqlif.app"
+    google_play_service_account_path: str = ""  # path to Google Play service account JSON
     site_url: str = ""
     admin_email: str = ""
     admin_password_hash: str = ""
@@ -83,6 +85,7 @@ class Settings(BaseSettings):
     apns_cert_path: str = ""
     ios_bundle_id: str = "teqlif"
     apns_use_sandbox: bool = False
+    iap_allow_sandbox: bool = False  # True yalnızca test/staging — production'da False zorunlu
 
     model_config = SettingsConfigDict(
         env_file=os.environ.get("TEQLIF_ENV_FILE", ".env.production"),

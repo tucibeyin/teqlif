@@ -7,8 +7,14 @@ def _make_apple() -> StoreVerifier:
     return AppleVerifier()
 
 
+def _make_google() -> StoreVerifier:
+    from app.services.store.google_play_verifier import GooglePlayVerifier
+    return GooglePlayVerifier()
+
+
 _REGISTRY: dict[str, type] = {
-    "apple": _make_apple,
+    "apple":  _make_apple,
+    "google": _make_google,
 }
 
 

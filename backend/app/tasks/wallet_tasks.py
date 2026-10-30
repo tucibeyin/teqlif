@@ -255,6 +255,8 @@ async def process_store_notification_task(
                 )
                 return
 
+            await session.commit()
+
         logger.info("[StoreNotif] İşlendi | platform=%s", platform)
 
     except Exception as exc:

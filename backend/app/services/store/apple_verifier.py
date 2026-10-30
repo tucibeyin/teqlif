@@ -76,6 +76,8 @@ class AppleVerifier(StoreVerifier):
         env = claims.get("environment", "")
         if env not in ("Production", "Sandbox"):
             raise ValueError(f"Geçersiz Apple environment: {env}")
+        if env == "Sandbox" and not settings.iap_allow_sandbox:
+            raise ValueError("Apple Sandbox receipt production ortamında reddedildi")
 
         bundle_id = claims.get("bundleId", "")
         if bundle_id != settings.ios_bundle_id:
