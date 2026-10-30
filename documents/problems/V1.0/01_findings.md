@@ -5771,7 +5771,7 @@ return {"upload_id": upload_id, "status": "processing"}
 ```
 
 #### ✅ Çözüm Damgası
-* **Commit:** `PENDING`
+* **Commit:** `d9dd903f`
 * **Tarih:** 2026-10-30
 * **Değişen Dosyalar:** `backend/app/routers/upload.py`, `backend/app/tasks/video_tasks.py`, `backend/app/worker.py`
 * **Özet:** `upload_listing_video` içindeki `_process_listing_video` (FFmpeg remux+AAC+thumbnail, 60s) ve `_get_video_duration` (ffprobe) HTTP handler'dan tamamen çıkarıldı. Ham video doğrudan `listings/video/{uuid}.mp4` key'iyle MinIO'ya `upload_bytes_async` ile yükleniyor, ardından `process_listing_video_task` ARQ video kuyruğuna (`_queue_name="video"`) enqueue ediliyor ve `{video_url, thumb_url: null}` hemen dönüyor. `process_listing_video_task` MinIO'dan indirip `nice -n 10 ffmpeg -c:v copy -c:a aac -movflags +faststart -t 60` ile işleyip aynı key'e yeniden yüklüyor; thumbnail üretiyor ve `listings.thumbnail_url` best-effort güncelleniyor. `WorkerSettingsVideo.functions` listesine eklendi (max_jobs=2 CPU starvation koruması mevcut).
