@@ -7,7 +7,7 @@ Create Date: 2026-10-30
 from alembic import op
 
 revision = "zzzzzza_referral_unique"
-down_revision = "zzzzzz_stream_total_likes"
+down_revision = "zzzzz0_searchalert_enum_fix"
 branch_labels = None
 depends_on = None
 
