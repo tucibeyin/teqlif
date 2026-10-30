@@ -6502,6 +6502,12 @@ AND NOT EXISTS (
             await db.commit()
 ```
 
+#### ✅ Çözüm Damgası
+- **Commit:** `e4aa689f` — `fix(sre-157): message_threads GC sorgusuna has_archive=FALSE filtresi eklendi`
+- **Tarih:** 2026-10-30
+- **Değişen Dosya:** `backend/app/worker.py`
+- **Yapılan:** DELETE sorgusuna `AND mt.has_archive = FALSE` koşulu eklendi; arşivi olan thread'ler GC tarafından artık silinmiyor
+
 ---
 
 ### SRE-158 · 🟠 P1 (Yüksek) · `send_retargeting` Endpoint'inde Bakiye Düşümü Öncesinde 500 Kişiye Push Gönderilmesi Nedeniyle Karşılıksız Bildirim İstismarı (Free Retargeting Exploit)
