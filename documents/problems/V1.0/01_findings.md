@@ -5657,6 +5657,14 @@ def _get_static_sync_engine():
 ```
 Ve `_get_t` içinde fallback sadece bellekten `tr` sözlüğüne dönmeli, event loop içinde asla senkron veritabanı TCP el sıkışması yapılmamalıdır.
 
+#### ✅ Çözüm Damgası
+* **Commit:** `2fc044d6` · 2026-10-30
+* **Değişiklik:**
+  * `i18n.py` — `_get_t` içindeki `create_engine(...)` + `engine.connect()` + `sync_redis.Redis.from_url(...)` tamamen kaldırıldı; fonksiyon artık I/O yapmıyor; stale-while-revalidate: TTL dolduğunda stale veri döner (3s event loop blokajı ve FD/pool sızıntısı giderildi). `_get_static_sync_engine()` singleton eklendi (event loop dışı bağlamlar için). Duplicate `_SUPPORTED` ve unused `Any` import temizlendi.
+  * `main.py` — `_i18n_refresh_loop()` arka plan görevi eklendi (her 4 dk, lifespan'da düzgün cancel+gather ile kapatılıyor); FastAPI worker süreci belleği restart gerektirmeden canlı tutulacak.
+  * `worker.py` — `refresh_i18n_cache_task` eklendi; `WorkerSettings.functions` ve `cron_jobs`'a her 4 dakikada bir girdi olarak eklendi.
+* **Durum:** Tüm node'lara deploy edildi; servisler sağlıklı.
+
 ---
 
 ### SRE-141 · 🔴 P0 (Kritik) · Doğrulanmamış Telefonun Erken DB Commit'i ile Numara Rehin Alma (Phone DoS) ve Statü Kaybı
