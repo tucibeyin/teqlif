@@ -143,10 +143,11 @@ async def create_campaign(
     if is_free:
         await credit_service.increment(CreditFeature.BOOST, current_user.id, current_user.premium_since)
 
-    # Redis'e anında yükle — cron'u beklemeye gerek yok
+    # Sadece yeni kampanyayı Redis'e yükle — global reload diğer kampanyaların
+    # Redis'teki anlık bütçelerini DB'den eski değerle ezer (SRE-55)
     try:
-        from app.services.ad_service import load_active_campaigns_to_redis
-        await load_active_campaigns_to_redis()
+        from app.services.ad_service import _reload_campaign_to_redis
+        await _reload_campaign_to_redis(campaign.id)
     except Exception as exc:
         logger.warning("[Ads] Redis yükleme atlandı: %s", exc)
 

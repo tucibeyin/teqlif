@@ -732,16 +732,34 @@ async def generate_description(
     """
     logger.info("[API] /generate-description user_id=%s title=%r", current_user.id, body.title[:60])
 
-    # ── TEQlik / PRO kredi ön kontrolü ──────────────────────────────────────────
+    # ── Atomik ön kontrol + kredi düş (TOCTOU önlenir) ──────────────────────────
     _ai_desc_cost  = credit_service.cost_teqlik(CreditFeature.AI_DESC)
     _ai_desc_limit = credit_service.free_limit(CreditFeature.AI_DESC, current_user.user_type)
-    if current_user.user_type == 'pro':
-        ai_used = await credit_service.get_used(CreditFeature.AI_DESC, current_user.id, current_user.premium_since)
-        if ai_used >= _ai_desc_limit and current_user.teqlik_balance < _ai_desc_cost:
-            raise InsufficientFundsException(code="MONTHLY_LIMIT_INSUFFICIENT_FUNDS")
-    else:
-        if current_user.teqlik_balance < _ai_desc_cost:
-            raise InsufficientFundsException()
+
+    # Redis sayacı LLM çağrısından ÖNCE artırılır: paralel istekler aynı anda
+    # "limit içinde" sayılıp ücret atlatamaz (SRE-65).
+    ai_used_new = await credit_service.increment(
+        CreditFeature.AI_DESC, current_user.id, current_user.premium_since
+    )
+
+    teqlik_spent = 0
+    if current_user.user_type != 'pro' or ai_used_new > _ai_desc_limit:
+        # Standart kullanıcı VEYA PRO ücretsiz limitini aştı → atomik DB düşürme LLM öncesi
+        result = await db.execute(
+            sql_text(
+                "UPDATE users SET teqlik_balance = teqlik_balance - :cost "
+                "WHERE id = :uid AND teqlik_balance >= :cost "
+                "RETURNING teqlik_balance"
+            ),
+            {"cost": _ai_desc_cost, "uid": current_user.id},
+        )
+        if result.scalar_one_or_none() is None:
+            raise InsufficientFundsException(
+                code="MONTHLY_LIMIT_INSUFFICIENT_FUNDS" if current_user.user_type == 'pro' else "INSUFFICIENT_FUNDS"
+            )
+        db.add(TeqlikTransaction(user_id=current_user.id, amount=-_ai_desc_cost, transaction_type="spend_ai_desc"))
+        await db.commit()
+        teqlik_spent = _ai_desc_cost
 
     # ── AI üretimi — node2'ye ilet, yoksa lokal fallback ─────────────────────
     params = dict(
@@ -753,40 +771,22 @@ async def generate_description(
         extra_fields=body.extra_fields,
         lang=body.lang,
     )
-    # generate_via_proxy lokal fallback da dahil tüm provider'lar başarısız olursa
-    # AIServiceBusyException fırlatır (503).
-    description, provider = await generate_via_proxy(params)
-
-    # ── Kredi düş (başarılı yanıt sonrası) ───────────────────────────────────
-    # NOT: Bu blok exception fırlatırsa 500 döner ve description teslim edilmez.
-    # Sessiz yutma kasıtlı olarak kaldırıldı (A-01): kredi düşürülemeyen açıklama
-    # ücretsiz teslim edilmemelidir.
-    teqlik_spent = 0
     try:
-        # Redis sayacı tüm kullanıcı tipleri için artırılır (abuse detection / analitik).
-        # PRO için ücretsiz limit hesabında kullanılır; standart için yalnızca iz bırakır.
-        ai_used_new = await credit_service.increment(
-            CreditFeature.AI_DESC, current_user.id, current_user.premium_since
-        )
-        if current_user.user_type == 'pro':
-            if ai_used_new > _ai_desc_limit:
+        # generate_via_proxy lokal fallback da dahil tüm provider'lar başarısız olursa
+        # AIServiceBusyException fırlatır (503).
+        description, provider = await generate_via_proxy(params)
+    except Exception:
+        # Compensating transaction: LLM başarısız olursa düşürülen TEQlik iade edilir
+        if teqlik_spent:
+            try:
                 await db.execute(
-                    sql_text("UPDATE users SET teqlik_balance = GREATEST(0, teqlik_balance - :cost) WHERE id = :uid"),
-                    {"cost": _ai_desc_cost, "uid": current_user.id},
+                    sql_text("UPDATE users SET teqlik_balance = teqlik_balance + :cost WHERE id = :uid"),
+                    {"cost": teqlik_spent, "uid": current_user.id},
                 )
-                db.add(TeqlikTransaction(user_id=current_user.id, amount=-_ai_desc_cost, transaction_type="spend_ai_desc"))
+                db.add(TeqlikTransaction(user_id=current_user.id, amount=teqlik_spent, transaction_type="refund_ai_desc"))
                 await db.commit()
-                teqlik_spent = _ai_desc_cost
-        else:
-            await db.execute(
-                sql_text("UPDATE users SET teqlik_balance = GREATEST(0, teqlik_balance - :cost) WHERE id = :uid"),
-                {"cost": _ai_desc_cost, "uid": current_user.id},
-            )
-            db.add(TeqlikTransaction(user_id=current_user.id, amount=-_ai_desc_cost, transaction_type="spend_ai_desc"))
-            await db.commit()
-            teqlik_spent = _ai_desc_cost
-    except Exception as exc:
-        logger.error("[AI Desc] Kredi düşürme başarısız — açıklama teslim edilmiyor: %s", exc)
+            except Exception as refund_exc:
+                logger.error("[AI Desc] İade başarısız user_id=%s cost=%d: %s", current_user.id, teqlik_spent, refund_exc)
         raise
 
     logger.info("[API] /generate-description done | provider=%s teqlik_spent=%d", provider, teqlik_spent)

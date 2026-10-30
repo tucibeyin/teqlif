@@ -2183,6 +2183,8 @@ Veritabanındaki `AdCampaign.spent_budget` alanı anlık olarak değil, sadece 1
 1. `ads.py:149` satırındaki genel `load_active_campaigns_to_redis()` çağrısı kaldırılmalıdır.
 2. Yerine sadece yeni oluşturulan tek bir kampanyayı Redis'e ekleyen `_reload_campaign_to_redis(campaign.id)` fonksiyonu çağrılmalıdır.
 
+> ✅ **Çözüldü** — commit PLACEHOLDER_55_65, 2026-10-30
+
 ---
 
 ### SRE-56 · 🟠 P1 (Yüksek) · `cleanup_expired_stories` İçinde Açık DB Oturumunda Senkron MinIO Silme ve Yetim DB Kayıtları
@@ -2623,6 +2625,8 @@ except Exception:
     await db.commit()
     raise
 ```
+
+> ✅ **Çözüldü** — commit PLACEHOLDER_55_65, 2026-10-30
 
 ---
 
