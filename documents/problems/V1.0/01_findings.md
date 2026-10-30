@@ -1183,6 +1183,8 @@ async def get_db():
 2. Hata durumunda tutarlılık için `execute()` metodunda `try...except` bloğu oluşturularak hata anında `await self._session.rollback()` çağrılmalı ve hata dışarı fırlatılmalıdır.
 3. Alternatif ve daha güvenli mimari: `verify_purchase` endpoint'i `SqlAlchemyUnitOfWork` pattern'ine bağlanmalı ve transaction yaşam döngüsü context manager garantisine alınmalıdır.
 
+> ✅ **Çözüldü** — commit `a8448139`, 2026-10-30. `wallet.py:verify_purchase`'a `await db.commit()` eklendi.
+
 ---
 
 ### SRE-32 · 🔴 P0 (Kritik) · Apple Store İadelerinde (Refund) Eksik `commit()` Nedeniyle İade Bakiyesinin Düşürülememesi ve Sonsuz Para Açığı
@@ -1233,6 +1235,8 @@ async with AsyncSessionLocal() as session:
    await session.commit()
    ```
    çağrılmalı, olası bir use-case içi commit unutulmasına karşı çift dikiş emniyet sağlanmalıdır.
+
+> ✅ **Çözüldü** — commit `a8448139`, 2026-10-30. `wallet_tasks.py:process_store_notification_task`'a `await session.commit()` eklendi.
 
 ---
 
@@ -1874,6 +1878,8 @@ class StoreNotificationHandlerFactory:
 3. `backend/app/services/store/notifications/google_handler.py` eklenerek `StoreNotificationHandlerFactory` içine `"google"` desteği bağlanmalıdır.
 4. Google Play credentials (`google-play-service-account.json`) ayarları `settings` sınıfına eklenmelidir.
 
+> ✅ **Çözüldü** — commit `a8448139`, 2026-10-30. `GooglePlayVerifier` implementasyonu oluşturuldu, factory.py'ye `google` platformu eklendi, config'e `google_play_service_account_path` eklendi.
+
 ---
 
 ### SRE-48 · 🔴 P0 (Kritik) · Üretim Ortamında Apple Sandbox Dekontlarının Kabul Edilmesi ve Sınırsız Karşılıksız Teqlik İstismarı
@@ -1911,6 +1917,8 @@ else:
     if env not in ("Production", "Sandbox"):
         raise ValueError(f"Geçersiz Apple environment: {env}")
 ```
+
+> ✅ **Çözüldü** — commit `a8448139`, 2026-10-30. `apple_verifier.py`'ye `iap_allow_sandbox` flag kontrolü eklendi; production'da Sandbox receipt'ler reddediliyor.
 
 ---
 
