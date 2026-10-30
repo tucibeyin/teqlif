@@ -6911,6 +6911,12 @@ ORDER BY ls.viewer_count DESC, bid_count DESC
 LIMIT 3
 ```
 
+#### ✅ Çözüm Damgası
+- **Commit:** `d11dde92` — `fix(sre-164): pro_insights best_streams bid_count kartezyen çarpım giderildi`
+- **Tarih:** 2026-10-30
+- **Değişen Dosya:** `backend/app/use_cases/analytics/pro_insights_use_case.py`
+- **Yapılan:** `LEFT JOIN auctions a` + `LEFT JOIN bids b ON b.stream_id = a.stream_id` → `LEFT JOIN bids b ON b.stream_id = ls.id`; `COUNT(b.id)` → `COUNT(DISTINCT b.id)`
+
 ---
 
 ### SRE-165 · 🟡 P2 (Orta) · `seed_interests` Endpoint'inde `NULL` Subcategory Nedeniyle PostgreSQL Unique Constraint İhlali ve Mükerrer Kategori Kaydı Şişmesi (Duplicate Category Insertion & Recommendation Bias via Nullable Subcategory)
