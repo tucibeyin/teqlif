@@ -1,6 +1,6 @@
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 
 from app.core.rate_limit import limiter
 from app.core.uow import SqlAlchemyUnitOfWork
@@ -27,7 +27,7 @@ async def _optional_user_id(
 async def search_users(
     request: Request,
     q: str = "",
-    offset: int = 0,
+    offset: int = Query(default=0, ge=0, le=1000),
     current_user_id: Optional[int] = Depends(_optional_user_id),
     uow: SqlAlchemyUnitOfWork = Depends(get_uow),
 ):
@@ -47,7 +47,7 @@ async def explore(
 async def search_all(
     request: Request,
     q: str = "",
-    offset: int = 0,
+    offset: int = Query(default=0, ge=0, le=1000),
     current_user_id: Optional[int] = Depends(_optional_user_id),
     uow: SqlAlchemyUnitOfWork = Depends(get_uow),
 ):
@@ -59,7 +59,7 @@ async def search_all(
 async def search_listings(
     request: Request,
     q: str = "",
-    offset: int = 0,
+    offset: int = Query(default=0, ge=0, le=1000),
     current_user_id: Optional[int] = Depends(_optional_user_id),
     uow: SqlAlchemyUnitOfWork = Depends(get_uow),
 ):

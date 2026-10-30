@@ -48,7 +48,7 @@ def build_stemmed_tsquery(q: str) -> str:
 
     Döner: "token1:* & token2:* & ..." formatında string.
     """
-    safe = re.sub(r"[&|!():<>@*\\]", " ", q)
+    safe = re.sub(r"""['\"&|!():<>@*\\]""", " ", q)
     words = [w for w in safe.split() if len(w) >= 2]
     if not words:
         return ""

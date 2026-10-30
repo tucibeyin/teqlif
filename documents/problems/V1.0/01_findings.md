@@ -4502,7 +4502,7 @@ async def get_listing_offers(
 
 ---
 
-### SRE-110 · 🟠 P1 (Yüksek) · Arama Stemmer'ında Tek Tırnak Temizlenmemesi (`to_tsquery` Syntax Error 500) ve Sınırsız Offset DoS
+### SRE-110 · ✅ Çözüldü (`STAMP` · 2026-10-31) · Arama Stemmer'ında Tek Tırnak Temizlenmemesi (`to_tsquery` Syntax Error 500) ve Sınırsız Offset DoS
 
 * **Etkilenen Dosyalar:** `backend/app/services/ml/turkish_nlp.py`, `backend/app/routers/search.py`, `backend/app/use_cases/search/queries/search_listings_query.py`
 * **İlgili Satırlar:** [turkish_nlp.py:51](file:///Users/tucibeyin/Desktop/teqlif/backend/app/services/ml/turkish_nlp.py#L51), [search.py:25-67](file:///Users/tucibeyin/Desktop/teqlif/backend/app/routers/search.py#L25-L67), [search_listings_query.py:161-170](file:///Users/tucibeyin/Desktop/teqlif/backend/app/use_cases/search/queries/search_listings_query.py#L161-L170)
