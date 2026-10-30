@@ -53,4 +53,29 @@ class CreateListingOfferCommand:
             "[CreateListingOfferCommand] Teklif verildi | listing_id=%s user_id=%s amount=%s",
             listing_id, current_user.id, amount,
         )
+
+        # Satıcıya bildirim + WS sinyali (commit sonrası)
+        try:
+            from app.services.notification_service import push_notification
+            from app.core.ws_manager import ws_manager
+            await push_notification(
+                user_id=listing.user_id,
+                notif={
+                    "type": "listing_offer_received",
+                    "title": "Yeni Teklif Aldınız!",
+                    "body": f"{current_user.username} ilanınıza {amount:,.0f} TL teklif verdi.",
+                    "related_id": listing_id,
+                    "listing_id": listing_id,
+                    "extra_data": {"offer_id": str(offer.id), "amount": str(amount)},
+                },
+                pref_key="new_offer",
+            )
+            await ws_manager.publish(
+                "dm_broadcast",
+                f"dm:{listing.user_id}",
+                {"type": "new_listing_offer", "listing_id": listing_id, "amount": amount, "buyer": current_user.username},
+            )
+        except Exception as _ne:
+            logger.warning("[CreateListingOfferCommand] Bildirim gönderilemedi: %s", _ne)
+
         return {"id": offer.id, "amount": offer.amount}
