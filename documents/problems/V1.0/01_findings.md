@@ -466,7 +466,7 @@ Tüm ML eğitim fonksiyonlarının başına Redis tabanlı dağıtık kilit (`lo
 
 ### SRE-11 · 🔴 P0 (Kritik) · Açık Artırmada İki Aşamalı Tutarsızlık ve Reddedilen Tekliflerin DB'de Kalması
 
-> ✅ **Çözüldü** — Commit `SRE-11-12-20-21` · 2026-10-30
+> ✅ **Çözüldü** — Commit `029abbb4` · 2026-10-30
 
 * **Etkilenen Dosyalar:** 
   * `backend/app/use_cases/auctions/commands/auction_commands.py` (satır 427–479)
@@ -519,7 +519,7 @@ if ok == 0:
 
 ### SRE-12 · 🔴 P0 (Kritik) · Uvicorn 8 Worker Çoğaltması Nedeniyle Arka Plan Scheduler ve Flush Görevlerinin 8 Kat Çalışması
 
-> ✅ **Çözüldü** — Commit `SRE-11-12-20-21` · 2026-10-30
+> ✅ **Çözüldü** — Commit `029abbb4` · 2026-10-30
 
 * **Etkilenen Dosyalar:** 
   * `backend/main.py` (satır 121–144)
@@ -796,7 +796,7 @@ Trol kullanıcı odadan atılamaz, yayında spam yapmaya ve tacize devam eder!
 
 ### SRE-20 · 🟠 P1 (Yüksek) · Davet (Referral) Sisteminde Çift Harcama / Race Condition ile Sınırsız Teqlik Kazanımı
 
-> ✅ **Çözüldü** — Commit `SRE-11-12-20-21` · 2026-10-30
+> ✅ **Çözüldü** — Commit `029abbb4` · 2026-10-30
 
 * **Etkilenen Dosyalar:** 
   * `backend/app/services/referral_service.py` (satır 65–146)
@@ -840,7 +840,7 @@ referred_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable
 
 ### SRE-21 · 🔴 P0 (Kritik) · Ters Proxy (Nginx) Arkasında İstemci IP Kaybı ve Küresel Rate Limit / Sahte Shill Kilidi
 
-> ✅ **Çözüldü** — Commit `SRE-11-12-20-21` · 2026-10-30
+> ✅ **Çözüldü** — Commit `029abbb4` · 2026-10-30
 
 * **Etkilenen Dosyalar:** 
   * `deploy/scale/V2.1/node1/systemd/teqlif.service` (satır 15–19)
