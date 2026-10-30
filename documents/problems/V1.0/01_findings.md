@@ -4467,7 +4467,7 @@ async def get_listing_offers(
 
 ---
 
-### SRE-109 · ✅ Çözüldü (`STAMP` · 2026-10-31) · Reklam Tıklama Lua Scriptinde Negatif Bütçe Guard'ı Olmaması ve `ad_campaigns:active` Set İhmali
+### SRE-109 · ✅ Çözüldü (`db5828a9` · 2026-10-31) · Reklam Tıklama Lua Scriptinde Negatif Bütçe Guard'ı Olmaması ve `ad_campaigns:active` Set İhmali
 
 * **Etkilenen Dosya:** `backend/app/services/ad_service.py`
 * **İlgili Satırlar:** [ad_service.py:36-43](file:///Users/tucibeyin/Desktop/teqlif/backend/app/services/ad_service.py#L36-L43), [ad_service.py:143-196](file:///Users/tucibeyin/Desktop/teqlif/backend/app/services/ad_service.py#L143-L196), [ad_service.py:199-226](file:///Users/tucibeyin/Desktop/teqlif/backend/app/services/ad_service.py#L199-L226)
