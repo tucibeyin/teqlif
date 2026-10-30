@@ -104,9 +104,10 @@ agent_sync() {
     # Script kendini de günceller — sonraki çalışmada yeni versiyon kullanılır
     local self_src="$REPO/deploy/scale/V2.1/scripts/teqlif-restart.sh"
     if ! diff -q "$self_src" /usr/local/sbin/teqlif-restart >/dev/null 2>&1; then
-      cp "$self_src" /usr/local/sbin/teqlif-restart
-      chmod 755 /usr/local/sbin/teqlif-restart
-      log "teqlif-restart scripti güncellendi"
+      cp "$self_src" /usr/local/sbin/teqlif-restart.new
+      chmod 755 /usr/local/sbin/teqlif-restart.new
+      mv /usr/local/sbin/teqlif-restart.new /usr/local/sbin/teqlif-restart
+      log "teqlif-restart scripti güncellendi (sonraki çalıştırmada aktif)"
     fi
   fi
 }
