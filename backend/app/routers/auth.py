@@ -1264,9 +1264,13 @@ async def request_phone_verification(
     if not valid:
         raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrPhoneFormat", "Geçersiz telefon numarası formatı"))
 
-    # Başka bir kullanıcıda kayıtlıysa reddet
+    # Başka bir kullanıcıda doğrulanmış numaraysa reddet (unverified claim'ler engellememez)
     existing = await db.scalar(
-        select(User).where(User.phone == data.phone, User.id != current_user.id)
+        select(User).where(
+            User.phone == data.phone,
+            User.id != current_user.id,
+            User.phone_verified == True,
+        )
     )
     if existing:
         raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrPhoneUsed", "Bu telefon numarası başka bir hesapta kayıtlı"))
@@ -1276,13 +1280,7 @@ async def request_phone_verification(
     if ttl > 0:
         raise CodeAlreadySentException(seconds_remaining=ttl)
 
-    # Telefonu kaydet (henüz doğrulanmamış)
-    current_user.phone = data.phone
-    current_user.phone_verified = False
-    await db.commit()
-    await invalidate_user_session_cache(current_user.id)
-
-    # Token üret ve Redis'e kaydet
+    # Token üret ve Redis'e kaydet (telefon yalnızca onaylandığında DB'ye yazılır)
     token = secrets.token_urlsafe(32)
     await redis.setex(f"phone_verify_req:{current_user.id}", VERIFY_CODE_TTL, "1")
     import json as _json
@@ -1378,17 +1376,40 @@ async def confirm_phone_verification(
         ))
 
     if action == "yes":
-        if user.phone == phone:
-            user.phone_verified = True
-            await db.commit()
-            await db.refresh(user)
-            await invalidate_user_session_cache(user.id)
-            if user.pending_referred_by and user.is_verified:
-                try:
-                    from app.services.referral_service import apply_referral
-                    await apply_referral(db, user, user.pending_referred_by)
-                except Exception:
-                    pass
+        # Race condition koruması: başka kullanıcı bu numarayı doğrulamışsa reddet
+        verified_by_other = await db.scalar(
+            select(User).where(
+                User.phone == phone,
+                User.id != user_id,
+                User.phone_verified == True,
+            )
+        )
+        if verified_by_other:
+            await redis.delete(f"phone_verify:{token}")
+            return HTMLResponse(_phone_verify_html(
+                "Numara Kullanımda",
+                "Bu telefon numarası başka bir hesapta doğrulanmış.",
+                "#ef4444", False,
+            ))
+        # Doğrulanmamış sahipsiz talepleri temizle (unique constraint koruması)
+        await db.execute(
+            sa_update(User).where(
+                User.phone == phone,
+                User.id != user_id,
+                User.phone_verified == False,
+            ).values(phone=None)
+        )
+        user.phone = phone
+        user.phone_verified = True
+        await db.commit()
+        await db.refresh(user)
+        await invalidate_user_session_cache(user.id)
+        if user.pending_referred_by and user.is_verified:
+            try:
+                from app.services.referral_service import apply_referral
+                await apply_referral(db, user, user.pending_referred_by)
+            except Exception:
+                pass
         await redis.delete(f"phone_verify:{token}")
         return HTMLResponse(_phone_verify_html(
             "Telefon Doğrulandı ✓",
@@ -1396,15 +1417,11 @@ async def confirm_phone_verification(
             "#0d9488", True,
         ))
     else:
-        if user.phone == phone:
-            user.phone = None
-            user.phone_verified = False
-            await db.commit()
-            await invalidate_user_session_cache(user.id)
+        # Telefon DB'ye hiç yazılmamıştı — token sil, DB değişikliği yok
         await redis.delete(f"phone_verify:{token}")
         return HTMLResponse(_phone_verify_html(
             "Numara Reddedildi",
-            "Telefon numarası hesabınızdan kaldırıldı. Uygulamadan profil sayfanıza gidip numaranızı güncelleyebilirsiniz.",
+            "İstek iptal edildi. Uygulamaya dönebilirsiniz.",
             "#f59e0b", False,
         ))
 
