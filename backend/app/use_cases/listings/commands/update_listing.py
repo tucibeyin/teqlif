@@ -136,6 +136,9 @@ class UpdateListingCommand:
                 listing.video_url = video_url  # None = kaldır, str = güncelle
                 if old_video and old_video != video_url and old_video.startswith("/uploads/"):
                     files_to_delete.append(old_video[len("/uploads/"):])
+                # thumbnail_url iletilmediyse ve yeni video varsa, deterministik türet
+                if thumbnail_url is _UNSET and video_url:
+                    listing.thumbnail_url = f"{video_url.rsplit('.', 1)[0]}_vthumb.jpg"
 
             listing.updated_at = datetime.now(timezone.utc)
             from app.services.feed.listing_cache_service import build_listing_snapshot

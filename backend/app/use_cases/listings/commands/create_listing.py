@@ -67,6 +67,11 @@ class CreateListingCommand:
         brand = ef.get("brand")
         model_name = ef.get("model") or ef.get("model_name")
 
+        # Video yüklendi ama thumbnail yoksa: worker'dan önce ilan oluşturulabilir
+        # (race condition). Deterministik key türetme her durumda doğru URL'i verir.
+        if not thumbnail_url and video_url:
+            thumbnail_url = f"{video_url.rsplit('.', 1)[0]}_vthumb.jpg"
+
         async with self.uow:
             listing_data = {
                 "user_id": user_id,
