@@ -6387,6 +6387,8 @@ async def get_object_bytes_dm(key: str) -> bytes | None:
                     raise
 ```
 
+> ✅ **Çözüldü** — commit `282d715b`, 2026-10-30
+
 ---
 
 ### SRE-156 · 🔴 P0 (Kritik) · `init_context` ve `get_conversations` Endpoint'lerinde Tekil `AsyncSession` Üzerinde `asyncio.gather` ile Eşzamanlı DB Sorgusu Çalıştırılması ve HTTP 500 Çökmesi (`IllegalStateChangeError`)
@@ -6471,6 +6473,8 @@ users_result, unread_result = await asyncio.gather(
             .group_by(DirectMessage.sender_id)
         )
 ```
+
+> ✅ **Çözüldü** — commit `282d715b`, 2026-10-30
 
 ---
 
