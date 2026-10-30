@@ -2721,6 +2721,8 @@ Kullanıcının silindiği veritabanına işlenmiş olsa dahi, `get_current_user
      ```
 2. Böylece silinen veya banlanan kullanıcının bir sonraki milisaniyedeki tüm istekleri `401 Unauthorized` / `USER_DELETED` ile engellenir.
 
+> ✅ **Çözüldü** — commit `2ad08dd4`, 2026-10-30
+
 ---
 
 ### SRE-69 · 🟠 P1 (Yüksek) · `auction.py` WebSocket Handler'ının `ws_manager` Yerine İzole `AuctionConnectionManager` Kullanması ve Graceful Shutdown'da Kapanmaması
@@ -3086,6 +3088,8 @@ Cache anahtarı namespace düzeyinde değil, **kullanıcı bazlı** ayrıştır�
            await redis.delete(*keys)
    ```
 3. Böylece bir kullanıcı birini takip ettiğinde sadece o 2 kullanıcının profil cache'i silinir; platformun geri kalan 49.998 kullanıcısının cache'i korunur.
+
+> ✅ **Çözüldü** — commit `2ad08dd4`, 2026-10-30
 
 ---
 
@@ -3655,6 +3659,8 @@ await db.execute(
 )
 ```
 Böylece A ve B birbirini aynı anda aradığında ikinci gelen istek ilkinin commit olmasını bekler; commit sonrasında veritabanında aktif çağrı (`caller_busy` / `active_call`) tespit edilerek ikinci çağrı anında `409 Conflict (USER_BUSY)` ile reddedilir.
+
+> ✅ **Çözüldü** — `calls.py:624` `min(current_user.id, callee_id), max(...)` canonical çift kilidi önceden uygulanmış; damga eklendi. 2026-10-30
 
 ---
 
