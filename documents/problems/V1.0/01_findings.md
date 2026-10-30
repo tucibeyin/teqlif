@@ -6580,6 +6580,16 @@ AND NOT EXISTS (
 ```
 2. Endpoint'in başına 24 saatlik cooldown kontrolü ekleyin.
 
+#### ✅ Çözüm Damgası
+- **Commit:** `eb974dd9` — `fix(sre-158): retargeting bakiye düşümü push öncesine alındı, 24s cooldown eklendi`
+- **Tarih:** 2026-10-30
+- **Değişen Dosya:** `backend/app/routers/leads.py`
+- **Yapılan:**
+  - Atomik `UPDATE teqlik_balance … RETURNING` bloğu push döngüsünden önceye taşındı; bakiye yetersizse `InsufficientFundsException` push gönderilmeden fırlatılıyor
+  - `retarget:cd:{user_id}:{listing_id}` Redis anahtarı 86400s TTL ile eklendi; PRO kontrolünden hemen sonra kontrol edilip `CooldownException` fırlatıldı
+  - Cooldown key bakiye commit'inden sonra yazılıyor (başarısız işlem cooldown tüketmiyor)
+  - `return` dict'indeki yinelenen `"sent"` anahtarı temizlendi
+
 ---
 
 ### SRE-159 · 🟠 P1 (Yüksek) · `start_call` Başlatma Sırasında Yalnızca `callee_id` Üzerine Advisory Lock Alınması Nedeniyle Karşılıklı Eşzamanlı Aramalarda Çift Çağrı ve Canlı Çakışma (Mutual Call Split-Brain)
