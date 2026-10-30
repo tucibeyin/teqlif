@@ -168,10 +168,9 @@ class ProInsightsUseCase:
             best_r = await self.db.execute(sql_text("""
                 SELECT ls.title, ls.viewer_count,
                        ROUND(EXTRACT(EPOCH FROM (ls.ended_at - ls.started_at))/60) AS dur_min,
-                       COUNT(b.id) AS bid_count
+                       COUNT(DISTINCT b.id) AS bid_count
                 FROM live_streams ls
-                LEFT JOIN auctions a ON a.stream_id = ls.id
-                LEFT JOIN bids b ON b.stream_id = a.stream_id
+                LEFT JOIN bids b ON b.stream_id = ls.id
                 WHERE ls.host_id = :uid AND ls.is_live = false AND ls.ended_at IS NOT NULL
                 GROUP BY ls.id, ls.title, ls.viewer_count, ls.started_at, ls.ended_at
                 ORDER BY ls.viewer_count DESC, bid_count DESC
