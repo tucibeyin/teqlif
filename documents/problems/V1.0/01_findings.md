@@ -6107,6 +6107,16 @@ WHERE sr.status = 'available'
 2. Canlı yayın durumu (`is_live`, `host_id`, `room_name`) Redis `stream:meta:{id}` anahtarından çekilerek ilk DB oturumu tamamen ortadan kaldırılmalıdır.
 3. Auto-mute satırına `await _redis.expire(mute_key(stream_id), 86400)` TTL eklenmelidir.
 
+#### ✅ Çözüm Damgası
+- **Commit:** `c71461b0` — `fix(sre-149): chat_ws el sıkışması ikinci DB bağlantısı kaldırıldı, mute TTL eklendi`
+- **Tarih:** 2026-10-30
+- **Değişen Dosya:** `backend/app/routers/chat.py`
+- **Yapılan:**
+  - Bilateral block sorgusu ayrı `AsyncSessionLocal()` yerine stream validation ile aynı session'a taşındı; 2000 eşzamanlı bağlantıda 4000→2000 DB connection isteği
+  - `mute_key` Redis set'ine `expire(86400)` TTL eklendi; kalıcı bellek sızıntısı durduruldu
+  - Redis `session:user:{id}` fast-path eklendi: sıcak oturumlar DB sorgusu yapmadan doğrulanıyor; cache miss → DB fallback
+  - Mimari not: `stream:meta:{id}` Redis anahtarı kodta mevcut değildi; stream sorgusu tek DB oturumuna dahil edildi (ikinci bağlantı olmadan)
+
 ---
 
 ### SRE-150 · 🟠 P1 (Yüksek) · purchase_sale Endpoint'inde Idempotency Key Eksikliği Nedeniyle Mükerrer Sipariş ve Çift Stok Düşümü
