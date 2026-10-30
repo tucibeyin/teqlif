@@ -2500,6 +2500,7 @@ async def cleanup_ghost_calls_task(ctx: dict) -> None:
     logger.info("[CALL_PROCESS][END] cleanup_ghost_calls_task START")
     try:
         from app.database import AsyncSessionLocal
+        from app.core.ws_manager import ws_manager
         from app.models.call import Call
         from sqlalchemy import select, or_
         from datetime import datetime, timezone, timedelta
