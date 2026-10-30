@@ -1,3 +1,6 @@
+import asyncio
+import json as _json
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc, func, cast, Date, text
@@ -6,13 +9,14 @@ from pydantic import BaseModel, Field
 from datetime import datetime, timezone, timedelta
 
 from app.models.enums import ListingStatus, UserStatus
-from app.database import get_db
+from app.database import get_db, AsyncSessionLocal
 from app.models.user import User
 from app.models.stream import LiveStream
 from app.models.listing import Listing
 from app.models.report import Report
 from app.models.teqlik_transaction import TeqlikTransaction
 from app.models.ad_campaign import AdCampaign
+from app.models.analytics import AnalyticsEvent
 from app.schemas.user import UserOut
 from app.utils.auth import get_current_user, hash_password, invalidate_user_session_cache
 from app.config import settings
@@ -52,62 +56,89 @@ class AdminUserCreate(BaseModel):
 # 0. DASHBOARD
 # ==========================================
 @router.get("/dashboard")
-async def get_dashboard(db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
+async def get_dashboard(admin: User = Depends(check_admin_access)):
+    _CACHE_KEY = "admin:dashboard:metrics"
+    _CACHE_TTL = 60
+
+    redis = await get_redis()
+    cached = await redis.get(_CACHE_KEY)
+    if cached:
+        return _json.loads(cached)
+
     today = datetime.now(timezone.utc).date()
+    since_7d = today - timedelta(days=6)
 
-    total_users = (await db.execute(select(func.count(User.id)))).scalar() or 0
-    active_users = (await db.execute(select(func.count(User.id)).where(User.status == UserStatus.ACTIVE))).scalar() or 0  # noqa: E712
-    banned_users = (await db.execute(select(func.count(User.id)).where(User.status == UserStatus.PASSIVE))).scalar() or 0  # noqa: E712
-    tomorrow = today + timedelta(days=1)
-    today_users = (await db.execute(
-        select(func.count(User.id)).where(User.created_at >= today, User.created_at < tomorrow)
-    )).scalar() or 0
+    async def _user_stats():
+        async with AsyncSessionLocal() as s:
+            row = (await s.execute(text("""
+                SELECT
+                    count(*)                                            AS total,
+                    count(*) FILTER (WHERE status = 'active')         AS active,
+                    count(*) FILTER (WHERE status = 'passive')        AS banned,
+                    count(*) FILTER (WHERE created_at::date = :today) AS today_new,
+                    coalesce(sum(teqlik_balance), 0)                  AS total_teqlik
+                FROM users
+            """), {"today": today})).fetchone()
+        return row
 
-    active_listings = (await db.execute(
-        select(func.count(Listing.id)).where(Listing.status == ListingStatus.ACTIVE)  # noqa: E712
-    )).scalar() or 0
+    async def _listing_count():
+        async with AsyncSessionLocal() as s:
+            return (await s.execute(
+                text("SELECT count(*) FROM listings WHERE status = 'active'")
+            )).scalar() or 0
 
-    active_streams = (await db.execute(
-        select(func.count(LiveStream.id)).where(LiveStream.is_live == True)  # noqa: E712
-    )).scalar() or 0
+    async def _stream_count():
+        async with AsyncSessionLocal() as s:
+            return (await s.execute(
+                text("SELECT count(*) FROM live_streams WHERE is_live = TRUE")
+            )).scalar() or 0
 
-    pending_reports = (await db.execute(
-        select(func.count(Report.id))
-    )).scalar() or 0
+    async def _report_count():
+        async with AsyncSessionLocal() as s:
+            return (await s.execute(text("SELECT count(*) FROM reports"))).scalar() or 0
 
-    total_teqlik = (await db.execute(select(func.coalesce(func.sum(User.teqlik_balance), 0)))).scalar() or 0
+    async def _teqlik_spent():
+        async with AsyncSessionLocal() as s:
+            return (await s.execute(text("""
+                SELECT coalesce(sum(amount), 0)
+                FROM teqlik_transactions
+                WHERE amount < 0 AND created_at::date = :today
+            """), {"today": today})).scalar() or 0
 
-    today_teqlik_spent = (await db.execute(
-        select(func.coalesce(func.sum(TeqlikTransaction.amount), 0))
-        .where(
-            TeqlikTransaction.amount < 0,
-            TeqlikTransaction.created_at >= today,
-            TeqlikTransaction.created_at < tomorrow,
+    async def _growth():
+        async with AsyncSessionLocal() as s:
+            rows = (await s.execute(text("""
+                SELECT created_at::date AS d, count(*) AS cnt
+                FROM users
+                WHERE created_at >= :since
+                GROUP BY 1 ORDER BY 1
+            """), {"since": since_7d})).fetchall()
+        counts = {str(r.d): int(r.cnt) for r in rows}
+        return [
+            {"date": str(today - timedelta(days=i)), "count": counts.get(str(today - timedelta(days=i)), 0)}
+            for i in range(6, -1, -1)
+        ]
+
+    u, active_listings, active_streams, pending_reports, today_teqlik_spent, growth = \
+        await asyncio.gather(
+            _user_stats(), _listing_count(), _stream_count(),
+            _report_count(), _teqlik_spent(), _growth(),
         )
-    )).scalar() or 0
 
-    # Son 7 gün günlük kayıt — growth chart için
-    growth = []
-    for i in range(6, -1, -1):
-        day = today - timedelta(days=i)
-        day_end = day + timedelta(days=1)
-        count = (await db.execute(
-            select(func.count(User.id)).where(User.created_at >= day, User.created_at < day_end)
-        )).scalar() or 0
-        growth.append({"date": str(day), "count": count})
-
-    return {
-        "total_users": total_users,
-        "active_users": active_users,
-        "banned_users": banned_users,
-        "today_users": today_users,
-        "active_listings": active_listings,
-        "active_streams": active_streams,
-        "pending_reports": pending_reports,
-        "total_teqlik_circulation": total_teqlik,
-        "today_teqlik_spent": abs(today_teqlik_spent),
+    result = {
+        "total_users": int(u.total),
+        "active_users": int(u.active),
+        "banned_users": int(u.banned),
+        "today_users": int(u.today_new),
+        "active_listings": int(active_listings),
+        "active_streams": int(active_streams),
+        "pending_reports": int(pending_reports),
+        "total_teqlik_circulation": float(u.total_teqlik),
+        "today_teqlik_spent": abs(float(today_teqlik_spent)),
         "user_growth_7d": growth,
     }
+    await redis.setex(_CACHE_KEY, _CACHE_TTL, _json.dumps(result))
+    return result
 
 
 # ==========================================
@@ -676,44 +707,67 @@ async def admin_send_push(data: PushRequest, db: AsyncSession = Depends(get_db),
 # ==========================================
 # 9. ANALİTİK VE ZİYARETÇİ VERİLERİ
 # ==========================================
-from app.models.analytics import AnalyticsEvent
 
 @router.get("/analytics/summary")
-async def get_admin_analytics_summary(db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
-    total_events_res = await db.execute(select(func.count(AnalyticsEvent.id)))
-    total_events = total_events_res.scalar() or 0
+async def get_admin_analytics_summary(admin: User = Depends(check_admin_access)):
+    _CACHE_KEY = "analytics:admin:summary"
+    _CACHE_TTL = 300  # 5 dakika
 
-    unique_sessions_res = await db.execute(select(func.count(func.distinct(AnalyticsEvent.session_id))))
-    unique_sessions = unique_sessions_res.scalar() or 0
+    redis = await get_redis()
+    cached = await redis.get(_CACHE_KEY)
+    if cached:
+        return _json.loads(cached)
 
-    device_groups_res = await db.execute(
-        select(AnalyticsEvent.device_type, func.count(AnalyticsEvent.id))
-        .group_by(AnalyticsEvent.device_type)
-    )
-    device_stats = [{"device": item[0], "count": item[1]} for item in device_groups_res.all()]
+    cutoff = datetime.now(timezone.utc) - timedelta(days=30)
 
-    recent_res = await db.execute(select(AnalyticsEvent).order_by(desc(AnalyticsEvent.created_at)).limit(500))
-    recent_events = recent_res.scalars().all()
-    
-    recent_list = []
-    for req in recent_events:
-        recent_list.append({
+    async with AsyncSessionLocal() as db:
+        # total + unique sessions tek sorguda, 30 gün zaman sınırı
+        stats = (await db.execute(text("""
+            SELECT
+                count(*)                    AS total_events,
+                count(DISTINCT session_id)  AS unique_sessions
+            FROM analytics_events
+            WHERE created_at >= :cutoff
+        """), {"cutoff": cutoff})).fetchone()
+
+        device_rows = (await db.execute(text("""
+            SELECT device_type, count(*) AS cnt
+            FROM analytics_events
+            WHERE created_at >= :cutoff
+            GROUP BY device_type
+        """), {"cutoff": cutoff})).fetchall()
+
+        # ORM nesnesi ile JSONB alanını güvenli deserialize et (limit 500→100)
+        recent_res = await db.execute(
+            select(AnalyticsEvent)
+            .order_by(desc(AnalyticsEvent.created_at))
+            .limit(100)
+        )
+        recent_events = recent_res.scalars().all()
+
+    device_stats = [{"device": r.device_type, "count": int(r.cnt)} for r in device_rows]
+    recent_list = [
+        {
             "id": req.id,
             "session_id": req.session_id,
             "event_type": req.event_type,
             "url": req.url or "-",
             "device": req.device_type,
             "brand": req.os or req.browser or "-",
-            "created_at": req.created_at,
-            "metadata": req.event_metadata or {}
-        })
+            "created_at": req.created_at.isoformat() if req.created_at else None,
+            "metadata": req.event_metadata or {},
+        }
+        for req in recent_events
+    ]
 
-    return {
-        "total_events": total_events,
-        "unique_sessions": unique_sessions,
+    result = {
+        "total_events": int(stats.total_events or 0),
+        "unique_sessions": int(stats.unique_sessions or 0),
         "device_stats": device_stats,
-        "recent_events": recent_list
+        "recent_events": recent_list,
     }
+    await redis.setex(_CACHE_KEY, _CACHE_TTL, _json.dumps(result, default=str))
+    return result
 
 
 # ==========================================
