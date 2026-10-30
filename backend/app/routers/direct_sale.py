@@ -20,6 +20,7 @@ from app.schemas.direct_sale import (
 )
 from app.utils.auth import get_current_user
 from app.core.rate_limit import limiter, get_user_id_or_ip
+from app.core.idempotency import idempotency_key, store_idempotency_result
 from app.use_cases.direct_sales.commands import direct_sale_commands as cmd
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -100,8 +101,11 @@ async def purchase_sale(
     data: DirectSalePurchaseIn,
     uow: SqlAlchemyUnitOfWork = Depends(get_uow),
     current_user: User = Depends(get_current_user),
+    _idem=Depends(idempotency_key("direct_sale_purchase", ttl=30)),
 ):
-    return await cmd.purchase_sale(sale_id, data, current_user, uow)
+    result = await cmd.purchase_sale(sale_id, data, current_user, uow)
+    await store_idempotency_result(request, result)
+    return result
 
 
 # ── Özet ve siparişler ────────────────────────────────────────────────────────
