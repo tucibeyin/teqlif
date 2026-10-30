@@ -4359,6 +4359,12 @@ _SCHEDULE_FUNCTIONS = {
 }
 
 
+async def refresh_i18n_cache_task(ctx: dict) -> None:
+    """Periyodik i18n bellek önbelleği yenileme — WorkerSettings cron'u tarafından her 4 dakikada çağrılır."""
+    from app.utils.i18n import preload_i18n_cache
+    await preload_i18n_cache()
+
+
 class WorkerSettings:
     """
     `arq app.worker.WorkerSettings` komutuyla başlatılır.
@@ -4445,6 +4451,9 @@ class WorkerSettings:
         reset_monthly_withdrawal_quota_task,
         check_expired_pro_users_task,
         process_store_notification_task,
+
+        # ── i18n bellek yenileme ──────────────────────────────────────
+        refresh_i18n_cache_task,
     ]
 
     cron_jobs = [
@@ -4464,6 +4473,8 @@ class WorkerSettings:
         cron(sync_ad_campaigns_task, minute={0, 10, 20, 30, 40, 50}),
         # Her 5 dakikada
         cron(flush_interactions_to_db, minute={0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55}),
+        # Her 4 dakikada — i18n bellek önbelleği yenileme (ARQ worker süreci)
+        cron(refresh_i18n_cache_task, minute=set(range(0, 60, 4))),
         # Her 2 dakikada
         cron(cleanup_stale_streams_task, minute=set(range(0, 60, 2))),
         # Her 30 dakikada — stream kayıt yaşam döngüsü

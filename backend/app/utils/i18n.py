@@ -12,7 +12,7 @@ restart gerektirmez.
 import json
 import time
 import logging
-from typing import Dict, Any
+from typing import Dict
 
 logger = logging.getLogger(__name__)
 
@@ -21,66 +21,47 @@ _CACHE_TIME: Dict[str, float] = {}
 _CACHE_TTL = 300.0  # 5 dakika TTL
 _SUPPORTED = {"tr", "en", "ar", "ru"}
 
+_STATIC_SYNC_ENGINE = None
+
+
+def _get_static_sync_engine():
+    """Paylaşımlı static sync SQLAlchemy engine — event loop dışı (script/test) bağlamları için singleton.
+
+    Her çağrıda yeni engine oluşturmak yerine tek bir pool paylaşılır.
+    Async bağlamlarda bu fonksiyon yerine AsyncSessionLocal kullanılmalıdır.
+    """
+    global _STATIC_SYNC_ENGINE
+    if _STATIC_SYNC_ENGINE is None:
+        from sqlalchemy import create_engine
+        from app.config import settings
+        sync_db_url = settings.database_url.replace("+asyncpg", "").replace("+aiosqlite", "")
+        _STATIC_SYNC_ENGINE = create_engine(
+            sync_db_url,
+            pool_size=2,
+            max_overflow=3,
+            pool_pre_ping=True,
+            pool_recycle=300,
+        )
+    return _STATIC_SYNC_ENGINE
+
 
 def _get_t(lang: str) -> dict:
     """
-    Belirtilen dil için çeviri sözlüğünü döner.
-    
-    * Disk (ARB) okuması yapmaz.
-    * Bellekteki TTL ön belleği (300 saniye) geçerliyse doğrudan oradan döner.
-    * Süre dolmuşsa veya bellek boşsa senkron Redis / DB sorgusuyla belleği tazeleyip döner.
+    Belirtilen dil için çeviri sözlüğünü döner. I/O yapmaz — asyncio event loop'u asla engellemez.
+
+    * TTL geçerliyse bellekten döner.
+    * TTL dolmuşsa eski veri varsa stale döner (yenileme preload_i18n_cache + periyodik cron ile yapılır).
+    * Hiç veri yoksa tr'ye fallback veya {} döner.
     """
     now = time.time()
     if lang in _MEMORY_CACHE and (now - _CACHE_TIME.get(lang, 0.0)) < _CACHE_TTL:
         return _MEMORY_CACHE[lang]
 
-    # 1. Redis'ten senkron okumayı dene
-    try:
-        from app.config import settings
-        import redis as sync_redis
-        r = sync_redis.Redis.from_url(
-            settings.redis_url, 
-            decode_responses=True, 
-            socket_timeout=2.0, 
-            socket_connect_timeout=2.0
-        )
-        cached_str = r.get(f"i18n:{lang}")
-        if cached_str:
-            data = json.loads(cached_str)
-            _MEMORY_CACHE[lang] = data
-            _CACHE_TIME[lang] = now
-            return data
-    except Exception as e:
-        logger.debug("[i18n._get_t] Redis senkron okuma hatası (%s): %s", lang, e)
-
-    # 2. Redis'te yoksa Veritabanından (translations tablosu) senkron okumayı dene
-    try:
-        from sqlalchemy import create_engine, text
-        from app.config import settings
-        sync_db_url = settings.database_url.replace("+asyncpg", "").replace("+aiosqlite", "")
-        engine = create_engine(sync_db_url, pool_pre_ping=True, connect_args={"connect_timeout": 3})
-        with engine.connect() as conn:
-            res = conn.execute(text("SELECT key, value FROM translations WHERE lang = :lang"), {"lang": lang})
-            data = {row.key: row.value for row in res}
-            if data:
-                _MEMORY_CACHE[lang] = data
-                _CACHE_TIME[lang] = now
-                # Redis'i de güncelleyelim
-                try:
-                    import redis as sync_redis
-                    r = sync_redis.Redis.from_url(settings.redis_url, decode_responses=True, socket_timeout=2.0)
-                    r.set(f"i18n:{lang}", json.dumps(data, ensure_ascii=False), ex=90000)
-                except Exception:
-                    pass
-                return data
-    except Exception as e:
-        logger.debug("[i18n._get_t] DB senkron okuma hatası (%s): %s", lang, e)
-
-    # 3. Her iki kaynak da başarısız olursa elimizdeki süresi dolmuş eski belleği dön (Stale-while-error)
+    # Stale-while-revalidate: TTL dolmuş ama veri varsa hemen dön (I/O yok, event loop engellenmez)
     if lang in _MEMORY_CACHE and _MEMORY_CACHE[lang]:
         return _MEMORY_CACHE[lang]
 
-    # 4. Hiçbir şey yoksa ve dil tr değilse Türkçe'ye (tr) fallback yap
+    # Hiç veri yok (cold start veya preload başarısız): tr fallback veya {}
     if lang != "tr":
         return _get_t("tr")
     return {}
@@ -127,8 +108,6 @@ async def preload_i18n_cache() -> None:
     except Exception as e:
         logger.error("[i18n] Pre-load genel hatası: %s", e)
 
-
-_SUPPORTED = {"tr", "en", "ar", "ru"}
 
 def get_locale(user=None, request=None, default: str = "tr") -> str:
     """

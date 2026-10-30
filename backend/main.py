@@ -75,6 +75,22 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 logger = setup_logging()
 
+
+async def _i18n_refresh_loop() -> None:
+    """i18n bellek önbelleğini her 4 dakikada preload_i18n_cache ile yeniler.
+
+    preload_i18n_cache startup'ta bir kez çalışır; bu döngü FastAPI worker sürecinin
+    çalıştığı süre boyunca TTL sona erdiğinde çevirilerin stale kalmasını engeller.
+    """
+    from app.utils.i18n import preload_i18n_cache
+    while True:
+        await asyncio.sleep(240)
+        try:
+            await preload_i18n_cache()
+        except Exception:
+            pass
+
+
 # --- SENTRY ENTEGRASYONU ---
 if settings.sentry_backend_dsn:
     sentry_sdk.init(
@@ -141,6 +157,7 @@ async def lifespan(app: FastAPI):
     dm_task = asyncio.create_task(dm_pubsub_listener())
     ds_scheduler_task = asyncio.create_task(direct_sale_scheduler())
     like_ticker_task = asyncio.create_task(stream_like_ticker())
+    i18n_refresh_task = asyncio.create_task(_i18n_refresh_loop())
     # Hype Meter sönümleme döngüsü
     from app.core.hype_manager import hype_manager
     hype_manager.start_decay()
@@ -154,7 +171,8 @@ async def lifespan(app: FastAPI):
     dm_task.cancel()
     ds_scheduler_task.cancel()
     like_ticker_task.cancel()
-    await asyncio.gather(task, chat_task, mod_task, dm_task, ds_scheduler_task, like_ticker_task, return_exceptions=True)
+    i18n_refresh_task.cancel()
+    await asyncio.gather(task, chat_task, mod_task, dm_task, ds_scheduler_task, like_ticker_task, i18n_refresh_task, return_exceptions=True)
     # Tüm açık WS bağlantılarını 1001 ile kapat (graceful shutdown)
     await ws_manager.shutdown()
     hype_manager.stop_decay()
