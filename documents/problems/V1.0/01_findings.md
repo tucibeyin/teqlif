@@ -1573,7 +1573,7 @@ Runbook, veri tabanını kurtarmakta fakat canlı trafiği bilerek ve isteyerek 
    * Runbook içindeki DNS yönlendirme talimatı kaldırılmalı veya Cloudflare üzerinde statik bir "Sistem Bakımda" (Cloudflare Waiting Room / Worker) sayfasına yönlendirme talimatı verilmelidir.
    * Canlı API trafiği, node2 üzerinde FastAPI/Nginx ortamı doğrulanmadan ASLA node2'ye çevrilmemelidir.
 
-> ✅ **Çözüldü** — commit PLACEHOLDER, 2026-10-30
+> ✅ **Çözüldü** — commit b70b46c2, 2026-10-30
 
 ---
 
