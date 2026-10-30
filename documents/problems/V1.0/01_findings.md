@@ -7212,6 +7212,8 @@ async def cleanup_ghost_calls_task(ctx: dict):
     # ...
 ```
 
+> ✅ **Çözüldü** — commit `c5fd0c32`, 2026-10-30
+
 ---
 
 ### SRE-171 · 🔴 P0 (Kritik) · `flush_interactions_to_db` Arka Plan Görevinde Redis `LTRIM` Komutunun Okunan Eleman Sayısı (`len(raw_items)`) Yerine Sabit `BATCH_LIMIT` (2000) ile Çağrılması Nedeniyle Eşzamanlı Gelen Tüm Kullanıcı Etkileşimlerinin ve Sinyallerinin Kalıcı Olarak Silinmesi (Silent Data Loss via Hardcoded BATCH_LIMIT in Redis LTRIM)
