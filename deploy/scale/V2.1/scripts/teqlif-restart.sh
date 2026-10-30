@@ -132,13 +132,12 @@ sync_nginx() {
     fi
   done
   if [ -n "$reloaded" ]; then
-    if nginx -t 2>/dev/null; then
-      if systemctl is-active nginx > /dev/null 2>&1; then
-        systemctl reload nginx
-        log "nginx reload tamamlandı"
-      else
-        log "Nginx config güncellendi (nginx şu an durmuş — reload atlandı)"
-      fi
+    if ! systemctl is-active nginx > /dev/null 2>&1; then
+      # nginx durdurulmuş (DR-hazırlık modu) — config kaydedildi, test runbook'a bırakıldı
+      log "Nginx config güncellendi (nginx şu an durmuş — test ve reload atlandı)"
+    elif nginx -t 2>/dev/null; then
+      systemctl reload nginx
+      log "nginx reload tamamlandı"
     else
       warn "nginx -t başarısız — backup'tan geri yükleniyor..."
       for conf in "$conf_dir"/*.conf; do
@@ -146,7 +145,7 @@ sync_nginx() {
         local fname dst
         fname=$(basename "$conf")
         dst="/etc/nginx/conf.d/$fname"
-        [ -f "${dst}.bak" ] && cp "${dst}.bak" "$dst"
+        [ -f "${dst}.bak" ] && cp "${dst}.bak" "$dst" || rm -f "$dst"
       done
       nginx -t 2>/dev/null && systemctl reload nginx
       err "Nginx config hatası — restart iptal edildi"
@@ -216,7 +215,6 @@ case "$NODE" in
   node2)
     agent_sync
     sync_services "$REPO/deploy/scale/V2.1/node2"
-    sync_nginx "$REPO/deploy/scale/V2.1/node2"
     log "node2 — backup node, uygulama servisi yok. git pull tamamlandı."
     ;;
 
