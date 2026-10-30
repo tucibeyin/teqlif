@@ -4368,6 +4368,18 @@ async def refresh_i18n_cache_task(ctx: dict) -> None:
     await preload_i18n_cache()
 
 
+async def flush_clickhouse_buffers_task(ctx: dict) -> None:
+    """ClickHouse Redis buffer'larını diske yazar — her 30sn'de bir, tek worker (SRE-12)."""
+    from app.database_clickhouse import flush_all_buffers
+    await flush_all_buffers()
+
+
+async def direct_sale_overdue_check_task(ctx: dict) -> None:
+    """Süresi dolmuş sold_out satışları ended'a geçirir — her 10sn'de bir, tek worker (SRE-12)."""
+    from app.use_cases.direct_sales.direct_sale_scheduler import _process_overdue_sales
+    await _process_overdue_sales()
+
+
 class WorkerSettings:
     """
     `arq app.worker.WorkerSettings` komutuyla başlatılır.
@@ -4457,6 +4469,10 @@ class WorkerSettings:
 
         # ── i18n bellek yenileme ──────────────────────────────────────
         refresh_i18n_cache_task,
+
+        # ── Scheduler görevleri (main.py'dan taşındı — SRE-12) ───────────────
+        flush_clickhouse_buffers_task,
+        direct_sale_overdue_check_task,
     ]
 
     cron_jobs = [
@@ -4474,6 +4490,10 @@ class WorkerSettings:
         cron(sync_swipelive_interests_task, minute={0, 20, 40}),
         # Her 10 dakikada
         cron(sync_ad_campaigns_task, minute={0, 10, 20, 30, 40, 50}),
+        # Her 30 saniyede — ClickHouse buffer flush (main.py'dan taşındı — SRE-12)
+        cron(flush_clickhouse_buffers_task, second={0, 30}),
+        # Her 10 saniyede — direct sale overdue geçiş (main.py'dan taşındı — SRE-12)
+        cron(direct_sale_overdue_check_task, second=set(range(0, 60, 10))),
         # Her 5 dakikada
         cron(flush_interactions_to_db, minute={0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55}),
         # Her 4 dakikada — i18n bellek önbelleği yenileme (ARQ worker süreci)

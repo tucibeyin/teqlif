@@ -23,7 +23,6 @@ from app.use_cases.auctions.auction_utils import pubsub_listener
 from app.routers.chat import chat_pubsub_listener, moderation_pubsub_listener
 from app.tasks.stream_like_ticker import stream_like_ticker
 from app.routers.messages import dm_pubsub_listener
-from app.use_cases.direct_sales.direct_sale_scheduler import direct_sale_scheduler
 from app.routers import notifications, messages, users, listings, follows, categories, upload, states, reports, favorites, search, ratings, analytics, leads, wallet
 from app.security.middleware import security_headers, SecurityMiddleware
 from app.security.sanitizer import InputSanitizationMiddleware
@@ -107,7 +106,7 @@ if settings.sentry_backend_dsn:
 async def lifespan(app: FastAPI):
     import shutil
     from app.database import init_extensions
-    from app.database_clickhouse import init_clickhouse, close_clickhouse, start_flush_loop, stop_flush_loop
+    from app.database_clickhouse import init_clickhouse, close_clickhouse
     from app.core.di import init_di
     from app.services import device_service as _device_service  # noqa: F401 — TokenInvalidatedEvent handler'ını event_bus'a kaydeder
 
@@ -136,7 +135,6 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"TCMB startup failed: {e}")
     await init_clickhouse()
-    flush_task = start_flush_loop()
     # FastAPI Cache — Redis backend (decode_responses=False: JsonCoder bytes bekler)
     _cache_redis = aioredis.from_url(settings.redis_url, decode_responses=False)
     FastAPICache.init(RedisBackend(_cache_redis), prefix="teqlif:cache")
@@ -155,7 +153,6 @@ async def lifespan(app: FastAPI):
     chat_task = asyncio.create_task(chat_pubsub_listener())
     mod_task = asyncio.create_task(moderation_pubsub_listener())
     dm_task = asyncio.create_task(dm_pubsub_listener())
-    ds_scheduler_task = asyncio.create_task(direct_sale_scheduler())
     like_ticker_task = asyncio.create_task(stream_like_ticker())
     i18n_refresh_task = asyncio.create_task(_i18n_refresh_loop())
     # Hype Meter sönümleme döngüsü
@@ -169,16 +166,14 @@ async def lifespan(app: FastAPI):
     chat_task.cancel()
     mod_task.cancel()
     dm_task.cancel()
-    ds_scheduler_task.cancel()
     like_ticker_task.cancel()
     i18n_refresh_task.cancel()
-    await asyncio.gather(task, chat_task, mod_task, dm_task, ds_scheduler_task, like_ticker_task, i18n_refresh_task, return_exceptions=True)
+    await asyncio.gather(task, chat_task, mod_task, dm_task, like_ticker_task, i18n_refresh_task, return_exceptions=True)
     # Tüm açık WS bağlantılarını 1001 ile kapat (graceful shutdown)
     await ws_manager.shutdown()
     hype_manager.stop_decay()
     await arq_pool.close()
     clear_pool()
-    await stop_flush_loop()
     await close_clickhouse()
 
 

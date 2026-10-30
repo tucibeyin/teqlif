@@ -10,7 +10,7 @@ class Referral(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     referrer_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
-    referred_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
+    referred_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True, index=True, unique=True)
     # 'pending' | 'completed'
     status: Mapped[str] = mapped_column(String(20), default="completed", nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

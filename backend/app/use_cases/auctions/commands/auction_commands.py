@@ -423,7 +423,7 @@ class AuctionCommands:
                 raise BadRequestException(code="AUCTION_NOT_ACTIVE")
             raise BadRequestException(code="BID_TOO_LOW")
 
-        # PostgreSQL'e KESİN YAZ — commit başarılı olana kadar Redis'e dokunma
+        # DB'ye flush et (transaction açık kalır) — Redis onayından önce commit etme
         new_bid = Bid(
             stream_id=stream_id,
             bidder_id=user.id,
@@ -432,51 +432,47 @@ class AuctionCommands:
         )
         self.uow.session.add(new_bid)
         try:
-            await self.uow.session.commit()
+            await self.uow.session.flush()  # ID üretilir, transaction hâlâ açık
         except Exception as exc:
             await self.uow.session.rollback()
             logger.error(
-                "[TEKLİF] DB commit HATASI | stream_id=%s user=%s amount=%s | %s",
+                "[TEKLİF] DB flush HATASI | stream_id=%s user=%s amount=%s | %s",
                 stream_id, user.username, data.amount, exc, exc_info=True,
             )
             capture_exception(exc)
             raise DatabaseException(code="BID_SAVE_FAILED")
 
-        await self.redis_repo.add_bidder(stream_id, user.id)  # 24 saat — auction sonunda da silinir
-
-        # Redis atomik güncelle (re-validate + update)
+        # Redis atomik güncelle (CAS) — Redis reddederse DB rollback yapılır
         ok, msg = await self.redis_repo.execute_bid(stream_id, float(data.amount), user.id, user.username)
         if ok == 0:
-            # Nadir race condition: DB commit ile Redis update arasında başka bir
-            # teklif geldi. DB kaydı audit trail olarak kalır, publish yapılmaz.
+            await self.uow.session.rollback()  # Reddedilen teklif DB'ye yazılmaz
             logger.warning(
-                "[TEKLİF] Race condition (eş zamanlı teklif) | stream_id=%s user=%s amount=%s reason=%s",
+                "[TEKLİF] Race condition — teklif reddedildi, DB rollback | stream_id=%s user=%s amount=%s reason=%s",
                 stream_id, user.username, data.amount, msg,
             )
             if msg == "not_active":
                 raise BadRequestException(code="AUCTION_NOT_ACTIVE")
-            # Redis stale — DB'deki en güncel teklifi Redis'e yaz
-            logger.warning("[TEKLİF] Redis stale, DB'den sync | stream=%s", stream_id)
-            try:
-                last_bid = (await self.uow.session.execute(
-                    select(Bid).where(Bid.stream_id == stream_id)
-                    .order_by(Bid.created_at.desc()).limit(1)
-                )).scalar_one_or_none()
-                if last_bid:
-                    redis_state = await self.redis_repo.get_state(stream_id)
-                    redis_current = float(redis_state.get("current_bid") or 0)
-                    # Yalnızca DB'deki en son teklif Redis'tekinden yüksekse yaz —
-                    # aksi hâlde Redis zaten daha yüksek bir teklifi gösteriyor, ezme.
-                    if float(last_bid.amount) > redis_current:
-                        await self.redis_repo.update_bid_state(
-                            stream_id,
-                            current_bid=str(float(last_bid.amount)),
-                            bidder_id=str(last_bid.bidder_id),
-                            bidder_name=last_bid.bidder_username,
-                        )
-            except Exception as sync_exc:
-                logger.error("[TEKLİF] Redis sync başarısız | stream=%s | %s", stream_id, sync_exc)
             raise BadRequestException(code="CONCURRENT_BID_OUTBID")
+
+        # Redis onayladı — DB'yi commit et
+        try:
+            await self.uow.session.commit()
+        except Exception as exc:
+            # Nadir: Redis güncellendi ama DB commit başarısız — Redis'i önceki duruma al
+            logger.error(
+                "[TEKLİF] DB commit HATASI (Redis güncellendi) | stream_id=%s user=%s amount=%s | %s",
+                stream_id, user.username, data.amount, exc, exc_info=True,
+            )
+            capture_exception(exc)
+            await self.redis_repo.update_bid_state(
+                stream_id,
+                current_bid=prev_data.get("current_bid", "0"),
+                bidder_id=prev_data.get("current_bidder_id", ""),
+                bidder_name=prev_data.get("current_bidder_name", ""),
+            )
+            raise DatabaseException(code="BID_SAVE_FAILED")
+
+        await self.redis_repo.add_bidder(stream_id, user.id)  # 24 saat — auction sonunda da silinir
 
         state = await GetAuctionStateQuery().execute(stream_id)
         await broadcast_to_stream_viewers(stream_id, {"type": WS.AUCTION_STATE, **state})

@@ -9,6 +9,7 @@ Sorumluluklar:
 import random
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, text as sql_text
+from sqlalchemy.exc import IntegrityError
 
 from app.models.user import User
 from app.models.referral import Referral
@@ -106,6 +107,11 @@ async def apply_referral(db: AsyncSession, current_user: User, referral_code: st
             "message": t.get("apiMsgReferralSavedVerify", "")
         }
 
+    # Eşzamanlı çift kullanımı önlemek için kullanıcı satırını kilitle ve tekrar kontrol et
+    await db.execute(select(User).where(User.id == current_user.id).with_for_update())
+    if await db.scalar(select(Referral).where(Referral.referred_id == current_user.id)):
+        raise BadRequestException(code="REFERRAL_ALREADY_USED")
+
     # Eğer tam onaylıysa ve kodu başarıyla kullanıyorsa pending'i temizle
     if current_user.pending_referred_by == code:
         current_user.pending_referred_by = None
@@ -141,7 +147,11 @@ async def apply_referral(db: AsyncSession, current_user: User, referral_code: st
         transaction_type="welcome_bonus",
     ))
 
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise BadRequestException(code="REFERRAL_ALREADY_USED")
     await db.refresh(current_user)
 
     logger.info(
