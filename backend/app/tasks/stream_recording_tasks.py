@@ -131,7 +131,7 @@ async def archive_recordings_task(ctx: dict) -> None:
                 UPDATE stream_recordings
                 SET status = 'archived', archived_at = NOW(), updated_at = NOW()
                 WHERE status = 'expired'
-                  AND transferred_at < NOW() - INTERVAL '2 days'
+                  AND COALESCE(transferred_at, available_at, created_at) < NOW() - INTERVAL '2 days'
             """)
         else:
             query = text("""
@@ -139,7 +139,7 @@ async def archive_recordings_task(ctx: dict) -> None:
                 SET status = 'archived', archived_at = NOW(), updated_at = NOW()
                 WHERE status = 'expired'
                   AND node2_confirmed_at IS NOT NULL
-                  AND transferred_at < NOW() - INTERVAL '2 days'
+                  AND COALESCE(transferred_at, available_at, created_at) < NOW() - INTERVAL '2 days'
             """)
 
         async with AsyncSessionLocal() as session:

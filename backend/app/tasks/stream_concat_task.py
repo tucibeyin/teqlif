@@ -277,7 +277,7 @@ async def _run_concat(stream_id: int) -> None:
 
     async with AsyncSessionLocal() as session:
         parts = (await session.execute(text("""
-            SELECT id, minio_key, part_number, host_id
+            SELECT id, minio_key, part_number, host_id, recording_started_at, duration_secs
             FROM stream_recordings
             WHERE stream_id        = :stream_id
               AND is_concat_result = FALSE
@@ -345,6 +345,18 @@ async def _run_concat(stream_id: int) -> None:
             await _mark_retry(stream_id, error)
             return
 
+        # DB INSERT için değerleri yakala (tmpdir kapanmadan önce)
+        first_started_at = parts[0]["recording_started_at"]
+        try:
+            _probe = await _ffprobe_streams(out_path)
+            concat_duration_secs = int(round(_probe["duration"])) if _probe["duration"] else None
+        except Exception:
+            concat_duration_secs = None
+        try:
+            concat_size_bytes = os.path.getsize(out_path)
+        except OSError:
+            concat_size_bytes = None
+
     # DB: concat sonucu kaydet, part'ları merged_and_purged yap
     async with AsyncSessionLocal() as session:
         part_ids = [p["id"] for p in parts]
@@ -359,10 +371,19 @@ async def _run_concat(stream_id: int) -> None:
 
         await session.execute(text("""
             INSERT INTO stream_recordings
-                (stream_id, host_id, minio_key, status, is_concat_result, available_at, created_at, updated_at)
+                (stream_id, host_id, minio_key, status, is_concat_result,
+                 available_at, transferred_at, recording_started_at,
+                 duration_secs, encoded_size_bytes, created_at, updated_at)
             VALUES
-                (:stream_id, :host_id, :minio_key, 'available', TRUE, NOW(), NOW(), NOW())
-        """), {"stream_id": stream_id, "host_id": host_id, "minio_key": concat_key})
+                (:stream_id, :host_id, :minio_key, 'available', TRUE,
+                 NOW(), NOW(), :rec_started_at,
+                 :duration_secs, :encoded_size_bytes, NOW(), NOW())
+        """), {
+            "stream_id": stream_id, "host_id": host_id, "minio_key": concat_key,
+            "rec_started_at": first_started_at,
+            "duration_secs": concat_duration_secs,
+            "encoded_size_bytes": concat_size_bytes,
+        })
 
         await session.commit()
 

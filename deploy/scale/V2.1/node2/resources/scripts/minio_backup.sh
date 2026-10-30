@@ -72,7 +72,7 @@ confirm_recordings() {
                 SET node2_confirmed_at = NOW(), updated_at = NOW()
                 WHERE node2_confirmed_at IS NULL
                   AND minio_key IS NOT NULL
-                  AND transferred_at IS NOT NULL
+                  AND COALESCE(transferred_at, available_at) IS NOT NULL
                   AND status IN ('available','expired')
                 RETURNING 1
             ) SELECT COUNT(*) FROM upd" 2>&1) || { \
