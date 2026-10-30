@@ -207,6 +207,31 @@ async def upload_file_async(key: str, path: str, content_type: str) -> str:
 # ── Private DM bucket ─────────────────────────────────────────────────────────
 
 
+async def get_object_bytes_dm(key: str) -> bytes | None:
+    """Private DM bucket'tan nesneyi bytes olarak indirir. Yoksa None döner."""
+    try:
+        node = await orchestrator.allocate_node(ServiceType.STORAGE)
+        client = _get_client_for_internal_url(node["minio_url"])
+
+        def _get() -> bytes:
+            resp = client.get_object(settings.minio_dm_bucket, key)
+            try:
+                return resp.read()
+            finally:
+                resp.close()
+                resp.release_conn()
+
+        return await asyncio.to_thread(_get)
+    except S3Error as e:
+        if e.code == "NoSuchKey":
+            return None
+        logger.error("[STORAGE_DM] get_object_bytes_dm hata: key=%s | %s", key, e)
+        raise
+    except Exception as exc:
+        logger.error("[STORAGE_DM] get_object_bytes_dm beklenmeyen hata: %s", exc)
+        raise
+
+
 async def upload_bytes_dm(key: str, data: bytes, content_type: str) -> str:
     node = await orchestrator.allocate_node(ServiceType.STORAGE)
     client = _get_client_for_internal_url(node["minio_url"])

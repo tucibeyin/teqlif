@@ -75,14 +75,15 @@ async def archive_old_dm_task(ctx: dict) -> None:
         for (user_a, user_b, year), msgs in groups.items():
             object_key = f"{_DM_ARCHIVE_PREFIX}/{user_a}_{user_b}/{year}.json.gz"
 
-            # Mevcut arşivi oku ve birleştir (aynı yıl birden fazla çalışma olursa)
+            # Mevcut arşivi DM bucket'tan oku ve birleştir (aynı yıl birden fazla çalışma)
             existing: list[dict] = []
-            try:
-                existing_bytes = await storage.get_object_bytes(object_key)
-                if existing_bytes:
+            existing_bytes = await storage.get_object_bytes_dm(object_key)
+            if existing_bytes:
+                try:
                     existing = json.loads(gzip.decompress(existing_bytes))
-            except Exception:
-                pass
+                except Exception as exc:
+                    logger.error("[DM_ARCHIVE] Gzip decompress hatası: %s | %s", object_key, exc)
+                    raise
 
             existing_ids = {m["id"] for m in existing}
             new_msgs = [m for m in msgs if m["id"] not in existing_ids]

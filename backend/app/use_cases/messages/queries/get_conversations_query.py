@@ -1,4 +1,3 @@
-import asyncio
 from sqlalchemy import select, func, or_, and_, tuple_
 from app.core.uow import AbstractUnitOfWork
 from app.models.message import DirectMessage
@@ -100,17 +99,15 @@ class GetConversationsQuery:
 
         other_ids = [m.receiver_id if m.sender_id == uid else m.sender_id for m in latest_msgs]
 
-        users_result, unread_result = await asyncio.gather(
-            self.uow.session.execute(select(User).where(User.id.in_(other_ids))),
-            self.uow.session.execute(
-                select(DirectMessage.sender_id, func.count().label("cnt"))
-                .where(
-                    DirectMessage.receiver_id == uid,
-                    DirectMessage.is_read == False,
-                    DirectMessage.is_shadowbanned == False,
-                )
-                .group_by(DirectMessage.sender_id)
-            ),
+        users_result = await self.uow.session.execute(select(User).where(User.id.in_(other_ids)))
+        unread_result = await self.uow.session.execute(
+            select(DirectMessage.sender_id, func.count().label("cnt"))
+            .where(
+                DirectMessage.receiver_id == uid,
+                DirectMessage.is_read == False,
+                DirectMessage.is_shadowbanned == False,
+            )
+            .group_by(DirectMessage.sender_id)
         )
         users_map = {u.id: u for u in users_result.scalars().all()}
         unread_map = {row.sender_id: row.cnt for row in unread_result}

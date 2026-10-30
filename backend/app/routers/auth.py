@@ -361,27 +361,26 @@ async def init_context(
     from app.models.notification import Notification
     from app.models.message import DirectMessage
 
-    notif_result, msg_result = await asyncio.gather(
-        db.execute(
-            select(func.count()).where(
-                Notification.user_id == current_user.id,
-                Notification.is_read == False,  # noqa: E712
-                Notification.type != "message",
-            )
-        ),
-        db.execute(
-            select(func.count()).where(
-                DirectMessage.receiver_id == current_user.id,
-                DirectMessage.is_read == False,  # noqa: E712
-            )
-        ),
+    # Tek AsyncSession üzerinde asyncio.gather yasak — IllegalStateChangeError verir
+    notif_count = await db.scalar(
+        select(func.count()).where(
+            Notification.user_id == current_user.id,
+            Notification.is_read == False,  # noqa: E712
+            Notification.type != "message",
+        )
+    )
+    msg_count = await db.scalar(
+        select(func.count()).where(
+            DirectMessage.receiver_id == current_user.id,
+            DirectMessage.is_read == False,  # noqa: E712
+        )
     )
 
     return {
         "user": UserOut.model_validate(current_user),
         "wallet_balance": current_user.teqlik_balance,
-        "notifications_unread": notif_result.scalar_one(),
-        "messages_unread": msg_result.scalar_one(),
+        "notifications_unread": notif_count,
+        "messages_unread": msg_count,
     }
 
 
