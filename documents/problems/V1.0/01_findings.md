@@ -6164,6 +6164,12 @@ async def purchase_sale(
     return result
 ```
 
+#### ✅ Çözüm Damgası
+- **Commit:** `c236ef03` — `fix(sre-150): purchase_sale endpoint'ine idempotency_key koruması eklendi`
+- **Tarih:** 2026-10-30
+- **Değişen Dosya:** `backend/app/routers/direct_sale.py`
+- **Yapılan:** `_idem=Depends(idempotency_key("direct_sale_purchase", ttl=30))` parametresi ve `store_idempotency_result` çağrısı eklendi; `auction.py:place_bid` ile aynı desen
+
 ---
 
 ### SRE-151 · 🟡 P2 (Orta) · WebSocket El Sıkışmasında DM Filtresinin Unutulması ve Badge Sayısı Titremesi (Flickering)
