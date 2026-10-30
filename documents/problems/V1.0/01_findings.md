@@ -5601,6 +5601,13 @@ AND COALESCE(sr.available_at, sr.created_at) > NOW() - INTERVAL '6 hours'
   * `stream_recording_tasks.py:57` — `COALESCE(sr.available_at, sr.created_at)` savunmacı fallback eklendi (mevcut NULL kayıtlar ve gelecek regresyonlar için)
 * **Durum:** Tüm node'lara (node1–6 + nodeMonitor) deploy edildi; node1 servisleri sağlıklı.
 
+#### ✅ Followup Çözüm Damgası (SRE-139 — transferred_at + recording_started_at)
+* **Commit:** `96268dda` · 2026-10-30
+* **Değişiklik:**
+  * `stream_concat_task.py` — Parts SELECT'e `recording_started_at, duration_secs` eklendi; `with tmpdir:` kapanmadan önce `_ffprobe_streams(out_path)` ile `concat_duration_secs` ve `os.path.getsize(out_path)` ile `concat_size_bytes` yakalandı; INSERT'e `transferred_at = NOW()`, `recording_started_at = :rec_started_at`, `duration_secs`, `encoded_size_bytes` eklendi — concat kayıtlarında `transferred_at` NULL kalması engellendi (node2 onayı + arşivleme kilidi)
+  * `stream_recording_tasks.py:134,142` — `archive_recordings_task` her iki sorgusunda `AND transferred_at` → `AND COALESCE(transferred_at, available_at, created_at)` (SQL 3VL fallback)
+  * `deploy/scale/V2.1/node2/resources/scripts/minio_backup.sh:75` — `AND transferred_at IS NOT NULL` → `AND COALESCE(transferred_at, available_at) IS NOT NULL`
+
 ---
 
 ### SRE-140 · 🔴 P0 (Kritik) · `_get_t` İçinde Senkron `create_engine` ile Havuz Sızıntısı ve 3s Uvicorn Event Loop Donması
