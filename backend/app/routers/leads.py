@@ -24,6 +24,7 @@ from app.models.listing import Listing
 from app.models.user import User
 from app.models.teqlik_transaction import TeqlikTransaction
 from app.utils.auth import get_current_user, invalidate_user_session_cache
+from app.utils.redis_client import get_redis
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/leads", tags=["leads"])
@@ -485,6 +486,12 @@ async def send_retargeting(
     if not listing:
         raise NotFoundException()
 
+    # 24 saatlik cooldown: aynı ilan için 24 saat içinde tekrar retargeting gönderemesin
+    _redis = await get_redis()
+    _cooldown_key = f"retarget:cd:{current_user.id}:{body.listing_id}"
+    if await _redis.exists(_cooldown_key):
+        raise CooldownException()
+
     # Karma model: kredi ücretsiz, kalan × 10 TEQlik
     cap   = credit_service.per_op_cap(CreditFeature.BLAST, current_user.user_type)
     used  = await credit_service.get_used(CreditFeature.BLAST, current_user.id, current_user.premium_since)
@@ -560,13 +567,7 @@ async def send_retargeting(
         except Exception as exc:
             logger.warning("[Retargeting] Push başarısız: %s", exc)
 
-    sent = 0
-    for i in range(0, len(fcm_tokens), 50):
-        chunk = fcm_tokens[i: i + 50]
-        await asyncio.gather(*[_send_one(t) for t in chunk])
-        sent += len(chunk)
-
-    # TEQlik düş + kredi say
+    # ── Atomik bakiye düşümü — push göndermeden önce ────────────────────────────
     if teqlik_cost > 0:
         deduct = await db.execute(
             sql_text(
@@ -590,6 +591,16 @@ async def send_retargeting(
         except Exception:
             pass
 
+    # Cooldown key'i yaz (bakiye başarıyla düşüldükten sonra)
+    await _redis.setex(_cooldown_key, 86400, "1")
+
+    # ── Push bildirimleri — bakiye güvence altında ────────────────────────────
+    sent = 0
+    for i in range(0, len(fcm_tokens), 50):
+        chunk = fcm_tokens[i: i + 50]
+        await asyncio.gather(*[_send_one(t) for t in chunk])
+        sent += len(chunk)
+
     if free_used > 0:
         await credit_service.increment(CreditFeature.BLAST, current_user.id, current_user.premium_since, count=free_used)
 
@@ -599,7 +610,6 @@ async def send_retargeting(
     return {
         "sent": sent,
         "spent": teqlik_cost,
-        "sent": sent,
     }
 
 
