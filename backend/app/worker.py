@@ -741,6 +741,7 @@ async def cleanup_empty_message_threads_task(ctx: dict) -> None:
             result = await db.execute(text(
                 "DELETE FROM message_threads mt "
                 "WHERE mt.status != 'pending' "
+                "AND mt.has_archive = FALSE "
                 "AND NOT EXISTS ("
                 "  SELECT 1 FROM direct_messages dm "
                 "  WHERE (dm.sender_id = mt.user_a_id AND dm.receiver_id = mt.user_b_id) "
