@@ -2256,7 +2256,7 @@ async def main() -> None:
 1. `teqlif.service` içinden `ExecStartPre` satırları kaldırılmalıdır. Systemd yalnızca Uvicorn sürecini yönetmelidir.
 2. `alembic upgrade head` ve `sync_main.py` yalnızca deployment anında (`teqlif-restart.sh` scripti içinde) Uvicorn yeniden başlatılmadan önce **tek bir kez** çalıştırılmalıdır.
 
-> ✅ **Çözüldü** — commit PLACEHOLDER_57, 2026-10-30
+> ✅ **Çözüldü** — commit 15d41e98, 2026-10-30
 
 ---
 
