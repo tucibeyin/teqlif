@@ -1528,7 +1528,7 @@ Uygulamanın en temel vitrin özelliği olan Story (Hikaye) video paylaşımı, 
      ```
 2. Değişiklik sonrası `nginx -t` test edilip Nginx yeniden yüklenmelidir (`systemctl reload nginx`).
 
-> ✅ **Çözüldü** — commit PLACEHOLDER, 2026-10-30
+> ✅ **Çözüldü** — commit d12df9a5, 2026-10-30
 
 ---
 
