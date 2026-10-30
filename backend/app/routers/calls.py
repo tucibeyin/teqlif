@@ -616,12 +616,13 @@ async def start_call(
                            current_user.id, caller_busy.id, "caller" if is_caller_role else "callee")
             raise AppException(status_code=409, message="Already in a call", code="CALLER_BUSY")
 
-    # Serialize concurrent start_call for the same callee at DB level.
-    # Two callers firing simultaneously both read "callee not busy" without this lock,
-    # creating two parallel calls to the same person. pg_advisory_xact_lock holds until
-    # the transaction commits, so the second caller always sees the first call in DB.
-    # Namespace key 42 prevents collisions with any other advisory lock usage in the app.
-    await db.execute(text("SELECT pg_advisory_xact_lock(42, :cid)"), {"cid": callee_id})
+    # Serialize concurrent start_call between this user pair at DB level.
+    # Canonical ordering (min, max) ensures A→B and B→A fight for the exact same lock,
+    # preventing split-brain where both directions pass the "not busy" check simultaneously.
+    # pg_advisory_xact_lock holds until the transaction commits.
+    # Namespace key 42 prevents collisions with other advisory lock usages in the app.
+    _u_min, _u_max = min(current_user.id, callee_id), max(current_user.id, callee_id)
+    await db.execute(text("SELECT pg_advisory_xact_lock(:u_min, :u_max)"), {"u_min": _u_min, "u_max": _u_max})
 
     # Check if callee is already in an active call
     active_call = await db.scalar(
