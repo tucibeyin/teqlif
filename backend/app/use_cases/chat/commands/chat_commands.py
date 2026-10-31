@@ -145,17 +145,25 @@ class ChatCommands:
         return bool(await redis.sismember(mod_key(stream_id), str(user_id)))
 
     async def add_viewer(self, stream_id: int, room_name: str, username: str) -> int:
-        """viewer_set'e ekler, sayacı artırır ve yeni izleyici sayısını döner.
+        """viewer_set'e ekler, yeni üyeyse sayacı artırır ve izleyici sayısını döner.
 
+        sadd dönüş değeri kontrol edilir: kullanıcı zaten setteyse (yeniden bağlantı)
+        INCR çalışmaz — sayaç şişmesi ve desenkronizasyon engellenir.
         Dönen count caller'ın system_join eşiği kararı ile VIEWER_COUNT
         mesajı için reuse edilebilir — ekstra Redis round-trip gerekmez.
         """
         try:
             redis = await get_redis()
-            await redis.sadd(f"live:viewer_set:{stream_id}", username)
-            key = f"live:viewers:{stream_id}"
-            count = await redis.incr(key)
-            await redis.expire(key, _VIEWER_TTL)
+            set_key = f"live:viewer_set:{stream_id}"
+            cnt_key = f"live:viewers:{stream_id}"
+            added = await redis.sadd(set_key, username)
+            await redis.expire(set_key, _VIEWER_TTL)
+            if added:
+                count = await redis.incr(cnt_key)
+            else:
+                count_raw = await redis.get(cnt_key)
+                count = int(count_raw) if count_raw else 1
+            await redis.expire(cnt_key, _VIEWER_TTL)
             peak_key = f"live:peak_viewers:{stream_id}"
             peak_raw = await redis.get(peak_key)
             current_peak = int(peak_raw) if peak_raw else 0
@@ -168,16 +176,26 @@ class ChatCommands:
             return 0
 
     async def remove_viewer(self, stream_id: int, room_name: str, username: str) -> None:
-        """viewer_set'ten çıkarır ve sayacı azaltır."""
+        """viewer_set'ten çıkarır, gerçekten setteyse sayacı azaltır.
+
+        srem dönüş değeri kontrol edilir: kullanıcı settede yoksa (örn. çift
+        disconnect) DECR çalışmaz — negatif sayaca ve desenkronizasyona engel olur.
+        """
         try:
             redis = await get_redis()
-            await redis.srem(f"live:viewer_set:{stream_id}", username)
-            key = f"live:viewers:{stream_id}"
-            count = await redis.decr(key)
-            if count < 0:
-                await redis.set(key, 0)
-                count = 0
-            await redis.expire(key, _VIEWER_TTL)
+            set_key = f"live:viewer_set:{stream_id}"
+            cnt_key = f"live:viewers:{stream_id}"
+            removed = await redis.srem(set_key, username)
+            await redis.expire(set_key, _VIEWER_TTL)
+            if removed:
+                count = await redis.decr(cnt_key)
+                if count < 0:
+                    await redis.set(cnt_key, 0)
+                    count = 0
+            else:
+                count_raw = await redis.get(cnt_key)
+                count = int(count_raw) if count_raw else 0
+            await redis.expire(cnt_key, _VIEWER_TTL)
             await publish_chat(stream_id, {"type": WS.VIEWER_COUNT, "count": int(count)})
         except Exception as exc:
             logger.warning("[CHAT] remove_viewer başarısız | stream_id=%s | %s", stream_id, exc)
