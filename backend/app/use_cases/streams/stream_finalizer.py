@@ -149,8 +149,8 @@ async def finalize_stream(stream: LiveStream, db: AsyncSession) -> None:
 
     # 7. pro_insights ve pro_metrics cache'i invalidate et (yayıncı raporunu güncel görsün)
     try:
-        keys = await redis.keys(f"cache:pro_insights:{stream.host_id}:*")
-        to_delete = list(keys) + [f"cache:pro_metrics:{stream.host_id}"]
+        keys = [k async for k in redis.scan_iter(f"cache:pro_insights:{stream.host_id}:*")]
+        to_delete = keys + [f"cache:pro_metrics:{stream.host_id}"]
         if to_delete:
             await redis.delete(*to_delete)
     except Exception:

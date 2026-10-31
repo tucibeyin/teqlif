@@ -31,7 +31,7 @@ class EdgeOrchestrator:
     async def get_all_metrics(self) -> List[Dict[str, Any]]:
         """Tüm aktif node'ların canlı metriklerini döner (TTL ile ölü ajanlar otomatik çıkar)."""
         redis = await get_redis()
-        keys  = await redis.keys("edge:metrics:*")
+        keys = [k async for k in redis.scan_iter("edge:metrics:*")]
         if not keys:
             return []
         raw = await redis.mget(*keys)
