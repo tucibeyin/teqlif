@@ -162,7 +162,7 @@ async def get_suggested_sellers(
         order_expr = f"""
             {cat_score_expr} * 0.60
             + LEAST(LOG(1.0 + COUNT(l.id)) / 4.0, 0.25)
-            + LEAST(LOG(1.0 + COALESCE(fol.follower_count, 0)) / 8.0, 0.15)
+            + LEAST(LOG(1.0 + u.follower_count) / 8.0, 0.15)
         """
     else:
         cat_params = {}
@@ -170,7 +170,7 @@ async def get_suggested_sellers(
         cat_score_expr = "0.0"
         order_expr = """
             LEAST(LOG(1.0 + COUNT(l.id)) / 4.0, 0.40)
-            + LEAST(LOG(1.0 + COALESCE(fol.follower_count, 0)) / 8.0, 0.25)
+            + LEAST(LOG(1.0 + u.follower_count) / 8.0, 0.25)
             + CASE WHEN MAX(l.created_at) > NOW() - INTERVAL '7 days' THEN 0.25 ELSE 0.0 END
             + LEAST(LOG(1.0 + COUNT(CASE WHEN l.created_at > NOW() - INTERVAL '7 days' THEN 1 END)) / 3.0, 0.10)
         """
@@ -186,14 +186,10 @@ async def get_suggested_sellers(
             u.user_type,
             COUNT(l.id)                                     AS listing_count,
             {cat_score_expr}                                AS cat_match,
-            COALESCE(fol.follower_count, 0)                 AS follower_count
+            u.follower_count                                AS follower_count
         FROM users u
         INNER JOIN listings l ON l.user_id = u.id
             AND l.status = 'active' AND l.status != 'deleted'
-        LEFT JOIN (
-            SELECT followed_id, COUNT(*) AS follower_count
-            FROM follows GROUP BY followed_id
-        ) fol ON fol.followed_id = u.id
         WHERE u.id != :uid
           AND u.status = 'active'
           AND u.id NOT IN (
@@ -202,7 +198,7 @@ async def get_suggested_sellers(
               SELECT blocker_id FROM user_blocks WHERE blocked_id = :uid
           )
         {{follow_filter}}
-        GROUP BY u.id, u.username, u.full_name, u.profile_image_url, u.bio, u.email_verified, u.phone_verified, u.user_type, fol.follower_count
+        GROUP BY u.id, u.username, u.full_name, u.profile_image_url, u.bio, u.email_verified, u.phone_verified, u.user_type, u.follower_count
         HAVING COUNT(l.id) >= 1
         ORDER BY ({order_expr}) DESC
         LIMIT :lim
