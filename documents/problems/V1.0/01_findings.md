@@ -3014,7 +3014,7 @@ Böylece alarm kaydı geçerli enum değeriyle güncellenir ve HTTP 204 No Conte
 
 ---
 
-### SRE-75 · 🟡 P2 (Orta) · `ratings.py:get_ratings` ve `favorites.py:get_favorites` Endpoint'lerinde Sayfalama (Pagination) Eksikliği ve O(N) IN Şişmesi
+### SRE-75 · 🟡 P2 (Orta) · `ratings.py:get_ratings` ve `favorites.py:get_favorites` Endpoint'lerinde Sayfalama (Pagination) Eksikliği ve O(N) IN Şişmesi ✅ Çözüldü (01b8df35 · 2026-10-31)
 
 * **Etkilenen Dosyalar:** `backend/app/routers/ratings.py` (satırlar 235–269), `backend/app/routers/favorites.py` (satırlar 44–65)
 * **İlgili Endpoint'ler:** `GET /api/ratings/{user_id}`, `GET /api/favorites`
@@ -7652,7 +7652,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 149. ~~**Adım 149 (`SRE-79`):** `users.py:get_suggested_sellers` sorgusundaki tüm `follows` tablosunu `GROUP BY` yapan alt sorguyu kaldırıp kullanıcı bazlı denormalize takipçi sayısına veya skeler alt sorguya geçir; Postgres CPU %100 yükünü çöz.~~ ✅ `9e17a454`
 150. ~~**Adım 150 (`SRE-80`):** `admin_data.py:admin_delete_listing` satır 323'teki hatalı `listing.status = PASSIVE` atamasını kaldır; admin tarafından silinen ilanların `DELETED` kalmasını sağla.~~ ✅ `47dc6226`
 151. ~~**Adım 151 (`SRE-71`):** `catalog.py:/version` taksonomi sorgusunu Redis tamsayı sayacına çevir; her sürüm kontrolünde tüm DB'nin taranmasını engelle.~~ ✅ `6d69b11d`
-152. **Adım 152 (`SRE-75`):** `ratings.py:get_ratings` ve `favorites.py:get_favorites` endpoint'lerine zorunlu sayfalama (`limit`/`offset`) getir; O(N) IN clause şişmesini ve bellek patlamasını engelle.
+152. ~~**Adım 152 (`SRE-75`):** `ratings.py:get_ratings` ve `favorites.py:get_favorites` endpoint'lerine zorunlu sayfalama (`limit`/`offset`) getir; O(N) IN clause şişmesini ve bellek patlamasını engelle.~~ ✅ `01b8df35`
 153. **Adım 153 (`SRE-62`):** `messages.py:get_messages` GET endpoint'inden `MarkMessagesReadCommand` çağrısını kaldır; `POST /{other_user_id}/read` bağımsız endpoint'i açarak Read-Replica çökmesini ve prefetch okundu hatalarını engelle.
 154. **Adım 154 (`SRE-63`):** `chat.py:_check_whale_status` mantıksal kontrolünü `host_type != "pro"` olarak düzelt; standart kullanıcıların yayınlarında her izleyici girişinde `Purchase` tablosunun taranmasını durdur.
 155. **Adım 155 (`SRE-67`):** `recommendation_service.py:_ids_from_categories` dinamik `ORDER BY hashtext(...)` sıralamasını kaldırıp Redis Set veya hafif aralık örneklemesine geçir; Postgres CPU %100 darboğazını çöz.
