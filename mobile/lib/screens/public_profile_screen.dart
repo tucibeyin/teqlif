@@ -1,4 +1,7 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import '../services/storage_service.dart';
 import '../widgets/ratings/expandable_comment.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../services/image_cache_manager.dart';
@@ -1178,7 +1181,7 @@ class _RatingFormSheetState extends ConsumerState<_RatingFormSheet> {
 
 // ── Ratings list bottom sheet ────────────────────────────────────────────────
 
-class _RatingsListSheet extends ConsumerWidget {
+class _RatingsListSheet extends ConsumerStatefulWidget {
   final int userId;
   final Map<String, dynamic>? summary;
 
@@ -1187,139 +1190,225 @@ class _RatingsListSheet extends ConsumerWidget {
     required this.summary,
   });
 
-  String _formatDate(BuildContext context, WidgetRef ref, String iso) {
+  @override
+  ConsumerState<_RatingsListSheet> createState() => _RatingsListSheetState();
+}
+
+class _RatingsListSheetState extends ConsumerState<_RatingsListSheet> {
+  final List<dynamic> _ratings = [];
+  int _offset = 0;
+  bool _hasMore = true;
+  bool _loadingInitial = true;
+  bool _loadingMore = false;
+  ScrollController? _sheetCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void dispose() {
+    _sheetCtrl?.removeListener(_onScroll);
+    super.dispose();
+  }
+
+  void _onScroll() {
+    final ctrl = _sheetCtrl;
+    if (ctrl == null) return;
+    if (ctrl.position.extentAfter < 300 && _hasMore && !_loadingMore && !_loadingInitial) {
+      _loadMore();
+    }
+  }
+
+  Future<Map<String, String>> _authHeaders() async {
+    final token = await StorageService.getToken();
+    return {
+      'Content-Type': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
+    };
+  }
+
+  Future<void> _load() async {
+    try {
+      final headers = await _authHeaders();
+      final resp = await http.get(
+        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/ratings/${widget.userId}?limit=20&offset=0'),
+        headers: headers,
+      );
+      if (resp.statusCode == 200 && mounted) {
+        final data = jsonDecode(resp.body) as List;
+        setState(() {
+          _ratings
+            ..clear()
+            ..addAll(data);
+          _offset = data.length;
+          _hasMore = data.length == 20;
+        });
+      }
+    } catch (_) {} finally {
+      if (mounted) setState(() => _loadingInitial = false);
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (!_hasMore || _loadingMore || _loadingInitial) return;
+    setState(() => _loadingMore = true);
+    try {
+      final headers = await _authHeaders();
+      final resp = await http.get(
+        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/ratings/${widget.userId}?limit=20&offset=$_offset'),
+        headers: headers,
+      );
+      if (resp.statusCode == 200 && mounted) {
+        final data = jsonDecode(resp.body) as List;
+        setState(() {
+          _ratings.addAll(data);
+          _offset += data.length;
+          _hasMore = data.length == 20;
+        });
+      }
+    } catch (_) {} finally {
+      if (mounted) setState(() => _loadingMore = false);
+    }
+  }
+
+  String _formatDate(String iso) {
     try {
       final d = DateTime.parse(iso).toLocal();
-      return DateFormat.yMMMd(
-        ref.read(localizationProvider).lang,
-      ).format(d);
+      return DateFormat.yMMMd(ref.read(localizationProvider).lang).format(d);
     } catch (_) {
       return '';
     }
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
-    final avgRaw = summary?['average'];
-    final count = summary?['count'] as int? ?? 0;
+    final avgRaw = widget.summary?['average'];
+    final count = widget.summary?['count'] as int? ?? 0;
     final avg = avgRaw != null ? (avgRaw as num).toDouble() : null;
     final filled = avg != null ? avg.round().clamp(0, 5) : 0;
-    
-    final ratingsAsync = ref.watch(ratingsListProvider(RatingsListArgs(userId)));
 
     return DraggableScrollableSheet(
       expand: false,
       initialChildSize: 0.6,
       maxChildSize: 0.92,
-      builder: (_, controller) => Column(
-        children: [
-          // Handle bar
-          Container(
-            margin: const EdgeInsets.only(top: 10, bottom: 8),
-            width: 36,
-            height: 4,
-            decoration: BoxDecoration(
-              color: AppColors.border(context),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          // Title
-          Padding(
-            padding: const EdgeInsetsDirectional.fromSTEB(20, 4, 20, 14),
-            child: Text(
-              loc.t('ratingReviews'),
-              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
-            ),
-          ),
-
-          // Summary bar
-          if (avg != null) ...[
+      builder: (_, controller) {
+        if (_sheetCtrl != controller) {
+          _sheetCtrl?.removeListener(_onScroll);
+          _sheetCtrl = controller;
+          controller.addListener(_onScroll);
+        }
+        return Column(
+          children: [
+            // Handle bar
             Container(
-              margin: const EdgeInsetsDirectional.fromSTEB(20, 0, 20, 14),
-              padding: const EdgeInsets.all(16),
+              margin: const EdgeInsets.only(top: 10, bottom: 8),
+              width: 36,
+              height: 4,
               decoration: BoxDecoration(
-                color: AppColors.surfaceVariant(context),
-                borderRadius: BorderRadius.circular(14),
+                color: AppColors.border(context),
+                borderRadius: BorderRadius.circular(2),
               ),
-              child: Row(
-                children: [
-                  Text(
-                    avg.toStringAsFixed(1),
-                    style: const TextStyle(
-                      fontSize: 40,
-                      fontWeight: FontWeight.w800,
-                      color: _starColor,
-                      height: 1,
+            ),
+            // Title
+            Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(20, 4, 20, 14),
+              child: Text(
+                loc.t('ratingReviews'),
+                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+              ),
+            ),
+
+            // Summary bar
+            if (avg != null) ...[
+              Container(
+                margin: const EdgeInsetsDirectional.fromSTEB(20, 0, 20, 14),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceVariant(context),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Row(
+                  children: [
+                    Text(
+                      avg.toStringAsFixed(1),
+                      style: const TextStyle(
+                        fontSize: 40,
+                        fontWeight: FontWeight.w800,
+                        color: _starColor,
+                        height: 1,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${'★' * filled}${'☆' * (5 - filled)}',
-                        style: const TextStyle(
-                          color: _starColor,
-                          fontSize: 20,
-                          letterSpacing: 2,
+                    const SizedBox(width: 16),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${'★' * filled}${'☆' * (5 - filled)}',
+                          style: const TextStyle(
+                            color: _starColor,
+                            fontSize: 20,
+                            letterSpacing: 2,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        loc.t('ratingCount', {'count': count.toString()}),
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textSecondary(context),
+                        const SizedBox(height: 4),
+                        Text(
+                          loc.t('ratingCount', {'count': count.toString()}),
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppColors.textSecondary(context),
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
+            ],
+
+            Divider(height: 1, color: AppColors.divider(context)),
+
+            // Ratings list
+            Expanded(
+              child: _loadingInitial
+                  ? const Center(child: CircularProgressIndicator(color: kPrimary))
+                  : _ratings.isEmpty
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(32),
+                            child: Text(
+                              loc.t('pubProfileNoReview'),
+                              style: TextStyle(color: AppColors.textTertiary(context)),
+                            ),
+                          ),
+                        )
+                      : ListView.separated(
+                          controller: controller,
+                          itemCount: _ratings.length + (_hasMore || _loadingMore ? 1 : 0),
+                          separatorBuilder: (_, _) =>
+                              Divider(height: 1, color: AppColors.divider(context)),
+                          itemBuilder: (_, i) {
+                            if (i == _ratings.length) {
+                              return const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 16),
+                                child: Center(child: CircularProgressIndicator(color: kPrimary)),
+                              );
+                            }
+                            final r = _ratings[i] as Map<String, dynamic>;
+                            return _PublicRatingItem(
+                              key: ValueKey(r['id']),
+                              rating: r,
+                              formatDate: _formatDate,
+                            );
+                          },
+                        ),
             ),
           ],
-
-          Divider(height: 1, color: AppColors.divider(context)),
-
-          // Ratings list
-          Expanded(
-            child: ratingsAsync.when(
-              data: (ratings) {
-                if (ratings.isEmpty) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(32),
-                      child: Text(
-                        loc.t('pubProfileNoReview'),
-                        style: TextStyle(
-                          color: AppColors.textTertiary(context),
-                        ),
-                      ),
-                    ),
-                  );
-                }
-                return ListView.separated(
-                  controller: controller,
-                  itemCount: ratings.length,
-                  separatorBuilder: (_, _) =>
-                      Divider(height: 1, color: AppColors.divider(context)),
-                  itemBuilder: (_, i) {
-                    final r = ratings[i] as Map<String, dynamic>;
-                    return _PublicRatingItem(
-                      key: ValueKey(r['id']),
-                      rating: r,
-                      formatDate: (iso) => _formatDate(context, ref, iso),
-                    );
-                  },
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator(color: kPrimary)),
-              error: (e, _) => Center(child: Text(loc.t('errorGenericRetry'))),
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

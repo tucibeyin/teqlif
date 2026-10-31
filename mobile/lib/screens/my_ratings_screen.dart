@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'viewmodels/my_ratings_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -7,6 +9,7 @@ import 'package:teqlif/core/network/api_client.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../services/localization_service.dart';
+import '../services/storage_service.dart';
 import '../widgets/ratings/expandable_comment.dart';
 import 'public_profile_screen.dart';
 
@@ -18,6 +21,97 @@ class MyRatingsScreen extends ConsumerStatefulWidget {
 }
 
 class _MyRatingsScreenState extends ConsumerState<MyRatingsScreen> {
+  final List<dynamic> _receivedExtra = [];
+  final List<dynamic> _givenExtra = [];
+  bool _receivedHasMore = true;
+  bool _givenHasMore = true;
+  bool _receivedLoadingMore = false;
+  bool _givenLoadingMore = false;
+  final _receivedScrollCtrl = ScrollController();
+  final _givenScrollCtrl = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _receivedScrollCtrl.addListener(_onReceivedScroll);
+    _givenScrollCtrl.addListener(_onGivenScroll);
+  }
+
+  @override
+  void dispose() {
+    _receivedScrollCtrl.dispose();
+    _givenScrollCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onReceivedScroll() {
+    if (_receivedScrollCtrl.position.extentAfter < 300 && _receivedHasMore && !_receivedLoadingMore) {
+      _loadMoreReceived();
+    }
+  }
+
+  void _onGivenScroll() {
+    if (_givenScrollCtrl.position.extentAfter < 300 && _givenHasMore && !_givenLoadingMore) {
+      _loadMoreGiven();
+    }
+  }
+
+  Future<void> _loadMoreReceived() async {
+    if (!_receivedHasMore || _receivedLoadingMore) return;
+    final baseLen = ref.read(myRatingsProvider).value?.receivedRatings.length ?? 0;
+    if (_receivedExtra.isEmpty && baseLen < 20) {
+      setState(() => _receivedHasMore = false);
+      return;
+    }
+    setState(() => _receivedLoadingMore = true);
+    try {
+      final offset = baseLen + _receivedExtra.length;
+      final token = await StorageService.getToken();
+      final headers = {'Content-Type': 'application/json', if (token != null) 'Authorization': 'Bearer $token'};
+      final resp = await http.get(
+        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/ratings/me/received?limit=20&offset=$offset'),
+        headers: headers,
+      );
+      if (resp.statusCode == 200 && mounted) {
+        final data = jsonDecode(resp.body) as List;
+        setState(() {
+          _receivedExtra.addAll(data);
+          _receivedHasMore = data.length == 20;
+        });
+      }
+    } catch (_) {} finally {
+      if (mounted) setState(() => _receivedLoadingMore = false);
+    }
+  }
+
+  Future<void> _loadMoreGiven() async {
+    if (!_givenHasMore || _givenLoadingMore) return;
+    final baseLen = ref.read(myRatingsProvider).value?.givenRatings.length ?? 0;
+    if (_givenExtra.isEmpty && baseLen < 20) {
+      setState(() => _givenHasMore = false);
+      return;
+    }
+    setState(() => _givenLoadingMore = true);
+    try {
+      final offset = baseLen + _givenExtra.length;
+      final token = await StorageService.getToken();
+      final headers = {'Content-Type': 'application/json', if (token != null) 'Authorization': 'Bearer $token'};
+      final resp = await http.get(
+        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/ratings/me/given?limit=20&offset=$offset'),
+        headers: headers,
+      );
+      if (resp.statusCode == 200 && mounted) {
+        final data = jsonDecode(resp.body) as List;
+        setState(() {
+          _givenExtra.addAll(data);
+          _givenHasMore = data.length == 20;
+        });
+      }
+    } catch (_) {} finally {
+      if (mounted) setState(() => _givenLoadingMore = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
@@ -46,8 +140,20 @@ class _MyRatingsScreenState extends ConsumerState<MyRatingsScreen> {
         body: stateAsync.when(
           data: (state) => TabBarView(
             children: [
-              _buildList(state.receivedRatings, isReceived: true),
-              _buildList(state.givenRatings, isReceived: false),
+              _buildList(
+                [...state.receivedRatings, ..._receivedExtra],
+                isReceived: true,
+                scrollCtrl: _receivedScrollCtrl,
+                loadingMore: _receivedLoadingMore,
+                hasMore: _receivedHasMore,
+              ),
+              _buildList(
+                [...state.givenRatings, ..._givenExtra],
+                isReceived: false,
+                scrollCtrl: _givenScrollCtrl,
+                loadingMore: _givenLoadingMore,
+                hasMore: _givenHasMore,
+              ),
             ],
           ),
           loading: () => const Center(child: CircularProgressIndicator()),
@@ -57,8 +163,14 @@ class _MyRatingsScreenState extends ConsumerState<MyRatingsScreen> {
     );
   }
 
-  Widget _buildList(List<dynamic> ratings, {required bool isReceived}) {
-    if (ratings.isEmpty) {
+  Widget _buildList(
+    List<dynamic> ratings, {
+    required bool isReceived,
+    required ScrollController scrollCtrl,
+    required bool loadingMore,
+    required bool hasMore,
+  }) {
+    if (ratings.isEmpty && !loadingMore) {
       return Center(
         child: Text(
           isReceived
@@ -70,9 +182,16 @@ class _MyRatingsScreenState extends ConsumerState<MyRatingsScreen> {
     }
 
     return ListView.builder(
+      controller: scrollCtrl,
       padding: const EdgeInsets.all(16),
-      itemCount: ratings.length,
+      itemCount: ratings.length + (hasMore || loadingMore ? 1 : 0),
       itemBuilder: (context, index) {
+        if (index == ratings.length) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Center(child: CircularProgressIndicator(color: kPrimary)),
+          );
+        }
         final item = ratings[index];
         final userObj = isReceived ? item['rater'] : item['rated'];
         return _RatingCard(

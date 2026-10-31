@@ -3315,6 +3315,10 @@ class _FavoritesScreenState extends ConsumerState<_FavoritesScreen> {
   List<dynamic> _listings = [];
   bool _loading = true;
   bool _hasError = false;
+  int _offset = 0;
+  bool _hasMore = true;
+  bool _loadingMore = false;
+  final _scrollCtrl = ScrollController();
 
   ListingFilterState _filter = const ListingFilterState();
 
@@ -3355,22 +3359,33 @@ class _FavoritesScreenState extends ConsumerState<_FavoritesScreen> {
   @override
   void initState() {
     super.initState();
+    _scrollCtrl.addListener(_onScroll);
     _load();
   }
 
   @override
   void dispose() {
+    _scrollCtrl.dispose();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollCtrl.position.extentAfter < 300 && _hasMore && !_loadingMore && !_loading) {
+      _loadMore();
+    }
   }
 
   Future<void> _load() async {
     final cached = ref.read(cacheServiceProvider).getData('user_favorites');
     if (cached != null) {
+      final cachedList = cached as List;
       if (mounted) {
         setState(() {
-          _listings = List.from(cached as List);
+          _listings = List.from(cachedList);
           _loading = false;
           _hasError = false;
+          _offset = cachedList.length;
+          _hasMore = cachedList.length == 20;
         });
       }
     } else {
@@ -3385,7 +3400,7 @@ class _FavoritesScreenState extends ConsumerState<_FavoritesScreen> {
       final token = await StorageService.getToken();
       if (token == null) return;
       final resp = await http.get(
-        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/favorites'),
+        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/favorites?limit=20&offset=0'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (resp.statusCode == 200 && mounted) {
@@ -3399,6 +3414,8 @@ class _FavoritesScreenState extends ConsumerState<_FavoritesScreen> {
           setState(() {
             _listings = data;
             _hasError = false;
+            _offset = data.length;
+            _hasMore = data.length == 20;
           });
         }
       }
@@ -3410,6 +3427,31 @@ class _FavoritesScreenState extends ConsumerState<_FavoritesScreen> {
       if (mounted) setState(() => _hasError = true);
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (!_hasMore || _loadingMore || _loading) return;
+    setState(() => _loadingMore = true);
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return;
+      final resp = await http.get(
+        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/favorites?limit=20&offset=$_offset'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (resp.statusCode == 200 && mounted) {
+        final data = jsonDecode(resp.body) as List;
+        setState(() {
+          _listings = [..._listings, ...data];
+          _offset += data.length;
+          _hasMore = data.length == 20;
+        });
+      }
+    } catch (e) {
+      LoggerService.instance.warning('FavoritesScreen', 'Daha fazla favori yüklenemedi: $e');
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
     }
   }
 
@@ -3504,10 +3546,17 @@ class _FavoritesScreenState extends ConsumerState<_FavoritesScreen> {
                       color: kPrimary,
                       onRefresh: _load,
                       child: ListView.separated(
+                        controller: _scrollCtrl,
                         padding: const EdgeInsets.all(12),
-                        itemCount: filtered.length,
+                        itemCount: filtered.length + (_hasMore || _loadingMore ? 1 : 0),
                         separatorBuilder: (_, _) => const SizedBox(height: 8),
                         itemBuilder: (ctx, i) {
+                          if (i == filtered.length) {
+                            return const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 16),
+                              child: Center(child: CircularProgressIndicator(color: kPrimary)),
+                            );
+                          }
                           final l = filtered[i];
                           final dynamic rawUrls = l['image_urls'];
                           final List<dynamic> imgs;
