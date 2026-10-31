@@ -363,18 +363,18 @@ async def _ids_from_categories(
     exclude_categories: Optional[list[str]] = None,
     limit: int = 40,
 ) -> list[int]:
-    """Belirtilen kategorilerden (veya hariç) rastgele aktif ilan ID'leri döndürür.
+    """Belirtilen kategorilerden rastgele aktif ilan ID'leri döndürür.
 
-    subcategories verilirse: category filtresi + subcategory filtresi (kesişim).
-    Kesişim sonucu boş gelirse subcategory filtresi düşürülür.
+    TABLESAMPLE BERNOULLI(20): sort gerektirmez, her çağrıda farklı rastgele örnekleme.
+    Küçük kategorilerde (sonuç < limit//2) indekssiz tam tarama fallback'i devreye girer.
+    subcategories verilirse: category + subcategory kesişimi; boş gelirse subcategory düşürülür.
     """
-    import random as _rand
     clauses = [
         "l.status = 'active'",
         "l.status != 'deleted'",
         "l.user_id != :uid",
     ]
-    params: dict = {"uid": user_id, "lim": limit, "salt": str(_rand.randint(0, 999999))}
+    params: dict = {"uid": user_id, "lim": limit}
 
     if categories:
         clauses.append("l.category = ANY(:cats)")
@@ -387,22 +387,27 @@ async def _ids_from_categories(
         params["excats"] = exclude_categories
 
     where = " AND ".join(clauses)
-    result = await db.execute(
-        text(f"SELECT l.id FROM listings l WHERE {where} ORDER BY (hashtext(l.id::text || :salt) & 2147483647) LIMIT :lim"),
-        params,
-    )
-    ids = [row.id for row in result]
+
+    async def _fetch(w: str, p: dict, sample: bool) -> list[int]:
+        tablesample = "TABLESAMPLE BERNOULLI(20)" if sample else ""
+        r = await db.execute(
+            text(f"SELECT l.id FROM listings l {tablesample} WHERE {w} LIMIT :lim"),
+            p,
+        )
+        return [row.id for row in r]
+
+    ids = await _fetch(where, params, sample=True)
+    if len(ids) < limit // 2:
+        ids = await _fetch(where, params, sample=False)
 
     # Kesişim boşsa subcategory filtresini düşür ve tekrar dene
     if not ids and subcategories and categories:
-        params_fallback = {k: v for k, v in params.items() if k != "subcats"}
-        clauses_fallback = [c for c in clauses if "subcategory" not in c]
-        where_fallback = " AND ".join(clauses_fallback)
-        result_fallback = await db.execute(
-            text(f"SELECT l.id FROM listings l WHERE {where_fallback} ORDER BY (hashtext(l.id::text || :salt) & 2147483647) LIMIT :lim"),
-            params_fallback,
-        )
-        ids = [row.id for row in result_fallback]
+        p2 = {k: v for k, v in params.items() if k != "subcats"}
+        c2 = [c for c in clauses if "subcategory" not in c]
+        w2 = " AND ".join(c2)
+        ids = await _fetch(w2, p2, sample=True)
+        if len(ids) < limit // 2:
+            ids = await _fetch(w2, p2, sample=False)
 
     return ids
 
