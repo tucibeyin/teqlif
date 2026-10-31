@@ -83,7 +83,7 @@ groups:
           description: "PostgreSQL aktif bağlantı sayısı {{ $value }} — max_connections limitine yaklaşılıyor."
 
       - alert: PostgresReplicationLag
-        expr: pg_replication_lag > 30
+        expr: pg_replication_lag_seconds > 30
         for: 2m
         labels:
           severity: warning
