@@ -1,0 +1,21 @@
+[Unit]
+Description=Prometheus PostgreSQL Exporter (node1)
+After=postgresql@17-main.service
+Wants=postgresql@17-main.service
+
+[Service]
+Type=simple
+User=prometheus
+Group=prometheus
+# Peer auth via unix socket — DATA_SOURCE_NAME'de şifre yok
+Environment=DATA_SOURCE_NAME=postgresql:///postgres?host=/var/run/postgresql&user=prometheus&sslmode=disable
+ExecStart=/usr/local/bin/postgres_exporter \
+  --web.listen-address=10.10.0.1:9187 \
+  --log.level=warn \
+  --auto-discover-databases
+Restart=on-failure
+RestartSec=15
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

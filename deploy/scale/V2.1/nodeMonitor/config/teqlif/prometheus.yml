@@ -47,3 +47,28 @@ scrape_configs:
     static_configs:
       - targets: ['10.10.0.99:9100']
         labels: { node: nodeMonitor, role: monitor }
+
+  # ── SRE-116: Uygulama katmanı metrikleri ──────────────────────────────
+
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['10.10.0.1:9187']
+        labels: { node: node1, component: postgres }
+
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['10.10.0.1:9121']
+        labels: { node: node1, component: redis }
+
+  - job_name: 'pgbouncer'
+    static_configs:
+      - targets: ['10.10.0.1:9127']
+        labels: { node: node1, component: pgbouncer }
+
+  - job_name: 'fastapi'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['10.10.0.1:9182']
+        labels: { node: node1, env: prod }
+      - targets: ['10.10.0.5:8000']
+        labels: { node: node5, env: staging }

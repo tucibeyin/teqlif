@@ -37,3 +37,56 @@ groups:
         annotations:
           summary: "{{ $labels.node }} disk doluyor"
           description: "{{ $labels.node }} {{ $labels.mountpoint }} disk kullanımı %{{ $value | printf \"%.1f\" }}"
+
+  # ── SRE-116: Uygulama katmanı alert kuralları ──────────────────────────
+  - name: app_health
+    interval: 30s
+    rules:
+      - alert: PgBouncerPoolExhausted
+        expr: pgbouncer_pools_sv_idle_count == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PgBouncer havuzu tükendi"
+          description: "PgBouncer {{ $labels.database }}/{{ $labels.user }} havuzunda boş bağlantı yok — yeni sorgular bloke olabilir."
+
+      - alert: RedisMemoryHigh
+        expr: redis_memory_used_bytes / redis_memory_max_bytes * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis bellek kullanımı yüksek"
+          description: "Redis bellek kullanımı %{{ $value | printf \"%.1f\" }} — maxmemory eşiğine yaklaşılıyor, eviction başlayabilir."
+
+      - alert: Http5xxRateHigh
+        expr: |
+          sum(rate(http_requests_total{status=~"5.."}[5m])) by (env)
+          /
+          sum(rate(http_requests_total[5m])) by (env)
+          * 100 > 5
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.env }} HTTP 5xx oranı yüksek"
+          description: "{{ $labels.env }} ortamında 5xx hata oranı %{{ $value | printf \"%.1f\" }} — anlık API arızası olabilir."
+
+      - alert: PostgresConnectionsHigh
+        expr: pg_stat_activity_count > 180
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PostgreSQL bağlantı sayısı yüksek"
+          description: "PostgreSQL aktif bağlantı sayısı {{ $value }} — max_connections limitine yaklaşılıyor."
+
+      - alert: PostgresReplicationLag
+        expr: pg_replication_lag > 30
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PostgreSQL replikasyon gecikmesi"
+          description: "Replikasyon gecikmesi {{ $value }}s — replica güncel değil."
