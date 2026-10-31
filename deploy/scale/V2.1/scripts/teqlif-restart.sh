@@ -172,6 +172,25 @@ sync_services() {
   return 0
 }
 
+# ── sync_scripts: resources/scripts/ altındaki shell scriptleri /usr/local/bin/'e sync et ─
+sync_scripts() {
+  local node_dir="$1"
+  local scripts_dir="$node_dir/resources/scripts"
+  [ -d "$scripts_dir" ] || return 0
+  for script in "$scripts_dir"/*.sh; do
+    [ -f "$script" ] || continue
+    local fname dst
+    fname=$(basename "$script")
+    dst="/usr/local/bin/$fname"
+    if ! diff -q "$script" "$dst" > /dev/null 2>&1; then
+      cp "$script" "$dst"
+      chmod +x "$dst"
+      log "Script güncellendi: $fname → /usr/local/bin/"
+    fi
+  done
+  return 0
+}
+
 # ── alembic_and_sync: migration + veri sync (deployment anında, her restart'ta değil) ─
 alembic_and_sync() {
   local env_file="$1"
@@ -215,6 +234,7 @@ case "$NODE" in
   node2)
     agent_sync
     sync_services "$REPO/deploy/scale/V2.1/node2"
+    sync_scripts "$REPO/deploy/scale/V2.1/node2"
     log "node2 — backup node, uygulama servisi yok. git pull tamamlandı."
     ;;
 
