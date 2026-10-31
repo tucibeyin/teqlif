@@ -3788,7 +3788,7 @@ return StreamTokenOut(
 
 ---
 
-### SRE-92 · 🟡 P2 (Orta) · `chat_commands.py` İçinde Bağımsız `INCR/DECR` ile İzleyici Sayacı Bozulması ve `live:viewer_set` TTL'siz RAM Sızıntısı ✅ Çözüldü (STAMP · 2026-10-31)
+### SRE-92 · 🟡 P2 (Orta) · `chat_commands.py` İçinde Bağımsız `INCR/DECR` ile İzleyici Sayacı Bozulması ve `live:viewer_set` TTL'siz RAM Sızıntısı ✅ Çözüldü (9ec352bb · 2026-10-31)
 
 * **Etkilenen Dosya:** `backend/app/use_cases/chat/commands/chat_commands.py` (satırlar 146–177)
 * **İlgili Metotlar:** `add_viewer`, `remove_viewer`
