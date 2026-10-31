@@ -7678,7 +7678,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 160. ~~**Adım 160 (`SRE-38`):** `auth.py:refresh_token` rotasyonuna 30 saniyelik grace period ekle; eşzamanlı isteklerde mobil kullanıcıların oturumdan atılmasını engelle.~~ ✅ `101b926e`
 161. ~~**Adım 161 (`SRE-07`):** `transfer_teqlik.py` içinde satır kilitleme sırasını `min(id), max(id)` olarak düzenle (Deadlock 40P01 çözümü).~~ ✅ `3ddb7b4c`
 162. ~~**Adım 162 (`SRE-28`):** `stream_finalizer.py` chat dump sorgusunu 500'lük chunk'lara bölerek asyncpg 32767 parametre limit çökmesini engelle.~~ ✅ `e2bea33b`
-163. **Adım 163 (`SRE-17`):** `listing_tasks.py` içindeki ilan pasifleştirmeyi tek bir `UPDATE ... RETURNING` sorgusuna indirge.
+163. ~~**Adım 163 (`SRE-17`):** `listing_tasks.py` içindeki ilan pasifleştirmeyi tek bir `UPDATE ... RETURNING` sorgusuna indirge.~~ ✅ `0d920c02`
 164. **Adım 164 (`SRE-18`):** `analytics_tasks.py` airdrop dağıtımını 500'lük gruplarla chunk'la.
 165. **Adım 165 (`SRE-27`):** `recommendation_service.py` içindeki dinamik `SELECT DISTINCT category` sorgusunu kaldırıp kategori önbelleğini kullan.
 166. **Adım 166 (`SRE-26`):** `storage_service.py:get_object_bytes` rastgele node seçimi yerine dosyanın yüklendiği yetkili MinIO adresini referans al.
@@ -7691,4 +7691,4 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 
 ### 🟢 Faz 4: Mimari İnce Ayar ve Dayanıklılık (P3 Öncelik — 2 Adım)
 173. **Adım 173 (`SRE-10`):** ML eğitim fonksiyonlarının başına Redis dağıtık kilit mekanizması yerleştir.
-174. **Adım 174 (`SRE-29`):** `stream_finalizer.py` ve `edge_orchestrator.py` içindeki O(N) `redis.keys()` aramalarını `SCAN` veya Redis Set indekslemesine çevir.
+174. ~~**Adım 174 (`SRE-29`):** `stream_finalizer.py` ve `edge_orchestrator.py` içindeki O(N) `redis.keys()` aramalarını `SCAN` veya Redis Set indekslemesine çevir.~~ ✅ `0ecc8cfb`
