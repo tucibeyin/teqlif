@@ -38,16 +38,21 @@ else
   echo "[SKIP] prometheus-redis-exporter zaten kurulu"
 fi
 
-# Redis şifresini redis.conf'tan oku ve env dosyasına yaz
+# Redis şifresini redis.conf'tan oku; Debian paketi ExecStart=/usr/bin/prometheus-redis-exporter $ARGS
+# kullanır — env dosyasına ARGS formatında yaz.
 REDIS_CONF="/project/teqlif/config/redis/redis-core.conf"
 REDIS_PASS=$(grep -m1 '^requirepass' "${REDIS_CONF}" 2>/dev/null | awk '{print $2}' || true)
-{
-  echo "REDIS_ADDR=redis://127.0.0.1:6379"
-  echo "REDIS_PASSWORD=${REDIS_PASS}"
-  echo "ARGS=--web.listen-address=10.10.0.1:9121"
-} > /etc/default/prometheus-redis-exporter
+echo "ARGS=--redis.addr=redis://127.0.0.1:6379 --redis.password=${REDIS_PASS} --web.listen-address=10.10.0.1:9121" \
+  > /etc/default/prometheus-redis-exporter
 chmod 640 /etc/default/prometheus-redis-exporter
 chown root:prometheus /etc/default/prometheus-redis-exporter
+# drop-in: boş ExecStart + ARGS kullanan yeni ExecStart (Debian base servisle uyumlu)
+mkdir -p /etc/systemd/system/prometheus-redis-exporter.service.d
+cat > /etc/systemd/system/prometheus-redis-exporter.service.d/override.conf <<'DROPIN'
+[Service]
+ExecStart=
+ExecStart=/usr/bin/prometheus-redis-exporter $ARGS
+DROPIN
 echo "[OK] /etc/default/prometheus-redis-exporter yazıldı"
 
 # ── 5. pgbouncer_exporter (apt) ────────────────────────────────────────────
@@ -60,24 +65,28 @@ fi
 
 # pgbouncer stats_users eklenmişse atla
 if ! grep -q 'stats_users' /etc/pgbouncer/pgbouncer.ini; then
-  # Rastgele 24-char alfanümerik şifre
   PROM_PGBOUNCER_PASS=$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 24)
-  # userlist.txt'ye ekle
   echo "\"prometheus\" \"${PROM_PGBOUNCER_PASS}\"" >> /etc/pgbouncer/userlist.txt
-  # pgbouncer.ini [pgbouncer] bölümüne stats_users ekle
   sed -i '/^\[pgbouncer\]/a stats_users = prometheus' /etc/pgbouncer/pgbouncer.ini
   systemctl reload pgbouncer
-  # env dosyasına pgbouncer bağlantı bilgilerini yaz
-  {
-    echo "PGBOUNCER_DSN=postgresql://prometheus:${PROM_PGBOUNCER_PASS}@127.0.0.1:6432/pgbouncer"
-    echo "ARGS=--web.listen-address=10.10.0.1:9127"
-  } > /etc/default/prometheus-pgbouncer-exporter
-  chmod 640 /etc/default/prometheus-pgbouncer-exporter
-  chown root:prometheus /etc/default/prometheus-pgbouncer-exporter
-  echo "[OK] pgbouncer stats_users = prometheus eklendi, şifre env dosyasına yazıldı"
 else
-  echo "[SKIP] pgbouncer stats_users zaten tanımlı"
+  # Şifreyi mevcut userlist.txt'ten oku
+  PROM_PGBOUNCER_PASS=$(grep '"prometheus"' /etc/pgbouncer/userlist.txt | sed 's/.*" "\(.*\)"/\1/')
+  echo "[SKIP] pgbouncer stats_users zaten tanımlı, şifre userlist.txt'ten okundu"
 fi
+# Debian paketi ExecStart=/usr/bin/prometheus-pgbouncer-exporter $ARGS kullanır;
+# drop-in override ARGS'ı geçirecek şekilde ayarlanmalı.
+echo "ARGS=--pgBouncer.connectionString=postgresql://prometheus:${PROM_PGBOUNCER_PASS}@127.0.0.1:6432/pgbouncer?sslmode=disable --web.listen-address=10.10.0.1:9127" \
+  > /etc/default/prometheus-pgbouncer-exporter
+chmod 640 /etc/default/prometheus-pgbouncer-exporter
+chown root:postgres /etc/default/prometheus-pgbouncer-exporter
+mkdir -p /etc/systemd/system/prometheus-pgbouncer-exporter.service.d
+cat > /etc/systemd/system/prometheus-pgbouncer-exporter.service.d/override.conf <<'DROPIN'
+[Service]
+ExecStart=
+ExecStart=/usr/bin/prometheus-pgbouncer-exporter $ARGS
+DROPIN
+echo "[OK] pgbouncer exporter env + drop-in yazıldı"
 
 # ── 6. nginx metrics proxy (FastAPI /metrics → 10.10.0.1:9182) ────────────
 NGINX_CONF_SRC="${SCRIPT_DIR}/nginx/teqlif-metrics-proxy.conf"
