@@ -18,7 +18,7 @@ Kullanım:
       --api-key      <key> \\
       --api-secret   <secret> \\
       --node-id      node4 \\
-      --redis-url    redis://127.0.0.1:6379
+      --redis-url    redis://10.10.0.1:6379/0
 """
 from __future__ import annotations
 
@@ -276,7 +276,7 @@ async def _main_async() -> None:
     parser.add_argument("--api-key",       required=True)
     parser.add_argument("--api-secret",    required=True)
     parser.add_argument("--node-id",       default=os.environ.get("AGENT_NODE_ID", "unknown"))
-    parser.add_argument("--redis-url",     default=os.environ.get("REDIS_URL", "redis://127.0.0.1:6379"))
+    parser.add_argument("--redis-url",     default=os.environ.get("REDIS_URL", "redis://10.10.0.1:6379/0"))
     args = parser.parse_args()
 
     stop_evt = asyncio.Event()
