@@ -1078,6 +1078,12 @@ all_categories = [row[0] for row in cat_result.fetchall()]
 #### 2. Çözüm / Refactoring Reçetesi
 Kategoriler doğrudan `app.utils.category_cache.get_categories()` üzerinden RAM/Redis'ten O(1) hızında okunmalıdır; PostgreSQL'e kesinlikle dinamik `DISTINCT` sorgusu atılmamalıdır.
 
+#### ✅ Çözüm Damgası
+- **Commit:** `282cee24` — `fix(sre-27): recommendation SELECT DISTINCT category → category_cache`
+- **Tarih:** 2026-11-01
+- **Değişen Dosya:** `backend/app/services/recommendation_service.py`
+- **Yapılan:** `get_personalized_feed` içindeki `SELECT DISTINCT category FROM listings WHERE status='active' LIMIT 50` sorgusu kaldırıldı; yerine startup'ta yüklenen `category_cache.get_valid_category_keys()` in-memory çağrısı konuldu. Her ana sayfa yenilemesindeki 30-60 ms DB full scan gecikme ortadan kalktı.
+
 ---
 
 ### SRE-28 · 🟡 P2 (Orta) · Canlı Yayın Sohbet Dump'ında asyncpg Parametre Limiti (32767) Çökmesi
@@ -7686,7 +7692,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 162. ~~**Adım 162 (`SRE-28`):** `stream_finalizer.py` chat dump sorgusunu 500'lük chunk'lara bölerek asyncpg 32767 parametre limit çökmesini engelle.~~ ✅ `e2bea33b`
 163. ~~**Adım 163 (`SRE-17`):** `listing_tasks.py` içindeki ilan pasifleştirmeyi tek bir `UPDATE ... RETURNING` sorgusuna indirge.~~ ✅ `0d920c02`
 164. ~~**Adım 164 (`SRE-18`):** `analytics_tasks.py` airdrop dağıtımını 500'lük gruplarla chunk'la.~~ ✅ `d591b64f`
-165. **Adım 165 (`SRE-27`):** `recommendation_service.py` içindeki dinamik `SELECT DISTINCT category` sorgusunu kaldırıp kategori önbelleğini kullan.
+165. ~~**Adım 165 (`SRE-27`):** `recommendation_service.py` içindeki dinamik `SELECT DISTINCT category` sorgusunu kaldırıp kategori önbelleğini kullan.~~ ✅ `282cee24`
 166. **Adım 166 (`SRE-26`):** `storage_service.py:get_object_bytes` rastgele node seçimi yerine dosyanın yüklendiği yetkili MinIO adresini referans al.
 167. **Adım 167 (`SRE-30`):** `hype_manager.py` skor durumunu Redis'e taşıyarak 8 Uvicorn worker arasında veri senkronizasyonunu sağla.
 168. **Adım 168 (`SRE-05`):** `foryou_worker.py` içindeki sorguya `last_active_at` filtresi ekle ve Redis çağrılarını pipeline yap.
