@@ -7663,7 +7663,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 159. ~~**Adım 159 (`SRE-60`):** `livekit_relay.py` varsayılan Redis adresini `10.10.0.1:6379` yap; relay hazırlık sinyalinin kaybolmasını engelle.~~ ✅ `f3e8d1f7`
 160. ~~**Adım 160 (`SRE-38`):** `auth.py:refresh_token` rotasyonuna 30 saniyelik grace period ekle; eşzamanlı isteklerde mobil kullanıcıların oturumdan atılmasını engelle.~~ ✅ `101b926e`
 161. ~~**Adım 161 (`SRE-07`):** `transfer_teqlik.py` içinde satır kilitleme sırasını `min(id), max(id)` olarak düzenle (Deadlock 40P01 çözümü).~~ ✅ `3ddb7b4c`
-162. **Adım 162 (`SRE-28`):** `stream_finalizer.py` chat dump sorgusunu 500'lük chunk'lara bölerek asyncpg 32767 parametre limit çökmesini engelle.
+162. ~~**Adım 162 (`SRE-28`):** `stream_finalizer.py` chat dump sorgusunu 500'lük chunk'lara bölerek asyncpg 32767 parametre limit çökmesini engelle.~~ ✅ `PENDING`
 163. **Adım 163 (`SRE-17`):** `listing_tasks.py` içindeki ilan pasifleştirmeyi tek bir `UPDATE ... RETURNING` sorgusuna indirge.
 164. **Adım 164 (`SRE-18`):** `analytics_tasks.py` airdrop dağıtımını 500'lük gruplarla chunk'la.
 165. **Adım 165 (`SRE-27`):** `recommendation_service.py` içindeki dinamik `SELECT DISTINCT category` sorgusunu kaldırıp kategori önbelleğini kullan.

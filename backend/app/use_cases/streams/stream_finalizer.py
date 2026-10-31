@@ -66,8 +66,12 @@ async def dump_chat_to_db(stream_id: int, db: AsyncSession) -> bool:
         if not rows:
             return True
 
+        # asyncpg int16 parametre limiti: 32767 / 9 parametre/satır ≈ 3640 satır.
+        # 500'lük chunk'lar bu sınırın çok altında kalır.
+        _CHUNK = 500
         await db.execute(sa_delete(StreamChatMessage).where(StreamChatMessage.stream_id == stream_id))
-        await db.execute(pg_insert(StreamChatMessage).values(rows))
+        for i in range(0, len(rows), _CHUNK):
+            await db.execute(pg_insert(StreamChatMessage).values(rows[i : i + _CHUNK]))
         await db.commit()
         logger.info("[Finalizer] Chat dump tamamlandı | stream_id=%s mesaj=%d", stream_id, len(rows))
         return True
