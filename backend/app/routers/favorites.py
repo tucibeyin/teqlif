@@ -53,7 +53,7 @@ async def get_favorites(
         .join(Favorite, Favorite.listing_id == Listing.id)
         .join(User, User.id == Listing.user_id)
         .where(Favorite.user_id == current_user.id, Listing.status != ListingStatus.DELETED)  # noqa: E712
-        .order_by(Favorite.created_at.desc())
+        .order_by(Favorite.created_at.desc(), Favorite.id.desc())
         .limit(limit)
         .offset(offset)
     )).all()

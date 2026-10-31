@@ -95,14 +95,18 @@ async def mark_read(
 @router.get("/me/received")
 async def get_my_received_ratings(
     current_user: User = Depends(get_current_user),
+    limit: int = Query(20, ge=1, le=50),
+    offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
 ):
-    """Kullanıcının aldığı değerlendirmeler — yanıt ve geçmiş bilgisiyle."""
+    """Kullanıcının aldığı değerlendirmeler — sayfalı, yanıt ve geçmiş bilgisiyle."""
     rows = await db.execute(
         select(Rating, User)
         .join(User, User.id == Rating.rater_id)
         .where(Rating.rated_id == current_user.id)
-        .order_by(Rating.created_at.desc())
+        .order_by(Rating.created_at.desc(), Rating.id.desc())
+        .limit(limit)
+        .offset(offset)
     )
     pairs = rows.all()
     rating_ids = [r.id for r, _ in pairs]
@@ -133,14 +137,18 @@ async def get_my_received_ratings(
 @router.get("/me/given")
 async def get_my_given_ratings(
     current_user: User = Depends(get_current_user),
+    limit: int = Query(20, ge=1, le=50),
+    offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
 ):
-    """Kullanıcının verdiği değerlendirmeler — geçmiş bilgisiyle."""
+    """Kullanıcının verdiği değerlendirmeler — sayfalı, geçmiş bilgisiyle."""
     rows = await db.execute(
         select(Rating, User)
         .join(User, User.id == Rating.rated_id)
         .where(Rating.rater_id == current_user.id)
-        .order_by(Rating.created_at.desc())
+        .order_by(Rating.created_at.desc(), Rating.id.desc())
+        .limit(limit)
+        .offset(offset)
     )
     pairs = rows.all()
     rating_ids = [r.id for r, _ in pairs]
@@ -243,7 +251,7 @@ async def get_ratings(
         select(Rating, User)
         .join(User, User.id == Rating.rater_id)
         .where(Rating.rated_id == user_id)
-        .order_by(Rating.updated_at.desc())
+        .order_by(Rating.updated_at.desc(), Rating.id.desc())
         .limit(limit)
         .offset(offset)
     )
