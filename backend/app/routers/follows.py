@@ -106,6 +106,12 @@ async def follow_user(
     status = "pending" if target.is_private else "accepted"
     follow = Follow(follower_id=current_user.id, followed_id=user_id, status=status)
     db.add(follow)
+    if status == "accepted":
+        await db.execute(
+            sa_update(User)
+            .where(User.id == user_id)
+            .values(follower_count=User.follower_count + 1)
+        )
     await db.commit()
 
     asyncio.create_task(invalidate_user_profile_cache(target.username))
@@ -163,6 +169,12 @@ async def unfollow_user(
     if not follow:
         raise NotFoundException(code="FOLLOW_RECORD_NOT_FOUND")
     target = await db.get(User, user_id)
+    if follow.status == "accepted":
+        await db.execute(
+            sa_update(User)
+            .where(User.id == user_id, User.follower_count > 0)
+            .values(follower_count=User.follower_count - 1)
+        )
     await db.delete(follow)
     await db.commit()
 
@@ -210,6 +222,11 @@ async def accept_follow_request(
         raise NotFoundException(code="FOLLOW_REQUEST_NOT_FOUND")
 
     follow.status = "accepted"
+    await db.execute(
+        sa_update(User)
+        .where(User.id == current_user.id)
+        .values(follower_count=User.follower_count + 1)
+    )
 
     # Follow kabul edilince mesaj isteği de normal konuşmaya dönüşür
     user_a, user_b = min(follower_id, current_user.id), max(follower_id, current_user.id)
