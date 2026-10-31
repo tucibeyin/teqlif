@@ -1121,6 +1121,14 @@ Canlı bir sistemde `KEYS` komutu çalıştığı sırada Redis tüm diğer gele
 1. `KEYS` yerine bloklamayan imleç tabanlı **`SCAN` (veya `redis.scan_iter`)** kullanılmalıdır.
 2. Veya daha iyisi: İlgili anahtarlar bir Redis Set'inde (`edge:nodes:active` veya `user:{id}:insight_keys`) indekslenmeli; böylece arama yapmaya gerek kalmadan O(1) `SMEMBERS` ile çekilmelidir.
 
+#### ✅ Çözüm Damgası
+- **Commit:** `0ecc8cfb` — `fix(sre-29): redis.keys() → scan_iter — event-loop blokajını kaldır`
+- **Tarih:** 2026-10-31
+- **Değişen Dosyalar:**
+  - `backend/app/use_cases/streams/stream_finalizer.py` (satır 152): `await redis.keys(...)` → `[k async for k in redis.scan_iter(...)]`
+  - `backend/app/services/edge_orchestrator.py` (satır 34): `await redis.keys(...)` → `[k async for k in redis.scan_iter(...)]`
+- **Yapılan:** O(N) KEYS komutu cursor tabanlı SCAN ile değiştirildi; Redis event-loop artık büyük keyspace taramalarında bloklanmaz.
+
 ---
 
 ### SRE-30 · 🟡 P2 (Orta) · Hype Manager Süreç İçi (In-Memory) Durum ve 8 Worker Arasında Senkronizasyon Yokluğu
