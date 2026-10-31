@@ -1052,6 +1052,12 @@ Bir avatar veya görsel `node1`'e yüklendiğinde, daha sonra `get_object_bytes`
 1. MinIO mimarisi küme genelinde ya tekil bir merkezi gateway (node1) üzerinden sunulmalı ya da `cluster.yaml`'daki gibi tek bir authoritative endpoint (`10.10.0.1:9000`) üzerinden yönetilmelidir.
 2. Dosya anahtarları (key) hangi node'a yüklendiğini içermeli (`node_id/bucket/key`) ya da `delete_object` fonksiyonundaki gibi URL üzerinden domain çözümlemesi yapılmalıdır.
 
+#### ✅ Çözüm Damgası
+- **Commit:** `537740c1` — `fix(sre-26): storage read fanout tüm node'ları dener (allocate yerine try-all)`
+- **Tarih:** 2026-11-01
+- **Değişen Dosya:** `backend/app/services/storage_service.py`
+- **Yapılan:** `get_object_bytes`, `get_object_bytes_dm` ve `list_object_keys` fonksiyonlarında `allocate_node(ServiceType.STORAGE)` kaldırıldı; yerine `_get_all_storage_clients()` ile tüm node'lar sırayla denenir. `NoSuchKey` → sonraki node, diğer S3 hatası → mevcut raise davranışı korundu. `list_object_keys` tüm node'lardan union döner. Yüklendiği node dışında seçim yapılıp `NoSuchKey` döndüğü routing hatası giderildi.
+
 ---
 
 ### SRE-27 · 🟡 P2 (Orta) · Keşfet Akışında Her İstekte Dinamik `SELECT DISTINCT category` Sorgusu
@@ -7693,7 +7699,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 163. ~~**Adım 163 (`SRE-17`):** `listing_tasks.py` içindeki ilan pasifleştirmeyi tek bir `UPDATE ... RETURNING` sorgusuna indirge.~~ ✅ `0d920c02`
 164. ~~**Adım 164 (`SRE-18`):** `analytics_tasks.py` airdrop dağıtımını 500'lük gruplarla chunk'la.~~ ✅ `d591b64f`
 165. ~~**Adım 165 (`SRE-27`):** `recommendation_service.py` içindeki dinamik `SELECT DISTINCT category` sorgusunu kaldırıp kategori önbelleğini kullan.~~ ✅ `282cee24`
-166. **Adım 166 (`SRE-26`):** `storage_service.py:get_object_bytes` rastgele node seçimi yerine dosyanın yüklendiği yetkili MinIO adresini referans al.
+166. ~~**Adım 166 (`SRE-26`):** `storage_service.py:get_object_bytes` rastgele node seçimi yerine dosyanın yüklendiği yetkili MinIO adresini referans al.~~ ✅ `537740c1`
 167. **Adım 167 (`SRE-30`):** `hype_manager.py` skor durumunu Redis'e taşıyarak 8 Uvicorn worker arasında veri senkronizasyonunu sağla.
 168. **Adım 168 (`SRE-05`):** `foryou_worker.py` içindeki sorguya `last_active_at` filtresi ekle ve Redis çağrılarını pipeline yap.
 169. **Adım 169 (`SRE-06`):** `feed_als_ml.py` ve `swipe_live_ml.py` içindeki Redis pipeline'larına 1.000'lik chunk döngüsü ekle.
