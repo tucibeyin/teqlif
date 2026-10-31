@@ -7657,7 +7657,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 153. ~~**Adım 153 (`SRE-62`):** `messages.py:get_messages` GET endpoint'inden `MarkMessagesReadCommand` çağrısını kaldır; `POST /{other_user_id}/read` bağımsız endpoint'i açarak Read-Replica çökmesini ve prefetch okundu hatalarını engelle.~~ ✅ `670f34ed`
 154. ~~**Adım 154 (`SRE-63`):** `chat.py:_check_whale_status` mantıksal kontrolünü `host_type != "pro"` olarak düzelt; standart kullanıcıların yayınlarında her izleyici girişinde `Purchase` tablosunun taranmasını durdur.~~ ✅ `8bcca43b`
 155. ~~**Adım 155 (`SRE-67`):** `recommendation_service.py:_ids_from_categories` dinamik `ORDER BY hashtext(...)` sıralamasını kaldırıp Redis Set veya hafif aralık örneklemesine geçir; Postgres CPU %100 darboğazını çöz.~~ ✅ `dcc955c9`
-156. **Adım 156 (`SRE-45`):** `.env.production` içindeki `ACCESS_TOKEN_EXPIRE_MINUTES` değerini 43200'den (30 gün) 60 dakikaya indir.
+156. ~~**Adım 156 (`SRE-45`):** `.env.production` içindeki `ACCESS_TOKEN_EXPIRE_MINUTES` değerini 43200'den (30 gün) 60 dakikaya indir.~~ ✅ `COMMIT_HASH`
 157. **Adım 157 (`SRE-46`):** `leader.py` içine 3 ardışık cycle toleransı ekle; split-brain ve mükerrer temizlik/raporlama riskini gider.
 158. **Adım 158 (`SRE-54`):** `clickhouse_backup.sh` CLI sözdizimini düzelt ve fallback moduna dinamik tablo listesi ekle; tabloların yedeksiz kalmasını engelle.
 159. **Adım 159 (`SRE-60`):** `livekit_relay.py` varsayılan Redis adresini `10.10.0.1:6379` yap; relay hazırlık sinyalinin kaybolmasını engelle.
