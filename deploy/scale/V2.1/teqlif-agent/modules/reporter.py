@@ -6,7 +6,7 @@ Node sağlığı · gece batch işleri · yedek durumu özetlenir.
 from __future__ import annotations
 
 import logging
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 
 from config import AgentConfig
 from db import AgentDB
@@ -60,20 +60,31 @@ _TR_TZ = timezone(timedelta(hours=3))
 
 class MorningReporter:
     def __init__(self, cfg: AgentConfig, db: AgentDB) -> None:
-        self._cfg            = cfg
-        self._db             = db
-        self._last_reported: date | None = None
+        self._cfg = cfg
+        self._db  = db
 
     async def run(self, is_leader: bool) -> None:
         if not is_leader:
             return
         now_utc = datetime.now(timezone.utc)
-        today   = now_utc.date()
         if now_utc.hour != _REPORT_UTC_HOUR:
             return
-        if self._last_reported == today:
-            return
-        self._last_reported = today
+        today     = now_utc.date()
+        redis_key = f"teqlif:agent:morning_reported:{today.isoformat()}"
+        try:
+            import redis.asyncio as _aioredis
+            r = await _aioredis.from_url(self._cfg.redis_url, decode_responses=True)
+            already_sent = await r.exists(redis_key)
+            if already_sent:
+                await r.aclose()
+                return
+            # SET NX: sadece ilk çağıran kazanır (birden fazla restart olsa da tek rapor)
+            set_ok = await r.set(redis_key, "1", nx=True, ex=90000)  # 25 saat TTL
+            await r.aclose()
+            if not set_ok:
+                return  # başka bir instance daha hızlı davrandı
+        except Exception:
+            logger.warning("Redis morning-lock kontrol edilemedi — tek seferlik fallback")
         try:
             await self._send_report(now_utc)
         except Exception:
