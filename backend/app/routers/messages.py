@@ -99,9 +99,17 @@ async def get_messages(
     current_user: User = Depends(get_current_user),
     uow: SqlAlchemyUnitOfWork = Depends(get_uow),
 ):
-    messages = await GetMessagesQuery(uow).execute(current_user.id, other_user_id, before_id)
+    return await GetMessagesQuery(uow).execute(current_user.id, other_user_id, before_id)
+
+
+@router.post("/{other_user_id}/read")
+async def mark_messages_read(
+    other_user_id: int,
+    current_user: User = Depends(get_current_user),
+    uow: SqlAlchemyUnitOfWork = Depends(get_uow),
+):
     await MarkMessagesReadCommand(uow).execute(current_user.id, other_user_id)
-    return messages
+    return {"ok": True}
 
 
 @router.post("/send", response_model=MessageOut)

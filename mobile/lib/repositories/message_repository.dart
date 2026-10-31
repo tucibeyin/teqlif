@@ -82,6 +82,18 @@ class MessageRepository {
 
   // ── Mutasyonlar ──────────────────────────────────────────────────────────
 
+  /// Mesajları okundu işaretle — istemci mesajları ekranda gösterdiğinde çağrılır.
+  Future<void> markMessagesRead(int otherUserId) async {
+    try {
+      await _client.call(
+        () async => http.post(
+          Uri.parse('${_client.config.baseUrl}/messages/$otherUserId/read'),
+          headers: await _buildHeaders(),
+        ),
+      );
+    } catch (_) {}
+  }
+
   /// Mesaj sil — scope: 'everyone' | 'me'.
   Future<bool> deleteMessage(
     int messageId,

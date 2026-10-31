@@ -163,6 +163,10 @@ class MessageThreadViewModel
     return ok;
   }
 
+  /// Okundu bildirimi — istemci mesajları ekranda gösterince çağrılır.
+  Future<void> markRead() =>
+      ref.read(messageRepositoryProvider).markMessagesRead(arg);
+
   /// SWR yenileme — uygulama ön plana gelince veya WS yeniden bağlanınca.
   void refresh() => _startStream(arg);
 }

@@ -1302,6 +1302,8 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
   Future<void> _initScreen() async {
     _myUserId = StorageService.currentUserIdSync ?? await StorageService.getCurrentUserId();
     _listenWs();
+    // Ekran açıldığında karşı tarafın mesajlarını okundu işaretle (GET'ten ayrıldı — SRE-62)
+    ref.read(messageThreadProvider(widget.otherUserId).notifier).markRead();
   }
 
   Future<void> _loadArchive() async {
@@ -1393,6 +1395,10 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
             ));
           }
           ref.read(messageThreadProvider(widget.otherUserId).notifier).handleWsEvent(data);
+          // Karşı taraftan mesaj gelince ekran açıkken okundu işaretle (SRE-62)
+          if (senderId == widget.otherUserId) {
+            ref.read(messageThreadProvider(widget.otherUserId).notifier).markRead();
+          }
           if (msgId != null && msgId > 0) {
             setState(() => _freshMsgIds.add(msgId as int));
             Future.delayed(const Duration(milliseconds: 600), () {
