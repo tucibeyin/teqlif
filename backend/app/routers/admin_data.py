@@ -352,8 +352,10 @@ async def admin_delete_listing(listing_id: int, db: AsyncSession = Depends(get_d
     listing = await db.get(Listing, listing_id)
     if not listing: raise NotFoundException(code="LISTING_NOT_FOUND")
     listing.status = ListingStatus.DELETED
-    listing.status = ListingStatus.PASSIVE
     await db.commit()
+    from app.services.feed.listing_cache_service import remove_from_recent_feed_cache, invalidate_listing
+    await remove_from_recent_feed_cache(listing_id)
+    await invalidate_listing(listing_id)
     return {"message": "Listing deleted."}
 
 # ==========================================
