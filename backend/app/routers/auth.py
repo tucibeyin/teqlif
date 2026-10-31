@@ -998,8 +998,19 @@ async def refresh_token(
     if not token:
         raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrTokenRequired", "refresh_token gerekli"))
 
+    import json as _json
     redis = await get_redis()
-    # GETDEL: atomik GET + DELETE — iki eş zamanlı istek aynı token'ı kullanamaz.
+
+    # Grace period: eşzamanlı refresh isteği daha önce işlendiyse üretilen çifti döndür.
+    # Mobil uygulama aynı anda birden fazla 401 alınca birden fazla refresh tetikler;
+    # ilk istek token'ı tüketir, sonrakiler bu cache'ten yanıt alır (30 sn TTL).
+    used_cached = await redis.get(f"refresh:used:{token}")
+    if used_cached:
+        cached = _json.loads(used_cached)
+        set_auth_cookies(response, cached["access_token"], cached["refresh_token"])
+        return {"access_token": cached["access_token"], "refresh_token": cached["refresh_token"], "token_type": "bearer"}
+
+    # GETDEL: atomik GET + DELETE — token tek kullanımlıktır.
     raw_data = await redis.getdel(f"refresh:{token}")
     if not raw_data:
         raise UnauthorizedException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrTokenInvalid", "Geçersiz veya süresi dolmuş refresh token"))
@@ -1022,6 +1033,8 @@ async def refresh_token(
     new_access = create_access_token(user.id, user.token_version)
     new_refresh = create_refresh_token()
     await redis.setex(f"refresh:{new_refresh}", REFRESH_TOKEN_TTL, f"{user.id}:{user.token_version}")
+    # Eşzamanlı istekler için 30 saniyelik grace period — üretilen çift cache'lenir.
+    await redis.setex(f"refresh:used:{token}", 30, _json.dumps({"access_token": new_access, "refresh_token": new_refresh}))
     set_auth_cookies(response, new_access, new_refresh)
 
     return {"access_token": new_access, "refresh_token": new_refresh, "token_type": "bearer"}
