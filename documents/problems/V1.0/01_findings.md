@@ -3605,7 +3605,7 @@ for lid in expired_ids:
 
 ---
 
-### SRE-88 · 🟡 P2 (Orta) · `teqlif-agent` İçinde Asenkron Event Loop'ta Senkron `time.sleep(1)` ile Agent Kilitlenmesi ✅ Çözüldü (STAMP · 2026-10-31)
+### SRE-88 · 🟡 P2 (Orta) · `teqlif-agent` İçinde Asenkron Event Loop'ta Senkron `time.sleep(1)` ile Agent Kilitlenmesi ✅ Çözüldü (00f887b3 · 2026-10-31)
 
 * **Etkilenen Dosya:** `deploy/scale/V2.1/teqlif-agent/modules/health.py` (satırlar 257–330)
 * **Bileşen:** Node 1–6 üzerinde çalışan `teqlif-agent` donanım ve sağlık izleme servisi
