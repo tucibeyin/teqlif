@@ -26,6 +26,7 @@ _INACTIVE_DAYS = 5         # Bu kadar gün sessizlik → risk sinyali
 _LOOKBACK_DAYS = 30        # Daha önce aktif miydi? kontrolü için pencere
 _DWELL_WINDOW_DAYS = 3     # Dwell drop karşılaştırma penceresi
 _BATCH_SIZE = 20           # Aynı anda kaç kullanıcıya push
+_AIRDROP_CHUNK = 500       # Her DB transaction'ında işlenecek kullanıcı sayısı
 _SELLER_GAP_DAYS = 14      # Bu kadar gün ilan açmamış satıcı → risk sinyali
 _SELLER_LOOKBACK_DAYS = 60 # Satıcı geçmişi kontrol penceresi
 
@@ -209,6 +210,8 @@ async def _filter_already_received(user_ids: set[int]) -> set[int]:
 async def _apply_airdrops(user_ids: set[int]) -> list[dict]:
     """
     Hak kazanan kullanıcılara teqlik yükle ve transaction logu yaz.
+    500'lük chunk'lar halinde işler; her commit satır kilitlerini anında
+    serbest bırakır, aktif kullanıcı isteklerini bloke etmez.
     Döner: [{"user_id": int, "fcm_token": str|None}, ...]
     """
     if not user_ids:
@@ -218,43 +221,50 @@ async def _apply_airdrops(user_ids: set[int]) -> list[dict]:
     from sqlalchemy import text
 
     uid_list = list(user_ids)
+    all_recipients: list[dict] = []
 
     async with AsyncSessionLocal() as db:
-        # Bakiyeleri toplu güncelle
-        await db.execute(
-            text("""
-                UPDATE users
-                SET teqlik_balance = teqlik_balance + :amount
-                WHERE id = ANY(:uids) AND status = 'active'
-            """),
-            {"amount": _AIRDROP_AMOUNT, "uids": uid_list},
-        )
+        for i in range(0, len(uid_list), _AIRDROP_CHUNK):
+            chunk = uid_list[i : i + _AIRDROP_CHUNK]
 
-        # Transaction loglarını toplu ekle
-        await db.execute(
-            text("""
-                INSERT INTO teqlik_transactions (user_id, amount, transaction_type, created_at)
-                SELECT u, :amount, :ttype, NOW()
-                FROM unnest(CAST(:uids AS int[])) AS u
-            """),
-            {"amount": _AIRDROP_AMOUNT, "ttype": _AIRDROP_TYPE, "uids": uid_list},
-        )
+            # Bakiye güncelle
+            await db.execute(
+                text("""
+                    UPDATE users
+                    SET teqlik_balance = teqlik_balance + :amount
+                    WHERE id = ANY(:uids) AND status = 'active'
+                """),
+                {"amount": _AIRDROP_AMOUNT, "uids": chunk},
+            )
 
-        # Push için FCM tokenları çek (tek sorguda)
-        rows = await db.execute(
-            text("""
-                SELECT id, fcm_token
-                FROM users
-                WHERE id = ANY(:uids) AND status = 'active'
-            """),
-            {"uids": uid_list},
-        )
-        recipients = [{"user_id": row[0], "fcm_token": row[1]} for row in rows.fetchall()]
+            # Transaction logu
+            await db.execute(
+                text("""
+                    INSERT INTO teqlik_transactions (user_id, amount, transaction_type, created_at)
+                    SELECT u, :amount, :ttype, NOW()
+                    FROM unnest(CAST(:uids AS int[])) AS u
+                """),
+                {"amount": _AIRDROP_AMOUNT, "ttype": _AIRDROP_TYPE, "uids": chunk},
+            )
 
-        await db.commit()
+            # Push için FCM tokenları (aynı chunk, kilit serbest kalmadan önce)
+            rows = await db.execute(
+                text("""
+                    SELECT id, fcm_token
+                    FROM users
+                    WHERE id = ANY(:uids) AND status = 'active'
+                """),
+                {"uids": chunk},
+            )
+            all_recipients.extend(
+                {"user_id": row[0], "fcm_token": row[1]} for row in rows.fetchall()
+            )
 
-    logger.info("[ChurnAirdrop] %d kullanıcıya %d teqlik yüklendi.", len(recipients), _AIRDROP_AMOUNT)
-    return recipients
+            # Satır kilitlerini serbest bırak — yeni transaction otomatik başlar
+            await db.commit()
+
+    logger.info("[ChurnAirdrop] %d kullanıcıya %d teqlik yüklendi.", len(all_recipients), _AIRDROP_AMOUNT)
+    return all_recipients
 
 
 async def _send_airdrop_notifications(recipients: list[dict], is_seller: bool = False) -> None:
