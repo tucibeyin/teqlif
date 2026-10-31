@@ -4735,7 +4735,7 @@ async def get_listing_offers(
 
 ---
 
-### SRE-116 · 🟡 P2 (Orta) · DB, Redis, PgBouncer ve API Metriklerinin Scrape Dışında Kalması (Kör İzleme)
+### SRE-116 · 🟡 P2 (Orta) · DB, Redis, PgBouncer ve API Metriklerinin Scrape Dışında Kalması (Kör İzleme) ✅ Çözüldü (5bb24428 · 2026-10-31)
 
 * **Etkilenen Dosya:** `deploy/scale/V2.1/nodeMonitor/config/teqlif/prometheus.yml`
 * **İlgili Satırlar:** [prometheus.yml:15-50](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/nodeMonitor/config/teqlif/prometheus.yml#L15-L50)
