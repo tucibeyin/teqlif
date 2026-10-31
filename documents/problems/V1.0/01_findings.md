@@ -7660,7 +7660,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 156. ~~**Adım 156 (`SRE-45`):** `.env.production` içindeki `ACCESS_TOKEN_EXPIRE_MINUTES` değerini 43200'den (30 gün) 60 dakikaya indir.~~ ✅ `5ff9f94c`
 157. ~~**Adım 157 (`SRE-46`):** `leader.py` içine 3 ardışık cycle toleransı ekle; split-brain ve mükerrer temizlik/raporlama riskini gider.~~ ✅ `841bf4ba`
 158. ~~**Adım 158 (`SRE-54`):** `clickhouse_backup.sh` CLI sözdizimini düzelt ve fallback moduna dinamik tablo listesi ekle; tabloların yedeksiz kalmasını engelle.~~ ✅ `e4458aa1`
-159. ~~**Adım 159 (`SRE-60`):** `livekit_relay.py` varsayılan Redis adresini `10.10.0.1:6379` yap; relay hazırlık sinyalinin kaybolmasını engelle.~~ ✅ `PENDING`
+159. ~~**Adım 159 (`SRE-60`):** `livekit_relay.py` varsayılan Redis adresini `10.10.0.1:6379` yap; relay hazırlık sinyalinin kaybolmasını engelle.~~ ✅ `f3e8d1f7`
 160. **Adım 160 (`SRE-38`):** `auth.py:refresh_token` rotasyonuna 30 saniyelik grace period ekle; eşzamanlı isteklerde mobil kullanıcıların oturumdan atılmasını engelle.
 161. **Adım 161 (`SRE-07`):** `transfer_teqlik.py` içinde satır kilitleme sırasını `min(id), max(id)` olarak düzenle (Deadlock 40P01 çözümü).
 162. **Adım 162 (`SRE-28`):** `stream_finalizer.py` chat dump sorgusunu 500'lük chunk'lara bölerek asyncpg 32767 parametre limit çökmesini engelle.
