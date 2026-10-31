@@ -14,13 +14,16 @@ BACKUP_DIR=/project/teqlif/backups/clickhouse   # native fallback çıktısı (t
 CH_DISK_DIR=/var/lib/clickhouse/backups         # SQL BACKUP çıktısı (clickhouse sahipli)
 RETENTION_DAYS=7
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-DEST="${BACKUP_DIR}/${CH_DB}_${TIMESTAMP}"
+BACKUP_NAME="${CH_DB}_${TIMESTAMP}"             # clickhouse-backup için sade isim (tam yol değil)
+DEST="${BACKUP_DIR}/${BACKUP_NAME}"             # fallback native export için tam yol
 BACKUP_METHOD="primary"
 
 install -d "${BACKUP_DIR}"
 
 # Yöntem 1: clickhouse-backup (tercih edilen, atomik snapshot)
-if clickhouse-backup create --tables "${CH_DB}.*" "${DEST}" 2>/dev/null; then
+# Doğru sözdizim: create <backup_name> --tables="<db>.*"  (tam yol değil, sadece isim)
+if command -v clickhouse-backup &>/dev/null && \
+   clickhouse-backup create "${BACKUP_NAME}" --tables="${CH_DB}.*" 2>/dev/null; then
     :
 # Yöntem 2: SQL BACKUP komutu
 elif clickhouse-client \
@@ -32,7 +35,12 @@ elif clickhouse-client \
 else
     BACKUP_METHOD="fallback"
     mkdir -p "${DEST}"
-    for TABLE in user_events feed_analytics search_events swipe_live_events direct_sale_events mv_listing_events_daily; do
+    # Dinamik tablo listesi — yeni tablo eklense de otomatik yedeklenir
+    # .inner% filtreleme: MV iç tabloları doğrudan dışa aktarılmaz
+    TABLES=$(clickhouse-client --host 127.0.0.1 --port 9000 --user "${CH_USER}" "${CH_PASS_ARG[@]}" \
+        --query "SELECT name FROM system.tables WHERE database='${CH_DB}' AND name NOT LIKE '.inner%'" \
+        2>/dev/null || true)
+    for TABLE in ${TABLES}; do
         clickhouse-client --host 127.0.0.1 --port 9000 --user "${CH_USER}" "${CH_PASS_ARG[@]}" \
             --query "SELECT * FROM ${CH_DB}.${TABLE} FORMAT Native" \
             > "${DEST}/${TABLE}.native"
