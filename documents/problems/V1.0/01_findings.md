@@ -3474,7 +3474,7 @@ await RelationshipStateService.cache(state)  # <-- FELAKET: 1 SAAT REDIS'E KİL�
 
 ---
 
-### SRE-85 · 🟡 P2 (Orta) · `delete_conversation_command.py` ve `delete_message_command.py` İçinde Silinen Mesajların Okunmamış Rozet Filtresinde Kalarak "Hayalet Rozet" Üretmesi
+### SRE-85 · 🟡 P2 (Orta) · `delete_conversation_command.py` ve `delete_message_command.py` İçinde Silinen Mesajların Okunmamış Rozet Filtresinde Kalarak "Hayalet Rozet" Üretmesi ✅ Çözüldü (1f4f4208 · 2026-10-31)
 
 * **Etkilenen Dosyalar:**
   * `backend/app/use_cases/messages/queries/get_unread_count_query.py` (satırlar 11–18)
@@ -7648,7 +7648,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 145. **Adım 145 (`SRE-98`):** `listings.py:get_listing_offers` endpoint'ine `get_current_user` kimlik doğrulaması, ilan sahibi yetki kontrolü ve sayfalama ekle; teklif verenlerin kullanıcı verilerinin ve teklif miktarlarının rakiplerce kazınmasını engelle.
 146. **Adım 146 (`SRE-88`):** `teqlif-agent/modules/health.py:_collect_hw_metrics` içindeki senkron `time.sleep(1)` çağrısını kaldırıp delta tabanlı asenkron ölçüme geçir; agent event loop'unun her 5 sn'de 1 saniye donmasını engelle.
 147. **Adım 147 (`SRE-92`):** `chat_commands.py:add_viewer` ve `remove_viewer` içindeki sayaç artırımını `sadd` sonucuna (`added == 1`) veya `SCARD` komutuna bağla; `live:viewer_set` anahtarına 24 saatlik TTL ekle; sayacın bozulmasını ve kalıcı RAM sızıntısını çöz.
-148. **Adım 148 (`SRE-85`):** `delete_conversation_command.py` ve `get_unread_count_query.py` içine `deleted_for_receiver` ve silinen thread kontrolü ekle; silinen sohbetlerin mobil uygulama üzerinde asla sıfırlanmayan hayalet okunmamış rozet (ghost unread badge) üretmesini engelle.
+148. ~~**Adım 148 (`SRE-85`):** `delete_conversation_command.py` ve `get_unread_count_query.py` içine `deleted_for_receiver` ve silinen thread kontrolü ekle; silinen sohbetlerin mobil uygulama üzerinde asla sıfırlanmayan hayalet okunmamış rozet (ghost unread badge) üretmesini engelle.~~ ✅ `1f4f4208`
 149. **Adım 149 (`SRE-79`):** `users.py:get_suggested_sellers` sorgusundaki tüm `follows` tablosunu `GROUP BY` yapan alt sorguyu kaldırıp kullanıcı bazlı denormalize takipçi sayısına veya skaler alt sorguya geçir; Postgres CPU %100 yükünü çöz.
 150. **Adım 150 (`SRE-80`):** `admin_data.py:admin_delete_listing` satır 323'teki hatalı `listing.status = PASSIVE` atamasını kaldır; admin tarafından silinen ilanların `DELETED` kalmasını sağla.
 151. **Adım 151 (`SRE-71`):** `catalog.py:/version` taksonomi sorgusunu Redis tamsayı sayacına çevir; her sürüm kontrolünde tüm DB'nin taranmasını engelle.
