@@ -724,6 +724,12 @@ result = await db.execute(stmt)
 updated_rows = result.all()  # Sadece bildirim için gereken küçük tuple'lar döner
 ```
 
+#### ✅ Çözüm Damgası
+- **Commit:** `0d920c02` — `fix(sre-17): listing_tasks UPDATE...RETURNING — ORM şişmesi ve IN patlaması giderildi`
+- **Tarih:** 2026-10-31
+- **Değişen Dosya:** `backend/app/tasks/listing_tasks.py`
+- **Yapılan:** `deactivate_expired_listings_task` ve `delete_expired_inactive_listings_task` içindeki `select(Listing) → [listing_ids] → update(id.in_(listing_ids))` zinciri tek bir `UPDATE ... RETURNING` sorgusuna dönüştürüldü. Belleğe ORM nesnesi çekilmiyor, 20.000 parametreli IN listesi üretilmiyor; bildirim ve medya tuple'ları RETURNING ile alınıyor.
+
 ---
 
 ### SRE-18 · 🟡 P2 (Orta) · Churn Airdrop Dağıtımında Toplu Kilit ve Tablo Blokajı
