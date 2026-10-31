@@ -5,8 +5,9 @@ Algoritma: WireGuard mesh üzerinden HTTP ping.
   Hayır → benim.
   Evet  → bekle.
 
-Redis veya dış koordinatör gerektirmez.
-Partition'da her ada kendi liderini seçer.
+Split-brain koruması: tek başarısız ping yeterli değil; üst-öncelikli peer'ların
+3 ardışık cycle (3 × cycle_interval) boyunca erişilememesi gerekir.
+Geçici ağ titremelerinde (jitter / packet-loss) liderlik el değiştirmez.
 """
 from __future__ import annotations
 
@@ -23,11 +24,15 @@ logger = logging.getLogger("teqlif-agent.leader")
 _PING_PATH = "/ping"
 
 
+_PROMOTE_THRESHOLD = 3  # ardışık başarısız cycle sayısı
+
+
 class LeaderElector:
     def __init__(self, cfg: AgentConfig) -> None:
         self._cfg       = cfg
         self._is_leader = False
         self._became_leader_at: float | None = None
+        self._consecutive_failures: int = 0
 
     @property
     def is_leader(self) -> bool:
@@ -36,7 +41,8 @@ class LeaderElector:
     async def check(self) -> bool:
         higher = self._cfg.higher_priority_peers
         if not higher:
-            # En yüksek öncelikli node — her zaman lider
+            # En yüksek öncelikli node — her zaman lider, sayaç sıfırla
+            self._consecutive_failures = 0
             self._promote()
             return True
 
@@ -46,11 +52,23 @@ class LeaderElector:
         any_alive = any(r is True for r in results)
 
         if any_alive:
+            self._consecutive_failures = 0
             self._demote()
             return False
-        else:
+
+        # Üst-öncelikli tüm peer'lar erişilemez
+        self._consecutive_failures += 1
+        if self._consecutive_failures >= _PROMOTE_THRESHOLD:
             self._promote()
             return True
+
+        # Sayaç eşiğe ulaşmadı — geçici kesinti olabilir, mevcut durumu koru
+        logger.warning(
+            "Üst-öncelikli peer'lar erişilemez (%d/%d ardışık) — split-brain koruması aktif",
+            self._consecutive_failures,
+            _PROMOTE_THRESHOLD,
+        )
+        return self._is_leader
 
     async def _ping(self, peer: PeerConfig) -> bool:
         url = f"http://{peer.wg_ip}:{self._cfg.gossip_port}{_PING_PATH}"
