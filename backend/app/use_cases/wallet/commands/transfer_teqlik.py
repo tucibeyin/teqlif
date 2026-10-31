@@ -33,23 +33,41 @@ class TransferTeqlikCommand:
             if receiver is None:
                 raise NotFoundException(code="RECEIVER_NOT_FOUND")
 
-            # Atomik bakiye güncelleme — AND teqlik_balance >= :amt koşulu
-            # eş zamanlı transferlerde double-spend'i önler (RETURNING ile doğrula)
-            result = await self.uow.session.execute(
-                text(
-                    "UPDATE users SET teqlik_balance = teqlik_balance - :amt "
-                    "WHERE id = :uid AND teqlik_balance >= :amt "
-                    "RETURNING teqlik_balance"
-                ),
-                {"amt": amount, "uid": sender_id},
-            )
-            if result.fetchone() is None:
-                raise InsufficientFundsException()
-
-            await self.uow.session.execute(
-                text("UPDATE users SET teqlik_balance = teqlik_balance + :amt WHERE id = :uid"),
-                {"amt": amount, "uid": receiver_id},
-            )
+            # Deterministik kilit sırası: her zaman küçük id'li satır önce güncellenir.
+            # A→B ve B→A eşzamanlı çalışsa bile aynı sırayla kilit talep ederler →
+            # döngüsel bekleme (deadlock / 40P01) matematiksel olarak imkânsız hale gelir.
+            if sender_id < receiver_id:
+                # sender küçük — önce sender'ı düşür, sonra receiver'ı artır
+                result = await self.uow.session.execute(
+                    text(
+                        "UPDATE users SET teqlik_balance = teqlik_balance - :amt "
+                        "WHERE id = :uid AND teqlik_balance >= :amt "
+                        "RETURNING teqlik_balance"
+                    ),
+                    {"amt": amount, "uid": sender_id},
+                )
+                if result.fetchone() is None:
+                    raise InsufficientFundsException()
+                await self.uow.session.execute(
+                    text("UPDATE users SET teqlik_balance = teqlik_balance + :amt WHERE id = :uid"),
+                    {"amt": amount, "uid": receiver_id},
+                )
+            else:
+                # receiver küçük — önce receiver'ı artır (kilit al), sonra sender'dan düş (kilit + bakiye kontrol)
+                await self.uow.session.execute(
+                    text("UPDATE users SET teqlik_balance = teqlik_balance + :amt WHERE id = :uid"),
+                    {"amt": amount, "uid": receiver_id},
+                )
+                result = await self.uow.session.execute(
+                    text(
+                        "UPDATE users SET teqlik_balance = teqlik_balance - :amt "
+                        "WHERE id = :uid AND teqlik_balance >= :amt "
+                        "RETURNING teqlik_balance"
+                    ),
+                    {"amt": amount, "uid": sender_id},
+                )
+                if result.fetchone() is None:
+                    raise InsufficientFundsException()
 
             t1_data = {"user_id": sender_id, "amount": -amount, "transaction_type": "transfer_out", "reference_id": receiver_id}
             t2_data = {"user_id": receiver_id, "amount": amount, "transaction_type": "transfer_in", "reference_id": sender_id}
