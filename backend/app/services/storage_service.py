@@ -135,46 +135,60 @@ async def delete_object(url_or_key: str) -> None:
 
 
 async def list_object_keys(prefix: str) -> list[str]:
-    """Public bucket'taki belirtilen prefix altındaki tüm nesne key'lerini döner."""
-    try:
-        node = await orchestrator.allocate_node(ServiceType.STORAGE)
-        client = _get_client_for_internal_url(node["minio_url"])
-
-        def _list() -> list[str]:
-            return [
-                obj.object_name
-                for obj in client.list_objects(settings.minio_bucket, prefix=prefix, recursive=True)
-            ]
-
-        return await asyncio.to_thread(_list)
-    except Exception as exc:
-        logger.error("[STORAGE] list_object_keys hata: prefix=%s | %s", prefix, exc)
+    """Public bucket'taki belirtilen prefix altındaki tüm nesne key'lerini döner.
+    Tüm storage node'larını tarar ve birleşik listeyi döner.
+    """
+    storage_nodes = await _get_all_storage_clients()
+    if not storage_nodes:
+        logger.error("[STORAGE] list_object_keys: storage node bulunamadı | prefix=%s", prefix)
         return []
+
+    all_keys: set[str] = set()
+    for client, node_label in storage_nodes:
+        try:
+            def _list(_c=client) -> list[str]:
+                return [
+                    obj.object_name
+                    for obj in _c.list_objects(settings.minio_bucket, prefix=prefix, recursive=True)
+                ]
+            keys = await asyncio.to_thread(_list)
+            all_keys.update(keys)
+        except Exception as exc:
+            logger.error("[STORAGE] list_object_keys hata: prefix=%s node=%s | %s", prefix, node_label, exc)
+
+    return list(all_keys)
 
 
 async def get_object_bytes(key: str) -> bytes | None:
-    """Public bucket'tan nesneyi bytes olarak indirir. Yoksa None döner."""
-    try:
-        node = await orchestrator.allocate_node(ServiceType.STORAGE)
-        client = _get_client_for_internal_url(node["minio_url"])
+    """Public bucket'tan nesneyi bytes olarak indirir.
+    Tüm storage node'larını sırayla dener; ilk başarılı node'dan döner.
+    """
+    storage_nodes = await _get_all_storage_clients()
+    if not storage_nodes:
+        logger.error("[STORAGE] get_object_bytes: storage node bulunamadı | key=%s", key)
+        return None
 
-        def _get() -> bytes:
-            resp = client.get_object(settings.minio_bucket, key)
-            try:
-                return resp.read()
-            finally:
-                resp.close()
-                resp.release_conn()
+    for client, node_label in storage_nodes:
+        try:
+            def _get(_c=client) -> bytes:
+                resp = _c.get_object(settings.minio_bucket, key)
+                try:
+                    return resp.read()
+                finally:
+                    resp.close()
+                    resp.release_conn()
 
-        return await asyncio.to_thread(_get)
-    except S3Error as e:
-        if e.code == "NoSuchKey":
+            return await asyncio.to_thread(_get)
+        except S3Error as e:
+            if e.code == "NoSuchKey":
+                continue  # Bu node'da yok, bir sonrakini dene
+            logger.error("[STORAGE] get_object_bytes hata: key=%s node=%s | %s", key, node_label, e)
             return None
-        logger.error("[STORAGE] get_object_bytes hata: key=%s | %s", key, e)
-        return None
-    except Exception as exc:
-        logger.error("[STORAGE] get_object_bytes hata: %s", exc)
-        return None
+        except Exception as exc:
+            logger.error("[STORAGE] get_object_bytes hata: key=%s node=%s | %s", key, node_label, exc)
+            return None
+
+    return None  # Hiçbir node'da bulunamadı
 
 
 def url_to_key(url_or_key: str) -> str:
@@ -208,28 +222,35 @@ async def upload_file_async(key: str, path: str, content_type: str) -> str:
 
 
 async def get_object_bytes_dm(key: str) -> bytes | None:
-    """Private DM bucket'tan nesneyi bytes olarak indirir. Yoksa None döner."""
-    try:
-        node = await orchestrator.allocate_node(ServiceType.STORAGE)
-        client = _get_client_for_internal_url(node["minio_url"])
+    """Private DM bucket'tan nesneyi bytes olarak indirir.
+    Tüm storage node'larını sırayla dener; ilk başarılı node'dan döner.
+    """
+    storage_nodes = await _get_all_storage_clients()
+    if not storage_nodes:
+        logger.error("[STORAGE_DM] get_object_bytes_dm: storage node bulunamadı | key=%s", key)
+        raise RuntimeError(f"No storage node available for DM key: {key}")
 
-        def _get() -> bytes:
-            resp = client.get_object(settings.minio_dm_bucket, key)
-            try:
-                return resp.read()
-            finally:
-                resp.close()
-                resp.release_conn()
+    for client, node_label in storage_nodes:
+        try:
+            def _get(_c=client) -> bytes:
+                resp = _c.get_object(settings.minio_dm_bucket, key)
+                try:
+                    return resp.read()
+                finally:
+                    resp.close()
+                    resp.release_conn()
 
-        return await asyncio.to_thread(_get)
-    except S3Error as e:
-        if e.code == "NoSuchKey":
-            return None
-        logger.error("[STORAGE_DM] get_object_bytes_dm hata: key=%s | %s", key, e)
-        raise
-    except Exception as exc:
-        logger.error("[STORAGE_DM] get_object_bytes_dm beklenmeyen hata: %s", exc)
-        raise
+            return await asyncio.to_thread(_get)
+        except S3Error as e:
+            if e.code == "NoSuchKey":
+                continue  # Bu node'da yok, bir sonrakini dene
+            logger.error("[STORAGE_DM] get_object_bytes_dm hata: key=%s node=%s | %s", key, node_label, e)
+            raise
+        except Exception as exc:
+            logger.error("[STORAGE_DM] get_object_bytes_dm beklenmeyen hata: key=%s node=%s | %s", key, node_label, exc)
+            raise
+
+    return None  # Hiçbir node'da bulunamadı
 
 
 async def upload_bytes_dm(key: str, data: bytes, content_type: str) -> str:
