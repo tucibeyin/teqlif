@@ -311,9 +311,17 @@ def _disk_percent(mount: str = "/") -> float:
     return round(usage.used / usage.total * 100, 1)
 
 
+# Önceki ölçüm için modül düzeyinde durum — event loop bloğu olmadan delta hesaplar
+_last_net_rx: int = 0
+_last_net_tx: int = 0
+_last_net_time: float = 0.0
+
+
 def _net_mbps() -> dict:
-    """Son 1s örneklemesi. Mevcut interface'i otomatik bulur."""
-    def _read_iface() -> tuple[str, int, int]:
+    """Delta tabanlı anlık net hızı döndürür; time.sleep içermez."""
+    global _last_net_rx, _last_net_tx, _last_net_time
+
+    def _read_iface() -> tuple[int, int]:
         with open("/proc/net/dev") as f:
             for line in f:
                 parts = line.split()
@@ -323,14 +331,24 @@ def _net_mbps() -> dict:
                 if iface in ("lo", "wg0") or not iface:
                     continue
                 if re.match(r"^(eth|ens|eno|enp|eno)\d", iface):
-                    return iface, int(parts[1]), int(parts[9])
-        return "", 0, 0
+                    return int(parts[1]), int(parts[9])
+        return 0, 0
 
-    iface, rx1, tx1 = _read_iface()
-    time.sleep(1)
-    _, rx2, tx2 = _read_iface()
-    rx_mbps = round((rx2 - rx1) * 8 / 1_000_000, 2)
-    tx_mbps = round((tx2 - tx1) * 8 / 1_000_000, 2)
+    now = time.monotonic()
+    rx, tx = _read_iface()
+
+    if _last_net_time == 0.0:
+        # İlk çağrı — referans değeri kaydet, sıfır döndür
+        _last_net_rx, _last_net_tx, _last_net_time = rx, tx, now
+        return {"net_rx_mbps": 0.0, "net_tx_mbps": 0.0}
+
+    dt = now - _last_net_time
+    if dt <= 0:
+        return {"net_rx_mbps": 0.0, "net_tx_mbps": 0.0}
+
+    rx_mbps = round(max(0.0, (rx - _last_net_rx) * 8 / (dt * 1_000_000)), 2)
+    tx_mbps = round(max(0.0, (tx - _last_net_tx) * 8 / (dt * 1_000_000)), 2)
+    _last_net_rx, _last_net_tx, _last_net_time = rx, tx, now
     return {"net_rx_mbps": rx_mbps, "net_tx_mbps": tx_mbps}
 
 
