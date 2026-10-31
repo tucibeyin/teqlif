@@ -339,9 +339,17 @@ async def toggle_listing_like(
 @router.get("/{listing_id}/offers")
 async def get_listing_offers(
     listing_id: int,
+    limit: int = FastApiQuery(20, ge=1, le=100),
+    offset: int = FastApiQuery(0, ge=0),
+    current_user: User = Depends(get_current_user),
     uow: SqlAlchemyUnitOfWork = Depends(get_uow),
 ):
-    return await GetListingOffersQuery(uow).execute(listing_id)
+    return await GetListingOffersQuery(uow).execute(
+        listing_id,
+        current_user_id=current_user.id,
+        limit=limit,
+        offset=offset,
+    )
 
 
 # ── Similar Listings ──────────────────────────────────────────────────────────

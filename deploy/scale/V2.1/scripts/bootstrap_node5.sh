@@ -89,6 +89,8 @@ ufw_node5() {
     ufw allow 443/tcp
     # AI Proxy sadece WG mesh'ten
     ufw allow in on wg0 from 10.10.0.0/24 to any port 8001 proto tcp
+    # Prometheus scrape: FastAPI staging /metrics sadece WG mesh'ten (nodeMonitor → SRE-116)
+    ufw allow in on wg0 from 10.10.0.0/24 to any port 8000 proto tcp
     ufw_enable
 }
 

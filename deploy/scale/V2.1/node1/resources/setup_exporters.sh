@@ -68,12 +68,20 @@ if ! grep -q 'stats_users' /etc/pgbouncer/pgbouncer.ini; then
   PROM_PGBOUNCER_PASS=$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 24)
   echo "\"prometheus\" \"${PROM_PGBOUNCER_PASS}\"" >> /etc/pgbouncer/userlist.txt
   sed -i '/^\[pgbouncer\]/a stats_users = prometheus' /etc/pgbouncer/pgbouncer.ini
-  systemctl reload pgbouncer
 else
   # Şifreyi mevcut userlist.txt'ten oku
   PROM_PGBOUNCER_PASS=$(grep '"prometheus"' /etc/pgbouncer/userlist.txt | sed 's/.*" "\(.*\)"/\1/')
   echo "[SKIP] pgbouncer stats_users zaten tanımlı, şifre userlist.txt'ten okundu"
 fi
+# Go-tabanlı postgres-exporter extra_float_digits startup parametresi gönderir;
+# PgBouncer bilinmeyen parametreleri reddeder — transaction pooling için gerekli.
+if ! grep -q 'ignore_startup_parameters' /etc/pgbouncer/pgbouncer.ini; then
+  sed -i '/^\[pgbouncer\]/a ignore_startup_parameters = extra_float_digits' /etc/pgbouncer/pgbouncer.ini
+  echo "[OK] ignore_startup_parameters = extra_float_digits eklendi"
+else
+  echo "[SKIP] ignore_startup_parameters zaten tanımlı"
+fi
+systemctl reload pgbouncer
 # Debian paketi ExecStart=/usr/bin/prometheus-pgbouncer-exporter $ARGS kullanır;
 # drop-in override ARGS'ı geçirecek şekilde ayarlanmalı.
 echo "ARGS=--pgBouncer.connectionString=postgresql://prometheus:${PROM_PGBOUNCER_PASS}@127.0.0.1:6432/pgbouncer?sslmode=disable --web.listen-address=10.10.0.1:9127" \

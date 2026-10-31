@@ -4063,7 +4063,7 @@ if stream.host_id != receiver_id:
 
 ---
 
-### SRE-98 · 🟡 P2 (Orta) · İlan Tekliflerinin Kimlik Doğrulamasız ve Gizliliksiz Halka Açık Sızması
+### SRE-98 · 🟡 P2 (Orta) · İlan Tekliflerinin Kimlik Doğrulamasız ve Gizliliksiz Halka Açık Sızması ✅ Çözüldü (COMMIT_PLACEHOLDER · 2026-10-31)
 
 * **Etkilenen Dosyalar:**
   * `backend/app/routers/listings.py` (satırlar 339–345)
