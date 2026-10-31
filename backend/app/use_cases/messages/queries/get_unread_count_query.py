@@ -13,6 +13,7 @@ class GetUnreadCountQuery:
                 DirectMessage.receiver_id == uid,
                 DirectMessage.is_read == False,
                 DirectMessage.is_shadowbanned == False,
+                DirectMessage.deleted_for_receiver == False,
             )
         )
         return result.scalar_one()

@@ -153,6 +153,7 @@ async def push_notification(
                 select(func.count()).where(
                     DirectMessage.receiver_id == user_id,
                     DirectMessage.is_read == False,  # noqa: E712
+                    DirectMessage.deleted_for_receiver == False,  # noqa: E712
                 )
             ) or 0
             badge = unread_notifs + unread_msgs
@@ -280,6 +281,7 @@ async def send_message_push(user_id: int, notif: dict) -> None:
             select(func.count()).where(
                 DirectMessage.receiver_id == user_id,
                 DirectMessage.is_read == False,  # noqa: E712
+                DirectMessage.deleted_for_receiver == False,  # noqa: E712
             )
         ) or 0
         badge = unread_notifs + unread_msgs

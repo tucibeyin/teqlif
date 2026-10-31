@@ -1,6 +1,6 @@
 import asyncio
 from datetime import datetime, timezone
-from sqlalchemy import select, delete as sa_delete, or_, and_
+from sqlalchemy import select, delete as sa_delete, update as sa_update, or_, and_
 from app.core.uow import AbstractUnitOfWork
 from app.core.logger import get_logger
 from app.models.message_thread import MessageThread
@@ -50,8 +50,17 @@ class DeleteConversationCommand:
             else:
                 thread.deleted_at_b = now
 
-            # Tek taraf sildi: soft-delete yeterli
+            # Tek taraf sildi: soft-delete yeterli — ama rozet temizlenmeli
             if thread.deleted_at_a is None or thread.deleted_at_b is None:
+                await self.uow.session.execute(
+                    sa_update(DirectMessage)
+                    .where(
+                        DirectMessage.receiver_id == uid,
+                        DirectMessage.sender_id == other_user_id,
+                        DirectMessage.is_read == False,
+                    )
+                    .values(is_read=True)
+                )
                 return
 
             # ── Her iki taraf da sildi: tüm veriyi hard-delete et ──
