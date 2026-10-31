@@ -4735,7 +4735,7 @@ async def get_listing_offers(
 
 ---
 
-### SRE-116 · 🟡 P2 (Orta) · DB, Redis, PgBouncer ve API Metriklerinin Scrape Dışında Kalması (Kör İzleme) ✅ Çözüldü (5bb24428 · 2026-10-31)
+### SRE-116 · 🟡 P2 (Orta) · DB, Redis, PgBouncer ve API Metriklerinin Scrape Dışında Kalması (Kör İzleme) ✅ Çözüldü (5bb24428, 1f42fa3f · 2026-10-31)
 
 * **Etkilenen Dosya:** `deploy/scale/V2.1/nodeMonitor/config/teqlif/prometheus.yml`
 * **İlgili Satırlar:** [prometheus.yml:15-50](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/nodeMonitor/config/teqlif/prometheus.yml#L15-L50)
@@ -4751,20 +4751,26 @@ async def get_listing_offers(
    hiçbir Prometheus job'unda yer almamaktadır.
 3. Sonuç: PgBouncer havuzu kilitlendiğinde veya API 500 hataları tavan yaptığında Prometheus hiçbir uyarı vermez; operasyon ekibi sistem çöktüğünde bile sunucu CPU'su %90'ı geçmediği sürece kör kalır.
 
-#### 2. Çözüm / Refactoring Reçetesi
-1. `prometheus.yml` içine `postgres`, `pgbouncer`, `redis` ve `fastapi` scrape job'ları eklenmelidir:
-   ```yaml
-   - job_name: 'postgres'
-     static_configs:
-       - targets: ['10.10.0.1:9187']
-   - job_name: 'redis'
-     static_configs:
-       - targets: ['10.10.0.1:9121']
-   - job_name: 'fastapi'
-     static_configs:
-       - targets: ['10.10.0.1:8000']
-   ```
-2. `alert_rules.yml` içine `PgBouncerPoolExhausted`, `RedisMemoryHigh`, `Http5xxRateHigh` kuralları tanımlanmalıdır.
+#### 2. Uygulanan Çözüm
+
+**Commit `5bb24428`:**
+- `prometheus.yml`: `postgres` (9187), `redis` (9121), `pgbouncer` (9127), `fastapi` (9182/prod + 8000/staging) scrape job'ları eklendi.
+- `alert_rules.yml`: `app_health` grubu — `PgBouncerPoolExhausted`, `RedisMemoryHigh`, `Http5xxRateHigh`, `PostgresConnectionsHigh`, `PostgresReplicationLag` alert kuralları eklendi.
+- `deploy/scale/V2.1/node1/systemd/prometheus-postgres-exporter.service`: Özel servis dosyası (peer auth, `10.10.0.1:9187`).
+- `deploy/scale/V2.1/node1/resources/nginx/teqlif-metrics-proxy.conf`: FastAPI `/metrics` → `10.10.0.1:9182` nginx proxy.
+- `deploy/scale/V2.1/node1/resources/setup_exporters.sh`: Tek adım kurulum scripti.
+
+**Commit `1f42fa3f`:**
+- `setup_exporters.sh`: Debian paket servisleri `ExecStart=$ARGS` kullandığı için `PGBOUNCER_DSN`/`REDIS_PASSWORD` yerine `ARGS` formatına geçildi. Drop-in override'lar güncellendi.
+
+**node1'de uygulanan:**
+- `prometheus-postgres-exporter` (peer auth, `10.10.0.1:9187`) — aktif
+- `prometheus-redis-exporter` (`ARGS` format, `10.10.0.1:9121`) — aktif
+- `prometheus-pgbouncer-exporter` (`ARGS` format + `ignore_startup_parameters`, `10.10.0.1:9127`) — aktif
+- nginx metrics proxy (`10.10.0.1:9182 → 127.0.0.1:8000/metrics`) — aktif
+- Prometheus target sayımı: 11/12 `up` (fastapi/node5 UFW-bloklu, ayrı item)
+
+**Açık madde:** node5 staging FastAPI (`10.10.0.5:8000`) UFW ile bloklu — port 8000'i WireGuard subnet'e (`10.10.0.0/24`) açmak gerekiyor.
 
 ---
 
