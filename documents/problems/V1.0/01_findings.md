@@ -764,6 +764,12 @@ for i in range(0, len(uid_list), CHUNK_SIZE):
 ```
 Böylece veritabanında satır kilitleri milisaniyeler içinde serbest bırakılır ve canlı kullanıcı istekleri engellenmez.
 
+#### ✅ Çözüm Damgası
+- **Commit:** `d591b64f` — `fix(sre-18): airdrop_apply 500'lük chunk — users tablo blokajı giderildi`
+- **Tarih:** 2026-11-01
+- **Değişen Dosya:** `backend/app/tasks/analytics_tasks.py`
+- **Yapılan:** `_apply_airdrops` içindeki tek büyük `UPDATE users WHERE id = ANY(10k_ids)` transaction'ı `_AIRDROP_CHUNK = 500`'lük döngüye bölündü. Her chunk'tan sonra `commit()` çağrılır; satır kilitleri anında serbest bırakılır, aktif kullanıcılar bloke olmaz. FCM token sorgusu da aynı chunk içinde alınır.
+
 ---
 
 ### SRE-19 · 🟠 P1 (Yüksek) · Canlı Yayın Katılımcı Çıkarma / Moderasyonda Yanlış Edge Node Yönlendirmesi
@@ -7679,7 +7685,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 161. ~~**Adım 161 (`SRE-07`):** `transfer_teqlik.py` içinde satır kilitleme sırasını `min(id), max(id)` olarak düzenle (Deadlock 40P01 çözümü).~~ ✅ `3ddb7b4c`
 162. ~~**Adım 162 (`SRE-28`):** `stream_finalizer.py` chat dump sorgusunu 500'lük chunk'lara bölerek asyncpg 32767 parametre limit çökmesini engelle.~~ ✅ `e2bea33b`
 163. ~~**Adım 163 (`SRE-17`):** `listing_tasks.py` içindeki ilan pasifleştirmeyi tek bir `UPDATE ... RETURNING` sorgusuna indirge.~~ ✅ `0d920c02`
-164. **Adım 164 (`SRE-18`):** `analytics_tasks.py` airdrop dağıtımını 500'lük gruplarla chunk'la.
+164. ~~**Adım 164 (`SRE-18`):** `analytics_tasks.py` airdrop dağıtımını 500'lük gruplarla chunk'la.~~ ✅ `d591b64f`
 165. **Adım 165 (`SRE-27`):** `recommendation_service.py` içindeki dinamik `SELECT DISTINCT category` sorgusunu kaldırıp kategori önbelleğini kullan.
 166. **Adım 166 (`SRE-26`):** `storage_service.py:get_object_bytes` rastgele node seçimi yerine dosyanın yüklendiği yetkili MinIO adresini referans al.
 167. **Adım 167 (`SRE-30`):** `hype_manager.py` skor durumunu Redis'e taşıyarak 8 Uvicorn worker arasında veri senkronizasyonunu sağla.
