@@ -1,5 +1,5 @@
 import json
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from app.models.enums import ListingStatus
@@ -42,13 +42,20 @@ def _listing_dict(l: Listing, u: User, likes_count: int = 0, is_liked: bool = Fa
 
 
 @router.get("")
-async def get_favorites(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def get_favorites(
+    current_user: User = Depends(get_current_user),
+    limit: int = Query(20, ge=1, le=50),
+    offset: int = Query(0, ge=0),
+    db: AsyncSession = Depends(get_db),
+):
     rows = (await db.execute(
         select(Listing, User, Favorite)
         .join(Favorite, Favorite.listing_id == Listing.id)
         .join(User, User.id == Listing.user_id)
         .where(Favorite.user_id == current_user.id, Listing.status != ListingStatus.DELETED)  # noqa: E712
         .order_by(Favorite.created_at.desc())
+        .limit(limit)
+        .offset(offset)
     )).all()
 
     if not rows:

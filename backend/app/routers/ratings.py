@@ -1,6 +1,6 @@
 from typing import Optional
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -234,14 +234,18 @@ async def get_rating_summary(
 @router.get("/{user_id}")
 async def get_ratings(
     user_id: int,
+    limit: int = Query(20, ge=1, le=50),
+    offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
 ):
-    """Kullanıcıya verilen tüm puanlar — yanıt ve geçmiş bilgisiyle."""
+    """Kullanıcıya verilen puanlar — sayfalı, yanıt ve geçmiş bilgisiyle."""
     rows = await db.execute(
         select(Rating, User)
         .join(User, User.id == Rating.rater_id)
         .where(Rating.rated_id == user_id)
         .order_by(Rating.updated_at.desc())
+        .limit(limit)
+        .offset(offset)
     )
     pairs = rows.all()
     rating_ids = [r.id for r, _ in pairs]
