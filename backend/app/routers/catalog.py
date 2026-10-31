@@ -103,10 +103,11 @@ def _compute_version(data: dict) -> str:
 
 
 @router.get("/version")
-@cache(expire=86400, key_builder=static_schema_key_builder)
 async def get_catalog_version() -> dict:
-    data = await _build_catalog()
-    return {"version": _compute_version(data)}
+    from app.utils.redis_client import get_redis
+    redis = await get_redis()
+    ver = await redis.get("catalog:version")
+    return {"version": ver.decode() if ver else "1"}
 
 
 @router.get("")

@@ -236,6 +236,8 @@ async def sync_fields():
         if keys:
             await r.delete(*keys)
             print(f"Redis API cache temizlendi. ({len(keys)} key silindi)")
+        ver = await r.incr("catalog:version")
+        print(f"[sync_fields] catalog:version → {ver}")
         await r.aclose()
     except Exception as e:
         print(f"Cache temizlenirken hata oluştu: {e}")
