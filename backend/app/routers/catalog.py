@@ -107,7 +107,7 @@ async def get_catalog_version() -> dict:
     from app.utils.redis_client import get_redis
     redis = await get_redis()
     ver = await redis.get("catalog:version")
-    return {"version": ver.decode() if ver else "1"}
+    return {"version": str(ver) if ver else "1"}
 
 
 @router.get("")
