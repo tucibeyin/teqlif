@@ -311,15 +311,10 @@ async def get_personalized_feed(
             if "|" in key
         ] or None
 
-    # Mevcut tüm aktif kategorileri PostgreSQL'den çek (keşif havuzu için)
-    cat_result = await db.execute(
-        text("""
-            SELECT DISTINCT category FROM listings
-            WHERE status = 'active' AND category IS NOT NULL
-            LIMIT 50
-        """)
-    )
-    all_categories = [row[0] for row in cat_result.fetchall()]
+    # Keşif havuzu için aktif kategoriler: startup'ta yüklenen in-memory cache,
+    # O(1) — her istekte PostgreSQL DISTINCT taraması yapılmaz.
+    from app.utils.category_cache import get_valid_category_keys
+    all_categories = list(get_valid_category_keys())
     if not all_categories:
         all_categories = list(affinity.keys())
 
