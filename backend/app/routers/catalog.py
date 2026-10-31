@@ -114,5 +114,8 @@ async def get_catalog_version() -> dict:
 @cache(expire=86400, key_builder=static_schema_key_builder)
 async def get_catalog(response: Response) -> dict:
     response.headers["Cache-Control"] = "public, max-age=86400, stale-while-revalidate=3600"
+    from app.utils.redis_client import get_redis
     data = await _build_catalog()
-    return {"version": _compute_version(data), **data}
+    redis = await get_redis()
+    ver = await redis.get("catalog:version")
+    return {"version": str(ver) if ver else "1", **data}
