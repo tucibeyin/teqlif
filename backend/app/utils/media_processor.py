@@ -99,9 +99,7 @@ def validate_file_magic(data: bytes, ext: str) -> str | None:
     return None
 
 
-def make_thumbnail_sync(file_path: str, ext: str) -> bytes:
-    """Sync Pillow thumbnail — asyncio.to_thread içinde çağrılmalı."""
-    img = Image.open(file_path)
+def _apply_thumbnail(img: "Image.Image", ext: str) -> bytes:
     try:
         from PIL import ImageOps
         img = ImageOps.exif_transpose(img)
@@ -119,6 +117,16 @@ def make_thumbnail_sync(file_path: str, ext: str) -> bytes:
     fmt = "JPEG" if ext in ("jpg", "webp", "gif") else "PNG"
     img.save(buf, format=fmt, quality=85, optimize=True)
     return buf.getvalue()
+
+
+def make_thumbnail(data: bytes, ext: str) -> bytes:
+    """Bytes'tan thumbnail — asyncio.to_thread içinde çağrılmalı."""
+    return _apply_thumbnail(Image.open(io.BytesIO(data)), ext)
+
+
+def make_thumbnail_sync(file_path: str, ext: str) -> bytes:
+    """Dosya yolundan thumbnail — asyncio.to_thread içinde çağrılmalı."""
+    return _apply_thumbnail(Image.open(file_path), ext)
 
 
 async def get_video_duration(path: str) -> float | None:
