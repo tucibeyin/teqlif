@@ -3192,7 +3192,23 @@ async def run_ml_training_pipeline_task(ctx: dict) -> None:
     Bağımsız Pazar cron'larının yerini alır: SwipeLive ALS → Item2Vec →
     FeedALS → KMeans → ListingQuality → InfluenceScores. Her adım kendi
     try/except bloğuyla sarılır; bir adımın başarısızlığı sonrakini engellemez.
+    Dağıtık kilit (lock:ml:run_ml_training_pipeline) ile aynı anda tek örnek çalışır.
     """
+    from app.utils.redis_client import get_redis
+    _pipeline_lock = "lock:ml:run_ml_training_pipeline"
+    _pipeline_lock_ttl = 21_600  # 6 saat — tam pipeline süresi
+    _redis = await get_redis()
+    if not await _redis.set(_pipeline_lock, "1", nx=True, ex=_pipeline_lock_ttl):
+        logger.warning("[MLPipeline] Kilit alınamadı — başka bir pipeline çalışıyor, atlandı")
+        return
+    try:
+        await _do_ml_training_pipeline(ctx)
+    finally:
+        await _redis.delete(_pipeline_lock)
+
+
+async def _do_ml_training_pipeline(ctx: dict) -> None:
+    """ML pipeline uygulaması — kilidi alan run_ml_training_pipeline_task tarafından çağrılır."""
     steps_ok: list[str] = []
     steps_fail: list[str] = []
 

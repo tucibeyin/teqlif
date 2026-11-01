@@ -33,6 +33,8 @@ _model_lock = threading.Lock()
 
 REDIS_SIM_TTL = 7 * 86400  # 7 gün
 TOP_N_SIMILAR = 20
+_LOCK_KEY     = "lock:ml:train_item2vec"
+_LOCK_TTL     = 7_200      # 2 saat — Word2Vec eğitimi bu süreden uzun sürmez
 VECTOR_SIZE = 64
 
 
@@ -192,9 +194,23 @@ async def _fetch_sessions(db_session, days: int = 90) -> list[list[str]]:
 async def train_item2vec(db_session) -> int:
     """
     Oturum verisinden Word2Vec modeli eğitir ve kaydeder.
+    Dağıtık kilit (lock:ml:train_item2vec) ile aynı anda tek örnek çalışır.
 
     Dönüş: oturum sayısı (0 ise model güncellenmedi).
     """
+    from app.utils.redis_client import get_redis
+    redis = await get_redis()
+    if not await redis.set(_LOCK_KEY, "1", nx=True, ex=_LOCK_TTL):
+        logger.info("[Item2Vec] Kilit alınamadı — başka bir eğitim çalışıyor, atlandı")
+        return 0
+    try:
+        return await _train_item2vec_impl(db_session)
+    finally:
+        await redis.delete(_LOCK_KEY)
+
+
+async def _train_item2vec_impl(db_session) -> int:
+    """Item2Vec eğitim uygulaması — kilidi alan train_item2vec tarafından çağrılır."""
     from gensim.models import Word2Vec
 
     sessions = await _fetch_sessions(db_session)

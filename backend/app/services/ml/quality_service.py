@@ -31,6 +31,8 @@ _scaler: Any = None
 _model_lock = threading.Lock()
 
 FEATURE_COUNT = 18
+_LOCK_KEY     = "lock:ml:train_quality_model"
+_LOCK_TTL     = 7_200   # 2 saat — GBR eğitimi bu süreden uzun sürmez
 
 
 # ── Özellik çıkarımı ─────────────────────────────────────────────────────────
@@ -215,9 +217,23 @@ async def train_quality_model(db_session) -> int:
     """
     Mevcut ilanların içerik özellikleri + gerçek engagement verisiyle
     GradientBoostingRegressor eğitir ve diske kaydeder.
+    Dağıtık kilit (lock:ml:train_quality_model) ile aynı anda tek örnek çalışır.
 
     Dönüş: eğitimde kullanılan örnek sayısı (0 ise model güncellenmedi).
     """
+    from app.utils.redis_client import get_redis
+    redis = await get_redis()
+    if not await redis.set(_LOCK_KEY, "1", nx=True, ex=_LOCK_TTL):
+        logger.info("[Quality] Kilit alınamadı — başka bir eğitim çalışıyor, atlandı")
+        return 0
+    try:
+        return await _train_quality_model_impl(db_session)
+    finally:
+        await redis.delete(_LOCK_KEY)
+
+
+async def _train_quality_model_impl(db_session) -> int:
+    """Quality model eğitim uygulaması — kilidi alan train_quality_model tarafından çağrılır."""
     from sqlalchemy import text
     import numpy as np
     from sklearn.ensemble import GradientBoostingRegressor

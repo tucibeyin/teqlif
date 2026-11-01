@@ -35,6 +35,8 @@ _SUBCAT_VEC_KEY = "feed:als:subcat_vec:{key}"  # key = "category|subcategory"
 _ALS_TTL        = 90_000   # 25 saat — günlük yeniden eğitimden önce bayatlamasın
 _MIN_ROWS       = 15       # Bu kadar satır yoksa eğitimi atla
 _PIPELINE_CHUNK = 1_000    # Redis buffer bloat önleme: pipeline başına max komut
+_LOCK_KEY       = "lock:ml:train_feed_als"
+_LOCK_TTL       = 10_800   # 3 saat — ALS eğitimi bu süreden uzun sürmez
 
 
 # ── Public API ─────────────────────────────────────────────────────────────────
@@ -96,7 +98,7 @@ async def get_als_scores(
 async def train_feed_als(db_session=None) -> None:
     """
     30 günlük feed_analytics verisinden ALS modeli eğit.
-    Faktör vektörlerini Redis'e yaz (25 saat TTL).
+    Dağıtık kilit (lock:ml:train_feed_als) ile aynı anda tek örnek çalışır.
     db_session: subcategory centroid hesaplamak için opsiyonel PostgreSQL oturumu.
     """
     try:
@@ -106,6 +108,21 @@ async def train_feed_als(db_session=None) -> None:
         logger.warning("[FeedALS] implicit/scipy kurulu değil, eğitim atlanıyor")
         return
 
+    from app.utils.redis_client import get_redis_binary as get_redis
+    redis = await get_redis()
+    if not await redis.set(_LOCK_KEY, b"1", nx=True, ex=_LOCK_TTL):
+        logger.info("[FeedALS] Kilit alınamadı — başka bir eğitim çalışıyor, atlandı")
+        return
+    try:
+        await _train_feed_als_impl(db_session)
+    finally:
+        await redis.delete(_LOCK_KEY)
+
+
+async def _train_feed_als_impl(db_session=None) -> None:
+    """Feed ALS eğitim uygulaması — kilidi alan train_feed_als tarafından çağrılır."""
+    import implicit
+    import scipy.sparse as sp
     from app.database_clickhouse import get_clickhouse_client
     from app.utils.redis_client import get_redis_binary as get_redis
 

@@ -32,7 +32,9 @@ _model: Optional[dict] = None   # {"centroids": np.array, "cat_profiles": list[d
 _model_lock = threading.Lock()
 
 N_CLUSTERS = 50
-DIM = 384
+DIM        = 384
+_LOCK_KEY  = "lock:ml:train_kmeans"
+_LOCK_TTL  = 3_600   # 1 saat — KMeans hızlı
 
 
 # ── Model yükleme (singleton) ─────────────────────────────────────────────────
@@ -121,9 +123,23 @@ def get_cold_start_embedding(
 async def train_kmeans(db_session) -> int:
     """
     Aktif ilan embedding'lerinden KMeans modeli eğitir.
+    Dağıtık kilit (lock:ml:train_kmeans) ile aynı anda tek örnek çalışır.
 
     Dönüş: eğitimde kullanılan ilan sayısı (0 → model güncellenmedi).
     """
+    from app.utils.redis_client import get_redis
+    redis = await get_redis()
+    if not await redis.set(_LOCK_KEY, "1", nx=True, ex=_LOCK_TTL):
+        logger.info("[KMeans] Kilit alınamadı — başka bir eğitim çalışıyor, atlandı")
+        return 0
+    try:
+        return await _train_kmeans_impl(db_session)
+    finally:
+        await redis.delete(_LOCK_KEY)
+
+
+async def _train_kmeans_impl(db_session) -> int:
+    """KMeans eğitim uygulaması — kilidi alan train_kmeans tarafından çağrılır."""
     from sqlalchemy import text
     from sklearn.cluster import MiniBatchKMeans
 

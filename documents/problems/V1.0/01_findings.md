@@ -7739,7 +7739,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 169. ~~**Adım 169 (`SRE-06`):** `feed_als_ml.py` ve `swipe_live_ml.py` içindeki Redis pipeline'larına 1.000'lik chunk döngüsü ekle.~~ ✅ `3a09afc4`
 170. ~~**Adım 170 (`SRE-08`):** `wallet_tasks.py` döngüsel SQL'lerini küme tabanlı batch işlemine dönüştür.~~ ✅ `52359e5e`
 ~~171. **Adım 171 (`SRE-09`):** `schedule.yaml` pazar sabahı görevlerini ardışık bir DAG zincirine bağla.~~ ✅ `94bd8367`
-172. **Adım 172 (`SRE-04`):** `bpr_service.py` ve `feed_als_ml.py` veri çekme sorgularına satır tavanı (`LIMIT`) ve süre kısıtlaması getir.
+~~172. **Adım 172 (`SRE-04`):** `bpr_service.py` ve `feed_als_ml.py` veri çekme sorgularına satır tavanı (`LIMIT`) ve süre kısıtlaması getir.~~ ✅ `80352d6b` (2026-10-29'da tamamlandı)
 
 ### 🟢 Faz 4: Mimari İnce Ayar ve Dayanıklılık (P3 Öncelik — 2 Adım)
 173. **Adım 173 (`SRE-10`):** ML eğitim fonksiyonlarının başına Redis dağıtık kilit mekanizması yerleştir.

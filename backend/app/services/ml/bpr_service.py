@@ -37,7 +37,9 @@ _model_data: Optional[dict] = None
 _model_lock = threading.Lock()
 
 _REDIS_PREFIX = "bpr:rec:"
-_REDIS_TTL = 7 * 86400
+_REDIS_TTL    = 7 * 86400
+_LOCK_KEY     = "lock:ml:train_bpr"
+_LOCK_TTL     = 14_400     # 4 saat — BPR 50 iterasyon, uzun sürebilir
 
 _WEIGHTS: dict[str, float] = {
     "listing_offer_submit": 10.0,
@@ -124,9 +126,23 @@ async def _cache_all_recommendations(
 
 async def train_bpr(db_session) -> int:
     """
-    Son 120 günün etkileşim verisinden BPR modeli eğitir.
+    Son 45 günün etkileşim verisinden BPR modeli eğitir.
+    Dağıtık kilit (lock:ml:train_bpr) ile aynı anda tek örnek çalışır.
     Başarılıysa önbelleği günceller ve cached kullanıcı sayısını döndürür.
     """
+    from app.utils.redis_client import get_redis
+    redis = await get_redis()
+    if not await redis.set(_LOCK_KEY, "1", nx=True, ex=_LOCK_TTL):
+        logger.info("[BPR] Kilit alınamadı — başka bir eğitim çalışıyor, atlandı")
+        return 0
+    try:
+        return await _train_bpr_impl(db_session)
+    finally:
+        await redis.delete(_LOCK_KEY)
+
+
+async def _train_bpr_impl(db_session) -> int:
+    """BPR eğitim uygulaması — kilidi alan train_bpr tarafından çağrılır."""
     from sqlalchemy import text
     from implicit.bpr import BayesianPersonalizedRanking
 

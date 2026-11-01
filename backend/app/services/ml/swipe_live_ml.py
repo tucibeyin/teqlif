@@ -21,6 +21,8 @@ _ALS_STREAM_VEC_KEY = "swipelive:als:stream_vec:{sid}"
 _ALS_SUBCAT_VEC_KEY = "swipelive:als:subcat_vec:{key}"  # key = "category|subcategory"
 _ALS_TTL        = 90_000   # 25 saat — günlük yeniden eğitimden önce bayatlamasın
 _PIPELINE_CHUNK = 1_000    # Redis buffer bloat önleme: pipeline başına max komut
+_LOCK_KEY       = "lock:ml:train_swipe_live_als"
+_LOCK_TTL       = 10_800   # 3 saat — ALS eğitimi bu süreden uzun sürmez
 
 
 # ── Public API ─────────────────────────────────────────────────────────────────
@@ -99,7 +101,7 @@ async def get_user_stream_recommendations(
 async def train_swipe_live_als() -> None:
     """
     30 günlük swipe_live_events verisinden ALS modeli eğit.
-    Faktör vektörlerini Redis'e yaz (25 saat TTL).
+    Dağıtık kilit (lock:ml:train_swipe_live_als) ile aynı anda tek örnek çalışır.
     """
     try:
         import implicit
@@ -108,6 +110,21 @@ async def train_swipe_live_als() -> None:
         logger.warning("[SwipeLiveML] implicit/scipy kurulu değil, ALS atlanıyor")
         return
 
+    from app.utils.redis_client import get_redis
+    redis = await get_redis()
+    if not await redis.set(_LOCK_KEY, "1", nx=True, ex=_LOCK_TTL):
+        logger.info("[SwipeLiveML] Kilit alınamadı — başka bir eğitim çalışıyor, atlandı")
+        return
+    try:
+        await _train_swipe_live_als_impl()
+    finally:
+        await redis.delete(_LOCK_KEY)
+
+
+async def _train_swipe_live_als_impl() -> None:
+    """SwipeLive ALS eğitim uygulaması — kilidi alan train_swipe_live_als tarafından çağrılır."""
+    import implicit
+    import scipy.sparse as sp
     from app.database_clickhouse import get_clickhouse_client
     from app.utils.redis_client import get_redis
 
