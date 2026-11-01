@@ -4192,6 +4192,17 @@ if stream.host_id != receiver_id:
 1. `admin_pause_campaign` fonksiyonu doğrudan `app.services.ad_service.pause_campaign` servisini çağırmalı; kampanya Redis setinden ve bütçe anahtarlarından temizlenmelidir.
 2. `admin_toggle_listing` ve `admin_delete_listing` fonksiyonlarında `await remove_from_recent_feed_cache(listing_id)` ve `await invalidate_listing(listing_id)` çağrılmalıdır.
 
+#### ✅ Çözüm Damgası — `30f24b5d` (2026-11-01)
+
+| Alan | Değer |
+|------|-------|
+| Commit | `30f24b5d` |
+| Tarih | 2026-11-01 |
+| Değiştirilen Dosya | `backend/app/routers/admin_data.py` |
+| Fix 1 | `admin_toggle_listing`: commit sonrası `remove_from_recent_feed_cache` + `invalidate_listing` |
+| Fix 2 | `admin_pause_campaign`: pause → pipeline ile 3 Redis key temizliği; active → `_reload_campaign_to_redis` |
+| Defansif | Redis ops try/except ile sarıldı — DB commit sonrası Redis hatası 500'e düşürmez |
+
 ---
 
 ### SRE-98 · 🟡 P2 (Orta) · İlan Tekliflerinin Kimlik Doğrulamasız ve Gizliliksiz Halka Açık Sızması ✅ Çözüldü (04ddf5d2 · 2026-10-31)
@@ -7803,7 +7814,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 86. ~~**Adım 86 (`SRE-93`):** `firebase_adapter.py:send_multicast` içindeki sıralı senkron `requests` döngüsünü kaldırıp asenkron HTTP havuzuna veya Firebase Admin SDK `send_each_for_multicast` toplu gönderimine geçir; takipçi bildirimlerinde `critical` ARQ kuyruğunun 25 dakika kilitlenmesini çöz.~~ ✅ `098444e4` + `af35b5a1`
 87. ~~**Adım 87 (`SRE-95`):** `convert_to_teqlik_command.py` ve `send_gift_command.py` içine sistem hazine hesabı (`id=0`) bakiyesini `users` tablosunda güncelleyen SQL sorgusunu ekle; mutabakat ve denetim kayıtlarının bozulmasını engelle.~~ ✅ `0dfb25cc` + `63fabab6`
 88. ~~**Adım 88 (`SRE-96`):** `wallet.py:send-gift` ve `send_gift_command.py` içine yayın durumu (`stream.status == 'live'`) ve host doğrulaması ekle; kapanmış yayınlar üzerinden bakiye aklanmasını ve sahte hype manipülasyonunu engelle.~~ ✅ `fbb5dbfb`
-89. **Adım 89 (`SRE-97`):** `admin_data.py` kampanya duraklatma ve ilan pasifleştirme endpoint'lerine Redis önbellek temizleme (`srem ad_campaigns:active` ve `invalidate_listing_cache`) çağrılarını ekle; admin aksiyonları ile Redis arasındaki desenkronizasyonu çöz.
+89. ~~**Adım 89 (`SRE-97`):** `admin_data.py` kampanya duraklatma ve ilan pasifleştirme endpoint'lerine Redis önbellek temizleme (`srem ad_campaigns:active` ve `invalidate_listing_cache`) çağrılarını ekle; admin aksiyonları ile Redis arasındaki desenkronizasyonu çöz.~~ ✅ `30f24b5d`
 90. **Adım 90 (`SRE-82`):** `credit_service.py` ve `leads.py` içindeki TOCTOU yarış durumunu Redis Lua scripti ile atomik check-and-consume işlemine dönüştür; kullanıcıların ücretsiz haklarını (blast, boost, ai) eşzamanlı isteklerle limitsiz tüketmesini engelle.
 91. **Adım 91 (`SRE-83`):** `tcmb_service.py:fetch_and_save_tcmb_rates` fonksiyonundaki `ForexBuying` text okumasına `NoneType` kontrolü ve fallback ekle; tatil günlerinde döviz kurlarının `AttributeError` ile çökmesini durdur.
 92. **Adım 92 (`SRE-84`):** `relationship_service.py` içindeki `is_busy` kontrolünü 1 saatlik statik izin önbelleğinden çıkarıp `GetThreadStatusQuery` anında dinamik değerlendirmeye taşı; 15 saniyelik bir telefon görüşmesinde arama butonunun 1 saat kilitli kalmasını (Cache Poisoning) engelle.

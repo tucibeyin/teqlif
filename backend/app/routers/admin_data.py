@@ -667,15 +667,22 @@ async def admin_pause_campaign(campaign_id: int, db: AsyncSession = Depends(get_
     await db.commit()
     from app.services.ad_service import _BUDGET_KEY, _CPC_KEY, _reload_campaign_to_redis
     from app.utils.redis_client import get_redis
-    if new_status == "paused":
-        redis = await get_redis()
-        pipe = redis.pipeline()
-        pipe.delete(_BUDGET_KEY.format(campaign_id))
-        pipe.delete(_CPC_KEY.format(campaign_id))
-        pipe.srem("ad_campaigns:active", str(campaign_id))
-        await pipe.execute()
-    else:
-        await _reload_campaign_to_redis(campaign_id)
+    import logging as _logging
+    try:
+        if new_status == "paused":
+            redis = await get_redis()
+            pipe = redis.pipeline()
+            pipe.delete(_BUDGET_KEY.format(campaign_id))
+            pipe.delete(_CPC_KEY.format(campaign_id))
+            pipe.srem("ad_campaigns:active", str(campaign_id))
+            await pipe.execute()
+        else:
+            await _reload_campaign_to_redis(campaign_id)
+    except Exception as exc:
+        _logging.getLogger(__name__).warning(
+            "[AdminPauseCampaign] Redis cache sync başarısız (DB commit edildi): campaign_id=%s err=%s",
+            campaign_id, exc,
+        )
     return {"message": f"Kampanya durumu → {new_status}", "status": new_status}
 
 
