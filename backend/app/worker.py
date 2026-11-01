@@ -871,6 +871,83 @@ async def cleanup_old_media_messages_task(ctx: dict) -> None:
         raise
 
 
+# ── Task: DM Video Thumbnail (SRE-135) ───────────────────────────────────────
+
+async def generate_dm_video_thumbnail_task(ctx: dict, dm_message_id: int, video_url: str) -> None:
+    """
+    DM video mesajı için thumbnail'i arka planda oluşturur.
+
+    VideoProcessor HTTP isteği döngüsünde FFmpeg çalıştırmak yerine bu görevi kuyruğa alır.
+    WorkerSettingsVideo (max_jobs=2) aynı anda en fazla 2 FFmpeg süreci çalışmasını garantiler.
+    """
+    import os
+    import shutil
+    import tempfile
+    import uuid as _uuid
+
+    from app.database import AsyncSessionLocal
+    from app.models.message import DirectMessage
+    from app.services import storage_service as storage
+    from app.services.dm_broadcast import broadcast_dm
+
+    try:
+        key = storage.dm_url_to_key(video_url)
+        vid_ext = key.rsplit(".", 1)[-1] if "." in key else "mp4"
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            src_path = os.path.join(tmp_dir, f"vid_{_uuid.uuid4().hex}.{vid_ext}")
+            await storage.download_dm_to_file(key, src_path)
+
+            if not shutil.which("ffmpeg"):
+                logger.warning("[DM_THUMB] ffmpeg bulunamadı | dm_id=%s", dm_message_id)
+                return
+
+            thumb_path = os.path.join(tmp_dir, f"{_uuid.uuid4().hex}_thumb.jpg")
+            proc = await asyncio.create_subprocess_exec(
+                "ffmpeg", "-y", "-i", src_path,
+                "-ss", "0", "-frames:v", "1", "-q:v", "2",
+                thumb_path,
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.DEVNULL,
+            )
+            try:
+                await asyncio.wait_for(proc.communicate(), timeout=20)
+            except asyncio.TimeoutError:
+                proc.kill()
+                logger.warning("[DM_THUMB] FFmpeg timeout | dm_id=%s", dm_message_id)
+                return
+
+            if not os.path.exists(thumb_path):
+                logger.warning("[DM_THUMB] Thumbnail dosyası oluşmadı | dm_id=%s", dm_message_id)
+                return
+
+            with open(thumb_path, "rb") as tf:
+                thumb_bytes = tf.read()
+
+        thumb_key = f"messages/vid/{_uuid.uuid4().hex}_thumb.jpg"
+        thumb_url = await storage.upload_bytes_dm(thumb_key, thumb_bytes, "image/jpeg")
+
+        async with AsyncSessionLocal() as db:
+            msg = await db.get(DirectMessage, dm_message_id)
+            if not msg:
+                logger.warning("[DM_THUMB] Mesaj bulunamadı | dm_id=%s", dm_message_id)
+                return
+            msg.thumbnail_url = thumb_url
+            sender_id = msg.sender_id
+            receiver_id = msg.receiver_id
+            await db.commit()
+
+        update_payload = {"type": "message_update", "id": dm_message_id, "thumbnail_url": thumb_url}
+        await broadcast_dm(sender_id, update_payload)
+        await broadcast_dm(receiver_id, update_payload)
+
+        logger.info("[DM_THUMB] Başarılı | dm_id=%s", dm_message_id)
+    except Exception as exc:
+        logger.error("[DM_THUMB] Başarısız | dm_id=%s | %s", dm_message_id, str(exc), exc_info=True)
+        capture_exception(exc)
+        raise
+
+
 # ── Task: Redis Interaction Kuyruğunu DB'ye Yaz ──────────────────────────────
 
 async def flush_interactions_to_db(ctx: dict) -> None:
@@ -4734,6 +4811,7 @@ class WorkerSettingsVideo:
         capture_hype_highlight,
         process_listing_video_task,
         process_story_video_task,
+        generate_dm_video_thumbnail_task,
     ]
 
     cron_jobs = [

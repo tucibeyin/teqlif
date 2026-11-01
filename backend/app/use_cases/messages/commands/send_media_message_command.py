@@ -83,7 +83,8 @@ class SendMediaMessageCommand:
         sender_id: int,
         receiver_id: int,
         content_type_field: str,
-        data: bytes,
+        file_path: str,
+        file_size: int,
         file_content_type: str,
         original_filename: str,
         duration_secs: int | None,
@@ -92,7 +93,6 @@ class SendMediaMessageCommand:
         if sender_id == receiver_id:
             raise ForbiddenException(code="SELF_MESSAGE_FORBIDDEN")
 
-        file_size = len(data)
         if file_size == 0:
             raise BadRequestException(code="MEDIA_EMPTY")
 
@@ -108,7 +108,7 @@ class SendMediaMessageCommand:
 
         # Upload before DB write; orphan cleanup on any subsequent failure
         processed = await process_media(
-            content_type_field, data, file_content_type, original_filename, duration_secs
+            content_type_field, file_path, file_content_type, original_filename, duration_secs
         )
 
         is_new_request = False
@@ -271,6 +271,17 @@ class SendMediaMessageCommand:
                     "sender_username": sender_username,
                 },
             )
+
+        if processed.pending_thumbnail:
+            from app.core.task_queue import get_pool
+            pool = get_pool()
+            if pool:
+                await pool.enqueue_job(
+                    "generate_dm_video_thumbnail_task",
+                    msg.id,
+                    processed.media_url,
+                    _queue_name="video",
+                )
 
         logger.info(
             "[SendMediaMessageCommand] Başarılı | sender=%s receiver=%s type=%s size=%d",

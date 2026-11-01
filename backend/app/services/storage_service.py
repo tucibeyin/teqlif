@@ -253,6 +253,30 @@ async def get_object_bytes_dm(key: str) -> bytes | None:
     return None  # Hiçbir node'da bulunamadı
 
 
+async def download_dm_to_file(key: str, local_path: str) -> None:
+    """DM bucket'tan nesneyi local dosyaya stream eder (fget_object — belleğe almaz)."""
+    storage_nodes = await _get_all_storage_clients()
+    if not storage_nodes:
+        raise RuntimeError(f"No storage node available for DM key: {key}")
+
+    for client, node_label in storage_nodes:
+        try:
+            def _get(_c=client) -> None:
+                _c.fget_object(settings.minio_dm_bucket, key, local_path)
+            await asyncio.to_thread(_get)
+            return
+        except S3Error as e:
+            if e.code == "NoSuchKey":
+                continue
+            logger.error("[STORAGE_DM] download_dm_to_file hata: key=%s node=%s | %s", key, node_label, e)
+            raise
+        except Exception as exc:
+            logger.error("[STORAGE_DM] download_dm_to_file hata: key=%s node=%s | %s", key, node_label, exc)
+            raise
+
+    raise FileNotFoundError(f"DM object not found on any node: {key}")
+
+
 async def upload_bytes_dm(key: str, data: bytes, content_type: str) -> str:
     node = await orchestrator.allocate_node(ServiceType.STORAGE)
     client = _get_client_for_internal_url(node["minio_url"])

@@ -1,6 +1,8 @@
 from typing import List
 import asyncio
 import json
+import os
+import tempfile
 
 from fastapi import APIRouter, Depends, Form, Query, Request, UploadFile, File, WebSocket, WebSocketDisconnect
 from app.core.exceptions import BadRequestException
@@ -136,19 +138,29 @@ _CONTENT_TYPE_LIMITS = {
 _CHUNK = 65536  # 64 KB
 
 
-async def _read_streaming(file: UploadFile, max_bytes: int) -> bytes:
-    """Chunk okuyarak max_bytes kontrolü yapar — tam dosyayı belleğe almadan."""
-    chunks: list[bytes] = []
+async def _stream_to_tmpfile(file: UploadFile, max_bytes: int) -> tuple[str, int]:
+    """Chunk okuyarak temp dosyaya yazar — RAM'e tampon almaz."""
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".bin")
+    tmp_path = tmp.name
     total = 0
-    while True:
-        chunk = await file.read(65536)  # 64 KB
-        if not chunk:
-            break
-        total += len(chunk)
-        if total > max_bytes:
-            raise BadRequestException(code="FILE_TOO_LARGE")
-        chunks.append(chunk)
-    return b"".join(chunks)
+    try:
+        while True:
+            chunk = await file.read(_CHUNK)
+            if not chunk:
+                break
+            total += len(chunk)
+            if total > max_bytes:
+                raise BadRequestException(code="FILE_TOO_LARGE")
+            tmp.write(chunk)
+    except Exception:
+        tmp.close()
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
+    tmp.close()
+    return tmp_path, total
 
 
 @router.post("/upload", response_model=MessageOut)
@@ -170,17 +182,24 @@ async def upload_media_message(
             raise BadRequestException(code="FILE_TOO_LARGE")
 
     max_bytes = _CONTENT_TYPE_LIMITS.get(content_type_field, FILE_MAX_BYTES)
-    data = await _read_streaming(file, max_bytes)
-    return await SendMediaMessageCommand(uow).execute(
-        sender_id=current_user.id,
-        receiver_id=receiver_id,
-        content_type_field=content_type_field,
-        data=data,
-        file_content_type=file.content_type or "",
-        original_filename=file.filename or "",
-        duration_secs=duration_secs,
-        sender_username=current_user.username,
-    )
+    tmp_path, file_size = await _stream_to_tmpfile(file, max_bytes)
+    try:
+        return await SendMediaMessageCommand(uow).execute(
+            sender_id=current_user.id,
+            receiver_id=receiver_id,
+            content_type_field=content_type_field,
+            file_path=tmp_path,
+            file_size=file_size,
+            file_content_type=file.content_type or "",
+            original_filename=file.filename or "",
+            duration_secs=duration_secs,
+            sender_username=current_user.username,
+        )
+    finally:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
 
 
 # ── Delete ────────────────────────────────────────────────────────────────────
