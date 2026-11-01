@@ -160,22 +160,29 @@ async def delete_expired_inactive_listings_task(ctx: dict) -> None:
 
 # ── Cache temizleme ───────────────────────────────────────────────────────────
 
+_REDIS_CHUNK = 1_000  # tek pipeline paketindeki max anahtar sayısı
+
+
 async def _invalidate_listings_batch(listing_ids: list[int]) -> None:
     """
     Pasife alınan ilanları Redis'ten toplu temizler.
-    Tek pipeline ile:
+    Tek pipeline (transaction=False) ile:
       - listing:{id} cache anahtarlarını siler
       - feed:recent ZSet'inden kaldırır
+    Büyük sistemlerde (bakım sonrası birikim vb.) 1.000'lik chunk'larla çalışır.
     """
     if not listing_ids:
         return
     try:
         redis = await get_redis()
-        cache_keys = [f"listing:{lid}" for lid in listing_ids]
-        async with redis.pipeline(transaction=False) as pipe:
-            pipe.delete(*cache_keys)
-            pipe.zrem("feed:recent", *[str(lid) for lid in listing_ids])
-            await pipe.execute()
+        for i in range(0, len(listing_ids), _REDIS_CHUNK):
+            chunk = listing_ids[i : i + _REDIS_CHUNK]
+            cache_keys = [f"listing:{lid}" for lid in chunk]
+            str_ids = [str(lid) for lid in chunk]
+            async with redis.pipeline(transaction=False) as pipe:
+                pipe.delete(*cache_keys)
+                pipe.zrem("feed:recent", *str_ids)
+                await pipe.execute()
         logger.info(
             "[ListingTasks] %d ilan Redis cache'den temizlendi (feed:recent + listing:{id})",
             len(listing_ids),
