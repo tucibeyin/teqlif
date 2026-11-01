@@ -515,6 +515,21 @@ async def purge_user(
     user.email_verified = False
     user.token_version = (user.token_version or 0) + 1
 
+    # İlanları pasife çek
+    await db.execute(
+        Listing.__table__.update()
+        .where(Listing.user_id == user_id)
+        .values(status='passive')
+    )
+
+    # Aktif canlı yayını varsa zorla sonlandır
+    from app.use_cases.streams.commands.force_close_stream import force_close_stream
+    active_stream = (await db.execute(
+        select(LiveStream).where(LiveStream.host_id == user_id, LiveStream.is_live == True)
+    )).scalar_one_or_none()
+    if active_stream:
+        await force_close_stream(db, active_stream.room_name)
+
     await db.commit()
 
     try:

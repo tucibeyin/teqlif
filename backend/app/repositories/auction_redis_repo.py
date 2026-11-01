@@ -116,6 +116,22 @@ redis.call('hdel', key, 'bin_buyer_id', 'bin_buyer_username', 'pre_pending_statu
 return {1, prev, buyer_username, buyer_id}
 """
 
+_ACCEPT_BID_LOCK_SCRIPT = """
+local key = KEYS[1]
+local status = redis.call('hget', key, 'status')
+if status ~= 'active' and status ~= 'paused' then
+    return {0, 'not_active', '', '', ''}
+end
+local current_bid = redis.call('hget', key, 'current_bid')
+if not current_bid or current_bid == '' then
+    return {0, 'no_bid', '', '', ''}
+end
+local bidder_id = redis.call('hget', key, 'current_bidder_id') or ''
+local bidder_name = redis.call('hget', key, 'current_bidder_name') or ''
+redis.call('hset', key, 'status', 'accepting')
+return {1, current_bid, bidder_id, bidder_name, status}
+"""
+
 
 class AuctionRedisRepository:
     def __init__(self):
@@ -193,6 +209,17 @@ class AuctionRedisRepository:
         if int(val[0]) == 0:
             return int(val[0]), val[1], "", ""
         return int(val[0]), val[1], val[2], val[3]
+
+    async def lock_accept_bid(self, stream_id: int) -> Tuple[int, str, str, str, str]:
+        """Atomik olarak accept_bid kilidi alır; durumu 'accepting' yapar, yeni teklifleri engeller.
+        ok=1 → (1, current_bid_str, bidder_id_str, bidder_name_str, original_status_str)
+        ok=0 → (0, 'not_active'|'no_bid', '', '', '')
+        """
+        redis = await get_redis()
+        val = await redis.eval(_ACCEPT_BID_LOCK_SCRIPT, 1, auction_key(stream_id))
+        if int(val[0]) == 0:
+            return int(val[0]), val[1], "", "", ""
+        return int(val[0]), val[1], val[2], val[3], val[4]
 
     async def has_cooldown(self, stream_id: int, user_id: int) -> bool:
         redis = await get_redis()

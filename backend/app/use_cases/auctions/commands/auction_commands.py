@@ -844,20 +844,19 @@ class AuctionCommands:
     async def accept_bid(self, stream_id: int, user: User, proof_image_url: Optional[str] = None) -> dict:
         await self._require_host(stream_id, user)
 
-        data = await self.redis_repo.get_state(stream_id)
-        if not data or data.get("status") not in ("active", "paused"):
+        # Atomik kilit: durumu 'accepting' yapar, bu noktadan sonra yeni teklif giremez
+        ok, raw_bid, winner_id_str, winner_name, original_status = await self.redis_repo.lock_accept_bid(stream_id)
+        if ok == 0:
+            if raw_bid == "no_bid":
+                raise BadRequestException(code="NO_BID_TO_ACCEPT")
             raise BadRequestException(code="AUCTION_NOT_ACTIVE")
+        final_price = float(raw_bid)
 
-        winner_name = data.get("current_bidder_name", "")
-        if not winner_name:
-            raise BadRequestException(code="NO_BID_TO_ACCEPT")
-
-        winner_id_str = data.get("current_bidder_id", "")
-        final_price = float(data["current_bid"])
+        # Durum artık 'accepting' — kalan alanları oku (yeni teklif giremez)
+        data = await self.redis_repo.get_state(stream_id)
         lid_str = data.get("listing_id", "")
         listing_id = int(lid_str) if lid_str else None
         item_name = data.get("item_name", "")
-        original_status = data.get("status", "active")  # kompanzasyon için
 
         listing_line = f"\n🔗 https://teqlif.com/ilan/{listing_id}" if listing_id else ""
         dm_content = (
