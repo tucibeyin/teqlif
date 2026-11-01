@@ -1,6 +1,7 @@
 import logging
 import json
-from sqlalchemy import select
+from datetime import datetime, timezone, timedelta
+from sqlalchemy import select, or_
 from app.database import AsyncSessionLocal
 from app.models.user import User
 from app.models.enums import UserStatus
@@ -9,10 +10,12 @@ from app.schedule_loader import get_ttl
 
 logger = logging.getLogger(__name__)
 
-_FORYOU_TTL = get_ttl("foryou_feed_seconds", default=86400)  # schedule.yaml ttl.foryou_feed_seconds
-_POOL_SIZE   = 500        # BPR + recent birleşiminden alınan max ilan
-_MAX_FEED    = 500        # Redis list max uzunluğu
-_MAX_PER_SUBCAT = 2       # Greedy diversity
+_FORYOU_TTL     = get_ttl("foryou_feed_seconds", default=86400)  # schedule.yaml ttl.foryou_feed_seconds
+_POOL_SIZE      = 500        # BPR + recent birleşiminden alınan max ilan
+_MAX_FEED       = 500        # Redis list max uzunluğu
+_MAX_PER_SUBCAT = 2          # Greedy diversity
+_CHUNK_SIZE     = 500        # mget / pipeline batch büyüklüğü
+_ACTIVE_DAYS    = 7          # Son N gün içinde giriş yapmayan kullanıcılar atlanır
 
 
 async def populate_foryou_feed_task(ctx: dict) -> None:
@@ -25,9 +28,17 @@ async def populate_foryou_feed_task(ctx: dict) -> None:
     try:
         redis = await get_redis()
 
+        # Hayalet kullanıcıları atla: son 7 gün içinde giriş yok ve last_active_at dolu
+        cutoff = datetime.now(timezone.utc) - timedelta(days=_ACTIVE_DAYS)
         async with AsyncSessionLocal() as db:
             result = await db.execute(
-                select(User.id).where(User.status == UserStatus.ACTIVE)
+                select(User.id).where(
+                    User.status == UserStatus.ACTIVE,
+                    or_(
+                        User.last_active_at.is_(None),
+                        User.last_active_at >= cutoff,
+                    ),
+                )
             )
             users = result.scalars().all()
 
@@ -49,44 +60,56 @@ async def populate_foryou_feed_task(ctx: dict) -> None:
         else:
             listing_meta = {}
 
-        for uid in users:
-            bpr_data = await redis.get(f"bpr:rec:{uid}")
-            bpr_listings = json.loads(bpr_data) if bpr_data else []
+        # Kullanıcıları 500'lük chunk'lara böl: mget + pipeline ile N+1 önlenir
+        for i in range(0, len(users), _CHUNK_SIZE):
+            chunk = users[i : i + _CHUNK_SIZE]
 
-            # BPR öncelikli + recent birleşimi (duplicate yok)
-            seen: set[int] = set()
-            combined_pool: list[int] = []
-            for lid in bpr_listings:
-                if lid not in seen:
-                    seen.add(lid)
-                    combined_pool.append(lid)
-            for lid in recent_listings:
-                if lid not in seen:
-                    seen.add(lid)
-                    combined_pool.append(lid)
+            bpr_keys = [f"bpr:rec:{uid}" for uid in chunk]
+            bpr_raws = await redis.mget(*bpr_keys)
 
-            # Greedy diversity
-            final_feed: list[int] = []
-            subcat_counts: dict[str, int] = {}
+            writes: list[tuple[int, str | None]] = []
+            for uid, bpr_raw in zip(chunk, bpr_raws):
+                bpr_listings = json.loads(bpr_raw) if bpr_raw else []
 
-            for lid in combined_pool:
-                if len(final_feed) >= _MAX_FEED:
-                    break
-                meta = listing_meta.get(lid)
-                if not meta or meta.get("status") != "active":
-                    continue
-                subcat = meta.get("subcategory")
-                if subcat:
-                    if subcat_counts.get(subcat, 0) >= _MAX_PER_SUBCAT:
+                # BPR öncelikli + recent birleşimi (duplicate yok)
+                seen: set[int] = set()
+                combined_pool: list[int] = []
+                for lid in bpr_listings:
+                    if lid not in seen:
+                        seen.add(lid)
+                        combined_pool.append(lid)
+                for lid in recent_listings:
+                    if lid not in seen:
+                        seen.add(lid)
+                        combined_pool.append(lid)
+
+                # Greedy diversity
+                final_feed: list[int] = []
+                subcat_counts: dict[str, int] = {}
+
+                for lid in combined_pool:
+                    if len(final_feed) >= _MAX_FEED:
+                        break
+                    meta = listing_meta.get(lid)
+                    if not meta or meta.get("status") != "active":
                         continue
-                    subcat_counts[subcat] = subcat_counts.get(subcat, 0) + 1
-                final_feed.append(lid)
+                    subcat = meta.get("subcategory")
+                    if subcat:
+                        if subcat_counts.get(subcat, 0) >= _MAX_PER_SUBCAT:
+                            continue
+                        subcat_counts[subcat] = subcat_counts.get(subcat, 0) + 1
+                    final_feed.append(lid)
 
-            foryou_key = f"feed:foryou:{uid}"
-            if final_feed:
-                await redis.set(foryou_key, json.dumps(final_feed), ex=_FORYOU_TTL)
-            else:
-                await redis.delete(foryou_key)
+                writes.append((uid, json.dumps(final_feed) if final_feed else None))
+
+            async with redis.pipeline(transaction=False) as pipe:
+                for uid, feed_data in writes:
+                    foryou_key = f"feed:foryou:{uid}"
+                    if feed_data is not None:
+                        pipe.set(foryou_key, feed_data, ex=_FORYOU_TTL)
+                    else:
+                        pipe.delete(foryou_key)
+                await pipe.execute()
 
         logger.info("[ForYouWorker] Sana Özel feed'leri %d kullanıcı için yenilendi.", len(users))
         from app.worker import _agent_ok

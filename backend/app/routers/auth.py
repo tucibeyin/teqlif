@@ -220,6 +220,10 @@ async def login(request: Request, data: UserLogin, response: Response, db: Async
             await db.commit()
             await invalidate_user_session_cache(user.id)
 
+    # ForYou filtresi için son giriş zamanını güncelle
+    await db.execute(sa_update(User).where(User.id == user.id).values(last_active_at=datetime.now(timezone.utc)))
+    await db.commit()
+
     redis = await get_redis()
     token = create_access_token(user.id, user.token_version)
     refresh = create_refresh_token()
