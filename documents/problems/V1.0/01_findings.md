@@ -5474,6 +5474,14 @@ class UserDevice(Base):
 ```
 2. Bildirimler `send_each_for_multicast` ile kullanıcının tüm aktif cihazlarına gönderilmeli; geçersiz olan token sadece kendi cihaz kaydını silmelidir.
 
+#### ✅ Çözüm Damgası — `be0378a1` (2026-11-01)
+* `models/user_device.py`: `UserDevice` modeli (`user_id FK CASCADE`, `fcm_token UNIQUE`, `platform`, `apns_sandbox`, `last_active_at`).
+* `alembic/zzzzzze_user_devices`: tablo oluşturuldu + `users.fcm_token IS NOT NULL` backfill (ON CONFLICT DO NOTHING).
+* `device_service.py`: `user.fcm_token = None` (tüm cihaz kör susturması) → `DELETE user_devices WHERE fcm_token = event.token` (sadece ilgili cihaz silinir).
+* `auth.py /device-tokens`: `users.fcm_token` güncelle (geriye uyumluluk) + `user_devices` UPSERT (ON CONFLICT fcm_token DO UPDATE); `delete_account`: açık `DELETE user_devices WHERE user_id = uid`.
+* `notification_service.py push_notification`: `user.fcm_token` → `SELECT user_devices.fcm_token WHERE user_id`; tüm cihazlara ayrı ARQ görevi; badge bir kez hesaplanır.
+* `notification_service.py send_message_push`: aynı pattern; `not user.fcm_token` → `not tokens` erken return.
+
 ---
 
 ### SRE-134 · 🟠 P1 (Yüksek) · `lk_list_all_rooms` ve `lk_broadcast_delete` İçinde Sıralı (Sequential) Döngü ile Blokaj
@@ -7681,7 +7689,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 60. ~~**Adım 60 (`SRE-123`):** `worker.py` temizlik görevlerindeki `VACUUM ANALYZE` çağrılarını kaldırıp autovacuum'a devret; 30 günlük bildirimleri ve analitikleri 5.000'lik gruplarla (batch delete) sil.~~ ✅ `ae09b7ab`
 61. ~~**Adım 61 (`SRE-124`):** `influence_service.py` sorgusuna `status = 'accepted'` filtresi ve sparse matris optimizasyonu ekle; Redis pipeline komutlarını 1.000'lik gruplara bölerek OOM ve socket kilitlenmesini durdur.~~ ✅ `b91b81f1`
 62. ~~**Adım 62 (`SRE-132`):** `fraud_detection_service.py:_log_fraud_attempt` içindeki global `fraud_log` Redis ZSET'ini ve her seferinde çalışan `zremrangebyscore` temizliğini kaldır; şüpheli teklif kayıtlarını ClickHouse `track_user_event` veya TTL'li Redis Stream'e (`XADD`) taşıyarak Redis dondurma ve OOM riskini engelle.~~ ✅ `a82feb8d`
-63. **Adım 63 (`SRE-133`):** `User` modeline `user_devices` (`user_id`, `fcm_token`, `platform`, `last_active_at`) ilişkisini ekle; `device_service.py` içinde geçersiz token olayında sadece ilgili cihazı silerek kullanıcının diğer aktif telefon ve tabletlerindeki bildirimlerin kesilmesini durdur.
+63. ~~**Adım 63 (`SRE-133`):** `User` modeline `user_devices` (`user_id`, `fcm_token`, `platform`, `last_active_at`) ilişkisini ekle; `device_service.py` içinde geçersiz token olayında sadece ilgili cihazı silerek kullanıcının diğer aktif telefon ve tabletlerindeki bildirimlerin kesilmesini durdur.~~ ✅ `be0378a1`
 64. **Adım 64 (`SRE-134`):** `livekit_service.py:lk_list_all_rooms` ve `lk_broadcast_delete` içindeki sıralı for döngülerini `asyncio.gather(*tasks, return_exceptions=True)` ile paralel hale getir ve 3.0s tavan timeout ekle; 1 erişilemez node yüzünden arka plan temizliğinin 16-60 sn kilitlenmesini çöz.
 65. **Adım 65 (`SRE-135`):** `messages.py:_read_streaming` fonksiyonundaki bellekte `b"".join` biriktirmeyi kaldırıp doğrudan geçici dosyaya stream et; `media_processor.py` içindeki senkron Pillow `make_thumbnail` ve FFmpeg video analizini `asyncio.to_thread` ve worker kuyruğuna delege ederek Uvicorn açlığını engelle.
 66. **Adım 66 (`SRE-136`):** `upsert_rating.py:UpsertRatingCommand` içindeki kilitsiz `scalar` ve `add` ikilisini PostgreSQL `ON CONFLICT (rater_id, rated_id) DO UPDATE` ifadesine dönüştür; komut içindeki kontrolsüz `commit()` çağrısını kaldırarak Unit of Work oturum bütünlüğünü koru.
