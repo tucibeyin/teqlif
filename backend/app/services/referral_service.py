@@ -16,6 +16,8 @@ from app.models.referral import Referral
 from app.models.teqlik_transaction import TeqlikTransaction
 from app.core.exceptions import BadRequestException, NotFoundException
 from app.core.logger import get_logger
+from app.utils.i18n import _get_t
+from app.utils.auth import invalidate_user_session_cache
 
 logger = get_logger(__name__)
 
@@ -153,6 +155,13 @@ async def apply_referral(db: AsyncSession, current_user: User, referral_code: st
         await db.rollback()
         raise BadRequestException(code="REFERRAL_ALREADY_USED")
     await db.refresh(current_user)
+
+    # Bakiye değişikliği Redis oturum önbelleğine yansısın
+    try:
+        await invalidate_user_session_cache(referrer.id)
+        await invalidate_user_session_cache(current_user.id)
+    except Exception as _ce:
+        logger.warning("[REFERRAL] Session cache invalidate failed: %s", _ce)
 
     logger.info(
         "[REFERRAL] referrer=%s referred=%s | referrer+%d referred+%d teqlik",

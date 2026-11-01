@@ -17,6 +17,9 @@ import os
 import tempfile
 from typing import Optional
 
+from app.models.enums import ListingStatus
+from app.services.notification_service import push_notification
+
 logger = logging.getLogger(__name__)
 
 _NSFW_AUTO_DEACTIVATE = 0.85
@@ -184,7 +187,6 @@ async def check_listing_nsfw(listing_id: int) -> None:
 
     if max_score >= _NSFW_AUTO_DEACTIVATE:
         try:
-            from app.routers.notifications import push_notification
             await push_notification(
                 user_id=listing.user_id,
                 notif={
