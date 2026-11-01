@@ -166,6 +166,19 @@ async def create_campaign(
     }
 
 
+@router.delete("/campaigns/{campaign_id}", status_code=200)
+async def cancel_campaign(
+    campaign_id: int,
+    current_user: User = Depends(get_current_user),
+):
+    """Satıcının kendi kampanyasını erken iptal etmesini sağlar."""
+    from app.services.ad_service import cancel_campaign as _cancel
+    cancelled = await _cancel(campaign_id, current_user.id)
+    if not cancelled:
+        raise NotFoundException(code="CAMPAIGN_NOT_FOUND")
+    return {"ok": True, "campaign_id": campaign_id}
+
+
 @router.get("/boost-credits")
 async def boost_credits(current_user: User = Depends(get_current_user)):
     """Kullanıcının bu ayki boost kredi durumunu döndürür."""

@@ -3639,6 +3639,12 @@ candidates = (await session.execute(
 1. `backend/app/services/ad_service.py` içinde `pause_campaign`, `cancel_campaign` ve `record_ad_click` (bütçe bittiğinde) bloklarına `pipe.srem("ad_campaigns:active", str(campaign_id))` satırı eklenmelidir.
 2. `feed_queries.py` içinde `sample_ids` rastgele örneklenmeli (`random.sample(..., min(len(raw_ids), 50))`) ve veritabanında pasif olduğu tespit edilen ID'ler arka planda `srem` ile setten temizlenmelidir (self-healing cache).
 
+#### ✅ Çözüm Damgası — `83d2f2b8` + `hotfix` (2026-11-01)
+
+* `ad_service.py`: `cancel_campaign()` eklendi — `status.in_(["active","paused"])` → `"completed"` + `srem`.
+* `ads.py`: `DELETE /api/ads/campaigns/{id}` endpoint'i açıldı.
+* `feed_queries.py`: `[:50]` → `random.sample`; self-healing `_purge_stale` DB doğrulaması ile (False Eviction Bug düzeltildi — `exclude_user_id` filtresinden dönen ID'ler artık `AdCampaign.status != 'active'` sorgusuyla doğrulanıyor).
+
 ---
 
 ### SRE-87 · 🟠 P1 (Yüksek) · Süresi Dolan İlanlar Pasife Alınırken Redis Feed ve İlan Cache'inin Temizlenmemesi (Desynchronized Zombie Feed)

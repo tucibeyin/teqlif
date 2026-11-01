@@ -1129,21 +1129,35 @@ class FeedQueries:
         )
         candidates = rows.all()
 
-        # Self-healing: SQL filtresi geçemeyen ID'ler artık pasif — setten çıkar.
+        # Self-healing: exclude_user_id veya ilan durum filtreleri nedeniyle
+        # candidates'e giremeyen ID'lerin gerçekten pasif olup olmadığını
+        # DB'den doğrula — yanlış tahliye (false eviction) önlenir.
         if len(candidates) < len(campaign_ids):
             active_ids = {c.id for c, _, _ in candidates}
-            stale = [cid for cid in campaign_ids if cid not in active_ids]
-            if stale:
+            suspect = [cid for cid in campaign_ids if cid not in active_ids]
+            if suspect:
                 import asyncio as _asyncio
 
                 async def _purge_stale(ids: list[int]) -> None:
                     try:
-                        r = await get_redis()
-                        await r.srem("ad_campaigns:active", *[str(i) for i in ids])
+                        from app.database import AsyncSessionLocal
+                        from app.models.ad_campaign import AdCampaign as _AC
+                        from sqlalchemy import select as _select
+                        async with AsyncSessionLocal() as db:
+                            res = await db.execute(
+                                _select(_AC.id).where(
+                                    _AC.id.in_(ids),
+                                    _AC.status != "active",
+                                )
+                            )
+                            truly_stale = [str(cid) for cid in res.scalars().all()]
+                        if truly_stale:
+                            r = await get_redis()
+                            await r.srem("ad_campaigns:active", *truly_stale)
                     except Exception:
                         pass
 
-                _asyncio.create_task(_purge_stale(stale))
+                _asyncio.create_task(_purge_stale(suspect))
 
         if not candidates:
             return []
