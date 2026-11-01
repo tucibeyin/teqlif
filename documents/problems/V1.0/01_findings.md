@@ -4101,6 +4101,14 @@ await self._session.execute(
 ```
 2. `ConvertToTeqlikCommand` içinde cüzdan dönüşümü çift taraflı defterde `wallet_ledger`'a kullanıcı bazında sahte eksi bakiye yazmak yerine, ayrı bir kazanç defteri (earnings ledger) üzerinden veya net `+bonus_teqlik` şeklinde kaydedilmelidir.
 
+#### ✅ Çözüm Damgası — 0dfb25cc (2026-11-01)
+
+| Alan | Detay |
+|------|-------|
+| **send_gift_command.py** | `SELECT id=0` → `UPDATE id=0 RETURNING teqlik_balance`; ledger `balance_after` doğru kümülatif değer |
+| **convert_to_teqlik_command.py** | Aynı `UPDATE RETURNING` pattern; sahte `-teqlik_amount` ledger girişi kaldırıldı; 3→2 satır |
+| **Etki** | `users.teqlik_balance` artık her hediye ve dönüşümde doğru artıyor/azalıyor; wallet_ledger mutabakatı sağlandı |
+
 ---
 
 ### SRE-96 · 🟠 P1 (Yüksek) · `send-gift` İçinde Canlı Yayın ve Host Doğrulaması Olmaması Nedeniyle Kapanmış Yayın Üzerinden Kara Para ve Sahte Gelir Transferi
@@ -7783,7 +7791,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 84. ~~**Adım 84 (`SRE-90`):** `calls.py:end_call` içine grup katılımcılarına `call_ended` WS yayını (`broadcast_to_call_participants`) ve `webhooks.py:_on_call_room_finished` içine `clear_presence` ekle; misafirlerin askıda kalmasını ve 10 dakikalık meşgul kilitlenmesini engelle.~~ ✅ `138f3ab5`
 85. ~~**Adım 85 (`SRE-91`):** `refresh_stream_token.py` içine `orchestrator.resolve_stream_endpoint(stream)` çağrısını ekle; token yenileyen izleyicilerin relay sunucusundan düşürülüp kaynak sunucuya (origin) hücum etmesini durdur.~~ ✅ `79a3cfb9`
 86. ~~**Adım 86 (`SRE-93`):** `firebase_adapter.py:send_multicast` içindeki sıralı senkron `requests` döngüsünü kaldırıp asenkron HTTP havuzuna veya Firebase Admin SDK `send_each_for_multicast` toplu gönderimine geçir; takipçi bildirimlerinde `critical` ARQ kuyruğunun 25 dakika kilitlenmesini çöz.~~ ✅ `098444e4` + `af35b5a1`
-87. **Adım 87 (`SRE-95`):** `convert_to_teqlik_command.py` ve `send_gift_command.py` içine sistem hazine hesabı (`id=0`) bakiyesini `users` tablosunda güncelleyen SQL sorgusunu ekle; mutabakat ve denetim kayıtlarının bozulmasını engelle.
+87. ~~**Adım 87 (`SRE-95`):** `convert_to_teqlik_command.py` ve `send_gift_command.py` içine sistem hazine hesabı (`id=0`) bakiyesini `users` tablosunda güncelleyen SQL sorgusunu ekle; mutabakat ve denetim kayıtlarının bozulmasını engelle.~~ ✅ `0dfb25cc`
 88. **Adım 88 (`SRE-96`):** `wallet.py:send-gift` ve `send_gift_command.py` içine yayın durumu (`stream.status == 'live'`) ve host doğrulaması ekle; kapanmış yayınlar üzerinden bakiye aklanmasını ve sahte hype manipülasyonunu engelle.
 89. **Adım 89 (`SRE-97`):** `admin_data.py` kampanya duraklatma ve ilan pasifleştirme endpoint'lerine Redis önbellek temizleme (`srem ad_campaigns:active` ve `invalidate_listing_cache`) çağrılarını ekle; admin aksiyonları ile Redis arasındaki desenkronizasyonu çöz.
 90. **Adım 90 (`SRE-82`):** `credit_service.py` ve `leads.py` içindeki TOCTOU yarış durumunu Redis Lua scripti ile atomik check-and-consume işlemine dönüştür; kullanıcıların ücretsiz haklarını (blast, boost, ai) eşzamanlı isteklerle limitsiz tüketmesini engelle.
