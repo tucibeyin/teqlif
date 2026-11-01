@@ -129,23 +129,26 @@ async def push_notification(
         logger.info("[PUSH] Sessiz saat — push bastırıldı | user_id=%s", user_id)
         return
 
-    # FCM push (always, regardless of WS connection)
+    # FCM push — kullanıcının tüm aktif cihazlarına gönder
     async with AsyncSessionLocal() as db:
-        result = await db.execute(select(User).where(User.id == user_id))
-        user = result.scalar_one_or_none()
-        if user is None:
-            logger.warning("[PUSH] Kullanıcı bulunamadı | user_id=%s", user_id)
-            return
-        has_token = bool(user.fcm_token)
-        logger.info("[PUSH] FCM token kontrol | user_id=%s | token=%s", user_id, f"{user.fcm_token[:20]}…" if has_token else "YOK")
-        if user and user.fcm_token:
-            logger.info("[PUSH] FCM kuyruğa alınıyor | user_id=%s | token=%s… | type=%s", user_id, user.fcm_token[:12], notif_type)
-            # Count total unread notifications + messages for iOS badge
+        from app.models.user_device import UserDevice
+
+        device_rows = await db.execute(
+            select(UserDevice.fcm_token).where(UserDevice.user_id == user_id)
+        )
+        tokens = [row[0] for row in device_rows.fetchall()]
+
+        if not tokens:
+            logger.info("[PUSH] Aktif cihaz yok | user_id=%s", user_id)
+        else:
+            logger.info("[PUSH] %d cihaza push | user_id=%s | type=%s", len(tokens), user_id, notif_type)
+
+            # Badge — tüm cihazlar için bir kez hesaplanır
             unread_notifs = await db.scalar(
                 select(func.count()).where(
                     Notification.user_id == user_id,
                     Notification.is_read == False,  # noqa: E712
-                    Notification.type != "message",  # DM'ler zaten ayrı sayılıyor
+                    Notification.type != "message",
                 )
             ) or 0
             from app.models.message import DirectMessage
@@ -158,7 +161,6 @@ async def push_notification(
             ) or 0
             badge = unread_notifs + unread_msgs
 
-            # Ek data payload: deep link için gerekli tüm alanlar
             extra_data: dict[str, str] = {}
             if notif.get("related_id") is not None:
                 extra_data["sender_id"] = str(notif["related_id"])
@@ -175,36 +177,38 @@ async def push_notification(
             if image_url and not image_url.startswith("http"):
                 image_url = f"https://www.teqlif.com{image_url}"
 
-            # FCM push kuyruğa alınır — push_notification bloklanmaz
             pool = get_pool()
-            if pool:
-                job = await pool.enqueue_job(
-                    "send_push_notification_task",
-                    user.fcm_token,
-                    notif.get("title", ""),
-                    notif.get("body"),
-                    badge,
-                    notif.get("type"),
-                    extra_data or None,
-                    image_url,
-                    _queue_name="critical",
-                )
-                logger.info("[PUSH] ARQ kuyruğuna alındı | job_id=%s | user_id=%s", getattr(job, 'job_id', '?'), user_id)
-            else:
-                # Worker başlatılmamışsa (geliştirme ortamı) direkt gönder
-                logger.warning("[PUSH] ARQ pool yok — direkt gönderiliyor | user_id=%s", user_id)
-                try:
-                    await send_push(
-                        user.fcm_token, notif.get("title", ""), notif.get("body"),
-                        badge=badge, notif_type=notif.get("type"),
-                        extra_data=extra_data or None, image_url=image_url,
+            for fcm_token in tokens:
+                if pool:
+                    job = await pool.enqueue_job(
+                        "send_push_notification_task",
+                        fcm_token,
+                        notif.get("title", ""),
+                        notif.get("body"),
+                        badge,
+                        notif.get("type"),
+                        extra_data or None,
+                        image_url,
+                        _queue_name="critical",
                     )
-                except Exception as exc:
-                    from app.services.firebase_service import InvalidFCMTokenError
-                    if isinstance(exc, InvalidFCMTokenError):
-                        logger.warning("[PUSH] Geçersiz token EventBus tarafından temizlenecek | user_id=%s", user_id)
-                    else:
-                        raise
+                    logger.info(
+                        "[PUSH] ARQ kuyruğuna alındı | job_id=%s | user_id=%s | token=%s…",
+                        getattr(job, "job_id", "?"), user_id, fcm_token[:12],
+                    )
+                else:
+                    logger.warning("[PUSH] ARQ pool yok — direkt gönderiliyor | user_id=%s", user_id)
+                    try:
+                        await send_push(
+                            fcm_token, notif.get("title", ""), notif.get("body"),
+                            badge=badge, notif_type=notif.get("type"),
+                            extra_data=extra_data or None, image_url=image_url,
+                        )
+                    except Exception as exc:
+                        from app.services.firebase_service import InvalidFCMTokenError
+                        if isinstance(exc, InvalidFCMTokenError):
+                            logger.warning("[PUSH] Geçersiz token EventBus tarafından temizlenecek | user_id=%s", user_id)
+                        else:
+                            raise
 
     # Push to WS connections — GlobalWSManager ile paralel fan-out
     notif_payload = {
@@ -238,7 +242,7 @@ async def send_message_push(user_id: int, notif: dict) -> None:
 
     async with AsyncSessionLocal() as db:
         user = await db.get(User, user_id)
-        if not user or not user.fcm_token:
+        if not user:
             return
 
         # 2. messages bildirim tercihi kontrolü
@@ -248,7 +252,17 @@ async def send_message_push(user_id: int, notif: dict) -> None:
             logger.debug("[MSG_PUSH] messages bildirimleri kapalı | user_id=%s", user_id)
             return
 
-        # 3. i18n çözümle
+        # 3. Aktif cihaz token'ları
+        from app.models.user_device import UserDevice
+        device_rows = await db.execute(
+            select(UserDevice.fcm_token).where(UserDevice.user_id == user_id)
+        )
+        tokens = [row[0] for row in device_rows.fetchall()]
+        if not tokens:
+            logger.debug("[MSG_PUSH] Aktif cihaz yok | user_id=%s", user_id)
+            return
+
+        # 4. i18n çözümle
         user_locale = user.locale or "tr"
         i18n = notif.get("i18n")
         resolved: dict = {k: v for k, v in notif.items() if k != "i18n"}
@@ -269,7 +283,7 @@ async def send_message_push(user_id: int, notif: dict) -> None:
             if body_key:
                 resolved["body"] = _fmt(body_key, i18n.get("body_params") or {})
 
-        # 4. Badge hesapla (unread notifs + unread DM'ler)
+        # 5. Badge hesapla
         unread_notifs = await db.scalar(
             select(func.count()).where(
                 Notification.user_id == user_id,
@@ -286,7 +300,7 @@ async def send_message_push(user_id: int, notif: dict) -> None:
         ) or 0
         badge = unread_notifs + unread_msgs
 
-    # 5. FCM gönder (kuyruğa veya direkt) — DB işlemi kapandıktan sonra
+    # 6. FCM gönder — tüm cihazlara kuyruğa al
     notif_type = resolved.get("type", "message")
     extra_data: dict[str, str] = {}
     if resolved.get("related_id") is not None:
@@ -295,34 +309,38 @@ async def send_message_push(user_id: int, notif: dict) -> None:
         extra_data["sender_username"] = str(resolved["sender_username"])
 
     pool = get_pool()
-    if pool:
-        job = await pool.enqueue_job(
-            "send_push_notification_task",
-            user.fcm_token,
-            resolved.get("title", ""),
-            resolved.get("body"),
-            badge,
-            notif_type,
-            extra_data or None,
-            None,  # image_url — DM push'unda kullanılmaz
-            _queue_name="critical",
-        )
-        logger.info("[MSG_PUSH] ARQ kuyruğuna alındı | job_id=%s | user_id=%s", getattr(job, "job_id", "?"), user_id)
-    else:
-        logger.warning("[MSG_PUSH] ARQ pool yok — direkt gönderiliyor | user_id=%s", user_id)
-        try:
-            await send_push(
-                user.fcm_token,
+    for fcm_token in tokens:
+        if pool:
+            job = await pool.enqueue_job(
+                "send_push_notification_task",
+                fcm_token,
                 resolved.get("title", ""),
                 resolved.get("body"),
-                badge=badge,
-                notif_type=notif_type,
-                extra_data=extra_data or None,
-                image_url=None,
+                badge,
+                notif_type,
+                extra_data or None,
+                None,
+                _queue_name="critical",
             )
-        except Exception as exc:
-            from app.services.firebase_service import InvalidFCMTokenError
-            if isinstance(exc, InvalidFCMTokenError):
-                logger.warning("[MSG_PUSH] Geçersiz FCM token | user_id=%s", user_id)
-            else:
-                raise
+            logger.info(
+                "[MSG_PUSH] ARQ kuyruğuna alındı | job_id=%s | user_id=%s | token=%s…",
+                getattr(job, "job_id", "?"), user_id, fcm_token[:12],
+            )
+        else:
+            logger.warning("[MSG_PUSH] ARQ pool yok — direkt gönderiliyor | user_id=%s", user_id)
+            try:
+                await send_push(
+                    fcm_token,
+                    resolved.get("title", ""),
+                    resolved.get("body"),
+                    badge=badge,
+                    notif_type=notif_type,
+                    extra_data=extra_data or None,
+                    image_url=None,
+                )
+            except Exception as exc:
+                from app.services.firebase_service import InvalidFCMTokenError
+                if isinstance(exc, InvalidFCMTokenError):
+                    logger.warning("[MSG_PUSH] Geçersiz FCM token | user_id=%s | token=%s…", user_id, fcm_token[:12])
+                else:
+                    raise

@@ -6,7 +6,7 @@ from typing import Optional
 from fastapi import APIRouter, Cookie, Depends, Request, Response, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, or_, case, update as sa_update, exists, literal
+from sqlalchemy import select, func, or_, case, update as sa_update, exists, literal, text as sa_text
 
 from app.models.enums import UserStatus
 from app.database import get_db
@@ -1594,6 +1594,22 @@ async def save_device_tokens(
             len(voip_token) if voip_token else "-",
         )
         await db.execute(sa_update(User).where(User.id == current_user.id).values(**values))
+
+        # user_devices — FCM token'ı cihaz tablosuna upsert et (çoklu cihaz desteği)
+        if token:
+            from app.models.user_device import UserDevice
+            platform = payload.get("platform", "unknown") or "unknown"
+            _sandbox = apns_sandbox if isinstance(apns_sandbox, bool) else None
+            await db.execute(
+                sa_text("""
+                    INSERT INTO user_devices (user_id, fcm_token, platform, apns_sandbox, last_active_at)
+                    VALUES (:uid, :tok, :plat, :sandbox, NOW())
+                    ON CONFLICT (fcm_token)
+                    DO UPDATE SET user_id = :uid, platform = :plat, apns_sandbox = :sandbox, last_active_at = NOW()
+                """),
+                {"uid": current_user.id, "tok": token, "plat": platform, "sandbox": _sandbox},
+            )
+
         await db.commit()
         await invalidate_user_session_cache(current_user.id)
     return {"ok": True}
@@ -1640,6 +1656,10 @@ async def delete_account(
     current_user.tiktok_url              = None
     current_user.fcm_token               = None
     current_user.voip_token              = None
+    # user_devices: CASCADE yok (status=DELETED, satır kalıyor) — açık sil
+    from app.models.user_device import UserDevice
+    from sqlalchemy import delete as sa_delete
+    await db.execute(sa_delete(UserDevice).where(UserDevice.user_id == uid))
     current_user.preference_embedding    = None
     current_user.max_budget              = None
     current_user.user_type               = 'standard'

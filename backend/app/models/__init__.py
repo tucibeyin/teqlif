@@ -42,3 +42,4 @@ from .user_wallet_earnings import UserWalletEarnings
 from .wallet_ledger import WalletLedger
 from .withdrawal_request import WithdrawalRequest
 from .refund_log import RefundLog
+from .user_device import UserDevice
