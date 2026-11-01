@@ -18,7 +18,7 @@ from datetime import datetime, timezone, timedelta
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_, text
+from sqlalchemy import select, or_, text, update as sa_update
 
 from app.database import get_db, AsyncSessionLocal
 from app.models.call import Call, CallParticipant
@@ -962,31 +962,42 @@ async def end_call(
         conn = connected_at if connected_at.tzinfo else connected_at.replace(tzinfo=timezone.utc)
         duration_seconds = max(0, int((ended_at - conn).total_seconds()))
 
+    # Grup katılımcılarının DB kayıtlarını güncelle
+    await db.execute(
+        sa_update(CallParticipant)
+        .where(CallParticipant.call_id == call_id_val, CallParticipant.status == "joined")
+        .values(status="ended")
+        .execution_options(synchronize_session=False)
+    )
     final_status = "ended" if accepted_at else "missed"
     call.status = final_status
     call.ended_at = ended_at
     call.duration_seconds = duration_seconds
     await db.commit()
-    asyncio.create_task(clear_presence(current_user.id))
-    asyncio.create_task(clear_presence(other_id))
-
-    try:
-        await clear_call_redis(call_id_val)
-    except Exception as _e:
-        logger.warning("[CALL_PROCESS][END] end_call: clear_call_redis FAILED | call_id=%d %s", call_id_val, _e)
 
     # FOR UPDATE above handles concurrent API-vs-API end_call.
     # NX lock handles API-vs-webhook race: whoever sets this key first wins.
+    # NX lock WS broadcast ve Redis temizleme'den ÖNCE — duplicate tespit edilirse
+    # temizlik yapıp döneriz, sahte bildirim gitmez.
     try:
         from app.utils.redis_client import get_redis as _get_redis
         _redis = await _get_redis()
         if not await _redis.set(f"call_ended_sent:{call_id_val}", "api", ex=300, nx=True):
             logger.info("[CALL_PROCESS][END] end_call: duplicate suppressed by Redis NX | call_id=%d", call_id_val)
+            try:
+                await clear_call_redis(call_id_val)
+            except Exception:
+                pass
+            asyncio.create_task(clear_presence(current_user.id))
+            asyncio.create_task(clear_presence(other_id))
             return {"ok": True}
     except Exception:
         pass  # Redis failure is non-fatal — proceed without webhook dedup
 
     ws_type = f"call_{final_status}"
+    # Grup katılımcılarına bildir — call:{id}:participants SET clear_call_redis'ten önce okunmalı
+    await broadcast_to_call_participants(call_id_val, {"type": ws_type, "call_id": call_id_val})
+    # Orijinal karşı taraf (1-on-1 ve grup aramaları için)
     await _ws_broadcast(other_id, {"type": ws_type, "call_id": call_id_val})
     other_user = await db.get(User, other_id)
     if other_user and other_user.fcm_token:
@@ -1002,6 +1013,15 @@ async def end_call(
             )
         except Exception as push_err:
             logger.warning(f"[Calls] Failed to send 'call_ended' push: {push_err}")
+
+    # Redis temizleme — broadcast'lerden SONRA (participants SET'i artık okunmadı)
+    try:
+        await clear_call_redis(call_id_val)
+    except Exception as _e:
+        logger.warning("[CALL_PROCESS][END] end_call: clear_call_redis FAILED | call_id=%d %s", call_id_val, _e)
+    asyncio.create_task(clear_presence(current_user.id))
+    asyncio.create_task(clear_presence(other_id))
+
     await lk_broadcast_delete(room_name, livekit_url=room_lk_url_end)
 
     logger.info(

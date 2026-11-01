@@ -3812,6 +3812,18 @@ await clear_presence(callee_id)
 await clear_call_redis(call_id)
 ```
 
+#### ✅ Çözüm Damgası — (2026-11-01)
+
+`calls.py:end_call`:
+- `sa_update(CallParticipant)` ile tüm `joined` katılımcı kayıtları `status='ended'` yapıldı (DB commit'te)
+- NX lock WS broadcast'lerden ÖNCE taşındı — duplicate tespit edilince `clear_call_redis` + `clear_presence` yapılıp erken dönülür
+- `broadcast_to_call_participants` çağrısı `_ws_broadcast` ve `clear_call_redis`'ten ÖNCE konumlandırıldı — grup katılımcıları `call_ended` olayını alır, `call:{id}:participants` SET'i silinmeden önce okunur
+- `clear_call_redis` + `clear_presence` broadcast'lerden SONRA taşındı
+
+`webhooks.py:_on_call_room_finished`:
+- `clear_presence(caller_id)` + `clear_presence(callee_id)` (create_task) — commit sonrası, NX lock'tan önce — 10 dk busy kilidi kaldırıldı
+- `clear_call_redis(call_id)` — participants SET temizlendi
+
 ---
 
 ### SRE-91 · 🟠 P1 (Yüksek) · `refresh_stream_token.py` İçinde `resolve_stream_endpoint` Çağrılmayarak İzleyicilerin Relay'den Atılması ve Origin Yığılması

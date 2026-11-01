@@ -91,6 +91,13 @@ async def _on_call_room_finished(room_name: str) -> None:
             callee_id = call.callee_id
             await db.commit()
 
+            # Presence temizleme — 10 dk busy kilidi kaldır
+            from app.services.call_presence import clear_presence as _clear_presence
+            from app.utils.call_redis import clear_call_redis as _clear_call_redis
+            asyncio.create_task(_clear_presence(caller_id))
+            asyncio.create_task(_clear_presence(callee_id))
+            await _clear_call_redis(call_id)
+
             # NX lock: if end_call API already set this key, skip — avoids 182ms duplicate delivery.
             from app.utils.redis_client import get_redis as _get_redis
             _redis = await _get_redis()
