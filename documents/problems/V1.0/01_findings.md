@@ -5047,6 +5047,9 @@ async def get_listing_offers(
 1. HTTP isteği videoyu MinIO'ya ham olarak kaydetmeli, DB'ye `status = 'processing'` olarak yazmalı ve derhal HTTP 202 Accepted dönmelidir.
 2. FFmpeg sıkıştırma ve thumbnail çıkarma işlemi ARQ worker havuzuna (`video_tasks.py`) delege edilmeli ve Uvicorn süreçleri CPU yükünden izole edilmelidir.
 
+#### ✅ Çözüm Damgası
+`stories.status` kolonu eklendi (Alembic `zzzzzzd_stories_status`). `upload_story` → ham video MinIO'ya yükle + `status='processing'` Story oluştur + HTTP 202 dön. `_compress_video` kaldırıldı. `process_story_video_task` ARQ video kuyruğuna eklendi (MinIO indir → nice -n 10 FFmpeg → thumbnail → aynı key'e yeniden yükle → `status='ready'`). `get_following_stories` yalnızca `status='ready'` hikayeleri besliyor. Commit: `af7464ca`
+
 ---
 
 ### SRE-123 · 🟠 P1 (Yüksek) · PgBouncer Transaction Pooling Altında `VACUUM ANALYZE` Nedeniyle Task Çökmesi ve Kilitsiz Silme
@@ -7651,7 +7654,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 56. ~~**Adım 56 (`SRE-114`):** `ip_utils.py:mask_ip` içine IPv6 `/64` alt ağ maskelemesi ekle; mobil IPv6 kullanıcılarında shill bidding korumasının by-pass edilmesini durdur.~~ ✅ `781e1c33`
 57. ~~**Adım 57 (`SRE-120`):** `client_log.py` içindeki IP tespitini `CF-Connecting-IP` / `X-Forwarded-For` ile düzelt; `entry.details` sözlüğüne JSON sanitization ve 2.000 karakter sınırı getirerek log injection (CWE-117) açığını kapat.~~ ✅ `0bd6f787`
 58. ~~**Adım 58 (`SRE-121`):** `favorites.py:remove_favorite` içindeki ilgisiz `ListingLike` silme kodunu kaldır; `add_favorite` içine double-click yarış koruması ekle ve beğeni işlemlerini `LikeService` ile senkronize et.~~ ✅ `0bd6f787`
-59. **Adım 59 (`SRE-122`):** `story_service.py` içindeki senkron FFmpeg video sıkıştırmasını HTTP thread'inden çıkarıp ARQ arka plan kuyruğuna delege et; Uvicorn event loop açlığını ve 504 Gateway Timeout'ları çöz.
+59. ~~**Adım 59 (`SRE-122`):** `story_service.py` içindeki senkron FFmpeg video sıkıştırmasını HTTP thread'inden çıkarıp ARQ arka plan kuyruğuna delege et; Uvicorn event loop açlığını ve 504 Gateway Timeout'ları çöz.~~ ✅ `af7464ca`
 60. **Adım 60 (`SRE-123`):** `worker.py` temizlik görevlerindeki `VACUUM ANALYZE` çağrılarını kaldırıp autovacuum'a devret; 30 günlük bildirimleri ve analitikleri 5.000'lik gruplarla (batch delete) sil.
 61. **Adım 61 (`SRE-124`):** `influence_service.py` sorgusuna `status = 'accepted'` filtresi ve sparse matris optimizasyonu ekle; Redis pipeline komutlarını 1.000'lik gruplara bölerek OOM ve socket kilitlenmesini durdur.
 62. **Adım 62 (`SRE-132`):** `fraud_detection_service.py:_log_fraud_attempt` içindeki global `fraud_log` Redis ZSET'ini ve her seferinde çalışan `zremrangebyscore` temizliğini kaldır; şüpheli teklif kayıtlarını ClickHouse `track_user_event` veya TTL'li Redis Stream'e (`XADD`) taşıyarak Redis dondurma ve OOM riskini engelle.
