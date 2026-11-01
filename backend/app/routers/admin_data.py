@@ -345,6 +345,9 @@ async def admin_toggle_listing(listing_id: int, db: AsyncSession = Depends(get_d
     if not listing: raise NotFoundException(code="LISTING_NOT_FOUND")
     listing.status = ListingStatus.PASSIVE if listing.status == ListingStatus.ACTIVE else ListingStatus.ACTIVE
     await db.commit()
+    from app.services.feed.listing_cache_service import remove_from_recent_feed_cache, invalidate_listing
+    await remove_from_recent_feed_cache(listing_id)
+    await invalidate_listing(listing_id)
     return {"message": "Listing status updated."}
 
 @router.delete("/listings/{listing_id}")
@@ -660,8 +663,20 @@ async def admin_pause_campaign(campaign_id: int, db: AsyncSession = Depends(get_
     if not campaign:
         raise NotFoundException(code="CAMPAIGN_NOT_FOUND")
     campaign.status = "paused" if campaign.status == "active" else "active"
+    new_status = campaign.status
     await db.commit()
-    return {"message": f"Kampanya durumu → {campaign.status}", "status": campaign.status}
+    from app.services.ad_service import _BUDGET_KEY, _CPC_KEY, _reload_campaign_to_redis
+    from app.utils.redis_client import get_redis
+    if new_status == "paused":
+        redis = await get_redis()
+        pipe = redis.pipeline()
+        pipe.delete(_BUDGET_KEY.format(campaign_id))
+        pipe.delete(_CPC_KEY.format(campaign_id))
+        pipe.srem("ad_campaigns:active", str(campaign_id))
+        await pipe.execute()
+    else:
+        await _reload_campaign_to_redis(campaign_id)
+    return {"message": f"Kampanya durumu → {new_status}", "status": new_status}
 
 
 # ==========================================
