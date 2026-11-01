@@ -3471,7 +3471,7 @@ Router içinde işlem başlamadan önce bu atomik script çalıştırılmalı; s
 
 ---
 
-### SRE-83 · 🟠 P1 (Yüksek) · `tcmb_service.py` İçinde Hafta Sonu ve Tatillerde Boş TCMB XML ForexBuying Nedeniyle `AttributeError` ile Güncellemenin Durması ✅ Çözüldü (COMMIT_PLACEHOLDER · 2026-11-01)
+### SRE-83 · 🟠 P1 (Yüksek) · `tcmb_service.py` İçinde Hafta Sonu ve Tatillerde Boş TCMB XML ForexBuying Nedeniyle `AttributeError` ile Güncellemenin Durması ✅ Çözüldü (e137bffd · 2026-11-01)
 
 * **Etkilenen Dosya:** `backend/app/services/tcmb_service.py` (satırlar 25–40)
 * **İlgili Görev:** `fetch_and_save_tcmb_rates`
@@ -3521,7 +3521,7 @@ if usd_rate is None:
 
 | Alan | Değer |
 |------|-------|
-| Commit | `COMMIT_PLACEHOLDER` |
+| Commit | `e137bffd` |
 | Tarih | 2026-11-01 |
 | `tcmb_service.py` | `_extract_rate()` helper eklendi; `ForexBuying → BanknoteBuying` fallback; her ikisi boşsa DB'den son kur çekilir |
 | Davranış değişikliği | Hafta sonu / tatil günlerinde cron job artık çökmez; önceki iş günü kurunu bugünün tarihi ile yazar |
@@ -7836,7 +7836,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 88. ~~**Adım 88 (`SRE-96`):** `wallet.py:send-gift` ve `send_gift_command.py` içine yayın durumu (`stream.status == 'live'`) ve host doğrulaması ekle; kapanmış yayınlar üzerinden bakiye aklanmasını ve sahte hype manipülasyonunu engelle.~~ ✅ `fbb5dbfb`
 89. ~~**Adım 89 (`SRE-97`):** `admin_data.py` kampanya duraklatma ve ilan pasifleştirme endpoint'lerine Redis önbellek temizleme (`srem ad_campaigns:active` ve `invalidate_listing_cache`) çağrılarını ekle; admin aksiyonları ile Redis arasındaki desenkronizasyonu çöz.~~ ✅ `30f24b5d`
 90. ~~**Adım 90 (`SRE-82`):** `credit_service.py` ve `leads.py` içindeki TOCTOU yarış durumunu Redis Lua scripti ile atomik check-and-consume işlemine dönüştür; kullanıcıların ücretsiz haklarını (blast, boost, ai) eşzamanlı isteklerle limitsiz tüketmesini engelle.~~ ✅ `cc430785`
-91. ~~**Adım 91 (`SRE-83`):** `tcmb_service.py:fetch_and_save_tcmb_rates` fonksiyonundaki `ForexBuying` text okumasına `NoneType` kontrolü ve fallback ekle; tatil günlerinde döviz kurlarının `AttributeError` ile çökmesini durdur.~~ ✅ `COMMIT_PLACEHOLDER`
+91. ~~**Adım 91 (`SRE-83`):** `tcmb_service.py:fetch_and_save_tcmb_rates` fonksiyonundaki `ForexBuying` text okumasına `NoneType` kontrolü ve fallback ekle; tatil günlerinde döviz kurlarının `AttributeError` ile çökmesini durdur.~~ ✅ `e137bffd`
 92. **Adım 92 (`SRE-84`):** `relationship_service.py` içindeki `is_busy` kontrolünü 1 saatlik statik izin önbelleğinden çıkarıp `GetThreadStatusQuery` anında dinamik değerlendirmeye taşı; 15 saniyelik bir telefon görüşmesinde arama butonunun 1 saat kilitli kalmasını (Cache Poisoning) engelle.
 93. **Adım 93 (`SRE-77`):** `admin_data.py:admin_send_push` içindeki senkron FCM döngüsünü ARQ arka plan kuyruğuna taşı ve Firebase Admin SDK `send_each_for_multicast` toplu gönderimine geçir; Uvicorn worker'ın 25 dakika donmasını önle.
 94. **Adım 94 (`SRE-78`):** `cleaner.py` (teqlif-agent) içindeki süresi dolan hikaye temizliğine MinIO nesne silme koordinasyonunu ekle; depolamada yüzlerce GB yetim video birikmesini engelle.
