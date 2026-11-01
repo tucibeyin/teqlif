@@ -5120,6 +5120,15 @@ async def get_listing_offers(
        await pipe.execute()
    ```
 
+#### ✅ Çözüm Damgası
+* **Commit:** `b91b81f1` — 2026-11-01
+* **Değişen Dosya:** `backend/app/services/influence_service.py`
+* **Yapılanlar:**
+  * `SELECT WHERE status = 'accepted'` filtresi eklendi — reddedilen/bekleyen takipler hesaplamadan çıkarıldı
+  * `networkx.DiGraph` + `nx.pagerank` (10M kenarda ~10 GB Python dict-of-dicts) → `scipy.sparse.csr_matrix` + güç iterasyonu (~300 MB)
+  * `asyncio.get_event_loop()` → `asyncio.get_running_loop()` (Python 3.10+ deprecation düzeltildi)
+  * Redis pipeline: tüm kullanıcılar tek `pipe.execute()` (socket kilitlenmesi) → 1.000'lik chunk döngüsüne bölündü
+
 ---
 
 ### SRE-125 · 🟡 P2 (Orta) · Her Feed İsteğinde `SELECT DISTINCT category FROM listings` Full Table Scan ve İndekssiz Sort
@@ -7664,7 +7673,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 58. ~~**Adım 58 (`SRE-121`):** `favorites.py:remove_favorite` içindeki ilgisiz `ListingLike` silme kodunu kaldır; `add_favorite` içine double-click yarış koruması ekle ve beğeni işlemlerini `LikeService` ile senkronize et.~~ ✅ `0bd6f787`
 59. ~~**Adım 59 (`SRE-122`):** `story_service.py` içindeki senkron FFmpeg video sıkıştırmasını HTTP thread'inden çıkarıp ARQ arka plan kuyruğuna delege et; Uvicorn event loop açlığını ve 504 Gateway Timeout'ları çöz.~~ ✅ `af7464ca`
 60. ~~**Adım 60 (`SRE-123`):** `worker.py` temizlik görevlerindeki `VACUUM ANALYZE` çağrılarını kaldırıp autovacuum'a devret; 30 günlük bildirimleri ve analitikleri 5.000'lik gruplarla (batch delete) sil.~~ ✅ `ae09b7ab`
-61. **Adım 61 (`SRE-124`):** `influence_service.py` sorgusuna `status = 'accepted'` filtresi ve sparse matris optimizasyonu ekle; Redis pipeline komutlarını 1.000'lik gruplara bölerek OOM ve socket kilitlenmesini durdur.
+61. ~~**Adım 61 (`SRE-124`):** `influence_service.py` sorgusuna `status = 'accepted'` filtresi ve sparse matris optimizasyonu ekle; Redis pipeline komutlarını 1.000'lik gruplara bölerek OOM ve socket kilitlenmesini durdur.~~ ✅ `b91b81f1`
 62. **Adım 62 (`SRE-132`):** `fraud_detection_service.py:_log_fraud_attempt` içindeki global `fraud_log` Redis ZSET'ini ve her seferinde çalışan `zremrangebyscore` temizliğini kaldır; şüpheli teklif kayıtlarını ClickHouse `track_user_event` veya TTL'li Redis Stream'e (`XADD`) taşıyarak Redis dondurma ve OOM riskini engelle.
 63. **Adım 63 (`SRE-133`):** `User` modeline `user_devices` (`user_id`, `fcm_token`, `platform`, `last_active_at`) ilişkisini ekle; `device_service.py` içinde geçersiz token olayında sadece ilgili cihazı silerek kullanıcının diğer aktif telefon ve tabletlerindeki bildirimlerin kesilmesini durdur.
 64. **Adım 64 (`SRE-134`):** `livekit_service.py:lk_list_all_rooms` ve `lk_broadcast_delete` içindeki sıralı for döngülerini `asyncio.gather(*tasks, return_exceptions=True)` ile paralel hale getir ve 3.0s tavan timeout ekle; 1 erişilemez node yüzünden arka plan temizliğinin 16-60 sn kilitlenmesini çöz.
