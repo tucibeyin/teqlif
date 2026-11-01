@@ -7198,6 +7198,9 @@ except Exception as _ce:
     logger.warning("[REFERRAL] Session cache invalidate failed: %s", _ce)
 ```
 
+#### ✅ Çözüm Damgası
+`3d616025` — `referral_service.py`'ye `_get_t` ve `invalidate_user_session_cache` importları eklendi; bakiye commit'i sonrası her iki kullanıcının önbelleği temizleniyor.
+
 ---
 
 ### SRE-168 · 🔴 P0 (Kritik) · `check_listing_nsfw` İçinde Eksik `ListingStatus` ve Yanlış `push_notification` Import'u Nedeniyle Müstehcen İçeriklerin Otomatik Askıya Alınamaması ve Sansürsüz Yayında Kalması (Missing `ListingStatus` Import in NudeNet Worker & Failure to Auto-Suspend Explicit Content)
@@ -7242,6 +7245,9 @@ from app.services.notification_service import push_notification
 # satır 170 güvenle ListingStatus.SUSPENDED.value değerini kullanır
 # satır 187'deki lokal hatalı router import'u kaldırılır
 ```
+
+#### ✅ Çözüm Damgası
+`3d616025` — `nsfw_service.py`'ye modül seviyesinde `ListingStatus` ve `push_notification` importları eklendi; servis→router döngüsel bağımlılığı giderildi.
 
 ---
 
@@ -7605,8 +7611,8 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 24. ~~**Adım 24 (`SRE-156`):** `auth.py:init_context` ve `get_conversations_query.py` içindeki tekil `AsyncSession` üzerinde `asyncio.gather` ile eşzamanlı `execute()` çağrılarını sıralı `await` yürütmesine çevir; mobil açılışta ve mesaj kutusunda yaşanan `IllegalStateChangeError` (HTTP 500) çökmesini çöz.~~ ✅ `282d715b`
 25. ~~**Adım 25 (`SRE-161`):** `auction_commands.py:accept_bid` ve `auction_redis_repo.py` içine atomik `lock_accept_bid` Lua script'i ekle; teklif kabul sürecinde Redis'in `accepting` durumuna alınmasını sağlayarak eşzamanlı yeni tekliflerle ihalenin gasbedilmesini ve çift kazanan anomalilerini engelle.~~ ✅ `1a389109`
 26. ~~**Adım 26 (`SRE-162`):** `admin_data.py:purge_user` endpoint'ine `token_version` artırımı, `invalidate_user_session_cache` çağrısı, aktif ilanları pasife çekme ve aktif canlı yayını sonlandırma ekle; anonimize edilip silinen kullanıcının 15 dk boyunca JWT ve Redis oturumunu sürdürmesini engelle.~~ ✅ `1a389109`
-27. **Adım 27 (`SRE-167`):** `referral_service.py:74, 156, 172` içine `from app.utils.i18n import _get_t` import'unu ekle ve bakiye dağıtımında `invalidate_user_session_cache` çağır; referans kodu kullanımının ve onaylı kullanıcıların e-posta/telefon doğrulamasında `NameError: name '_get_t' is not defined` (HTTP 500) ile çökmesini ve cüzdan bakiyesinin Redis önbelleğinde 15 dk eski kalmasını çöz.
-28. **Adım 28 (`SRE-168`):** `nsfw_service.py:170, 187` içine `from app.models.enums import ListingStatus` ve doğru `notification_service` import'unu ekle; NudeNet moderasyonunun `NameError: name 'ListingStatus' is not defined` ile çöküp müstehcen ve pornografik içerikli ilanların sansürsüz yayında kalmasını engelle.
+27. ~~**Adım 27 (`SRE-167`):** `referral_service.py:74, 156, 172` içine `from app.utils.i18n import _get_t` import'unu ekle ve bakiye dağıtımında `invalidate_user_session_cache` çağır; referans kodu kullanımının ve onaylı kullanıcıların e-posta/telefon doğrulamasında `NameError: name '_get_t' is not defined` (HTTP 500) ile çökmesini ve cüzdan bakiyesinin Redis önbelleğinde 15 dk eski kalmasını çöz.~~ ✅ `3d616025`
+28. ~~**Adım 28 (`SRE-168`):** `nsfw_service.py:170, 187` içine `from app.models.enums import ListingStatus` ve doğru `notification_service` import'unu ekle; NudeNet moderasyonunun `NameError: name 'ListingStatus' is not defined` ile çöküp müstehcen ve pornografik içerikli ilanların sansürsüz yayında kalmasını engelle.~~ ✅ `3d616025`
 29. ~~**Adım 29 (`SRE-171`):** `worker.py:flush_interactions_to_db` satır 856'da `BATCH_LIMIT` yerine `len(raw_items)` kullan; veritabanı yazımı sürerken gelen tüm kullanıcı tıklama ve dwell etkileşimlerinin Redis'ten kalıcı silinmesini ve ML modellerinin bozulmasını engelle.~~ ✅ `96411c73`
 30. ~~**Adım 30 (`SRE-172`):** `failover_stream.py` içine Redis `stream:meta` güncellemesini ve oda chat kanalına `stream_failover` WebSocket yayını ekle; çöken sunucudaki izleyicilerin ölü düğümde kilitli kalmasını ve yayının 0 izleyiciyle devam etmesini çöz.~~ ✅ `603776be`
 31. ~~**Adım 31 (`SRE-89`):** `calls.py:start_call` içindeki tek taraflı advisory lock'u `min(caller, callee), max(caller, callee)` sıralı çiftine dönüştür; simetrik arama çakışmasında (glare) çift LiveKit odası oluşmasını ve çoklu arama DoS açığını engelle.~~ ✅ (önceden uygulanmış)
