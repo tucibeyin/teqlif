@@ -5617,6 +5617,19 @@ await self.uow.session.execute(stmt)
 
 ---
 
+#### ✅ Çözüm Damgası — SRE-136
+
+| Alan | Değer |
+|---|---|
+| **Commit** | `db6d8895` |
+| **Tarih** | 2026-11-01 |
+| **Değiştirilen Dosyalar** | `upsert_rating.py` |
+| **Kök Neden** | `SELECT` → `INSERT/UPDATE` iki adımı yarış durumu yaratır; `self.uow.session.commit()` direkt çağrısı UoW sözleşmesini bozar; commit sonrası session sorgusu `InvalidRequestError` riski taşır |
+| **Çözüm** | Tek CTE: `old_val` eski değeri aynı snapshot'ta yakalar, `upsert` `ON CONFLICT DO UPDATE` atomik yazım, `RETURNING` ile `was_update`/`old_score` alınır; `RatingHistory` commit öncesi eklenir; `async with self.uow:` commit'i devralır; `asyncio.create_task` commit sonrası tetiklenir |
+| **Test** | `python3 -c "import ast; ast.parse(...)"` — geçti |
+
+---
+
 ### SRE-137 · 🟡 P2 (Orta) · `accept_follow_request` İçinde Koşulsuz `_redis.decr` Nedeniyle Mesaj İstek Sayacının Negatife Düşmesi
 * **Etkilenen Dosya:** `backend/app/routers/follows.py`
 * **İlgili Satırlar:** 213–228
@@ -7712,7 +7725,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 63. ~~**Adım 63 (`SRE-133`):** `User` modeline `user_devices` (`user_id`, `fcm_token`, `platform`, `last_active_at`) ilişkisini ekle; `device_service.py` içinde geçersiz token olayında sadece ilgili cihazı silerek kullanıcının diğer aktif telefon ve tabletlerindeki bildirimlerin kesilmesini durdur.~~ ✅ `be0378a1`
 64. ~~**Adım 64 (`SRE-134`):** `livekit_service.py:lk_list_all_rooms` ve `lk_broadcast_delete` içindeki sıralı for döngülerini `asyncio.gather(*tasks, return_exceptions=True)` ile paralel hale getir ve 3.0s tavan timeout ekle; 1 erişilemez node yüzünden arka plan temizliğinin 16-60 sn kilitlenmesini çöz.~~ ✅ `b8488471`
 65. ~~**Adım 65 (`SRE-135`):** `messages.py:_read_streaming` fonksiyonundaki bellekte `b"".join` biriktirmeyi kaldırıp doğrudan geçici dosyaya stream et; `media_processor.py` içindeki senkron Pillow `make_thumbnail` ve FFmpeg video analizini `asyncio.to_thread` ve worker kuyruğuna delege ederek Uvicorn açlığını engelle.~~ ✅ `6fd934fb`
-66. **Adım 66 (`SRE-136`):** `upsert_rating.py:UpsertRatingCommand` içindeki kilitsiz `scalar` ve `add` ikilisini PostgreSQL `ON CONFLICT (rater_id, rated_id) DO UPDATE` ifadesine dönüştür; komut içindeki kontrolsüz `commit()` çağrısını kaldırarak Unit of Work oturum bütünlüğünü koru.
+66. ~~**Adım 66 (`SRE-136`):** `upsert_rating.py:UpsertRatingCommand` içindeki kilitsiz `scalar` ve `add` ikilisini PostgreSQL `ON CONFLICT (rater_id, rated_id) DO UPDATE` ifadesine dönüştür; komut içindeki kontrolsüz `commit()` çağrısını kaldırarak Unit of Work oturum bütünlüğünü koru.~~ ✅ `db6d8895`
 67. ~~**Adım 67 (`SRE-142`):** `upload.py:upload_listing_video` içindeki 60 MB bellek biriktirme ve senkron FFmpeg/FFprobe transcode işlemlerini HTTP isteğinden çıkarıp ARQ arka plan kuyruğuna delege et; istemcinin 60s bekleyip 504 Gateway Timeout almasını ve CPU %100 açlığını durdur.~~ ✅ `d9dd903f`
 68. ~~**Adım 68 (`SRE-143`):** `admin_data.py:get_dashboard` endpoint'indeki 16 sıralı aggregate SQL ve 7 günlük döngüsel sorguyu tek bir tarih gruplamalı CTE'ye çevir ve sonuçları Redis'te 60 saniye TTL ile önbellekle; Postgres CPU kilitlenmesini çöz.~~ ✅ `0387d0cf`
 69. ~~**Adım 69 (`SRE-144`):** `admin_data.py:get_admin_analytics_summary` içindeki `COUNT(DISTINCT session_id)` ve grup sorgularını transactional PostgreSQL yerine doğrudan ClickHouse `user_events` tablosuna yönlendir ve 5 dakikalık Redis önbelleği ekle; buffer cache kirlenmesini ve DB kilitlenmesini durdur.~~ ✅ `0387d0cf`
