@@ -1101,17 +1101,18 @@ class FeedQueries:
         # "ad_campaigns:active" set'i yalnızca aktif kampanya ID'lerini tutar.
         # Keyspace SCAN yerine O(N) SMEMBERS — kampanya sayısı küçük (~50 max).
         raw_ids = await redis.smembers("ad_campaigns:active")
-        campaign_ids: list[int] = []
+        all_ids: list[int] = []
         for raw in raw_ids:
             try:
-                campaign_ids.append(int(raw))
+                all_ids.append(int(raw))
             except (ValueError, TypeError):
                 continue
-            if len(campaign_ids) >= 50:
-                break
 
-        if not campaign_ids:
+        if not all_ids:
             return []
+
+        # Rastgele örnekleme: ölü slotların ilk 50'yi tıklamasını önler.
+        campaign_ids = random.sample(all_ids, min(len(all_ids), 50))
 
         # Kampanya meta verilerini çek
         rows = await self.uow.session.execute(
@@ -1127,6 +1128,23 @@ class FeedQueries:
             )
         )
         candidates = rows.all()
+
+        # Self-healing: SQL filtresi geçemeyen ID'ler artık pasif — setten çıkar.
+        if len(candidates) < len(campaign_ids):
+            active_ids = {c.id for c, _, _ in candidates}
+            stale = [cid for cid in campaign_ids if cid not in active_ids]
+            if stale:
+                import asyncio as _asyncio
+
+                async def _purge_stale(ids: list[int]) -> None:
+                    try:
+                        r = await get_redis()
+                        await r.srem("ad_campaigns:active", *[str(i) for i in ids])
+                    except Exception:
+                        pass
+
+                _asyncio.create_task(_purge_stale(stale))
+
         if not candidates:
             return []
 

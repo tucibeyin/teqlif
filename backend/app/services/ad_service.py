@@ -227,6 +227,36 @@ async def pause_campaign(campaign_id: int, seller_id: int) -> bool:
     return False
 
 
+async def cancel_campaign(campaign_id: int, seller_id: int) -> bool:
+    """
+    Kampanyayı iptal eder (satıcı erken bitiş).
+    Redis set'inden ve budget/cpc anahtarlarından temizler.
+    """
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(
+            update(AdCampaign)
+            .where(
+                AdCampaign.id == campaign_id,
+                AdCampaign.seller_id == seller_id,
+                AdCampaign.status.in_(["active", "paused"]),
+            )
+            .values(status="completed")
+            .returning(AdCampaign.id)
+        )
+        await db.commit()
+        updated = result.fetchone()
+
+    if updated:
+        redis = await get_redis()
+        pipe = redis.pipeline()
+        pipe.delete(_BUDGET_KEY.format(campaign_id))
+        pipe.delete(_CPC_KEY.format(campaign_id))
+        pipe.srem("ad_campaigns:active", str(campaign_id))
+        await pipe.execute()
+        return True
+    return False
+
+
 async def resume_campaign(campaign_id: int, seller_id: int) -> bool:
     """
     Duraklatılmış kampanyayı yeniden başlatır.
