@@ -105,18 +105,23 @@ class HandleStoreRefundCommand:
             ),
             {"uid": user_id, "delta": -refunded_teqlik, "bal": balance_after},
         )
-        # Platform ledger: iade edilen teqlik'i sisteme geri yaz (id=0)
+        # Platform ledger: iade edilen teqlik'i sisteme geri yaz (id=0) — teqlik_balance atomik güncellenir
         sys_bal_row = await self._session.execute(
-            text("SELECT teqlik_balance FROM users WHERE id = 0")
+            text(
+                "UPDATE users SET teqlik_balance = teqlik_balance + :delta "
+                "WHERE id = 0 RETURNING teqlik_balance"
+            ),
+            {"delta": refunded_teqlik},
         )
-        sys_balance = sys_bal_row.scalar() or 0
+        sys_row = sys_bal_row.fetchone()
+        sys_balance_after = sys_row[0] if sys_row is not None else refunded_teqlik
         await self._session.execute(
             text(
                 "INSERT INTO wallet_ledger "
                 "(user_id, delta_teqlik, balance_after, tx_type) "
                 "VALUES (0, :delta, :bal, 'iap_refund_recovery')"
             ),
-            {"delta": refunded_teqlik, "bal": sys_balance + refunded_teqlik},
+            {"delta": refunded_teqlik, "bal": sys_balance_after},
         )
 
         # ── 7. refund_log INSERT ───────────────────────────────────────────────
