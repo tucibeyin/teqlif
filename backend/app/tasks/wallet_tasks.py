@@ -28,69 +28,62 @@ async def release_pending_earnings_task(ctx: dict) -> None:
     gift_events.payout_status='pending' AND sent_at <= NOW()-14d
     → user_wallet_earnings: available += total, pending -= total
     → gift_events.payout_status = 'released'
-    """
-    released_users = 0
-    released_teqlik = 0
 
+    Tek CTE zinciriyle set-based SQL: kullanıcı başına N+1 döngü yok,
+    transaction kısa tutulur, WAL şişmesi ve satır kilit birikimi önlenir.
+    """
     try:
         cutoff = datetime.now(timezone.utc) - timedelta(days=_PENDING_HOLD_DAYS)
 
         async with AsyncSessionLocal() as session:
-            locked = await session.execute(
-                text(
-                    "SELECT receiver_id, SUM(earned_teqlik) AS total "
-                    "FROM gift_events "
-                    "WHERE payout_status = 'pending' "
-                    "  AND sent_at <= :cutoff "
-                    "GROUP BY receiver_id"
-                ),
+            result = await session.execute(
+                text("""
+                    WITH amounts AS (
+                        SELECT receiver_id,
+                               SUM(earned_teqlik)::bigint AS total
+                        FROM   gift_events
+                        WHERE  payout_status = 'pending'
+                          AND  sent_at <= :cutoff
+                        GROUP  BY receiver_id
+                        HAVING SUM(earned_teqlik) > 0
+                    ),
+                    wallet_update AS (
+                        UPDATE user_wallet_earnings uwe
+                        SET available  = uwe.available + a.total,
+                            pending    = uwe.pending   - a.total,
+                            updated_at = NOW()
+                        FROM   amounts a
+                        WHERE  uwe.user_id = a.receiver_id
+                        RETURNING uwe.user_id,
+                                  a.total        AS delta,
+                                  uwe.available  AS balance_after
+                    ),
+                    ledger_insert AS (
+                        INSERT INTO wallet_ledger
+                               (user_id, delta_teqlik, balance_after,
+                                tx_type, reference_type)
+                        SELECT user_id, delta, balance_after,
+                               'earnings_released', 'cron'
+                        FROM   wallet_update
+                        RETURNING user_id, delta_teqlik
+                    ),
+                    gift_update AS (
+                        UPDATE gift_events
+                        SET payout_status = 'released',
+                            released_at   = NOW()
+                        WHERE payout_status = 'pending'
+                          AND sent_at <= :cutoff
+                        RETURNING 1
+                    )
+                    SELECT
+                        (SELECT COUNT(*)                            FROM ledger_insert) AS released_users,
+                        (SELECT COALESCE(SUM(delta_teqlik), 0)     FROM ledger_insert) AS released_teqlik
+                """),
                 {"cutoff": cutoff},
             )
-            rows = locked.fetchall()
-
-            for user_id, total in rows:
-                if not total or total <= 0:
-                    continue
-
-                await session.execute(
-                    text(
-                        "UPDATE user_wallet_earnings "
-                        "SET available = available + :amt, "
-                        "    pending   = pending   - :amt, "
-                        "    updated_at = NOW() "
-                        "WHERE user_id = :uid"
-                    ),
-                    {"amt": int(total), "uid": user_id},
-                )
-
-                avail_row = await session.execute(
-                    text("SELECT available FROM user_wallet_earnings WHERE user_id = :uid"),
-                    {"uid": user_id},
-                )
-                avail_after = avail_row.fetchone()[0]
-
-                await session.execute(
-                    text(
-                        "INSERT INTO wallet_ledger "
-                        "(user_id, delta_teqlik, balance_after, tx_type, reference_type) "
-                        "VALUES (:uid, :delta, :bal, 'earnings_released', 'cron')"
-                    ),
-                    {"uid": user_id, "delta": int(total), "bal": int(avail_after)},
-                )
-
-                released_users += 1
-                released_teqlik += int(total)
-
-            # Aynı :cutoff — TOCTOU zaman kayması yok
-            await session.execute(
-                text(
-                    "UPDATE gift_events "
-                    "SET payout_status = 'released', released_at = NOW() "
-                    "WHERE payout_status = 'pending' "
-                    "  AND sent_at <= :cutoff"
-                ),
-                {"cutoff": cutoff},
-            )
+            row = result.fetchone()
+            released_users  = int(row[0]) if row else 0
+            released_teqlik = int(row[1]) if row else 0
             await session.commit()
 
         logger.info(
