@@ -4170,7 +4170,7 @@ if stream.host_id != receiver_id:
 
 ---
 
-### SRE-97 · 🟠 P1 (Yüksek) · Admin Kampanya Duraklatma ve İlan Pasifleştirmede Redis'in Güncellenmemesi (Admin vs Redis Desync)
+### SRE-97 · 🟠 P1 (Yüksek) · Admin Kampanya Duraklatma ve İlan Pasifleştirmede Redis'in Güncellenmemesi (Admin vs Redis Desync) ✅ Çözüldü (30f24b5d · 2026-11-01)
 
 * **Etkilenen Dosya:** `backend/app/routers/admin_data.py` (satırlar 310–326, 602–610)
 * **İlgili Endpointler:** `POST /api/admin-data/ad-campaigns/{id}/pause`, `POST /api/admin-data/listings/{id}/toggle`, `DELETE /api/admin-data/listings/{id}`
