@@ -63,6 +63,20 @@ class SendGiftCommand:
         if receiver_id == sender_id:
             raise BadRequestException(code="SELF_GIFT_FORBIDDEN")
 
+        # ── Yayın doğrulaması — canlı yayın ve host kontrolü ──────────────────
+        stream_row = await self._session.execute(
+            text(
+                "SELECT id, host_id FROM live_streams "
+                "WHERE id = :sid AND is_live = TRUE AND status = 'live'"
+            ),
+            {"sid": stream_id},
+        )
+        stream = stream_row.fetchone()
+        if stream is None:
+            raise BadRequestException(code="STREAM_NOT_LIVE")
+        if stream.host_id != receiver_id:
+            raise BadRequestException(code="RECEIVER_IS_NOT_STREAM_HOST")
+
         # ── Kazanç hesabı ──────────────────────────────────────────────────────
         host_share_pct = _HOST_SHARE_PRO if receiver_type == "pro" else _HOST_SHARE_STD
         earned_teqlik   = math.floor(cost * host_share_pct / 100)  # INTEGER
