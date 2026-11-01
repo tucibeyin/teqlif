@@ -269,20 +269,14 @@ batch:
     minute: 15
     watchdog_m: 4320          # 3 gün (Cum→Pzt maks boşluk)
 
-  - name: train_swipe_live_als_task
+  - name: run_ml_training_pipeline_task  # SRE-09: Pazar ML DAG (ardışık)
     weekday: 6                # Pazar
     hour: 5
-    minute: 15
-    watchdog_m: 10080
-
-  - name: train_item2vec_task
-    weekday: 6                # Pazar
-    hour: 5
-    minute: 30
+    minute: 0
     watchdog_m: 10080
 
   - name: train_kmeans_cold_start_task
-    weekday: [2, 6]           # Çarşamba, Pazar
+    weekday: 2                # Çarşamba (Pazar → pipeline üstlendi)
     hour: 5
     minute: 45
     watchdog_m: 4320
@@ -291,24 +285,6 @@ batch:
     weekday: 0                # Pazartesi — cleanup_old_analytics (CH delete) sonrası
     hour: 5
     minute: 45
-    watchdog_m: 10080
-
-  - name: train_feed_als_task
-    weekday: 6                # Pazar
-    hour: 6
-    minute: 0
-    watchdog_m: 10080
-
-  - name: train_listing_quality_model_task
-    weekday: 6                # Pazar
-    hour: 6
-    minute: 30
-    watchdog_m: 10080
-
-  - name: compute_influence_scores_task
-    weekday: 6                # Pazar
-    hour: 6
-    minute: 30
     watchdog_m: 10080
 
   # ── Aylık (ayın 1'i) ────────────────────────────────────────────────────────

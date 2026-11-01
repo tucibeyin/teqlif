@@ -3185,6 +3185,103 @@ async def train_feed_als_task(ctx: dict) -> None:
         raise
 
 
+async def run_ml_training_pipeline_task(ctx: dict) -> None:
+    """
+    Her Pazar 05:00 UTC — Haftalık ML eğitim pipeline'ı (ardışık adımlar).
+
+    Bağımsız Pazar cron'larının yerini alır: SwipeLive ALS → Item2Vec →
+    FeedALS → KMeans → ListingQuality → InfluenceScores. Her adım kendi
+    try/except bloğuyla sarılır; bir adımın başarısızlığı sonrakini engellemez.
+    """
+    steps_ok: list[str] = []
+    steps_fail: list[str] = []
+
+    # ── 1. SwipeLive ALS ──────────────────────────────────────────────────────
+    try:
+        from app.services.ml.swipe_live_ml import train_swipe_live_als
+        await train_swipe_live_als()
+        steps_ok.append("swipe_live_als")
+        await _agent_ok(ctx, "train_swipe_live_als_task")
+        logger.info("[MLPipeline] 1/6 swipe_live_als tamamlandı")
+    except Exception as exc:
+        logger.error("[MLPipeline] 1/6 swipe_live_als başarısız | %s", exc, exc_info=True)
+        capture_exception(exc)
+        steps_fail.append("swipe_live_als")
+
+    # ── 2. Item2Vec ────────────────────────────────────────────────────────────
+    try:
+        from app.database import AsyncSessionLocal
+        from app.services.ml.item2vec_service import train_item2vec
+        async with AsyncSessionLocal() as db:
+            n = await train_item2vec(db)
+        steps_ok.append("item2vec")
+        await _agent_ok(ctx, "train_item2vec_task")
+        logger.info("[MLPipeline] 2/6 item2vec tamamlandı | oturum=%d", n)
+    except Exception as exc:
+        logger.error("[MLPipeline] 2/6 item2vec başarısız | %s", exc, exc_info=True)
+        capture_exception(exc)
+        steps_fail.append("item2vec")
+
+    # ── 3. Feed ALS ────────────────────────────────────────────────────────────
+    try:
+        from app.database import AsyncSessionLocal
+        from app.services.ml.feed_als_ml import train_feed_als
+        async with AsyncSessionLocal() as db:
+            await train_feed_als(db)
+        steps_ok.append("feed_als")
+        await _agent_ok(ctx, "train_feed_als_task")
+        logger.info("[MLPipeline] 3/6 feed_als tamamlandı")
+    except Exception as exc:
+        logger.error("[MLPipeline] 3/6 feed_als başarısız | %s", exc, exc_info=True)
+        capture_exception(exc)
+        steps_fail.append("feed_als")
+
+    # ── 4. KMeans cold start ───────────────────────────────────────────────────
+    try:
+        from app.database import AsyncSessionLocal
+        from app.services.ml.kmeans_service import train_kmeans
+        async with AsyncSessionLocal() as db:
+            n = await train_kmeans(db)
+        steps_ok.append("kmeans")
+        await _agent_ok(ctx, "train_kmeans_cold_start_task")
+        logger.info("[MLPipeline] 4/6 kmeans tamamlandı | ilan=%d", n)
+    except Exception as exc:
+        logger.error("[MLPipeline] 4/6 kmeans başarısız | %s", exc, exc_info=True)
+        capture_exception(exc)
+        steps_fail.append("kmeans")
+
+    # ── 5. Listing quality model ───────────────────────────────────────────────
+    try:
+        await train_listing_quality_model_task(ctx)
+        steps_ok.append("listing_quality")
+        logger.info("[MLPipeline] 5/6 listing_quality tamamlandı")
+    except Exception as exc:
+        logger.error("[MLPipeline] 5/6 listing_quality başarısız | %s", exc, exc_info=True)
+        capture_exception(exc)
+        steps_fail.append("listing_quality")
+
+    # ── 6. Influence scores (PageRank) ─────────────────────────────────────────
+    try:
+        from app.services.influence_service import compute_influence_scores
+        count = await compute_influence_scores()
+        steps_ok.append("influence_scores")
+        await _agent_ok(ctx, "compute_influence_scores_task")
+        logger.info("[MLPipeline] 6/6 influence_scores tamamlandı | kullanıcı=%d", count)
+    except ImportError:
+        logger.warning("[MLPipeline] 6/6 networkx yüklü değil, influence_scores atlandı")
+        steps_ok.append("influence_scores")
+    except Exception as exc:
+        logger.error("[MLPipeline] 6/6 influence_scores başarısız | %s", exc, exc_info=True)
+        capture_exception(exc)
+        steps_fail.append("influence_scores")
+
+    logger.info(
+        "[MLPipeline] Haftalık ML pipeline tamamlandı | başarılı=%s başarısız=%s",
+        steps_ok, steps_fail,
+    )
+    await _agent_ok(ctx, "run_ml_training_pipeline_task")
+
+
 # ── Task: Bildirim Zaman Optimizasyonu ────────────────────────────────────────
 
 async def optimize_notification_timing_task(ctx: dict) -> None:
@@ -4351,6 +4448,7 @@ _SCHEDULE_FUNCTIONS = {
     "train_feed_als_task":                   train_feed_als_task,
     "train_listing_quality_model_task":      train_listing_quality_model_task,
     "compute_influence_scores_task":               compute_influence_scores_task,
+    "run_ml_training_pipeline_task":               run_ml_training_pipeline_task,
     "cleanup_old_exchange_rates_task":             cleanup_old_exchange_rates_task,
     "cleanup_old_streams_task":                   cleanup_old_streams_task,
     "archive_old_dm_task":                        archive_old_dm_task,
@@ -4421,6 +4519,7 @@ class WorkerSettings:
         invalidate_swipe_live_configs_task,
         train_swipe_live_als_task,
         train_feed_als_task,
+        run_ml_training_pipeline_task,
         sync_swipelive_interests_task,
         backfill_listing_embeddings_task,
         reembed_condition_listings_task,
