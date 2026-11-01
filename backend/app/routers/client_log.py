@@ -11,14 +11,15 @@ Kullanım:
 """
 from __future__ import annotations
 
+import json
 import re
-import time
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
 
 from app.core.logger import get_logger
+from app.core.ip_utils import get_client_ip
 from app.utils.auth import decode_token, bearer_scheme
 
 logger = get_logger(__name__)
@@ -57,7 +58,7 @@ async def _rate_check(request: Request) -> bool:
         redis = await get_redis()
         if not redis:
             return True
-        ip  = request.client.host if request.client else "unknown"
+        ip  = get_client_ip(request)
         key = f"rl:client_log:{ip}"
         cnt = await redis.incr(key)
         if cnt == 1:
@@ -76,7 +77,7 @@ async def client_log(
     if not await _rate_check(request):
         return {"ok": True}
 
-    ip       = request.client.host if request.client else "?"
+    ip       = get_client_ip(request)
     platform = entry.platform or "?"
     version  = entry.version  or "?"
 
@@ -92,6 +93,11 @@ async def client_log(
     )
 
     if entry.details:
-        logger.warning("[CLIENT_LOG] details | tag=%s | %s", _sanitize(entry.tag), entry.details)
+        details_str = json.dumps(entry.details, ensure_ascii=False, default=str)[:2000]
+        logger.warning(
+            "[CLIENT_LOG] details | tag=%s | %s",
+            _sanitize(entry.tag),
+            _sanitize(details_str, max_len=2000),
+        )
 
     return {"ok": True}

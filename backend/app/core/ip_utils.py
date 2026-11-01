@@ -1,6 +1,29 @@
-"""KVKK/GDPR uyumluluğu için IP adresi maskeleme yardımcısı."""
+"""KVKK/GDPR uyumluluğu için IP adresi maskeleme ve tespit yardımcıları."""
 
 import ipaddress
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from fastapi import Request
+
+
+def get_client_ip(request: "Request") -> str:
+    """Gerçek istemci IP'sini döner (proxy zincirine güvenli).
+
+    Öncelik: CF-Connecting-IP → X-Real-IP → X-Forwarded-For → ASGI host.
+    CF-Connecting-IP: Cloudflare Proxied modunda tek güvenilir kaynak.
+    X-Real-IP: Nginx'in $remote_addr/$http_cf_connecting_ip ile set ettiği header.
+    """
+    cf_ip = request.headers.get("cf-connecting-ip")
+    if cf_ip:
+        return cf_ip.strip()
+    real_ip = request.headers.get("x-real-ip")
+    if real_ip:
+        return real_ip.strip()
+    xff = request.headers.get("x-forwarded-for")
+    if xff:
+        return xff.split(",")[0].strip()
+    return request.client.host if request.client else "0.0.0.0"
 
 
 def mask_ip(ip: str | None) -> str | None:

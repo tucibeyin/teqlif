@@ -2,6 +2,7 @@ import json
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
+from sqlalchemy.exc import IntegrityError
 from app.models.enums import ListingStatus
 from app.database import get_db
 from app.models.favorite import Favorite
@@ -96,7 +97,11 @@ async def add_favorite(listing_id: int, current_user: User = Depends(get_current
         db.add(Favorite(user_id=current_user.id, listing_id=listing_id))
     if not existing_like:
         db.add(ListingLike(user_id=current_user.id, listing_id=listing_id))
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        # Çift tıklama yarışında kayıt zaten eklendi — başarı sayılır
+        await db.rollback()
     try:
         from app.utils.redis_client import get_redis
         await (await get_redis()).delete(f"listing:engagement:{listing_id}")
@@ -110,17 +115,12 @@ async def remove_favorite(listing_id: int, current_user: User = Depends(get_curr
     fav = await db.scalar(
         select(Favorite).where(Favorite.user_id == current_user.id, Favorite.listing_id == listing_id)
     )
-    like_obj = await db.scalar(
-        select(ListingLike).where(ListingLike.user_id == current_user.id, ListingLike.listing_id == listing_id)
-    )
     if fav:
         await db.delete(fav)
-    if like_obj:
-        await db.delete(like_obj)
     await db.commit()
     try:
         from app.utils.redis_client import get_redis
         await (await get_redis()).delete(f"listing:engagement:{listing_id}")
     except Exception:
         pass
-    return {"ok": True, "is_favorited": False, "is_liked": False}
+    return {"ok": True, "is_favorited": False}
