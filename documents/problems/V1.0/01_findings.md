@@ -481,6 +481,16 @@ Bu işler cron zamanlarıyla birbirinden bağımsız değil, bir **İş Akışı
 
 ### SRE-10 · 🟢 P3 (Düşük) · ML Eğitim Görevlerinde Dağıtık Kilit (Distributed Lock) Eksikliği
 
+#### ✅ Çözüm Damgası — `955c0ec7` (2026-11-01)
+
+`lock:ml:{task_name}` Redis NX lock pattern tüm 6 ML eğitim fonksiyonuna ve
+`run_ml_training_pipeline_task`'a eklendi. Her fonksiyon ince bir wrapper'a
+dönüştürüldü (thin wrapper + `_impl` extraction): wrapper kilit alır →
+`_impl` gerçek işi yapar → `finally` kilidi serbest bırakır. Kilit
+alınamazsa INFO log + graceful return 0/None (hata değil, atlama).
+TTL'ler: swipe_live_als/feed_als 3s, bpr 4s, item2vec/quality 2s, kmeans 1s,
+pipeline 6s.
+
 * **Etkilenen Dosyalar:** `feed_als_ml.py`, `swipe_live_ml.py`, `bpr_service.py`
 
 #### 1. Sorunun Tanımı ve Arıza Modu
@@ -7742,5 +7752,5 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 ~~172. **Adım 172 (`SRE-04`):** `bpr_service.py` ve `feed_als_ml.py` veri çekme sorgularına satır tavanı (`LIMIT`) ve süre kısıtlaması getir.~~ ✅ `80352d6b` (2026-10-29'da tamamlandı)
 
 ### 🟢 Faz 4: Mimari İnce Ayar ve Dayanıklılık (P3 Öncelik — 2 Adım)
-173. **Adım 173 (`SRE-10`):** ML eğitim fonksiyonlarının başına Redis dağıtık kilit mekanizması yerleştir.
+~~173. **Adım 173 (`SRE-10`):** ML eğitim fonksiyonlarının başına Redis dağıtık kilit mekanizması yerleştir.~~ ✅ `955c0ec7`
 174. ~~**Adım 174 (`SRE-29`):** `stream_finalizer.py` ve `edge_orchestrator.py` içindeki O(N) `redis.keys()` aramalarını `SCAN` veya Redis Set indekslemesine çevir.~~ ✅ `0ecc8cfb`
