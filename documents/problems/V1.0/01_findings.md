@@ -334,6 +334,13 @@ for uid in users:
    ```
 2. **Redis Pipeline ile Batch İşleme:** Kullanıcılar 500'lük gruplar halinde işlenmeli; okuma (`mget`) ve yazma (`pipeline()`) toplu olarak gerçekleştirilmelidir.
 
+#### ✅ Çözüm Damgası — `78e30bb8` (2026-11-01)
+* `users` tablosuna `last_active_at TIMESTAMPTZ NULL` kolonu eklendi (Alembic: `zzzzzzc_users_last_activ`).
+* `User` modeline `last_active_at` alanı eklendi.
+* `auth.py` login endpoint'i başarılı girişte `last_active_at = NOW()` ile günceller.
+* `foryou_worker.py`: `last_active_at IS NULL OR last_active_at >= cutoff` filtresiyle hayalet kullanıcılar atlanır.
+* `foryou_worker.py`: per-user `redis.get()` N+1 döngüsü → 500'lük chunk + `mget` + `pipeline(transaction=False)` ile ortadan kaldırıldı.
+
 ---
 
 ### SRE-06 · 🟠 P1 (Yüksek) · Sınırsız Redis Pipeline Yüklemesi (Buffer Bloat)
@@ -7707,7 +7714,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 165. ~~**Adım 165 (`SRE-27`):** `recommendation_service.py` içindeki dinamik `SELECT DISTINCT category` sorgusunu kaldırıp kategori önbelleğini kullan.~~ ✅ `282cee24`
 166. ~~**Adım 166 (`SRE-26`):** `storage_service.py:get_object_bytes` rastgele node seçimi yerine dosyanın yüklendiği yetkili MinIO adresini referans al.~~ ✅ `537740c1`
 167. ~~**Adım 167 (`SRE-30`):** `hype_manager.py` skor durumunu Redis'e taşıyarak 8 Uvicorn worker arasında veri senkronizasyonunu sağla.~~ ✅ `455b8219`
-168. **Adım 168 (`SRE-05`):** `foryou_worker.py` içindeki sorguya `last_active_at` filtresi ekle ve Redis çağrılarını pipeline yap.
+168. ~~**Adım 168 (`SRE-05`):** `foryou_worker.py` içindeki sorguya `last_active_at` filtresi ekle ve Redis çağrılarını pipeline yap.~~ ✅ `78e30bb8`
 169. **Adım 169 (`SRE-06`):** `feed_als_ml.py` ve `swipe_live_ml.py` içindeki Redis pipeline'larına 1.000'lik chunk döngüsü ekle.
 170. **Adım 170 (`SRE-08`):** `wallet_tasks.py` döngüsel SQL'lerini küme tabanlı batch işlemine dönüştür.
 171. **Adım 171 (`SRE-09`):** `schedule.yaml` pazar sabahı görevlerini ardışık bir DAG zincirine bağla.
