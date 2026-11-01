@@ -3639,7 +3639,7 @@ candidates = (await session.execute(
 1. `backend/app/services/ad_service.py` içinde `pause_campaign`, `cancel_campaign` ve `record_ad_click` (bütçe bittiğinde) bloklarına `pipe.srem("ad_campaigns:active", str(campaign_id))` satırı eklenmelidir.
 2. `feed_queries.py` içinde `sample_ids` rastgele örneklenmeli (`random.sample(..., min(len(raw_ids), 50))`) ve veritabanında pasif olduğu tespit edilen ID'ler arka planda `srem` ile setten temizlenmelidir (self-healing cache).
 
-#### ✅ Çözüm Damgası — `83d2f2b8` + `hotfix` (2026-11-01)
+#### ✅ Çözüm Damgası — `83d2f2b8` + `68a097d6` (2026-11-01)
 
 * `ad_service.py`: `cancel_campaign()` eklendi — `status.in_(["active","paused"])` → `"completed"` + `srem`.
 * `ads.py`: `DELETE /api/ads/campaigns/{id}` endpoint'i açıldı.
@@ -3684,6 +3684,12 @@ for lid in expired_ids:
     await remove_from_recent_feed_cache(lid)
     await invalidate_listing(lid)
 ```
+
+#### ✅ Çözüm Damgası — `7c254cf3` (2026-11-01)
+
+* `listing_tasks.py`: `get_redis` import edildi.
+* `_invalidate_listings_batch(listing_ids)` eklendi — tek Redis pipeline ile `listing:{id}` anahtarları ve `feed:recent` ZSet girişleri toplu temizlenir (N round-trip yok).
+* `deactivate_expired_listings_task`: DB commit sonrasına `await _invalidate_listings_batch(listing_ids)` çağrısı eklendi.
 
 ---
 
@@ -7748,7 +7754,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 80. ~~**Adım 80 (`SRE-173`):** `wallet.py:convert_to_teqlik` sonrasına `await invalidate_user_session_cache(current_user.id)` ekle; dönüştürülen TEQlik bakiyesinin 15 dk boyunca önbellekte eski kalmasını ve yetersiz bakiye hatasını engelle.~~ ✅ (önceden uygulanmış)
 81. ~~**Adım 81 (`SRE-174`):** `create_offer.py` içine satıcıya yönelik `push_notification` ve `ws_manager.publish` bildirimlerini ekle; ilan tekliflerinin satıcıya iletilmeyerek yanıtsız kalmasını ve satış döngüsünün tıkanmasını çöz.~~ ✅ `2ab7eb6c`
 82. ~~**Adım 82 (`SRE-86`):** `ad_service.py:pause_campaign`, `cancel_campaign` ve `record_ad_click` içine `pipe.srem("ad_campaigns:active", str(campaign_id))` ekle; `feed_queries.py`'da pasif reklamların ilk 50 slotu tıkayıp tüm sponsorlu ilanları dondurmasını engelle.~~ ✅ `83d2f2b8`
-83. **Adım 83 (`SRE-87`):** `listing_tasks.py:deactivate_expired_listings_task` sonrasına `remove_from_recent_feed_cache(lid)` ve `invalidate_listing(lid)` toplu pipeline çağrılarını ekle; zombi ilanların feed akışında kalmasını ve checkout çökmelerini engelle.
+83. ~~**Adım 83 (`SRE-87`):** `listing_tasks.py:deactivate_expired_listings_task` sonrasına `remove_from_recent_feed_cache(lid)` ve `invalidate_listing(lid)` toplu pipeline çağrılarını ekle; zombi ilanların feed akışında kalmasını ve checkout çökmelerini engelle.~~ ✅ `7c254cf3`
 84. **Adım 84 (`SRE-90`):** `calls.py:end_call` içine grup katılımcılarına `call_ended` WS yayını (`broadcast_to_call_participants`) ve `webhooks.py:_on_call_room_finished` içine `clear_presence` ekle; misafirlerin askıda kalmasını ve 10 dakikalık meşgul kilitlenmesini engelle.
 85. **Adım 85 (`SRE-91`):** `refresh_stream_token.py` içine `orchestrator.resolve_stream_endpoint(stream)` çağrısını ekle; token yenileyen izleyicilerin relay sunucusundan düşürülüp kaynak sunucuya (origin) hücum etmesini durdur.
 86. **Adım 86 (`SRE-93`):** `firebase_adapter.py:send_multicast` içindeki sıralı senkron `requests` döngüsünü kaldırıp asenkron HTTP havuzuna veya Firebase Admin SDK `send_each_for_multicast` toplu gönderimine geçir; takipçi bildirimlerinde `critical` ARQ kuyruğunun 25 dakika kilitlenmesini çöz.
