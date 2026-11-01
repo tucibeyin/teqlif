@@ -3886,6 +3886,10 @@ return StreamTokenOut(
 )
 ```
 
+#### ✅ Çözüm Damgası — (2026-11-01)
+
+`orchestrator` modül seviyesinde import edildi; `not is_publisher` koşulunda `orchestrator.resolve_stream_endpoint(stream)` çağrısı eklendi. Token ve `StreamTokenOut` relay `room_name`/`livekit_url` ile üretiliyor. Redundant lokal import kaldırıldı. `JoinStreamCommand` ile tam simetri sağlandı.
+
 ---
 
 ### SRE-92 · 🟡 P2 (Orta) · `chat_commands.py` İçinde Bağımsız `INCR/DECR` ile İzleyici Sayacı Bozulması ve `live:viewer_set` TTL'siz RAM Sızıntısı ✅ Çözüldü (9ec352bb · 2026-10-31)
@@ -7768,7 +7772,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 82. ~~**Adım 82 (`SRE-86`):** `ad_service.py:pause_campaign`, `cancel_campaign` ve `record_ad_click` içine `pipe.srem("ad_campaigns:active", str(campaign_id))` ekle; `feed_queries.py`'da pasif reklamların ilk 50 slotu tıkayıp tüm sponsorlu ilanları dondurmasını engelle.~~ ✅ `83d2f2b8`
 83. ~~**Adım 83 (`SRE-87`):** `listing_tasks.py:deactivate_expired_listings_task` sonrasına `remove_from_recent_feed_cache(lid)` ve `invalidate_listing(lid)` toplu pipeline çağrılarını ekle; zombi ilanların feed akışında kalmasını ve checkout çökmelerini engelle.~~ ✅ `7c254cf3`
 84. ~~**Adım 84 (`SRE-90`):** `calls.py:end_call` içine grup katılımcılarına `call_ended` WS yayını (`broadcast_to_call_participants`) ve `webhooks.py:_on_call_room_finished` içine `clear_presence` ekle; misafirlerin askıda kalmasını ve 10 dakikalık meşgul kilitlenmesini engelle.~~ ✅ `138f3ab5`
-85. **Adım 85 (`SRE-91`):** `refresh_stream_token.py` içine `orchestrator.resolve_stream_endpoint(stream)` çağrısını ekle; token yenileyen izleyicilerin relay sunucusundan düşürülüp kaynak sunucuya (origin) hücum etmesini durdur.
+85. ~~**Adım 85 (`SRE-91`):** `refresh_stream_token.py` içine `orchestrator.resolve_stream_endpoint(stream)` çağrısını ekle; token yenileyen izleyicilerin relay sunucusundan düşürülüp kaynak sunucuya (origin) hücum etmesini durdur.~~ ✅ `COMMIT_HASH`
 86. **Adım 86 (`SRE-93`):** `firebase_adapter.py:send_multicast` içindeki sıralı senkron `requests` döngüsünü kaldırıp asenkron HTTP havuzuna veya Firebase Admin SDK `send_each_for_multicast` toplu gönderimine geçir; takipçi bildirimlerinde `critical` ARQ kuyruğunun 25 dakika kilitlenmesini çöz.
 87. **Adım 87 (`SRE-95`):** `convert_to_teqlik_command.py` ve `send_gift_command.py` içine sistem hazine hesabı (`id=0`) bakiyesini `users` tablosunda güncelleyen SQL sorgusunu ekle; mutabakat ve denetim kayıtlarının bozulmasını engelle.
 88. **Adım 88 (`SRE-96`):** `wallet.py:send-gift` ve `send_gift_command.py` içine yayın durumu (`stream.status == 'live'`) ve host doğrulaması ekle; kapanmış yayınlar üzerinden bakiye aklanmasını ve sahte hype manipülasyonunu engelle.
