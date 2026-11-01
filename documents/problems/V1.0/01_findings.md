@@ -377,6 +377,11 @@ for i in range(0, len(items), BATCH_SIZE):
     await pipe.execute()
 ```
 
+#### ✅ Çözüm Damgası — `3a09afc4` (2026-11-01)
+* `feed_als_ml.py` ve `swipe_live_ml.py`'de tüm pipeline yazımları (user vec, item/stream vec, subcategory centroid) `_PIPELINE_CHUNK = 1_000`'lik chunk döngüsüne bölündü.
+* `transaction=False` ile MULTI/EXEC overhead de kaldırıldı.
+* 150.000 komutluk tek `pipe.execute()` → max 1.000 komutluk sıralı `pipe.execute()` çağrılarına dönüştürüldü.
+
 ---
 
 ### SRE-07 · 🟡 P2 (Orta) · Cüzdan ve Karşılıklı Transferlerde Veritabanı Kilitlenmesi (Deadlock / 40P01)
@@ -7716,7 +7721,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 166. ~~**Adım 166 (`SRE-26`):** `storage_service.py:get_object_bytes` rastgele node seçimi yerine dosyanın yüklendiği yetkili MinIO adresini referans al.~~ ✅ `537740c1`
 167. ~~**Adım 167 (`SRE-30`):** `hype_manager.py` skor durumunu Redis'e taşıyarak 8 Uvicorn worker arasında veri senkronizasyonunu sağla.~~ ✅ `455b8219`
 168. ~~**Adım 168 (`SRE-05`):** `foryou_worker.py` içindeki sorguya `last_active_at` filtresi ekle ve Redis çağrılarını pipeline yap.~~ ✅ `78e30bb8`
-169. **Adım 169 (`SRE-06`):** `feed_als_ml.py` ve `swipe_live_ml.py` içindeki Redis pipeline'larına 1.000'lik chunk döngüsü ekle.
+169. ~~**Adım 169 (`SRE-06`):** `feed_als_ml.py` ve `swipe_live_ml.py` içindeki Redis pipeline'larına 1.000'lik chunk döngüsü ekle.~~ ✅ `3a09afc4`
 170. **Adım 170 (`SRE-08`):** `wallet_tasks.py` döngüsel SQL'lerini küme tabanlı batch işlemine dönüştür.
 171. **Adım 171 (`SRE-09`):** `schedule.yaml` pazar sabahı görevlerini ardışık bir DAG zincirine bağla.
 172. **Adım 172 (`SRE-04`):** `bpr_service.py` ve `feed_als_ml.py` veri çekme sorgularına satır tavanı (`LIMIT`) ve süre kısıtlaması getir.
