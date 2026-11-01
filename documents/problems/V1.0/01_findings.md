@@ -3528,7 +3528,7 @@ if usd_rate is None:
 
 ---
 
-### SRE-84 · 🟠 P1 (Yüksek) · `relationship_service.py` İçinde Canlı Arama Durumunun (`user_busy`) 1 Saatlik İzin Önbelleğine Yazılarak Aramaların Kilitlenmesi (Cache Poisoning)
+### SRE-84 · 🟠 P1 (Yüksek) · `relationship_service.py` İçinde Canlı Arama Durumunun (`user_busy`) 1 Saatlik İzin Önbelleğine Yazılarak Aramaların Kilitlenmesi (Cache Poisoning) ✅ Çözüldü (612566d2 · 2026-10-31)
 
 * **Etkilenen Dosyalar:**
   * `backend/app/services/relationship_service.py` (satırlar 270–286)
@@ -3567,6 +3567,17 @@ await RelationshipStateService.cache(state)  # <-- FELAKET: 1 SAAT REDIS'E KİL�
 1. Statik ilişki izinleri (takip, engel, mesaj izni) ile canlı meşguliyet durumu (`is_busy`) birbirinden kesin olarak ayrılmalıdır.
 2. `RelationshipStateService.recompute_and_cache` ve `cache` fonksiyonlarından `is_busy` kontrolü tamamen kaldırılmalıdır. Önbellekte sadece izinler (`can_call_permission: true/false`) tutulmalıdır.
 3. `is_busy` kontrolü, yalnızca kullanıcı aramayı başlatmak üzere butona bastığında (`calls.py:start_call`) veya `GetThreadStatusQuery` endpoint seviyesinde önbellekten okunan statik izin `True` ise anlık Redis sorgusuyla dinamik olarak birleştirilmelidir.
+
+#### ✅ Çözüm Damgası — `612566d2` (2026-10-31)
+
+| Alan | Değer |
+|------|-------|
+| Commit | `612566d2` (SRE-108 adıyla kaydedildi) |
+| Tarih | 2026-10-31 |
+| `relationship_service.py` | `recompute_and_cache`'den `_is_busy` + `_REASON_USER_BUSY` enjeksiyonu kaldırıldı |
+| `get_thread_status_query.py` | `_overlay_busy()` eklendi — statik cache okunduktan sonra anlık `is_busy` kontrolü |
+| `call_presence.py` | Stale yorum düzeltildi (Adım 92) |
+| `calls.py:start_call` | DB tabanlı meşguliyet kontrolü (`Call` tablosu + `pg_advisory_xact_lock`) — doğru |
 
 ---
 
@@ -7837,7 +7848,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 89. ~~**Adım 89 (`SRE-97`):** `admin_data.py` kampanya duraklatma ve ilan pasifleştirme endpoint'lerine Redis önbellek temizleme (`srem ad_campaigns:active` ve `invalidate_listing_cache`) çağrılarını ekle; admin aksiyonları ile Redis arasındaki desenkronizasyonu çöz.~~ ✅ `30f24b5d`
 90. ~~**Adım 90 (`SRE-82`):** `credit_service.py` ve `leads.py` içindeki TOCTOU yarış durumunu Redis Lua scripti ile atomik check-and-consume işlemine dönüştür; kullanıcıların ücretsiz haklarını (blast, boost, ai) eşzamanlı isteklerle limitsiz tüketmesini engelle.~~ ✅ `cc430785`
 91. ~~**Adım 91 (`SRE-83`):** `tcmb_service.py:fetch_and_save_tcmb_rates` fonksiyonundaki `ForexBuying` text okumasına `NoneType` kontrolü ve fallback ekle; tatil günlerinde döviz kurlarının `AttributeError` ile çökmesini durdur.~~ ✅ `e137bffd`
-92. **Adım 92 (`SRE-84`):** `relationship_service.py` içindeki `is_busy` kontrolünü 1 saatlik statik izin önbelleğinden çıkarıp `GetThreadStatusQuery` anında dinamik değerlendirmeye taşı; 15 saniyelik bir telefon görüşmesinde arama butonunun 1 saat kilitli kalmasını (Cache Poisoning) engelle.
+92. ~~**Adım 92 (`SRE-84`):** `relationship_service.py` içindeki `is_busy` kontrolünü 1 saatlik statik izin önbelleğinden çıkarıp `GetThreadStatusQuery` anında dinamik değerlendirmeye taşı; 15 saniyelik bir telefon görüşmesinde arama butonunun 1 saat kilitli kalmasını (Cache Poisoning) engelle.~~ ✅ `612566d2`
 93. **Adım 93 (`SRE-77`):** `admin_data.py:admin_send_push` içindeki senkron FCM döngüsünü ARQ arka plan kuyruğuna taşı ve Firebase Admin SDK `send_each_for_multicast` toplu gönderimine geçir; Uvicorn worker'ın 25 dakika donmasını önle.
 94. **Adım 94 (`SRE-78`):** `cleaner.py` (teqlif-agent) içindeki süresi dolan hikaye temizliğine MinIO nesne silme koordinasyonunu ekle; depolamada yüzlerce GB yetim video birikmesini engelle.
 95. **Adım 95 (`SRE-69`):** `auction.py` müzayede WebSocket handler'ını `ws_manager`'a bağla; Uvicorn restart anında soketlerin kirli kopmasını engelle.

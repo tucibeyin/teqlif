@@ -2,7 +2,8 @@
 Call presence — kullanıcının anlık arama durumunu Redis'te tutar.
 
 Üç noktada kullanılır:
-1. RelationshipStateService: can_call hesabında hedef meşgulse 'user_busy' reason'ı verir.
+1. GetThreadStatusQuery._overlay_busy(): can_call True ise hedef meşgulse API yanıtına
+   user_busy reason ekler (statik relationship cache'e yazılmaz — SRE-84/SRE-108 fix).
 2. start_call: caller/callee'yi 'ringing' olarak işaretler.
 3. accept/reject/end/missed: varlığı günceller veya temizler.
 
