@@ -47,7 +47,7 @@ async def compute_influence_scores() -> int:
     redis = await get_redis()
     items = list(scores.items())
     for i in range(0, len(items), _CHUNK):
-        pipe = redis.pipeline()
+        pipe = redis.pipeline(transaction=False)
         for uid, score in items[i : i + _CHUNK]:
             pipe.setex(f"influence_rank:{uid}", _REDIS_TTL, str(score))
         await pipe.execute()

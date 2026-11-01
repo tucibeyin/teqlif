@@ -11,7 +11,6 @@ FraudDetectionService.evaluate_bid():
 
 import asyncio
 import json
-import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
@@ -48,7 +47,13 @@ async def _log_fraud_attempt(
     username: str,
     extra: dict | None = None,
 ) -> None:
-    """Dolandırıcılık girişimini logger + Redis fraud_log ZADD'e kaydeder."""
+    """
+    Dolandırıcılık girişimini logger + Redis Stream'e kaydeder.
+
+    Önceki tasarım (ZSET + zremrangebyscore) her yazımda O(log N + M) temizlik
+    yapıyordu; yüksek frekanslı saldırılarda Redis event loop'unu donduruyordu.
+    Redis Stream (XADD MAXLEN ~10000): O(1) amortized, sınırlı bellek, no TTL yönetimi.
+    """
     payload = {
         "fraud_type": fraud_type,
         "stream_id": stream_id,
@@ -62,13 +67,14 @@ async def _log_fraud_attempt(
     )
     try:
         redis = await get_redis()
-        score = time.time()
-        value = json.dumps(payload)
-        await redis.zadd("fraud_log", {value: score})
-        cutoff = score - 30 * 24 * 3600
-        await redis.zremrangebyscore("fraud_log", "-inf", cutoff)
+        await redis.xadd(
+            "fraud_stream",
+            {"data": json.dumps(payload, default=str)},
+            maxlen=10000,
+            approximate=True,
+        )
     except Exception as exc:
-        logger.error("[FRAUD_ATTEMPT] Redis log yazılamadı | %s", exc)
+        logger.error("[FRAUD_ATTEMPT] Redis stream yazılamadı | %s", exc)
 
 
 class FraudDetectionService:

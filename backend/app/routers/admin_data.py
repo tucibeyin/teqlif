@@ -803,17 +803,18 @@ async def get_fraud_log(
     limit: int = Query(default=50, le=200),
     admin: User = Depends(check_admin_access),
 ):
-    """Redis fraud_log ZADD'inden son N kaydı döndür (en yeniden eskiye)."""
+    """Redis fraud_stream'den son N kaydı döndür (en yeniden eskiye)."""
     import json as _json
     redis = await get_redis()
-    raw_entries = await redis.zrevrange("fraud_log", 0, limit - 1, withscores=True)
+    raw_entries = await redis.xrevrange("fraud_stream", count=limit)
     result = []
-    for value, score in raw_entries:
+    for entry_id, fields in raw_entries:
+        ts_ms = int(str(entry_id).split("-")[0])
         try:
-            entry = _json.loads(value)
-            entry["timestamp"] = score
+            entry = _json.loads(fields["data"])
         except Exception:
-            entry = {"raw": value, "timestamp": score}
+            entry = {"raw": str(fields)}
+        entry["timestamp"] = ts_ms / 1000.0
         result.append(entry)
     return {"count": len(result), "entries": result}
 
