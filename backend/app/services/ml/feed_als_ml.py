@@ -32,8 +32,9 @@ logger = logging.getLogger(__name__)
 _USER_VEC_KEY = "feed:als:user_vec:{uid}"
 _ITEM_VEC_KEY = "feed:als:item_vec:{lid}"
 _SUBCAT_VEC_KEY = "feed:als:subcat_vec:{key}"  # key = "category|subcategory"
-_ALS_TTL = 90_000   # 25 saat — günlük yeniden eğitimden önce bayatlamasın
-_MIN_ROWS = 15       # Bu kadar satır yoksa eğitimi atla
+_ALS_TTL        = 90_000   # 25 saat — günlük yeniden eğitimden önce bayatlamasın
+_MIN_ROWS       = 15       # Bu kadar satır yoksa eğitimi atla
+_PIPELINE_CHUNK = 1_000    # Redis buffer bloat önleme: pipeline başına max komut
 
 
 # ── Public API ─────────────────────────────────────────────────────────────────
@@ -220,17 +221,24 @@ async def train_feed_als(db_session=None) -> None:
     model.fit(user_items)
 
     redis = await get_redis()
-    pipe = redis.pipeline()
 
     uf = np.asarray(model.user_factors, dtype=np.float32)
     itf = np.asarray(model.item_factors, dtype=np.float32)
 
-    for uid, ui in u2i.items():
-        pipe.setex(_USER_VEC_KEY.format(uid=uid), _ALS_TTL, uf[ui].tobytes())
-    for lid, li in l2i.items():
-        pipe.setex(_ITEM_VEC_KEY.format(lid=lid), _ALS_TTL, itf[li].tobytes())
+    user_items_list = list(u2i.items())
+    for i in range(0, len(user_items_list), _PIPELINE_CHUNK):
+        async with redis.pipeline(transaction=False) as pipe:
+            for uid, ui in user_items_list[i : i + _PIPELINE_CHUNK]:
+                pipe.setex(_USER_VEC_KEY.format(uid=uid), _ALS_TTL, uf[ui].tobytes())
+            await pipe.execute()
 
-    await pipe.execute()
+    item_items_list = list(l2i.items())
+    for i in range(0, len(item_items_list), _PIPELINE_CHUNK):
+        async with redis.pipeline(transaction=False) as pipe:
+            for lid, li in item_items_list[i : i + _PIPELINE_CHUNK]:
+                pipe.setex(_ITEM_VEC_KEY.format(lid=lid), _ALS_TTL, itf[li].tobytes())
+            await pipe.execute()
+
     logger.info(
         "[FeedALS] Eğitim tamamlandı | users=%d listings=%d factors=%d",
         n_users, n_items, factors,
@@ -252,11 +260,13 @@ async def train_feed_als(db_session=None) -> None:
                 key = f"{cat}|{subcat}"
                 subcat_map.setdefault(key, []).append(itf_arr[l2i[lid]])
             if subcat_map:
-                sc_pipe = redis.pipeline()
-                for key, vecs in subcat_map.items():
-                    centroid = np.mean(vecs, axis=0).astype(np.float32)
-                    sc_pipe.setex(_SUBCAT_VEC_KEY.format(key=key), _ALS_TTL, centroid.tobytes())
-                await sc_pipe.execute()
+                sc_items = list(subcat_map.items())
+                for i in range(0, len(sc_items), _PIPELINE_CHUNK):
+                    async with redis.pipeline(transaction=False) as sc_pipe:
+                        for key, vecs in sc_items[i : i + _PIPELINE_CHUNK]:
+                            centroid = np.mean(vecs, axis=0).astype(np.float32)
+                            sc_pipe.setex(_SUBCAT_VEC_KEY.format(key=key), _ALS_TTL, centroid.tobytes())
+                        await sc_pipe.execute()
                 logger.info("[FeedALS] %d subcategory centroid yazıldı", len(subcat_map))
         except Exception as exc:
             logger.warning("[FeedALS] Subcategory centroid hesaplanamadı: %s", exc)

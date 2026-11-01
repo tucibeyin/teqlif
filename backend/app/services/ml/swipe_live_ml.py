@@ -19,7 +19,8 @@ logger = logging.getLogger(__name__)
 _ALS_USER_VEC_KEY = "swipelive:als:user_vec:{uid}"
 _ALS_STREAM_VEC_KEY = "swipelive:als:stream_vec:{sid}"
 _ALS_SUBCAT_VEC_KEY = "swipelive:als:subcat_vec:{key}"  # key = "category|subcategory"
-_ALS_TTL = 90_000  # 25 saat — günlük yeniden eğitimden önce bayatlamasın
+_ALS_TTL        = 90_000   # 25 saat — günlük yeniden eğitimden önce bayatlamasın
+_PIPELINE_CHUNK = 1_000    # Redis buffer bloat önleme: pipeline başına max komut
 
 
 # ── Public API ─────────────────────────────────────────────────────────────────
@@ -193,17 +194,24 @@ async def train_swipe_live_als() -> None:
     model.fit(user_items)
 
     redis = await get_redis()
-    pipe = redis.pipeline()
 
     uf = np.asarray(model.user_factors, dtype=np.float32)
     sf = np.asarray(model.item_factors, dtype=np.float32)
 
-    for uid, ui in u2i.items():
-        pipe.setex(_ALS_USER_VEC_KEY.format(uid=uid), _ALS_TTL, uf[ui].tobytes())
-    for sid, si in s2i.items():
-        pipe.setex(_ALS_STREAM_VEC_KEY.format(sid=sid), _ALS_TTL, sf[si].tobytes())
+    user_items_list = list(u2i.items())
+    for i in range(0, len(user_items_list), _PIPELINE_CHUNK):
+        async with redis.pipeline(transaction=False) as pipe:
+            for uid, ui in user_items_list[i : i + _PIPELINE_CHUNK]:
+                pipe.setex(_ALS_USER_VEC_KEY.format(uid=uid), _ALS_TTL, uf[ui].tobytes())
+            await pipe.execute()
 
-    await pipe.execute()
+    stream_items_list = list(s2i.items())
+    for i in range(0, len(stream_items_list), _PIPELINE_CHUNK):
+        async with redis.pipeline(transaction=False) as pipe:
+            for sid, si in stream_items_list[i : i + _PIPELINE_CHUNK]:
+                pipe.setex(_ALS_STREAM_VEC_KEY.format(sid=sid), _ALS_TTL, sf[si].tobytes())
+            await pipe.execute()
+
     logger.info(
         "[SwipeLiveML] ALS eğitim tamamlandı | users=%d streams=%d factors=%d",
         n_users, n_streams, factors,
@@ -217,9 +225,11 @@ async def train_swipe_live_als() -> None:
         if sc:
             subcat_vecs.setdefault(sc, []).append(sf_arr[si])
     if subcat_vecs:
-        sc_pipe = redis.pipeline()
-        for key, vecs in subcat_vecs.items():
-            centroid = np.mean(vecs, axis=0).astype(np.float32)
-            sc_pipe.setex(_ALS_SUBCAT_VEC_KEY.format(key=key), _ALS_TTL, centroid.tobytes())
-        await sc_pipe.execute()
+        sc_items = list(subcat_vecs.items())
+        for i in range(0, len(sc_items), _PIPELINE_CHUNK):
+            async with redis.pipeline(transaction=False) as sc_pipe:
+                for key, vecs in sc_items[i : i + _PIPELINE_CHUNK]:
+                    centroid = np.mean(vecs, axis=0).astype(np.float32)
+                    sc_pipe.setex(_ALS_SUBCAT_VEC_KEY.format(key=key), _ALS_TTL, centroid.tobytes())
+                await sc_pipe.execute()
         logger.info("[SwipeLiveML] %d subcategory centroid yazıldı", len(subcat_vecs))
