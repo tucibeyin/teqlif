@@ -183,6 +183,8 @@ class FirebaseAdapter(PushNotificationPort):
                 return ""
         return s.credentials.token or ""
 
+    _MULTICAST_CHUNK = 5_000  # tek gather dalgasındaki max coroutine sayısı
+
     async def send_multicast(
         self, tokens: list[str], title: str, body: str, data: Dict[str, Any] = None
     ) -> dict:
@@ -190,6 +192,9 @@ class FirebaseAdapter(PushNotificationPort):
 
         Eski sıralı requests döngüsü 10.000 token için ~25 dk harcıyordu;
         yeni implementasyon ~5-10 saniyede tamamlanır.
+        gather çağrısı 5.000'lik chunk'lara bölünür — 500K+ takipçili
+        influencer'larda tek seferde yüz binlerce coroutine nesnesi
+        oluşturulmasının neden olacağı heap şişmesini önler.
         """
         if not tokens:
             return {"success": 0, "failure": 0}
@@ -226,17 +231,21 @@ class FirebaseAdapter(PushNotificationPort):
                     logger.debug("[FirebaseAdapter] Multicast token hatası: %s", exc)
                     return False
 
+        success = 0
+        failure = 0
         connector = aiohttp.TCPConnector(limit=50)
         async with aiohttp.ClientSession(
             headers=req_headers, connector=connector
         ) as session:
-            results = await asyncio.gather(
-                *[_send_one(t) for t in tokens],
-                return_exceptions=True,
-            )
+            for i in range(0, len(tokens), self._MULTICAST_CHUNK):
+                chunk = tokens[i : i + self._MULTICAST_CHUNK]
+                chunk_results = await asyncio.gather(
+                    *[_send_one(t) for t in chunk],
+                    return_exceptions=True,
+                )
+                success += sum(1 for r in chunk_results if r is True)
+                failure += sum(1 for r in chunk_results if r is not True)
 
-        success = sum(1 for r in results if r is True)
-        failure = len(tokens) - success
         logger.info(
             "[FirebaseAdapter] Multicast tamamlandı | total=%d success=%d failure=%d",
             len(tokens), success, failure,
