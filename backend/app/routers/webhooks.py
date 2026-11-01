@@ -72,9 +72,10 @@ async def _on_call_room_finished(room_name: str) -> None:
     """Ghost call cleanup from LiveKit webhook for calls."""
     try:
         from app.database import AsyncSessionLocal
-        from app.models.call import Call
-        from sqlalchemy import select
+        from app.models.call import Call, CallParticipant
+        from sqlalchemy import select, update as _sa_update
         from app.core.ws_manager import ws_manager
+        from app.services.call_ws import broadcast_to_call_participants as _bcast_participants
         from datetime import datetime, timezone
 
         async with AsyncSessionLocal() as db:
@@ -82,8 +83,15 @@ async def _on_call_room_finished(room_name: str) -> None:
             call = result.scalar_one_or_none()
             if not call or call.status in ("ended", "missed", "rejected"):
                 return
-            
+
             logger.info("Call %s closed via Webhook (room_finished)", room_name)
+            # Grup katılımcılarını da güncelle — calls.py:end_call ile simetrik
+            await db.execute(
+                _sa_update(CallParticipant)
+                .where(CallParticipant.call_id == call.id, CallParticipant.status == "joined")
+                .values(status="ended")
+                .execution_options(synchronize_session=False)
+            )
             call.status = "ended"
             call.ended_at = datetime.now(timezone.utc)
             call_id = call.id
@@ -93,22 +101,28 @@ async def _on_call_room_finished(room_name: str) -> None:
 
             # Presence temizleme — 10 dk busy kilidi kaldır
             from app.services.call_presence import clear_presence as _clear_presence
-            from app.utils.call_redis import clear_call_redis as _clear_call_redis
             asyncio.create_task(_clear_presence(caller_id))
             asyncio.create_task(_clear_presence(callee_id))
-            await _clear_call_redis(call_id)
 
-            # NX lock: if end_call API already set this key, skip — avoids 182ms duplicate delivery.
+            # NX lock: if end_call API already set this key, skip — avoids duplicate delivery.
             from app.utils.redis_client import get_redis as _get_redis
             _redis = await _get_redis()
             if not await _redis.set(f"call_ended_sent:{call_id}", "webhook", ex=300, nx=True):
                 logger.info("[CALL_PROCESS][END] Webhook: call_ended already sent by API, skipping | call_id=%s", call_id)
+                from app.utils.call_redis import clear_call_redis as _clear_call_redis
+                await _clear_call_redis(call_id)
                 return
 
             logger.info("[CALL_PROCESS][END] Webhook room_finished: sending call_ended to caller %s and callee %s", caller_id, callee_id)
+            # Grup katılımcılarına bildir — call:{id}:participants SET clear_call_redis'ten önce okunmalı
+            await _bcast_participants(call_id, {"type": "call_ended", "call_id": call_id})
             _DM = "dm_broadcast"
             await ws_manager.publish(_DM, f"dm:{caller_id}", {"type": "call_ended", "call_id": call_id})
             await ws_manager.publish(_DM, f"dm:{callee_id}", {"type": "call_ended", "call_id": call_id})
+
+            # Redis temizleme — broadcast'lerden SONRA
+            from app.utils.call_redis import clear_call_redis as _clear_call_redis
+            await _clear_call_redis(call_id)
             
     except Exception as exc:
         logger.error(f"Error closing ghost call {room_name} via webhook: {exc}", exc_info=True)
