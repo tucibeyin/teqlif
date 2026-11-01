@@ -451,6 +451,14 @@ async with AsyncSessionLocal() as session:
 
 ### SRE-09 · 🟡 P2 (Orta) · Pazar Günü "Süper Fırtına" Yığılması (Schedule Storm)
 
+#### ✅ Çözüm Damgası — `94bd8367` (2026-11-01)
+
+`run_ml_training_pipeline_task` eklendi (`worker.py:3188`). 6 bağımsız Pazar
+cron'u kaldırıldı; `train_kmeans_cold_start_task` Çarşamba'ya alındı.
+Pipeline sırası: SwipeLive ALS → Item2Vec → FeedALS → KMeans →
+ListingQuality → InfluenceScores. Her adım bağımsız `try/except`; birinin
+başarısızlığı sonrakini engellemez.
+
 * **Etkilenen Dosya:** `deploy/scale/V2.1/schedule.yaml`
 * **İlgili Satırlar:** 257–300
 
@@ -7730,7 +7738,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 168. ~~**Adım 168 (`SRE-05`):** `foryou_worker.py` içindeki sorguya `last_active_at` filtresi ekle ve Redis çağrılarını pipeline yap.~~ ✅ `78e30bb8`
 169. ~~**Adım 169 (`SRE-06`):** `feed_als_ml.py` ve `swipe_live_ml.py` içindeki Redis pipeline'larına 1.000'lik chunk döngüsü ekle.~~ ✅ `3a09afc4`
 170. ~~**Adım 170 (`SRE-08`):** `wallet_tasks.py` döngüsel SQL'lerini küme tabanlı batch işlemine dönüştür.~~ ✅ `52359e5e`
-171. **Adım 171 (`SRE-09`):** `schedule.yaml` pazar sabahı görevlerini ardışık bir DAG zincirine bağla.
+~~171. **Adım 171 (`SRE-09`):** `schedule.yaml` pazar sabahı görevlerini ardışık bir DAG zincirine bağla.~~ ✅ `94bd8367`
 172. **Adım 172 (`SRE-04`):** `bpr_service.py` ve `feed_als_ml.py` veri çekme sorgularına satır tavanı (`LIMIT`) ve süre kısıtlaması getir.
 
 ### 🟢 Faz 4: Mimari İnce Ayar ve Dayanıklılık (P3 Öncelik — 2 Adım)
