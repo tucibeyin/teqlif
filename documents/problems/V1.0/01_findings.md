@@ -5523,6 +5523,13 @@ for r in results:
         all_rooms.update(r)
 ```
 
+#### ✅ Çözüm Damgası — `b8488471` (2026-11-01)
+* `_list_rooms_at` / `_list_rooms_with_participants_at`: module-level async helper, `aiohttp.ClientTimeout(total=3.0)` per-node.
+* `_delete_room_at`: `asyncio.wait_for(api.room.delete_room(...), timeout=3.0)` — `LiveKitAPI` gRPC'de explicit timeout eksikliği giderildi.
+* `lk_list_all_rooms` / `lk_list_all_rooms_with_participants` / `lk_broadcast_delete`: sıralı `for node in nodes` → `asyncio.gather(*tasks, return_exceptions=True)` + `asyncio.wait_for(..., timeout=5.0)` ceiling.
+* N=2 node (node3, node4) için max bekleme: 3.0s (eski sıralı: 2×4=8s list, 2×30s broadcast_delete).
+* `return_exceptions=True`: 1 node çöktüğünde diğerleri sorgulanmaya devam eder; RuntimeError koruması (`reachable == 0`) korundu.
+
 ---
 
 ### SRE-135 · 🟠 P1 (Yüksek) · `_read_streaming` Bellek Çiftlemesi ve HTTP Handler İçinde Senkron Pillow/FFmpeg Süreç Blokajı
@@ -7690,7 +7697,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 61. ~~**Adım 61 (`SRE-124`):** `influence_service.py` sorgusuna `status = 'accepted'` filtresi ve sparse matris optimizasyonu ekle; Redis pipeline komutlarını 1.000'lik gruplara bölerek OOM ve socket kilitlenmesini durdur.~~ ✅ `b91b81f1`
 62. ~~**Adım 62 (`SRE-132`):** `fraud_detection_service.py:_log_fraud_attempt` içindeki global `fraud_log` Redis ZSET'ini ve her seferinde çalışan `zremrangebyscore` temizliğini kaldır; şüpheli teklif kayıtlarını ClickHouse `track_user_event` veya TTL'li Redis Stream'e (`XADD`) taşıyarak Redis dondurma ve OOM riskini engelle.~~ ✅ `a82feb8d`
 63. ~~**Adım 63 (`SRE-133`):** `User` modeline `user_devices` (`user_id`, `fcm_token`, `platform`, `last_active_at`) ilişkisini ekle; `device_service.py` içinde geçersiz token olayında sadece ilgili cihazı silerek kullanıcının diğer aktif telefon ve tabletlerindeki bildirimlerin kesilmesini durdur.~~ ✅ `be0378a1`
-64. **Adım 64 (`SRE-134`):** `livekit_service.py:lk_list_all_rooms` ve `lk_broadcast_delete` içindeki sıralı for döngülerini `asyncio.gather(*tasks, return_exceptions=True)` ile paralel hale getir ve 3.0s tavan timeout ekle; 1 erişilemez node yüzünden arka plan temizliğinin 16-60 sn kilitlenmesini çöz.
+64. ~~**Adım 64 (`SRE-134`):** `livekit_service.py:lk_list_all_rooms` ve `lk_broadcast_delete` içindeki sıralı for döngülerini `asyncio.gather(*tasks, return_exceptions=True)` ile paralel hale getir ve 3.0s tavan timeout ekle; 1 erişilemez node yüzünden arka plan temizliğinin 16-60 sn kilitlenmesini çöz.~~ ✅ `b8488471`
 65. **Adım 65 (`SRE-135`):** `messages.py:_read_streaming` fonksiyonundaki bellekte `b"".join` biriktirmeyi kaldırıp doğrudan geçici dosyaya stream et; `media_processor.py` içindeki senkron Pillow `make_thumbnail` ve FFmpeg video analizini `asyncio.to_thread` ve worker kuyruğuna delege ederek Uvicorn açlığını engelle.
 66. **Adım 66 (`SRE-136`):** `upsert_rating.py:UpsertRatingCommand` içindeki kilitsiz `scalar` ve `add` ikilisini PostgreSQL `ON CONFLICT (rater_id, rated_id) DO UPDATE` ifadesine dönüştür; komut içindeki kontrolsüz `commit()` çağrısını kaldırarak Unit of Work oturum bütünlüğünü koru.
 67. ~~**Adım 67 (`SRE-142`):** `upload.py:upload_listing_video` içindeki 60 MB bellek biriktirme ve senkron FFmpeg/FFprobe transcode işlemlerini HTTP isteğinden çıkarıp ARQ arka plan kuyruğuna delege et; istemcinin 60s bekleyip 504 Gateway Timeout almasını ve CPU %100 açlığını durdur.~~ ✅ `d9dd903f`
