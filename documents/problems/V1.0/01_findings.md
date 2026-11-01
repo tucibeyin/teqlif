@@ -334,10 +334,11 @@ for uid in users:
    ```
 2. **Redis Pipeline ile Batch İşleme:** Kullanıcılar 500'lük gruplar halinde işlenmeli; okuma (`mget`) ve yazma (`pipeline()`) toplu olarak gerçekleştirilmelidir.
 
-#### ✅ Çözüm Damgası — `78e30bb8` (2026-11-01)
+#### ✅ Çözüm Damgası — `78e30bb8` + `1ead5aa2` (2026-11-01)
 * `users` tablosuna `last_active_at TIMESTAMPTZ NULL` kolonu eklendi (Alembic: `zzzzzzc_users_last_activ`).
 * `User` modeline `last_active_at` alanı eklendi.
 * `auth.py` login endpoint'i başarılı girişte `last_active_at = NOW()` ile günceller.
+* `auth.py` refresh endpoint'i: `last_active:throttle:{uid}` Redis key (TTL=86400s) ile günde 1x DB write — mobil kullanıcılar her saat refresh yapar ama login yapmaz, bu olmadan aktif kullanıcılar 7 gün sonra hayalet sayılırdı.
 * `foryou_worker.py`: `last_active_at IS NULL OR last_active_at >= cutoff` filtresiyle hayalet kullanıcılar atlanır.
 * `foryou_worker.py`: per-user `redis.get()` N+1 döngüsü → 500'lük chunk + `mget` + `pipeline(transaction=False)` ile ortadan kaldırıldı.
 
