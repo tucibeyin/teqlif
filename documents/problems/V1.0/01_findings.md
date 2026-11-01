@@ -6880,6 +6880,9 @@ if ok == 0:
 final_price = float(msg)
 ```
 
+#### ✅ Çözüm Damgası
+`1a389109` — `auction_redis_repo.py`'ye `_ACCEPT_BID_LOCK_SCRIPT` Lua script'i ve `lock_accept_bid()` metodu eklendi; `auction_commands.py:accept_bid` `get_state+manuel kontrol` yerine atomik kilit kullanacak şekilde güncellendi.
+
 ---
 
 ### SRE-162 · 🔴 P0 (Kritik) · `purge_user` Endpoint'inde `token_version` Artırılmaması, Session Cache ve İlan/Yayınların Temizlenmemesi Nedeniyle Silinen Kullanıcının Oturumunun Sürmesi (Zombie Session & Orphaned Listings on Account Purge)
@@ -6948,6 +6951,9 @@ final_price = float(msg)
     except Exception:
         pass
 ```
+
+#### ✅ Çözüm Damgası
+`1a389109` — `admin_data.py:purge_user`'a `Listing.__table__.update()` (pasifleştirme) ve `force_close_stream` çağrısı eklendi; token revocation + session cache invalidation zaten mevcuttu.
 
 ---
 
@@ -7597,8 +7603,8 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 22. ~~**Adım 22 (`SRE-147`):** `auth.py:refresh_token` ve `create_refresh_token` kayıtlarına `token_version` bilgisini ekle (`user.id:user.token_version`); `/refresh` anında kullanıcının mevcut DB versiyonuyla karşılaştırarak şifre sıfırlama veya oturum düşürme sonrası çalınan refresh token'ların kullanılmasını (Session Hijack Persistence) engelle.~~ ✅ `27acfe56`
 23. ~~**Adım 23 (`SRE-155`):** `storage_service.py` içine `get_object_bytes_dm` fonksiyonunu ekle ve `dm_archive_tasks.py:archive_old_dm_task` içindeki yanlış public bucket okumasını düzelt; `NoSuchKey` dışındaki ağ hatalarında exception yutmasını kaldırarak MinIO'daki geçmiş yılların tüm DM arşivlerinin kalıcı ezilmesini ve silinmesini engelle.~~ ✅ `282d715b`
 24. ~~**Adım 24 (`SRE-156`):** `auth.py:init_context` ve `get_conversations_query.py` içindeki tekil `AsyncSession` üzerinde `asyncio.gather` ile eşzamanlı `execute()` çağrılarını sıralı `await` yürütmesine çevir; mobil açılışta ve mesaj kutusunda yaşanan `IllegalStateChangeError` (HTTP 500) çökmesini çöz.~~ ✅ `282d715b`
-25. **Adım 25 (`SRE-161`):** `auction_commands.py:accept_bid` ve `auction_redis_repo.py` içine atomik `lock_accept_bid` Lua script'i ekle; teklif kabul sürecinde Redis'in `accepting` durumuna alınmasını sağlayarak eşzamanlı yeni tekliflerle ihalenin gasbedilmesini ve çift kazanan anomalilerini engelle.
-26. **Adım 26 (`SRE-162`):** `admin_data.py:purge_user` endpoint'ine `token_version` artırımı, `invalidate_user_session_cache` çağrısı, aktif ilanları pasife çekme ve aktif canlı yayını sonlandırma ekle; anonimize edilip silinen kullanıcının 15 dk boyunca JWT ve Redis oturumunu sürdürmesini engelle.
+25. ~~**Adım 25 (`SRE-161`):** `auction_commands.py:accept_bid` ve `auction_redis_repo.py` içine atomik `lock_accept_bid` Lua script'i ekle; teklif kabul sürecinde Redis'in `accepting` durumuna alınmasını sağlayarak eşzamanlı yeni tekliflerle ihalenin gasbedilmesini ve çift kazanan anomalilerini engelle.~~ ✅ `1a389109`
+26. ~~**Adım 26 (`SRE-162`):** `admin_data.py:purge_user` endpoint'ine `token_version` artırımı, `invalidate_user_session_cache` çağrısı, aktif ilanları pasife çekme ve aktif canlı yayını sonlandırma ekle; anonimize edilip silinen kullanıcının 15 dk boyunca JWT ve Redis oturumunu sürdürmesini engelle.~~ ✅ `1a389109`
 27. **Adım 27 (`SRE-167`):** `referral_service.py:74, 156, 172` içine `from app.utils.i18n import _get_t` import'unu ekle ve bakiye dağıtımında `invalidate_user_session_cache` çağır; referans kodu kullanımının ve onaylı kullanıcıların e-posta/telefon doğrulamasında `NameError: name '_get_t' is not defined` (HTTP 500) ile çökmesini ve cüzdan bakiyesinin Redis önbelleğinde 15 dk eski kalmasını çöz.
 28. **Adım 28 (`SRE-168`):** `nsfw_service.py:170, 187` içine `from app.models.enums import ListingStatus` ve doğru `notification_service` import'unu ekle; NudeNet moderasyonunun `NameError: name 'ListingStatus' is not defined` ile çöküp müstehcen ve pornografik içerikli ilanların sansürsüz yayında kalmasını engelle.
 29. ~~**Adım 29 (`SRE-171`):** `worker.py:flush_interactions_to_db` satır 856'da `BATCH_LIMIT` yerine `len(raw_items)` kullan; veritabanı yazımı sürerken gelen tüm kullanıcı tıklama ve dwell etkileşimlerinin Redis'ten kalıcı silinmesini ve ML modellerinin bozulmasını engelle.~~ ✅ `96411c73`
