@@ -381,26 +381,32 @@ async def cleanup_expired_stories_task(ctx: dict) -> None:
 
 async def cleanup_old_notifications_task(ctx: dict) -> None:
     """
-    Her gün 03:00'da çalışır; 30 günden eski bildirimleri siler.
+    Her gün 03:00'da çalışır; 30 günden eski bildirimleri 5.000'lik batch'ler halinde siler.
 
     Kullanıcı başına birikim: ~30 bildirim/gün × 1000 kullanıcı = 900K satır/ay.
     30 günlük retention yeterli; daha eskisi operasyonel değer taşımaz.
+    Batch delete: tek devasa DELETE yerine 5.000'lik adımlar — WAL şişmesini ve
+    RowExclusiveLock süresini sınırlar. VACUUM autovacuum daemon'ına bırakılır.
     """
     try:
-        from app.database import AsyncSessionLocal, engine
+        from app.database import AsyncSessionLocal
         from sqlalchemy import text
+        total = 0
         async with AsyncSessionLocal() as db:
-            result = await db.execute(
-                text("DELETE FROM notifications WHERE created_at < NOW() - INTERVAL '30 days'")
-            )
-            await db.commit()
-            logger.info(
-                "[Worker] Bildirim cleanup tamamlandı | silinen=%d", result.rowcount
-            )
-        async with engine.connect() as conn:
-            await conn.execution_options(isolation_level="AUTOCOMMIT")
-            await conn.execute(text("VACUUM ANALYZE notifications"))
-            logger.info("[Worker] VACUUM ANALYZE notifications tamamlandı")
+            while True:
+                result = await db.execute(text("""
+                    DELETE FROM notifications
+                    WHERE id IN (
+                        SELECT id FROM notifications
+                        WHERE created_at < NOW() - INTERVAL '30 days'
+                        LIMIT 5000
+                    )
+                """))
+                await db.commit()
+                total += result.rowcount
+                if result.rowcount == 0:
+                    break
+        logger.info("[Worker] Bildirim cleanup tamamlandı | silinen=%d", total)
         await _agent_ok(ctx, "cleanup_old_notifications_task")
     except Exception as exc:
         logger.error("[Worker] Bildirim cleanup başarısız | %s", str(exc), exc_info=True)
@@ -412,28 +418,33 @@ async def cleanup_old_notifications_task(ctx: dict) -> None:
 
 async def cleanup_old_analytics_task(ctx: dict) -> None:
     """
-    Her Pazartesi 04:00'da çalışır; 90 günden eski analytics_events kayıtlarını siler.
+    Her Pazartesi 04:00'da çalışır; 90 günden eski analytics_events kayıtlarını 5.000'lik
+    batch'ler halinde siler.
 
     Bu tablo en hızlı büyüyen tablodur; retention olmadan GB'larca büyür.
     90 günlük veri çoğu analiz ihtiyacı için fazlasıyla yeterli.
-    Büyük silme sonrası VACUUM ANALYZE dead tuple'ları temizler, sorgu planını yeniler.
+    Batch delete: WAL şişmesini ve RowExclusiveLock süresini sınırlar.
+    VACUUM autovacuum daemon'ına bırakılır.
     """
     try:
-        from app.database import AsyncSessionLocal, engine
+        from app.database import AsyncSessionLocal
         from sqlalchemy import text
+        total = 0
         async with AsyncSessionLocal() as db:
-            result = await db.execute(
-                text("DELETE FROM analytics_events WHERE created_at < NOW() - INTERVAL '90 days'")
-            )
-            await db.commit()
-            logger.info(
-                "[Worker] Analytics cleanup tamamlandı | silinen=%d", result.rowcount
-            )
-        # VACUUM transaction dışında çalışmalı (DDL, autocommit gerekir)
-        async with engine.connect() as conn:
-            await conn.execution_options(isolation_level="AUTOCOMMIT")
-            await conn.execute(text("VACUUM ANALYZE analytics_events"))
-            logger.info("[Worker] VACUUM ANALYZE analytics_events tamamlandı")
+            while True:
+                result = await db.execute(text("""
+                    DELETE FROM analytics_events
+                    WHERE id IN (
+                        SELECT id FROM analytics_events
+                        WHERE created_at < NOW() - INTERVAL '90 days'
+                        LIMIT 5000
+                    )
+                """))
+                await db.commit()
+                total += result.rowcount
+                if result.rowcount == 0:
+                    break
+        logger.info("[Worker] Analytics cleanup tamamlandı | silinen=%d", total)
         await _agent_ok(ctx, "cleanup_old_analytics_task")
     except Exception as exc:
         logger.error("[Worker] Analytics cleanup başarısız | %s", str(exc), exc_info=True)
@@ -443,27 +454,33 @@ async def cleanup_old_analytics_task(ctx: dict) -> None:
 
 async def cleanup_old_user_interactions_task(ctx: dict) -> None:
     """
-    Her Salı 04:00'da çalışır; 90 günden eski user_interactions kayıtlarını siler.
+    Her Salı 04:00'da çalışır; 90 günden eski user_interactions kayıtlarını 5.000'lik
+    batch'ler halinde siler.
 
     flush_interactions_to_db her 5 dakikada INSERT eder — temizlenmezse tablo
     sınırsız büyür ve compute_trending_listings_task sorguları yavaşlar.
-    Büyük silme sonrası VACUUM ANALYZE çalıştırılır.
+    Batch delete: WAL şişmesini ve RowExclusiveLock süresini sınırlar.
+    VACUUM autovacuum daemon'ına bırakılır.
     """
     try:
-        from app.database import AsyncSessionLocal, engine
+        from app.database import AsyncSessionLocal
         from sqlalchemy import text
+        total = 0
         async with AsyncSessionLocal() as db:
-            result = await db.execute(
-                text("DELETE FROM user_interactions WHERE created_at < NOW() - INTERVAL '90 days'")
-            )
-            await db.commit()
-            logger.info(
-                "[Worker] user_interactions cleanup tamamlandı | silinen=%d", result.rowcount
-            )
-        async with engine.connect() as conn:
-            await conn.execution_options(isolation_level="AUTOCOMMIT")
-            await conn.execute(text("VACUUM ANALYZE user_interactions"))
-            logger.info("[Worker] VACUUM ANALYZE user_interactions tamamlandı")
+            while True:
+                result = await db.execute(text("""
+                    DELETE FROM user_interactions
+                    WHERE id IN (
+                        SELECT id FROM user_interactions
+                        WHERE created_at < NOW() - INTERVAL '90 days'
+                        LIMIT 5000
+                    )
+                """))
+                await db.commit()
+                total += result.rowcount
+                if result.rowcount == 0:
+                    break
+        logger.info("[Worker] user_interactions cleanup tamamlandı | silinen=%d", total)
         await _agent_ok(ctx, "cleanup_old_user_interactions_task")
     except Exception as exc:
         logger.error("[Worker] user_interactions cleanup başarısız | %s", str(exc), exc_info=True)
@@ -485,7 +502,7 @@ async def cleanup_old_stream_likes_task(ctx: dict) -> None:
     Bu job, o temizliği atlayan edge case'leri yakalar.
     """
     try:
-        from app.database import AsyncSessionLocal, engine
+        from app.database import AsyncSessionLocal
         from sqlalchemy import text
         async with AsyncSessionLocal() as db:
             result = await db.execute(
@@ -495,10 +512,6 @@ async def cleanup_old_stream_likes_task(ctx: dict) -> None:
             logger.info(
                 "[Worker] Stream likes cleanup tamamlandı | silinen=%d", result.rowcount
             )
-        async with engine.connect() as conn:
-            await conn.execution_options(isolation_level="AUTOCOMMIT")
-            await conn.execute(text("VACUUM ANALYZE stream_likes"))
-            logger.info("[Worker] VACUUM ANALYZE stream_likes tamamlandı")
         await _agent_ok(ctx, "cleanup_old_stream_likes_task")
     except Exception as exc:
         logger.error("[Worker] Stream likes cleanup başarısız | %s", str(exc), exc_info=True)
@@ -516,7 +529,7 @@ async def cleanup_old_stream_viewers_task(ctx: dict) -> None:
     Retention: 10 yıl (3650 gün) — uzun tutulmasının nedeni fraud/analitik sorguları.
     """
     try:
-        from app.database import AsyncSessionLocal, engine
+        from app.database import AsyncSessionLocal
         from sqlalchemy import text
         async with AsyncSessionLocal() as db:
             result = await db.execute(
@@ -530,10 +543,6 @@ async def cleanup_old_stream_viewers_task(ctx: dict) -> None:
             logger.info(
                 "[Worker] Stream viewer cleanup tamamlandı | silinen=%d", result.rowcount
             )
-        async with engine.connect() as conn:
-            await conn.execution_options(isolation_level="AUTOCOMMIT")
-            await conn.execute(text("VACUUM ANALYZE live_stream_viewers"))
-            logger.info("[Worker] VACUUM ANALYZE live_stream_viewers tamamlandı")
         await _agent_ok(ctx, "cleanup_old_stream_viewers_task")
     except Exception as exc:
         logger.error("[Worker] Stream viewer cleanup başarısız | %s", str(exc), exc_info=True)
@@ -600,7 +609,7 @@ async def cleanup_old_stream_chat_messages_task(ctx: dict) -> None:
     stream'lerin chat'ini yanlışlıkla silmesini önler.
     """
     try:
-        from app.database import AsyncSessionLocal, engine
+        from app.database import AsyncSessionLocal
         from sqlalchemy import text
         async with AsyncSessionLocal() as db:
             result = await db.execute(text("""
@@ -617,9 +626,6 @@ async def cleanup_old_stream_chat_messages_task(ctx: dict) -> None:
             """))
             await db.commit()
             logger.info("[Worker] Chat cleanup tamamlandı | silinen=%d", result.rowcount)
-        async with engine.connect() as conn:
-            await conn.execution_options(isolation_level="AUTOCOMMIT")
-            await conn.execute(text("VACUUM ANALYZE stream_chat_messages"))
         await _agent_ok(ctx, "cleanup_old_stream_chat_messages_task")
     except Exception as exc:
         logger.error("[Worker] Chat cleanup başarısız | %s", str(exc), exc_info=True)
@@ -789,7 +795,7 @@ async def cleanup_hidden_messages_task(ctx: dict) -> None:
     sayılır ve kayıtlar silinebilir.
     """
     try:
-        from app.database import AsyncSessionLocal, engine
+        from app.database import AsyncSessionLocal
         from sqlalchemy import text
         async with AsyncSessionLocal() as db:
             r1 = await db.execute(
@@ -812,10 +818,6 @@ async def cleanup_hidden_messages_task(ctx: dict) -> None:
                 "[Worker] DM cleanup tamamlandı | gizli=%d terk_edilmiş=%d",
                 r1.rowcount, r2.rowcount,
             )
-        async with engine.connect() as conn:
-            await conn.execution_options(isolation_level="AUTOCOMMIT")
-            await conn.execute(text("VACUUM ANALYZE direct_messages"))
-            logger.info("[Worker] VACUUM ANALYZE direct_messages tamamlandı")
         await _agent_ok(ctx, "cleanup_hidden_messages_task")
     except Exception as exc:
         logger.error("[Worker] Gizli mesaj cleanup başarısız | %s", str(exc), exc_info=True)
@@ -2152,22 +2154,29 @@ async def backfill_listing_embeddings_task(ctx: dict) -> None:
 # ── Task: Eski İmpressionları Temizle ────────────────────────────────────────
 
 async def cleanup_old_impressions_task(ctx: dict) -> None:
-    """Her gün 05:00'da çalışır; 30 günden eski listing_impressions kayıtlarını siler."""
+    """
+    Her gün 05:00'da çalışır; 30 günden eski listing_impressions kayıtlarını 5.000'lik
+    batch'ler halinde siler. VACUUM autovacuum daemon'ına bırakılır.
+    """
     try:
         from sqlalchemy import text
-        from app.database import AsyncSessionLocal, engine
+        from app.database import AsyncSessionLocal
+        total = 0
         async with AsyncSessionLocal() as db:
-            result = await db.execute(
-                text("DELETE FROM listing_impressions WHERE seen_at < NOW() - INTERVAL '30 days'")
-            )
-            await db.commit()
-            logger.info(
-                "[Worker] Impression cleanup tamamlandı | silinen=%d", result.rowcount
-            )
-        async with engine.connect() as conn:
-            await conn.execution_options(isolation_level="AUTOCOMMIT")
-            await conn.execute(text("VACUUM ANALYZE listing_impressions"))
-            logger.info("[Worker] VACUUM ANALYZE listing_impressions tamamlandı")
+            while True:
+                result = await db.execute(text("""
+                    DELETE FROM listing_impressions
+                    WHERE id IN (
+                        SELECT id FROM listing_impressions
+                        WHERE seen_at < NOW() - INTERVAL '30 days'
+                        LIMIT 5000
+                    )
+                """))
+                await db.commit()
+                total += result.rowcount
+                if result.rowcount == 0:
+                    break
+        logger.info("[Worker] Impression cleanup tamamlandı | silinen=%d", total)
         await _agent_ok(ctx, "cleanup_old_impressions_task")
     except Exception as exc:
         logger.error("[Worker] Impression cleanup başarısız | %s", str(exc), exc_info=True)
