@@ -84,7 +84,8 @@ class MorningReporter:
             if not set_ok:
                 return  # başka bir instance daha hızlı davrandı
         except Exception:
-            logger.warning("Redis morning-lock kontrol edilemedi — tek seferlik fallback")
+            logger.warning("Redis morning-lock kontrol edilemedi — rapor bu döngüde atlanıyor")
+            return
         try:
             await self._send_report(now_utc)
         except Exception:
