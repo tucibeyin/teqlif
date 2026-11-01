@@ -3402,7 +3402,7 @@ fiat_amount = round(try_amount / usd_or_eur_per_try_rate, 2)
 
 ---
 
-### SRE-82 · 🟠 P1 (Yüksek) · `credit_service.py` ve `leads.py` İçinde TOCTOU Yarış Durumu (Race Condition) ile Kullanıcıların Ücretsiz Haklarını Sınırsız Aşabilmesi
+### SRE-82 · 🟠 P1 (Yüksek) · `credit_service.py` ve `leads.py` İçinde TOCTOU Yarış Durumu (Race Condition) ile Kullanıcıların Ücretsiz Haklarını Sınırsız Aşabilmesi ✅ Çözüldü (cc430785 · 2026-11-01)
 
 * **Etkilenen Dosyalar:**
   * `backend/app/services/credit_service.py` (satırlar 118–176)
@@ -3457,6 +3457,17 @@ end
 return allowed -- Tüketilen gerçek hak sayısı
 ```
 Router içinde işlem başlamadan önce bu atomik script çalıştırılmalı; scriptin onayladığı kadar miktar (`allowed`) ücretsiz kabul edilmeli, kalanı için TEQlik tahsil edilmelidir.
+
+#### ✅ Çözüm Damgası — `cc430785` (2026-11-01)
+
+| Alan | Değer |
+|------|-------|
+| Commit | `cc430785` |
+| Tarih | 2026-11-01 |
+| `credit_service.py` | `check_and_consume()` Lua script + `_billing_ttl()` yardımcısı |
+| `ads.py` (BOOST) | Validasyonlar öne çekildi; `get_used`+`increment` → `check_and_consume(count=1)` |
+| `leads.py` (BLAST) | `actual_count` sonrası atomik rezervasyon; `estimated_cost` aşılınca kırpma |
+| `listings.py` (BLAST) | Aynı pattern; `fcm_tokens` sayısı üzerinden atomik rezervasyon |
 
 ---
 
@@ -7815,7 +7826,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 87. ~~**Adım 87 (`SRE-95`):** `convert_to_teqlik_command.py` ve `send_gift_command.py` içine sistem hazine hesabı (`id=0`) bakiyesini `users` tablosunda güncelleyen SQL sorgusunu ekle; mutabakat ve denetim kayıtlarının bozulmasını engelle.~~ ✅ `0dfb25cc` + `63fabab6`
 88. ~~**Adım 88 (`SRE-96`):** `wallet.py:send-gift` ve `send_gift_command.py` içine yayın durumu (`stream.status == 'live'`) ve host doğrulaması ekle; kapanmış yayınlar üzerinden bakiye aklanmasını ve sahte hype manipülasyonunu engelle.~~ ✅ `fbb5dbfb`
 89. ~~**Adım 89 (`SRE-97`):** `admin_data.py` kampanya duraklatma ve ilan pasifleştirme endpoint'lerine Redis önbellek temizleme (`srem ad_campaigns:active` ve `invalidate_listing_cache`) çağrılarını ekle; admin aksiyonları ile Redis arasındaki desenkronizasyonu çöz.~~ ✅ `30f24b5d`
-90. **Adım 90 (`SRE-82`):** `credit_service.py` ve `leads.py` içindeki TOCTOU yarış durumunu Redis Lua scripti ile atomik check-and-consume işlemine dönüştür; kullanıcıların ücretsiz haklarını (blast, boost, ai) eşzamanlı isteklerle limitsiz tüketmesini engelle.
+90. ~~**Adım 90 (`SRE-82`):** `credit_service.py` ve `leads.py` içindeki TOCTOU yarış durumunu Redis Lua scripti ile atomik check-and-consume işlemine dönüştür; kullanıcıların ücretsiz haklarını (blast, boost, ai) eşzamanlı isteklerle limitsiz tüketmesini engelle.~~ ✅ `cc430785`
 91. **Adım 91 (`SRE-83`):** `tcmb_service.py:fetch_and_save_tcmb_rates` fonksiyonundaki `ForexBuying` text okumasına `NoneType` kontrolü ve fallback ekle; tatil günlerinde döviz kurlarının `AttributeError` ile çökmesini durdur.
 92. **Adım 92 (`SRE-84`):** `relationship_service.py` içindeki `is_busy` kontrolünü 1 saatlik statik izin önbelleğinden çıkarıp `GetThreadStatusQuery` anında dinamik değerlendirmeye taşı; 15 saniyelik bir telefon görüşmesinde arama butonunun 1 saat kilitli kalmasını (Cache Poisoning) engelle.
 93. **Adım 93 (`SRE-77`):** `admin_data.py:admin_send_push` içindeki senkron FCM döngüsünü ARQ arka plan kuyruğuna taşı ve Firebase Admin SDK `send_each_for_multicast` toplu gönderimine geçir; Uvicorn worker'ın 25 dakika donmasını önle.
