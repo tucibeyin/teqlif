@@ -5434,6 +5434,12 @@ await redis.zremrangebyscore("fraud_log", "-inf", cutoff)
 1. Dolandırıcılık logları kalıcı analiz verisidir; Redis ZSET'inde tutulmamalı, doğrudan ClickHouse `track_user_event` tablosuna veya yapılandırılmış loglara (ELK/Loki) aktarılmalıdır.
 2. Redis'te tutulması gerekiyorsa, her yazmada tüm ZSET'i taramak yerine günlük TTL'e sahip Redis Stream (`XADD` + `MAXLEN ~ 10000`) kullanılmalıdır.
 
+#### ✅ Çözüm Damgası — `a82feb8d` (2026-11-01)
+* `fraud_detection_service.py:_log_fraud_attempt`: `zadd("fraud_log") + zremrangebyscore(...)` (O(log N+M), TTL yok, OOM riski) → `xadd("fraud_stream", MAXLEN ~10000, approximate=True)` (O(1) amortized, ≤5 MB RAM tavanı).
+* `admin_data.py:get_fraud_log`: `zrevrange("fraud_log")` → `xrevrange("fraud_stream")`; Stream ID'den `ts_ms / 1000.0` ile milisaniye hassasiyetinde zaman damgası çözümleme; API sözleşmesi bozulmadan korundu.
+* `influence_service.py`: `redis.pipeline()` → `redis.pipeline(transaction=False)` — bağımsız SETEX komutları MULTI/EXEC maliyeti olmadan akıtılıyor.
+* Kullanılmayan `import time` temizlendi.
+
 ---
 
 ### SRE-133 · 🟠 P1 (Yüksek) · `User.fcm_token` Tekil Sütun Tasarımı ile Çoklu Cihaz Desteğinin Olmaması ve Toplu Bildirim Kesintisi
