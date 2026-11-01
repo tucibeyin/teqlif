@@ -4999,6 +4999,9 @@ async def get_listing_offers(
        logger.warning("[CLIENT_LOG] details | tag=%s | %s", _sanitize(entry.tag), _sanitize(details_str, max_len=2000))
    ```
 
+#### ✅ Çözüm Damgası
+`ip_utils.py`'ye `get_client_ip()` eklendi (CF-Connecting-IP → X-Real-IP → XFF öncelik zinciri). `client_log.py` rate-limit anahtarı ve log satırı artık gerçek istemci IP'sini kullanıyor. `entry.details` JSON serializasyonu + `_sanitize(max_len=2000)` ile CWE-117 log injection kapatıldı. Commit: `0bd6f787`
+
 ---
 
 ### SRE-121 · 🟠 P1 (Yüksek) · Favoriden Çıkarılırken İlgisiz Beğeninin (`ListingLike`) Sessizce Silinmesi ve Cache Desync
@@ -5023,6 +5026,9 @@ async def get_listing_offers(
 1. Favori ve beğeni domain modelleri birbirinden ayrılmalıdır; `remove_favorite` ASLA `ListingLike` nesnesini silmemelidir.
 2. Ekleme işlemi `ON CONFLICT DO NOTHING` veya `IntegrityError` yakalayan idempotent bir yapıya kavuşturulmalıdır.
 3. Beğeni ile ilgili tüm durum değişiklikleri `LikeService.toggle_listing_like` üzerinden yürütülerek Redis set'leri ile tam senkron tutulmalıdır.
+
+#### ✅ Çözüm Damgası
+`favorites.py:remove_favorite` içindeki ilgisiz `ListingLike` silme bloğu kaldırıldı; `remove_favorite` artık yalnızca `Favorite` kaydını siliyor. `add_favorite` içine `IntegrityError` yakalama eklenerek çift tıklama yarış koruması sağlandı (idempotent). Commit: `0bd6f787`
 
 ---
 
@@ -7643,8 +7649,8 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 54. ~~**Adım 54 (`SRE-110`):** `turkish_nlp.py:build_stemmed_tsquery` regex temizliğine tek ve çift tırnak karakterlerini ekle (`to_tsquery` syntax error 500 çökmesini durdur); `search.py` endpoint'lerindeki `offset` parametresine `le=1000` doğrulama tavanı getir.~~ ✅ `d09a09c6`
 55. ~~**Adım 55 (`SRE-113`):** `delete_message_command.py` içinde herkesten silinen mesajlarda (`scope="everyone"`) `media_url` ve `thumbnail_url` varsa MinIO `delete_object_dm` çağrısını ekle; özel fotoğrafların yetim kalmasını ve KVKK ihlalini engelle.~~ ✅ `542edc79`
 56. ~~**Adım 56 (`SRE-114`):** `ip_utils.py:mask_ip` içine IPv6 `/64` alt ağ maskelemesi ekle; mobil IPv6 kullanıcılarında shill bidding korumasının by-pass edilmesini durdur.~~ ✅ `781e1c33`
-57. **Adım 57 (`SRE-120`):** `client_log.py` içindeki IP tespitini `CF-Connecting-IP` / `X-Forwarded-For` ile düzelt; `entry.details` sözlüğüne JSON sanitization ve 2.000 karakter sınırı getirerek log injection (CWE-117) açığını kapat.
-58. **Adım 58 (`SRE-121`):** `favorites.py:remove_favorite` içindeki ilgisiz `ListingLike` silme kodunu kaldır; `add_favorite` içine double-click yarış koruması ekle ve beğeni işlemlerini `LikeService` ile senkronize et.
+57. ~~**Adım 57 (`SRE-120`):** `client_log.py` içindeki IP tespitini `CF-Connecting-IP` / `X-Forwarded-For` ile düzelt; `entry.details` sözlüğüne JSON sanitization ve 2.000 karakter sınırı getirerek log injection (CWE-117) açığını kapat.~~ ✅ `0bd6f787`
+58. ~~**Adım 58 (`SRE-121`):** `favorites.py:remove_favorite` içindeki ilgisiz `ListingLike` silme kodunu kaldır; `add_favorite` içine double-click yarış koruması ekle ve beğeni işlemlerini `LikeService` ile senkronize et.~~ ✅ `0bd6f787`
 59. **Adım 59 (`SRE-122`):** `story_service.py` içindeki senkron FFmpeg video sıkıştırmasını HTTP thread'inden çıkarıp ARQ arka plan kuyruğuna delege et; Uvicorn event loop açlığını ve 504 Gateway Timeout'ları çöz.
 60. **Adım 60 (`SRE-123`):** `worker.py` temizlik görevlerindeki `VACUUM ANALYZE` çağrılarını kaldırıp autovacuum'a devret; 30 günlük bildirimleri ve analitikleri 5.000'lik gruplarla (batch delete) sil.
 61. **Adım 61 (`SRE-124`):** `influence_service.py` sorgusuna `status = 'accepted'` filtresi ve sparse matris optimizasyonu ekle; Redis pipeline komutlarını 1.000'lik gruplara bölerek OOM ve socket kilitlenmesini durdur.
