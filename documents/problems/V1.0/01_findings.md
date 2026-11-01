@@ -4159,6 +4159,15 @@ if stream.host_id != receiver_id:
     raise BadRequestException(code="RECEIVER_IS_NOT_STREAM_HOST")
 ```
 
+#### ✅ Çözüm Damgası — fbb5dbfb (2026-11-01)
+
+| Alan | Detay |
+|------|-------|
+| **send_gift_command.py** | `receiver_id` belirlendikten sonra tek sorgu: `is_live=TRUE AND status='live'` + `host_id=receiver_id` |
+| **Hata kodları** | `STREAM_NOT_LIVE` (yayın yok/kapalı), `RECEIVER_IS_NOT_STREAM_HOST` (host uyuşmazlığı) |
+| **Konum** | Self-gift kontrolünden sonra, kilit/bakiye işlemlerinden önce |
+| **Etki** | Kapanmış yayın üzerinden nakit transferi, yanlış alıcıya hype ve FK 500 kapatıldı |
+
 ---
 
 ### SRE-97 · 🟠 P1 (Yüksek) · Admin Kampanya Duraklatma ve İlan Pasifleştirmede Redis'in Güncellenmemesi (Admin vs Redis Desync)
@@ -7793,7 +7802,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 85. ~~**Adım 85 (`SRE-91`):** `refresh_stream_token.py` içine `orchestrator.resolve_stream_endpoint(stream)` çağrısını ekle; token yenileyen izleyicilerin relay sunucusundan düşürülüp kaynak sunucuya (origin) hücum etmesini durdur.~~ ✅ `79a3cfb9`
 86. ~~**Adım 86 (`SRE-93`):** `firebase_adapter.py:send_multicast` içindeki sıralı senkron `requests` döngüsünü kaldırıp asenkron HTTP havuzuna veya Firebase Admin SDK `send_each_for_multicast` toplu gönderimine geçir; takipçi bildirimlerinde `critical` ARQ kuyruğunun 25 dakika kilitlenmesini çöz.~~ ✅ `098444e4` + `af35b5a1`
 87. ~~**Adım 87 (`SRE-95`):** `convert_to_teqlik_command.py` ve `send_gift_command.py` içine sistem hazine hesabı (`id=0`) bakiyesini `users` tablosunda güncelleyen SQL sorgusunu ekle; mutabakat ve denetim kayıtlarının bozulmasını engelle.~~ ✅ `0dfb25cc` + `63fabab6`
-88. **Adım 88 (`SRE-96`):** `wallet.py:send-gift` ve `send_gift_command.py` içine yayın durumu (`stream.status == 'live'`) ve host doğrulaması ekle; kapanmış yayınlar üzerinden bakiye aklanmasını ve sahte hype manipülasyonunu engelle.
+88. ~~**Adım 88 (`SRE-96`):** `wallet.py:send-gift` ve `send_gift_command.py` içine yayın durumu (`stream.status == 'live'`) ve host doğrulaması ekle; kapanmış yayınlar üzerinden bakiye aklanmasını ve sahte hype manipülasyonunu engelle.~~ ✅ `fbb5dbfb`
 89. **Adım 89 (`SRE-97`):** `admin_data.py` kampanya duraklatma ve ilan pasifleştirme endpoint'lerine Redis önbellek temizleme (`srem ad_campaigns:active` ve `invalidate_listing_cache`) çağrılarını ekle; admin aksiyonları ile Redis arasındaki desenkronizasyonu çöz.
 90. **Adım 90 (`SRE-82`):** `credit_service.py` ve `leads.py` içindeki TOCTOU yarış durumunu Redis Lua scripti ile atomik check-and-consume işlemine dönüştür; kullanıcıların ücretsiz haklarını (blast, boost, ai) eşzamanlı isteklerle limitsiz tüketmesini engelle.
 91. **Adım 91 (`SRE-83`):** `tcmb_service.py:fetch_and_save_tcmb_rates` fonksiyonundaki `ForexBuying` text okumasına `NoneType` kontrolü ve fallback ekle; tatil günlerinde döviz kurlarının `AttributeError` ile çökmesini durdur.
