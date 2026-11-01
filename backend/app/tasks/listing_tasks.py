@@ -21,6 +21,7 @@ from app.models.enums import ListingStatus
 from app.core.logger import get_logger, capture_exception
 from app.database import AsyncSessionLocal
 from app.models.listing import Listing
+from app.utils.redis_client import get_redis
 
 logger = get_logger(__name__)
 
@@ -74,6 +75,8 @@ async def deactivate_expired_listings_task(ctx: dict) -> None:
 
             logger.info("[ListingTasks] %d ilan pasife alındı | ids=%s", len(listing_ids), listing_ids[:10])
 
+        # Commit sonrası: feed:recent ZSet + listing:{id} cache toplu temizle
+        await _invalidate_listings_batch(listing_ids)
         await _notify_deactivated(list(user_ids_set), user_listing_map)
         from app.worker import _agent_ok
         await _agent_ok(ctx, "deactivate_expired_listings_task")
@@ -153,6 +156,32 @@ async def delete_expired_inactive_listings_task(ctx: dict) -> None:
     except Exception as exc:
         logger.error("[ListingTasks] delete_expired_inactive_listings_task başarısız | %s", exc, exc_info=True)
         capture_exception(exc)
+
+
+# ── Cache temizleme ───────────────────────────────────────────────────────────
+
+async def _invalidate_listings_batch(listing_ids: list[int]) -> None:
+    """
+    Pasife alınan ilanları Redis'ten toplu temizler.
+    Tek pipeline ile:
+      - listing:{id} cache anahtarlarını siler
+      - feed:recent ZSet'inden kaldırır
+    """
+    if not listing_ids:
+        return
+    try:
+        redis = await get_redis()
+        cache_keys = [f"listing:{lid}" for lid in listing_ids]
+        async with redis.pipeline(transaction=False) as pipe:
+            pipe.delete(*cache_keys)
+            pipe.zrem("feed:recent", *[str(lid) for lid in listing_ids])
+            await pipe.execute()
+        logger.info(
+            "[ListingTasks] %d ilan Redis cache'den temizlendi (feed:recent + listing:{id})",
+            len(listing_ids),
+        )
+    except Exception as exc:
+        logger.warning("[ListingTasks] Toplu cache temizliği başarısız | %s", exc)
 
 
 # ── Bildirim yardımcıları ─────────────────────────────────────────────────────
