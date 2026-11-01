@@ -1041,6 +1041,13 @@ async def refresh_token(
     await redis.setex(f"refresh:used:{token}", 30, _json.dumps({"access_token": new_access, "refresh_token": new_refresh}))
     set_auth_cookies(response, new_access, new_refresh)
 
+    # ForYou filtresi: aktif mobil kullanıcılar da izlenir — günde 1x DB write (throttle)
+    throttle_key = f"last_active:throttle:{user.id}"
+    if not await redis.exists(throttle_key):
+        await redis.setex(throttle_key, 86400, "1")
+        await db.execute(sa_update(User).where(User.id == user.id).values(last_active_at=datetime.now(timezone.utc)))
+        await db.commit()
+
     return {"access_token": new_access, "refresh_token": new_refresh, "token_type": "bearer"}
 
 
