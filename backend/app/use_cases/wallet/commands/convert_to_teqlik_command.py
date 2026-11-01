@@ -17,11 +17,11 @@ class ConvertToTeqlikCommand:
 
     Kapalı döngü dönüşüm: available → teqlik_balance; nakde geri çevrilemez.
     cashout_enabled flag'inden bağımsız — yayıncının kazancıdır, çekim değil.
-    wallet_ledger 3 satır:
-      1. user: -teqlik_amount (convert_to_teqlik, available çıkışı)
-      2. user: +total_teqlik  (convert_to_teqlik, balance girişi)
-      3. id=0: -bonus_teqlik  (bonus_mint, sistem "basar")
-    Delta toplamı: -amount + (amount + bonus) - bonus = 0 ✓
+    wallet_ledger 2 satır:
+      1. user: +total_teqlik  (convert_to_teqlik, teqlik_balance girişi)
+      2. id=0: -bonus_teqlik  (bonus_mint, sistem basar)
+    Defter dengesi: +total_teqlik - bonus_teqlik = +teqlik_amount
+    (teqlik_amount available→teqlik form değişimi; net yeni değer = bonus_teqlik)
     """
 
     def __init__(self, session: AsyncSession) -> None:
@@ -57,16 +57,8 @@ class ConvertToTeqlikCommand:
         )
         new_balance = bal_row.fetchone()[0]
 
-        # wallet_ledger — 3 satır
-        prev_balance = new_balance - total_teqlik
-        await self._session.execute(
-            text(
-                "INSERT INTO wallet_ledger "
-                "(user_id, delta_teqlik, balance_after, tx_type) "
-                "VALUES (:uid, :delta, :bal, 'convert_to_teqlik')"
-            ),
-            {"uid": user_id, "delta": -teqlik_amount, "bal": prev_balance},
-        )
+        # wallet_ledger — 2 satır
+        # 1. Kullanıcı: teqlik_balance'a giren toplam tutar
         await self._session.execute(
             text(
                 "INSERT INTO wallet_ledger "
@@ -75,18 +67,23 @@ class ConvertToTeqlikCommand:
             ),
             {"uid": user_id, "delta": total_teqlik, "bal": new_balance},
         )
-        # Sistem (id=0) bonus mint — negatif (sistem basar)
+        # 2. Sistem (id=0) bonus mint — teqlik_balance atomik olarak güncellenir
         sys_bal_row = await self._session.execute(
-            text("SELECT teqlik_balance FROM users WHERE id = 0")
+            text(
+                "UPDATE users SET teqlik_balance = teqlik_balance - :delta "
+                "WHERE id = 0 RETURNING teqlik_balance"
+            ),
+            {"delta": bonus_teqlik},
         )
-        sys_balance = sys_bal_row.scalar() or 0
+        sys_row = sys_bal_row.fetchone()
+        sys_balance_after = sys_row[0] if sys_row is not None else -bonus_teqlik
         await self._session.execute(
             text(
                 "INSERT INTO wallet_ledger "
                 "(user_id, delta_teqlik, balance_after, tx_type) "
                 "VALUES (0, :delta, :bal, 'bonus_mint')"
             ),
-            {"delta": -bonus_teqlik, "bal": sys_balance - bonus_teqlik},
+            {"delta": -bonus_teqlik, "bal": sys_balance_after},
         )
 
         logger.info(
