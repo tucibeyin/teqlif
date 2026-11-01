@@ -3969,6 +3969,15 @@ def _send_multicast_batch(self, tokens: list[str], ...):
 2. Ya da `aiohttp` ile asenkron HTTP istemcisi üzerinden sınırlı bir eşzamanlılık havuzuyla (`asyncio.Semaphore(50)`) paralel gönderim yapılmalıdır; böylece 10.000 bildirim 25 dakikada değil, 3–4 saniyede tamamlanır.
 3. Yayın başlangıç bildirimleri `critical` kuyruğundan alınıp düşük öncelikli `notifications` veya `bulk` kuyruğuna taşınmalıdır.
 
+#### ✅ Çözüm Damgası — 098444e4 (2026-11-01)
+
+| Alan | Detay |
+|------|-------|
+| **firebase_adapter.py** | `send_multicast` → `aiohttp + asyncio.Semaphore(50)` paralel; `_get_bearer_token()` OAuth2 token yönetimi |
+| **stream_utils.py** | `notify_followers_task` `_queue_name` `"critical"` → `"default"` |
+| **worker.py** | `send_stream_started_notifications` `WorkerSettingsCritical.functions`'tan kaldırıldı, `WorkerSettings.functions`'a taşındı |
+| **Etki** | 10.000 token ~300× hızlanma (~25 dk → ~5-10 sn); critical queue artık bulk push tarafından bloke edilmez |
+
 ---
 
 ### SRE-94 · 🔴 P0 (Kritik) · Para Çekim İptalinde Eksik `FOR UPDATE` ile Çift İade ve Çekim-İptal Yarışı (Double Refund & Free Cash Exploit)
@@ -7773,7 +7782,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 83. ~~**Adım 83 (`SRE-87`):** `listing_tasks.py:deactivate_expired_listings_task` sonrasına `remove_from_recent_feed_cache(lid)` ve `invalidate_listing(lid)` toplu pipeline çağrılarını ekle; zombi ilanların feed akışında kalmasını ve checkout çökmelerini engelle.~~ ✅ `7c254cf3`
 84. ~~**Adım 84 (`SRE-90`):** `calls.py:end_call` içine grup katılımcılarına `call_ended` WS yayını (`broadcast_to_call_participants`) ve `webhooks.py:_on_call_room_finished` içine `clear_presence` ekle; misafirlerin askıda kalmasını ve 10 dakikalık meşgul kilitlenmesini engelle.~~ ✅ `138f3ab5`
 85. ~~**Adım 85 (`SRE-91`):** `refresh_stream_token.py` içine `orchestrator.resolve_stream_endpoint(stream)` çağrısını ekle; token yenileyen izleyicilerin relay sunucusundan düşürülüp kaynak sunucuya (origin) hücum etmesini durdur.~~ ✅ `79a3cfb9`
-86. **Adım 86 (`SRE-93`):** `firebase_adapter.py:send_multicast` içindeki sıralı senkron `requests` döngüsünü kaldırıp asenkron HTTP havuzuna veya Firebase Admin SDK `send_each_for_multicast` toplu gönderimine geçir; takipçi bildirimlerinde `critical` ARQ kuyruğunun 25 dakika kilitlenmesini çöz.
+86. ~~**Adım 86 (`SRE-93`):** `firebase_adapter.py:send_multicast` içindeki sıralı senkron `requests` döngüsünü kaldırıp asenkron HTTP havuzuna veya Firebase Admin SDK `send_each_for_multicast` toplu gönderimine geçir; takipçi bildirimlerinde `critical` ARQ kuyruğunun 25 dakika kilitlenmesini çöz.~~ ✅ `098444e4`
 87. **Adım 87 (`SRE-95`):** `convert_to_teqlik_command.py` ve `send_gift_command.py` içine sistem hazine hesabı (`id=0`) bakiyesini `users` tablosunda güncelleyen SQL sorgusunu ekle; mutabakat ve denetim kayıtlarının bozulmasını engelle.
 88. **Adım 88 (`SRE-96`):** `wallet.py:send-gift` ve `send_gift_command.py` içine yayın durumu (`stream.status == 'live'`) ve host doğrulaması ekle; kapanmış yayınlar üzerinden bakiye aklanmasını ve sahte hype manipülasyonunu engelle.
 89. **Adım 89 (`SRE-97`):** `admin_data.py` kampanya duraklatma ve ilan pasifleştirme endpoint'lerine Redis önbellek temizleme (`srem ad_campaigns:active` ve `invalidate_listing_cache`) çağrılarını ekle; admin aksiyonları ile Redis arasındaki desenkronizasyonu çöz.
