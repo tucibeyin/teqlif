@@ -3812,7 +3812,7 @@ await clear_presence(callee_id)
 await clear_call_redis(call_id)
 ```
 
-#### ✅ Çözüm Damgası — 138f3ab5 + hotfix (2026-11-01)
+#### ✅ Çözüm Damgası — 138f3ab5 + 25c666f1 (2026-11-01)
 
 `calls.py:end_call`:
 - `sa_update(CallParticipant)` ile tüm `joined` katılımcı kayıtları `status='ended'` yapıldı (DB commit'te)
