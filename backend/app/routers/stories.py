@@ -10,7 +10,7 @@ Her endpoint sadece:
 """
 from typing import List
 
-from fastapi import APIRouter, Depends, Query, UploadFile, File, status
+from fastapi import APIRouter, Depends, Query, Request, UploadFile, File, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -53,18 +53,47 @@ async def get_my_stories(
     return await StoryService(db).get_my_stories(current_user.id)
 
 
-@router.post("/upload", status_code=status.HTTP_201_CREATED)
+@router.post("/upload", status_code=status.HTTP_202_ACCEPTED)
 async def upload_story(
+    request: Request,
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Sıkıştırılmış video dosyasını alır, diske kaydeder ve
-    24 saat geçerliliğe sahip story kaydı oluşturur.
+    Ham video/görseli MinIO'ya yükler, Story kaydı oluşturur ve HTTP 202 döner.
+
+    Videolar status='processing' olarak kaydedilir; FFmpeg sıkıştırma ve thumbnail
+    ARQ video worker'ında (process_story_video_task) arka planda işlenir.
+    Görseller status='ready' olarak anında hazır olur.
     """
     story = await StoryService(db).upload_story(current_user.id, file)
-    return {"id": story.id, "video_url": story.video_url, "expires_at": story.expires_at}
+
+    if story.media_type == "video":
+        try:
+            pool = request.app.state.arq_pool
+            await pool.enqueue_job(
+                "process_story_video_task",
+                story.id,
+                story.video_path,
+                _queue_name="video",
+            )
+            logger.info(
+                "[STORY UPLOAD] ARQ kuyruğa alındı | story_id=%d | key=%s",
+                story.id, story.video_path,
+            )
+        except Exception as exc:
+            logger.warning(
+                "[STORY UPLOAD] ARQ enqueue başarısız, story işlenmeyecek | story_id=%d | %s",
+                story.id, exc,
+            )
+
+    return {
+        "id": story.id,
+        "video_url": story.video_url,
+        "expires_at": story.expires_at,
+        "status": story.status,
+    }
 
 
 @router.delete("/{story_id}", status_code=status.HTTP_204_NO_CONTENT)

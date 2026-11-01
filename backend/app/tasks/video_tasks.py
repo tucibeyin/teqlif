@@ -360,3 +360,123 @@ async def capture_hype_highlight(ctx: dict, room_name: str, room_id: int, host_i
                 os.unlink(p)
             except OSError:
                 pass
+
+
+async def process_story_video_task(ctx: dict, story_id: int, raw_minio_key: str) -> None:
+    """
+    Ham story videosunu ARQ arka planında sıkıştırır.
+
+    Adımlar:
+      1. MinIO'dan ham videoyu indir
+      2. FFmpeg: scale=-2:720, libx264, CRF 28, AAC 128k (nice -n 10)
+      3. Thumbnail çıkar (0. kare, JPEG)
+      4. Sıkıştırılmış videoyu aynı MinIO key'ine yeniden yükle
+      5. Thumbnail'ı {stem}_thumb.jpg key'ine yükle
+      6. stories tablosunu: thumbnail_url, status='ready' olarak güncelle
+
+    ARQ video kuyruğunda çalışır (WorkerSettingsVideo, node1).
+    Herhangi bir adımda hata olursa story silinmez; status='processing' kalır
+    (cleanup_expired_stories 24 saatte temizler).
+    """
+    import shutil as _shutil
+    from app.services import storage_service as storage
+    from app.database import AsyncSessionLocal
+    from sqlalchemy import text
+
+    logger.info("[StoryTask] İşleniyor | story_id=%s key=%s", story_id, raw_minio_key)
+
+    raw_bytes = await storage.get_object_bytes(raw_minio_key)
+    if not raw_bytes:
+        logger.warning("[StoryTask] MinIO'da bulunamadı | key=%s", raw_minio_key)
+        return
+
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        raw_path = os.path.join(tmp_dir, "src.mp4")
+        out_path = os.path.join(tmp_dir, "out.mp4")
+        thumb_path = os.path.join(tmp_dir, "thumb.jpg")
+
+        with open(raw_path, "wb") as f:
+            f.write(raw_bytes)
+        del raw_bytes
+
+        if not _shutil.which("ffmpeg"):
+            logger.warning("[StoryTask] ffmpeg bulunamadı | story_id=%s", story_id)
+            return
+
+        compress_cmd = [
+            "nice", "-n", "10",
+            "ffmpeg", "-y", "-i", raw_path,
+            "-vf", "scale=-2:720",
+            "-c:v", "libx264", "-crf", "28", "-preset", "fast",
+            "-c:a", "aac", "-b:a", "128k",
+            "-movflags", "+faststart",
+            out_path,
+        ]
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                *compress_cmd,
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.DEVNULL,
+            )
+            await asyncio.wait_for(proc.communicate(), timeout=120)
+            if proc.returncode != 0 or not os.path.exists(out_path):
+                logger.warning(
+                    "[StoryTask] FFmpeg sıkıştırma başarısız | story_id=%s rc=%s",
+                    story_id, proc.returncode,
+                )
+                return
+        except Exception as exc:
+            logger.warning("[StoryTask] FFmpeg hata | story_id=%s | %s", story_id, exc)
+            return
+
+        thumb_cmd = [
+            "ffmpeg", "-y", "-i", out_path,
+            "-ss", "0", "-frames:v", "1", "-q:v", "2",
+            thumb_path,
+        ]
+        thumb_ok = False
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                *thumb_cmd,
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.DEVNULL,
+            )
+            await asyncio.wait_for(proc.communicate(), timeout=30)
+            thumb_ok = os.path.exists(thumb_path)
+        except Exception:
+            pass
+
+        try:
+            await storage.upload_file(raw_minio_key, out_path, "video/mp4")
+            logger.info("[StoryTask] Sıkıştırılmış video yüklendi | story_id=%s key=%s", story_id, raw_minio_key)
+        except Exception as exc:
+            logger.error("[StoryTask] Video yüklenemedi | story_id=%s | %s", story_id, exc)
+            return
+
+        thumb_url = None
+        if thumb_ok:
+            key_stem = raw_minio_key.rsplit(".", 1)[0]
+            thumb_key = f"{key_stem}_thumb.jpg"
+            try:
+                thumb_url = await storage.upload_file(thumb_key, thumb_path, "image/jpeg")
+                logger.info("[StoryTask] Thumbnail yüklendi | story_id=%s key=%s", story_id, thumb_key)
+            except Exception as exc:
+                logger.warning("[StoryTask] Thumbnail yüklenemedi | story_id=%s | %s", story_id, exc)
+
+        try:
+            async with AsyncSessionLocal() as db:
+                await db.execute(
+                    text(
+                        "UPDATE stories SET status = 'ready'"
+                        + (", thumbnail_url = :thumb" if thumb_url else "")
+                        + " WHERE id = :sid"
+                    ),
+                    {"sid": story_id, **({"thumb": thumb_url} if thumb_url else {})},
+                )
+                await db.commit()
+            logger.info("[StoryTask] DB güncellendi | story_id=%s status=ready", story_id)
+        except Exception as exc:
+            logger.error("[StoryTask] DB güncellenemedi | story_id=%s | %s", story_id, exc)
+
+    logger.info("[StoryTask] Tamamlandı | story_id=%s", story_id)

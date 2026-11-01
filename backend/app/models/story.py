@@ -26,6 +26,7 @@ class Story(Base):
     video_path: Mapped[str] = mapped_column(String(500), nullable=False)
     video_url: Mapped[str] = mapped_column(String(500), nullable=False)
     thumbnail_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, server_default="ready")
     expires_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, index=True
     )

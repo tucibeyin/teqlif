@@ -16,9 +16,7 @@ Hata Yönetimi:
   DB hataları   → logger.error + capture_exception → DatabaseException (500)
   Disk hataları → FileNotFoundError sessizce yutulur, OSError loglanır
 """
-import asyncio
 import os
-import shutil
 import uuid
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
@@ -43,57 +41,6 @@ from app.utils.media_processor import detect_image_type, detect_video_type
 from app.core.logger import get_logger, capture_exception
 
 logger = get_logger(__name__)
-
-
-async def _compress_video(src: str, out_dir: str, original_ext: str) -> tuple[str | None, str | None]:
-    """
-    ffmpeg ile 480p / libx264 / CRF 28 / AAC 128k sıkıştırma.
-    Mobil VideoQuality.MediumQuality ile aynı hedef kalite.
-
-    Dönüş:
-      (compressed_path, compressed_filename)  — başarılı
-      (None, None)                            — ffmpeg yok veya hata
-    """
-    if not shutil.which("ffmpeg"):
-        logger.warning("[STORY COMPRESS] ffmpeg bulunamadı — sıkıştırma atlandı")
-        return None, None
-
-    out_name = f"{uuid.uuid4().hex}.mp4"
-    out_path = os.path.join(out_dir, out_name)
-
-    cmd = [
-        "ffmpeg", "-y",
-        "-i", src,
-        "-vf", "scale=-2:720",
-        "-c:v", "libx264",
-        "-crf", "28",
-        "-preset", "fast",
-        "-c:a", "aac",
-        "-b:a", "128k",
-        "-movflags", "+faststart",
-        out_path,
-    ]
-
-    try:
-        proc = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.DEVNULL,
-            stderr=asyncio.subprocess.DEVNULL,
-        )
-        await asyncio.wait_for(proc.communicate(), timeout=120)
-        if proc.returncode == 0 and os.path.exists(out_path):
-            return out_path, out_name
-        if os.path.exists(out_path):
-            os.remove(out_path)
-        return None, None
-    except Exception as exc:
-        logger.warning("[STORY COMPRESS] ffmpeg başarısız, orijinal kullanılacak: %s", exc)
-        if os.path.exists(out_path):
-            try:
-                os.remove(out_path)
-            except OSError:
-                pass
-        return None, None
 
 
 class StoryService:
@@ -139,6 +86,7 @@ class StoryService:
                     Follow.follower_id == current_user_id,
                     Follow.status == "accepted",
                     Story.expires_at > func.now(),
+                    Story.status == "ready",
                     Story.user_id.not_in(_blocked_users),
                 )
                 .order_by(Story.created_at.asc())
@@ -281,12 +229,13 @@ class StoryService:
 
     async def upload_story(self, user_id: int, file: UploadFile) -> Story:
         """
-        Gelen video dosyasını `uploads/stories/` altına kaydeder,
-        24 saat geçerliliğe sahip Story DB kaydı oluşturur ve döner.
+        Ham video/görseli MinIO'ya yükler, Story DB kaydı oluşturur ve döner.
 
-        Doğrulama:
-          - Yalnızca video/* content-type kabul edilir.
-          - Maksimum boyut: 100 MB (istemci tarafı sıkıştırma sonrası yeterli).
+        Video hikayeleri status='processing' ile oluşturulur; FFmpeg sıkıştırması
+        ARQ video worker'ına (process_story_video_task) delege edilir.
+        Görseller doğrudan status='ready' ile hazır olur.
+
+        Çağıran (router) video ise story.video_path kullanarak ARQ'yu tetikler.
         """
         _MAX_BYTES = 20 * 1024 * 1024  # 20 MB
 
@@ -318,35 +267,28 @@ class StoryService:
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_path = os.path.join(tmp_dir, filename)
-            with open(tmp_path, "wb") as f:
-                f.write(raw)
-
-            upload_path = tmp_path
-            if not is_image:
-                compressed_path, _ = await _compress_video(tmp_path, tmp_dir, ext)
-                if compressed_path:
-                    upload_path = compressed_path
-                    logger.info("[STORY UPLOAD] Sıkıştırıldı | user_id=%s", user_id)
-
+            with open(tmp_path, "wb") as fh:
+                fh.write(raw)
             try:
-                video_url = await storage.upload_file(minio_key, upload_path, content_type)
+                video_url = await storage.upload_file(minio_key, tmp_path, content_type)
             except Exception as exc:
                 logger.error(
                     "[STORY UPLOAD] MinIO yükleme başarısız | user_id=%s | %s",
-                    user_id,
-                    exc,
-                    exc_info=True,
+                    user_id, exc, exc_info=True,
                 )
                 capture_exception(exc)
                 raise DatabaseException(code="STORY_LOAD_FAILED")
 
         expires_at = datetime.now(timezone.utc) + timedelta(hours=24)
+        # Görseller hemen hazır; videolar ARQ işleyene kadar 'processing' olarak kalır
+        initial_status = "ready" if is_image else "processing"
 
         story = Story(
             user_id=user_id,
             media_type=media_type,
             video_path=minio_key,
             video_url=video_url,
+            status=initial_status,
             expires_at=expires_at,
         )
         try:
@@ -357,18 +299,14 @@ class StoryService:
             await storage.delete_object(minio_key)
             logger.error(
                 "[STORY UPLOAD] DB kaydı oluşturulamadı | user_id=%s | %s",
-                user_id,
-                exc,
-                exc_info=True,
+                user_id, exc, exc_info=True,
             )
             capture_exception(exc)
             raise DatabaseException("Hikaye kaydedilemedi")
 
         logger.info(
-            "[STORY UPLOAD] Yüklendi | story_id=%d | user_id=%s | key=%s",
-            story.id,
-            user_id,
-            minio_key,
+            "[STORY UPLOAD] Kabul edildi | story_id=%d | user_id=%s | status=%s | key=%s",
+            story.id, user_id, initial_status, minio_key,
         )
         return story
 
