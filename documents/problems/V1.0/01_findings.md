@@ -1176,6 +1176,12 @@ Kullanıcı B'nin mesajı Worker 2'ye düştüğünde Worker 2'deki skor 15'tir.
 #### 2. Çözüm / Refactoring Reçetesi
 Hype skoru ve kullanıcı cooldown zamanları süreç belleğinde değil, Redis üzerinde `live:hype:{stream_id}` anahtarında atomik olarak tutulmalı; sönümleme döngüsü (decay) ise 8 worker'da ayrı ayrı değil, tek bir ARQ periyodik görevi üzerinden yürütülmelidir.
 
+#### ✅ Çözüm Damgası
+- **Commit:** `455b8219` — `fix(sre-30): hype_manager state Redis'e taşındı (8 worker senkronizasyonu)`
+- **Tarih:** 2026-11-01
+- **Değişen Dosyalar:** `backend/app/core/hype_manager.py`, `backend/app/routers/chat.py`, `backend/app/routers/streams.py`, `backend/app/use_cases/streams/stream_finalizer.py`
+- **Yapılan:** `_scores`, `_user_ts`, `_last_alert`, `_has_highlighted` Python process belleğinden tamamen kaldırıldı. Tüm state Redis'e taşındı: skor Lua ile atomic clamp (0–100), user cooldown SETNX+TTL, alert SET+TTL=120s, highlight NX flag. Decay loop'a distributed lock (`live:hype:decay_lock`, NX TTL=5s) eklendi — yalnızca 1 worker çalışır. `streams.py`'de `get_score()` yerine `redis.mget()` toplu okuma. `finalize_stream`'e `hype_manager.remove_stream()` eklendi.
+
 ---
 
 ### SRE-31 · 🔴 P0 (Kritik) · In-App Purchase (IAP) Satın Alma Doğrulamasında Eksik `commit()` Nedeniyle Gerçek Parayla Alınan Bakiyenin Rollback Olması
@@ -7700,7 +7706,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 164. ~~**Adım 164 (`SRE-18`):** `analytics_tasks.py` airdrop dağıtımını 500'lük gruplarla chunk'la.~~ ✅ `d591b64f`
 165. ~~**Adım 165 (`SRE-27`):** `recommendation_service.py` içindeki dinamik `SELECT DISTINCT category` sorgusunu kaldırıp kategori önbelleğini kullan.~~ ✅ `282cee24`
 166. ~~**Adım 166 (`SRE-26`):** `storage_service.py:get_object_bytes` rastgele node seçimi yerine dosyanın yüklendiği yetkili MinIO adresini referans al.~~ ✅ `537740c1`
-167. **Adım 167 (`SRE-30`):** `hype_manager.py` skor durumunu Redis'e taşıyarak 8 Uvicorn worker arasında veri senkronizasyonunu sağla.
+167. ~~**Adım 167 (`SRE-30`):** `hype_manager.py` skor durumunu Redis'e taşıyarak 8 Uvicorn worker arasında veri senkronizasyonunu sağla.~~ ✅ `455b8219`
 168. **Adım 168 (`SRE-05`):** `foryou_worker.py` içindeki sorguya `last_active_at` filtresi ekle ve Redis çağrılarını pipeline yap.
 169. **Adım 169 (`SRE-06`):** `feed_als_ml.py` ve `swipe_live_ml.py` içindeki Redis pipeline'larına 1.000'lik chunk döngüsü ekle.
 170. **Adım 170 (`SRE-08`):** `wallet_tasks.py` döngüsel SQL'lerini küme tabanlı batch işlemine dönüştür.
