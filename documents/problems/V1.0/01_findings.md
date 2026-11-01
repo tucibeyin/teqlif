@@ -440,6 +440,13 @@ async with AsyncSessionLocal() as session:
 1. İşlem tek tek satır döngüsüyle değil; küme tabanlı (set-based) SQL sorgusuyla tek bir `UPDATE ... FROM` ifadesiyle toplu olarak yapılmalıdır.
 2. Veya kullanıcılar **100'lük gruplar (batches)** halinde işlenip her 100 kullanıcıda bir `session.commit()` çağrılmalıdır.
 
+#### ✅ Çözüm Damgası — `52359e5e` (2026-11-01)
+* `release_pending_earnings_task` baştan yeniden yazıldı.
+* Python for döngüsü ve 15.000 sıralı SQL kaldırıldı.
+* Tek PostgreSQL CTE zinciri: `amounts → wallet_update (RETURNING) → ledger_insert (RETURNING) → gift_update`.
+* Bir `session.execute()` + `session.commit()` — transaction anında kapanır.
+* WAL şişmesi, satır kilit birikimi ve yarıda rollback riski ortadan kalktı.
+
 ---
 
 ### SRE-09 · 🟡 P2 (Orta) · Pazar Günü "Süper Fırtına" Yığılması (Schedule Storm)
@@ -7722,7 +7729,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 167. ~~**Adım 167 (`SRE-30`):** `hype_manager.py` skor durumunu Redis'e taşıyarak 8 Uvicorn worker arasında veri senkronizasyonunu sağla.~~ ✅ `455b8219`
 168. ~~**Adım 168 (`SRE-05`):** `foryou_worker.py` içindeki sorguya `last_active_at` filtresi ekle ve Redis çağrılarını pipeline yap.~~ ✅ `78e30bb8`
 169. ~~**Adım 169 (`SRE-06`):** `feed_als_ml.py` ve `swipe_live_ml.py` içindeki Redis pipeline'larına 1.000'lik chunk döngüsü ekle.~~ ✅ `3a09afc4`
-170. **Adım 170 (`SRE-08`):** `wallet_tasks.py` döngüsel SQL'lerini küme tabanlı batch işlemine dönüştür.
+170. ~~**Adım 170 (`SRE-08`):** `wallet_tasks.py` döngüsel SQL'lerini küme tabanlı batch işlemine dönüştür.~~ ✅ `52359e5e`
 171. **Adım 171 (`SRE-09`):** `schedule.yaml` pazar sabahı görevlerini ardışık bir DAG zincirine bağla.
 172. **Adım 172 (`SRE-04`):** `bpr_service.py` ve `feed_als_ml.py` veri çekme sorgularına satır tavanı (`LIMIT`) ve süre kısıtlaması getir.
 
