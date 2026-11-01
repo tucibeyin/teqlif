@@ -1,12 +1,11 @@
 import asyncio
 
-from sqlalchemy import select
+from sqlalchemy import select, text as sa_text
 from app.core.uow import AbstractUnitOfWork
 from app.core.exceptions import BadRequestException, ForbiddenException, NotFoundException
 from app.core.logger import get_logger
 from app.models.enums import UserStatus
 from app.models.follow import Follow
-from app.models.rating import Rating
 from app.models.rating_history import RatingHistory
 from app.models.user import User
 from app.services.notification_service import push_notification
@@ -42,72 +41,97 @@ class UpsertRatingCommand:
         if comment:
             comment = censor_text(comment)
 
-        target = await self.uow.session.scalar(
-            select(User).where(User.id == rated_id, User.status == UserStatus.ACTIVE)
-        )
-        if not target:
-            raise NotFoundException(code="USER_NOT_FOUND")
+        notif_payload: dict | None = None
 
-        is_following = await self.uow.session.scalar(
-            select(Follow).where(
-                Follow.follower_id == rater_id,
-                Follow.followed_id == rated_id,
+        async with self.uow:
+            target = await self.uow.session.scalar(
+                select(User).where(User.id == rated_id, User.status == UserStatus.ACTIVE)
             )
-        )
-        if not is_following:
-            raise ForbiddenException(code="RATING_REQUIRES_FOLLOW")
+            if not target:
+                raise NotFoundException(code="USER_NOT_FOUND")
 
-        existing = await self.uow.session.scalar(
-            select(Rating).where(
-                Rating.rater_id == rater_id, Rating.rated_id == rated_id
-            )
-        )
-
-        if existing:
-            old_score = existing.score
-            # Güncelleme: eski değeri history'ye kaydet
-            self.uow.session.add(
-                RatingHistory(
-                    rating_id=existing.id,
-                    score=existing.score,
-                    comment=existing.comment,
+            is_following = await self.uow.session.scalar(
+                select(Follow).where(
+                    Follow.follower_id == rater_id,
+                    Follow.followed_id == rated_id,
                 )
             )
-            existing.score = score
-            existing.comment = comment
-            logger.info(
-                "[UpsertRatingCommand] Updated | rater=%s rated=%s score=%s",
-                rater_id, rated_id, score,
-            )
-            await self.uow.session.commit()
+            if not is_following:
+                raise ForbiddenException(code="RATING_REQUIRES_FOLLOW")
 
-            if old_score != score:
-                rater = await self.uow.session.scalar(
-                    select(User).where(User.id == rater_id)
+            # Tek SQL ifadesiyle atomik upsert — çift tıklama / yarış güvenli.
+            # old_val CTE, upsert CTE ile aynı snapshot'ta eski değeri yakalar.
+            row = (await self.uow.session.execute(
+                sa_text("""
+                    WITH old_val AS (
+                        SELECT id, score, comment
+                        FROM ratings
+                        WHERE rater_id = :rater_id AND rated_id = :rated_id
+                    ),
+                    upsert AS (
+                        INSERT INTO ratings (rater_id, rated_id, score, comment)
+                        VALUES (:rater_id, :rated_id, :score, :comment)
+                        ON CONFLICT (rater_id, rated_id) DO UPDATE
+                            SET score      = EXCLUDED.score,
+                                comment    = EXCLUDED.comment,
+                                updated_at = NOW()
+                        RETURNING id
+                    )
+                    SELECT upsert.id,
+                           (old_val.id IS NOT NULL) AS was_update,
+                           old_val.score             AS old_score,
+                           old_val.comment           AS old_comment
+                    FROM upsert LEFT JOIN old_val ON true
+                """),
+                {
+                    "rater_id": rater_id,
+                    "rated_id": rated_id,
+                    "score": score,
+                    "comment": comment,
+                },
+            )).one()
+
+            rating_id: int = row.id
+            was_update: bool = row.was_update
+
+            if was_update:
+                logger.info(
+                    "[UpsertRatingCommand] Updated | rater=%s rated=%s score=%s",
+                    rater_id, rated_id, score,
                 )
-                if rater:
-                    asyncio.create_task(push_notification(
-                        user_id=rated_id,
-                        notif={
-                            "type": "rating_updated",
-                            "i18n": {
-                                "title_key": "notifRatingUpdatedTitle",
-                                "title_params": {"username": rater.username},
-                            },
-                            "related_id": rater.id,
-                            "sender_username": rater.username,
-                            "sender_image_url": rater.profile_image_url,
-                        },
-                        pref_key="ratings",
+                old_score = row.old_score
+                if old_score != score:
+                    self.uow.session.add(RatingHistory(
+                        rating_id=rating_id,
+                        score=old_score,
+                        comment=row.old_comment,
                     ))
-        else:
-            self.uow.session.add(
-                Rating(rater_id=rater_id, rated_id=rated_id, score=score, comment=comment)
-            )
-            logger.info(
-                "[UpsertRatingCommand] Created | rater=%s rated=%s score=%s",
-                rater_id, rated_id, score,
-            )
-            await self.uow.session.commit()
+                    rater = await self.uow.session.scalar(
+                        select(User).where(User.id == rater_id)
+                    )
+                    if rater:
+                        notif_payload = {
+                            "user_id": rated_id,
+                            "notif": {
+                                "type": "rating_updated",
+                                "i18n": {
+                                    "title_key": "notifRatingUpdatedTitle",
+                                    "title_params": {"username": rater.username},
+                                },
+                                "related_id": rater.id,
+                                "sender_username": rater.username,
+                                "sender_image_url": rater.profile_image_url,
+                            },
+                            "pref_key": "ratings",
+                        }
+            else:
+                logger.info(
+                    "[UpsertRatingCommand] Created | rater=%s rated=%s score=%s",
+                    rater_id, rated_id, score,
+                )
+
+        # UoW commit tamamlandı; bildirim bağımsız async görev olarak başlatılır
+        if notif_payload:
+            asyncio.create_task(push_notification(**notif_payload))
 
         return {"ok": True}
