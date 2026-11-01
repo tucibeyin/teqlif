@@ -342,6 +342,7 @@ class StoryService:
                 expires_at=s.expires_at,
                 created_at=s.created_at,
                 stream_id=None,
+                status=s.status,
             )
             for s in stories
         ]
