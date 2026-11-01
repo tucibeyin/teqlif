@@ -737,7 +737,6 @@ async def get_raid_targets(
     - Maksimum 3 yayın döner
     """
     import math
-    from app.core.hype_manager import hype_manager
     from app.use_cases.feed.queries.feed_queries import FeedQueries
     from app.utils.redis_client import get_redis
 
@@ -753,17 +752,21 @@ async def get_raid_targets(
     # Kullanıcı kategori ilgi skorları (kişiselleştirme)
     interests: dict[str, float] = await FeedQueries(uow).get_user_interests(current_user.id)
 
-    # Redis'ten anlık izleyici sayılarını çek
+    # Redis'ten anlık izleyici sayılarını + hype skorlarını toplu çek
     redis = await get_redis()
     viewer_keys = [f"live:viewers:{s.id}" for s in streams]
+    hype_keys   = [f"live:hype:score:{s.id}" for s in streams]
     raw_counts = await redis.mget(*viewer_keys) if viewer_keys else []
-    viewer_map: dict[int, int] = {}
-    for s, raw in zip(streams, raw_counts):
-        viewer_map[s.id] = int(raw) if raw else s.viewer_count
+    raw_hypes  = await redis.mget(*hype_keys)  if hype_keys  else []
+    viewer_map: dict[int, int]   = {}
+    hype_map:   dict[int, float] = {}
+    for s, rv, rh in zip(streams, raw_counts, raw_hypes):
+        viewer_map[s.id] = int(rv)   if rv else s.viewer_count
+        hype_map[s.id]   = float(rh) if rh else 0.0
 
     def _score(s: LiveStream) -> float:
         affinity = min(interests.get(s.category or "", 0.05), 1.0)
-        hype = min(hype_manager.get_score(s.id) / 100.0, 1.0)
+        hype = min(hype_map.get(s.id, 0.0) / 100.0, 1.0)
         viewers = math.log1p(viewer_map.get(s.id, 0)) / 10.0
         return affinity * 0.55 + hype * 0.30 + viewers * 0.15
 
@@ -777,7 +780,7 @@ async def get_raid_targets(
             "title": s.title,
             "host_name": s.host.username if s.host else "",
             "viewer_count": viewer_map.get(s.id, 0),
-            "hype_score": round(hype_manager.get_score(s.id)),
+            "hype_score": round(hype_map.get(s.id, 0.0)),
             "thumbnail_url": s.thumbnail_url,
             "category": s.category,
         }

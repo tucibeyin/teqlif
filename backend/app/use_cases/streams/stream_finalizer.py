@@ -147,6 +147,13 @@ async def finalize_stream(stream: LiveStream, db: AsyncSession) -> None:
     except Exception:
         logger.error("finalize_stream: Redis temizliği başarısız | stream_id=%s", stream.id, exc_info=True)
 
+    # 6b. Hype state temizle (score, highlight flag, alert cooldown)
+    try:
+        from app.core.hype_manager import hype_manager
+        await hype_manager.remove_stream(stream.id)
+    except Exception:
+        logger.warning("finalize_stream: Hype state temizlenemedi | stream_id=%s", stream.id, exc_info=True)
+
     # 7. pro_insights ve pro_metrics cache'i invalidate et (yayıncı raporunu güncel görsün)
     try:
         keys = [k async for k in redis.scan_iter(f"cache:pro_insights:{stream.host_id}:*")]

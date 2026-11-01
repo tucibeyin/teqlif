@@ -204,7 +204,7 @@ async def _handle_chat_message(
     delta = calculate_message_hype(content)
     if delta != 0:
         viewer_count = ws_manager.subscriber_count(f"chat:{stream_id}")
-        new_score = hype_manager.add_delta(
+        new_score = await hype_manager.add_delta(
             stream_id, delta,
             user_id=user_id,
             viewer_count=max(1, viewer_count),
@@ -218,7 +218,7 @@ async def _handle_chat_message(
             logger.warning("[Hype] Broadcast başarısız | stream=%s | %s", stream_id, exc)
 
         # Auto-Highlight: oda için ilk kez 90 barajı geçildiyse 15s video çek
-        if room_name and host_id and hype_manager.should_highlight(stream_id, new_score):
+        if room_name and host_id and await hype_manager.should_highlight(stream_id, new_score):
             from app.core.task_queue import get_pool
             _pool = get_pool()
             if _pool:
@@ -233,8 +233,8 @@ async def _handle_chat_message(
                 logger.warning("[Highlight] ARQ pool hazır değil, görev atlandı | stream_id=%s", stream_id)
 
         # Host uyarısı: eşik geçildiyse ve cooldown dolduysa
-        if host_id and hype_manager.should_alert(stream_id):
-            hype_manager.mark_alerted(stream_id)
+        if host_id and await hype_manager.should_alert(stream_id):
+            await hype_manager.mark_alerted(stream_id)
             host_topic = f"chat:{stream_id}:u{host_id}"
             try:
                 await ws_manager.publish("chat_broadcast", host_topic, {
