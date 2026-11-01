@@ -109,7 +109,7 @@ async def notify_followers_task(user_id: int, username: str, stream_title: str |
             username=username,
             stream_title=stream_title,
             stream_id=stream_id,
-            _queue_name="critical",
+            _queue_name="default",
         )
     except Exception as exc:
         logger.error(

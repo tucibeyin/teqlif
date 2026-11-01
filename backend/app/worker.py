@@ -4674,6 +4674,9 @@ class WorkerSettings:
         # ── Scheduler görevleri (main.py'dan taşındı — SRE-12) ───────────────
         flush_clickhouse_buffers_task,
         direct_sale_overdue_check_task,
+
+        # ── Toplu bildirim (critical değil — SRE-93) ─────────────────────────
+        send_stream_started_notifications,
     ]
 
     cron_jobs = [
@@ -4758,7 +4761,6 @@ class WorkerSettingsCritical:
 
     functions = [
         send_push_notification_task,
-        send_stream_started_notifications,
         notify_outbid_task,
         notify_auction_losers_task,
         send_smart_auction_alerts,
