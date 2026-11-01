@@ -104,6 +104,18 @@ def next_billing_date(premium_since: datetime) -> date:
     return date(ny, nm, min(day, calendar.monthrange(ny, nm)[1]))
 
 
+def _billing_ttl(premium_since: datetime | None) -> int:
+    """Mevcut fatura döneminin sonuna kadar saniye cinsinden TTL."""
+    now = datetime.now(timezone.utc)
+    if premium_since:
+        nxt = next_billing_date(premium_since)
+        end_dt = datetime(nxt.year, nxt.month, nxt.day, tzinfo=timezone.utc)
+    else:
+        last_day = calendar.monthrange(now.year, now.month)[1]
+        end_dt = now.replace(day=last_day, hour=23, minute=59, second=59, microsecond=0)
+    return max(60, int((end_dt - now).total_seconds()) + 1)
+
+
 # ── Redis Sayaç Yardımcıları ──────────────────────────────────────────────────
 
 def redis_key(feature: CreditFeature, user_id: int, premium_since: datetime | None) -> str:
@@ -156,15 +168,7 @@ async def increment(
         key = redis_key(feature, user_id, premium_since)
         new_val = await redis.incrby(key, count)
         if new_val <= count:
-            now = datetime.now(timezone.utc)
-            if premium_since:
-                nxt = next_billing_date(premium_since)
-                end_dt = datetime(nxt.year, nxt.month, nxt.day, tzinfo=timezone.utc)
-            else:
-                last_day = calendar.monthrange(now.year, now.month)[1]
-                end_dt = now.replace(day=last_day, hour=23, minute=59, second=59, microsecond=0)
-            ttl = max(60, int((end_dt - now).total_seconds()) + 1)
-            await redis.expire(key, ttl)
+            await redis.expire(key, _billing_ttl(premium_since))
         return new_val
     except Exception as exc:
         logger.warning(
@@ -173,3 +177,55 @@ async def increment(
             feature, user_id, count, exc,
         )
         return 0
+
+
+# Lua: atomik check-and-consume — TOCTOU önleme
+# KEYS[1]: kredi anahtarı  ARGV[1]: tüketilmek istenen miktar
+# ARGV[2]: ücretsiz limit  ARGV[3]: ttl (saniye)
+# Dönüş: fiilen tüketilen ücretsiz kredi sayısı (0 ≤ returned ≤ count)
+_LUA_CHECK_AND_CONSUME = """
+local current = tonumber(redis.call('GET', KEYS[1]) or '0')
+local limit   = tonumber(ARGV[2])
+local count   = tonumber(ARGV[1])
+if current >= limit then
+    return 0
+end
+local allowed = math.min(count, limit - current)
+local new_val = redis.call('INCRBY', KEYS[1], allowed)
+if new_val == allowed then
+    redis.call('EXPIRE', KEYS[1], tonumber(ARGV[3]))
+end
+return allowed
+"""
+
+
+async def check_and_consume(
+    feature: CreditFeature,
+    user_id: int,
+    premium_since: datetime | None,
+    count: int,
+    user_type: str,
+) -> int:
+    """Atomik check-and-consume: Lua script ile tek adımda kontrol + rezervasyon.
+
+    Döner: tüketilen ücretsiz kredi sayısı (0 ≤ returned ≤ count).
+    Redis erişilemezse fail-open: count döner — get_used fail-open davranışıyla tutarlı;
+    iş birimi tarafından onaylanan risk (kısa Redis kesintisinde ücretsiz hak sınırı atlatılabilir).
+    """
+    limit = free_limit(feature, user_type)
+    if count <= 0 or limit <= 0:
+        return 0
+    key = redis_key(feature, user_id, premium_since)
+    ttl = _billing_ttl(premium_since)
+    try:
+        from app.utils.redis_client import get_redis
+        redis = await get_redis()
+        result = await redis.eval(_LUA_CHECK_AND_CONSUME, 1, key, count, limit, ttl)
+        return int(result)
+    except Exception as exc:
+        logger.warning(
+            "[CreditService] Redis erişilemedi (check_and_consume) — fail-open: %d dönülüyor. "
+            "feature=%s user_id=%s hata=%s",
+            count, feature, user_id, exc,
+        )
+        return count  # fail-open: tüm hakkı serbest say

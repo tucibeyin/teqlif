@@ -274,10 +274,28 @@ async def send_blast(
     if actual_count == 0:
         return {"error": "NO_RECIPIENTS"}
 
-    # ── Kesin Maliyet Hesabı (Sadece Bulunan FCM Sayısına Göre) ─────────────
-    free_used  = min(credits_remaining, actual_count)
+    # ── Atomik check-and-consume (TOCTOU önleme) ──────────────────────────────
+    # get_used yukarıda yalnızca kota tahmini için kullanıldı; asıl rezervasyon
+    # burada Lua script ile tek adımda atomik yapılır.
+    free_used = await credit_service.check_and_consume(
+        CreditFeature.BLAST, current_user.id, current_user.premium_since,
+        count=actual_count, user_type=current_user.user_type,
+    )
     paid_count = actual_count - free_used
     teqlik_cost  = paid_count * credit_service.cost_teqlik(CreditFeature.BLAST)
+
+    # Atomik rezervasyon sonucu önceden onaylanan tutarı aşıyorsa alıcı listesini kırp
+    if body.estimated_cost is not None and teqlik_cost > body.estimated_cost:
+        max_paid = body.estimated_cost // credit_service.cost_teqlik(CreditFeature.BLAST)
+        trimmed_total = free_used + max_paid
+        rows = rows[:trimmed_total]
+        recipient_ids = [r[0] for r in rows]
+        fcm_tokens    = [r[1] for r in rows if r[1] and r[2] is not False]
+        actual_count  = len(recipient_ids)
+        paid_count    = actual_count - free_used
+        teqlik_cost   = paid_count * credit_service.cost_teqlik(CreditFeature.BLAST)
+        if actual_count == 0:
+            return {"error": "NO_RECIPIENTS"}
 
     # ── TEQlik bakiye kontrolü ─────────────────────────────────────────────────
     if teqlik_cost > 0 and current_user.teqlik_balance < teqlik_cost:
@@ -325,8 +343,7 @@ async def send_blast(
         except Exception:
             pass
 
-    if free_used > 0:
-        await credit_service.increment(CreditFeature.BLAST, current_user.id, current_user.premium_since, count=free_used)
+    # check_and_consume ile atomik olarak tüketildi — increment gerekmez.
 
     # ── Bildirim metnini hesapla, ARQ'ya devret ───────────────────────────────
     from app.utils.i18n import _get_t

@@ -58,19 +58,7 @@ async def create_campaign(
     - AdCampaign kaydı oluşturulur (status='active').
     - Redis bütçe engine'ine yüklenir (anında aktif hale gelir).
     """
-    # Aylık boost kredi kontrolü (PRO: 3 ücretsiz; standart: 0 ücretsiz → her seferinde 50 TEQlik)
-    boost_limit = credit_service.free_limit(CreditFeature.BOOST, current_user.user_type)
-    boost_used = await credit_service.get_used(CreditFeature.BOOST, current_user.id, current_user.premium_since)
-
-    # Aylık ücretsiz hak kaldı mı?
-    is_free = boost_used < boost_limit
-
-    # Ücretli modda: TEQlik bakiyesi yeterli mi?
-    if not is_free:
-        if current_user.teqlik_balance < credit_service.cost_teqlik(CreditFeature.BOOST):
-            raise InsufficientFundsException(code="INSUFFICIENT_FUNDS_BOOST")
-
-    # İlanın bu kullanıcıya ait olduğunu doğrula
+    # İlanın bu kullanıcıya ait olduğunu ÖNCE doğrula (kredi tüketiminden önce)
     listing = await db.scalar(
         select(Listing).where(
             Listing.id == body.listing_id,
@@ -90,6 +78,20 @@ async def create_campaign(
     )
     if existing:
         raise ConflictException(code="ACTIVE_CAMPAIGN_EXISTS")
+
+    # Aylık boost kredi kontrolü — atomik check-and-consume (TOCTOU önleme)
+    # PRO: ayda 3 ücretsiz; standart: 0 ücretsiz → her seferinde 50 TEQlik.
+    # Validasyonlar kredi tüketiminden ÖNCE yapıldı; aşağıdan sonra yalnızca
+    # DB commit hatası kredi israfına yol açabilir (kabul edilebilir nadir durum).
+    free_consumed = await credit_service.check_and_consume(
+        CreditFeature.BOOST, current_user.id, current_user.premium_since, 1, current_user.user_type
+    )
+    is_free = free_consumed > 0
+
+    # Ücretli modda: TEQlik bakiyesi yeterli mi?
+    if not is_free:
+        if current_user.teqlik_balance < credit_service.cost_teqlik(CreditFeature.BOOST):
+            raise InsufficientFundsException(code="INSUFFICIENT_FUNDS_BOOST")
 
     campaign = AdCampaign(
         listing_id=body.listing_id,
@@ -139,9 +141,7 @@ async def create_campaign(
             pass
     await db.refresh(campaign)
 
-    # Boost kredi sayacını artır (ücretsiz hak kullanıldıysa)
-    if is_free:
-        await credit_service.increment(CreditFeature.BOOST, current_user.id, current_user.premium_since)
+    # Boost kredi check_and_consume ile atomik olarak tüketildi — increment gerekmez.
 
     # Sadece yeni kampanyayı Redis'e yükle — global reload diğer kampanyaların
     # Redis'teki anlık bütçelerini DB'den eski değerle ezer (SRE-55)

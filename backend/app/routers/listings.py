@@ -847,10 +847,8 @@ async def send_mass_notification(
 
     desired = body.recipient_count or cap
     max_paid_authorized = body.estimated_cost // credit_service.cost_teqlik(CreditFeature.BLAST)
+    # actual_count: PG sorgu tavanı için tahmin — asıl kredi rezervasyonu aşağıda atomik yapılır
     actual_count = min(desired, credits_remaining + max_paid_authorized, cap)
-    free_used    = min(credits_remaining, actual_count)
-    paid_count   = actual_count - free_used
-    teqlik_cost    = paid_count * credit_service.cost_teqlik(CreditFeature.BLAST)
 
     # Hedef kitleyi oluştur: doğrudan görüntüleyenler + kategori ilgisi olanlar
     candidate_ids = await _build_listing_audience(
@@ -875,6 +873,25 @@ async def send_mass_notification(
 
     if not fcm_tokens:
         return {"sent": 0, "spent": 0, "code": "NO_RECIPIENTS"}
+
+    # ── Atomik check-and-consume (TOCTOU önleme) ──────────────────────────────
+    # get_used yukarıda yalnızca actual_count tahmini için kullanıldı; asıl
+    # rezervasyon burada Lua script ile tek adımda atomik yapılır.
+    free_used = await credit_service.check_and_consume(
+        CreditFeature.BLAST, current_user.id, current_user.premium_since,
+        count=len(fcm_tokens), user_type=current_user.user_type,
+    )
+    paid_count = len(fcm_tokens) - free_used
+    teqlik_cost  = paid_count * credit_service.cost_teqlik(CreditFeature.BLAST)
+
+    # Atomik rezervasyon önceden onaylanan tutarı aşıyorsa token listesini kırp
+    if teqlik_cost > body.estimated_cost:
+        max_paid_tokens = body.estimated_cost // credit_service.cost_teqlik(CreditFeature.BLAST)
+        fcm_tokens  = fcm_tokens[:free_used + max_paid_tokens]
+        paid_count  = len(fcm_tokens) - free_used
+        teqlik_cost = paid_count * credit_service.cost_teqlik(CreditFeature.BLAST)
+        if not fcm_tokens:
+            return {"sent": 0, "spent": 0, "code": "NO_RECIPIENTS"}
 
     from app.services.firebase_service import send_push, InvalidFCMTokenError
     from app.utils.i18n import _get_t
@@ -928,8 +945,7 @@ async def send_mass_notification(
     await db.commit()
     await invalidate_user_session_cache(current_user.id)
 
-    if free_used > 0:
-        await credit_service.increment(CreditFeature.BLAST, current_user.id, current_user.premium_since, count=free_used)
+    # check_and_consume ile atomik olarak tüketildi — increment gerekmez.
 
     # FCM commit'ten SONRA gönderilir — bakiye kesinleşmeden bildirim gitmesin
     sent = 0
