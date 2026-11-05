@@ -136,7 +136,17 @@ class EncoderManager:
                 stdout=asyncio.subprocess.DEVNULL,
                 stderr=asyncio.subprocess.PIPE,
             )
-            _, stderr_b = await proc.communicate()
+            try:
+                _, stderr_b = await asyncio.wait_for(proc.communicate(), timeout=1800)
+            except asyncio.TimeoutError:
+                proc.kill()
+                await proc.wait()
+                enc_path.unlink(missing_ok=True)
+                await _pg_exec(dsn,
+                    "UPDATE stream_recordings SET status='failed', error_message=$1, updated_at=NOW() WHERE id=$2",
+                    "ffmpeg encode timeout (1800s)", rec_id)
+                logger.error("Encode TIMEOUT | rec_id=%d", rec_id)
+                return
 
             if proc.returncode != 0:
                 err = (stderr_b or b"").decode(errors="replace")[-200:].strip()
@@ -235,7 +245,15 @@ class EncoderManager:
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
-            _, stderr_b = await proc.communicate()
+            try:
+                _, stderr_b = await asyncio.wait_for(proc.communicate(), timeout=900)
+            except asyncio.TimeoutError:
+                proc.kill()
+                await proc.wait()
+                await _pg_exec(dsn,
+                    "UPDATE stream_recordings SET status='encoded', updated_at=NOW() WHERE id=$1", rec_id)
+                logger.error("mc cp TIMEOUT | rec_id=%d", rec_id)
+                return
 
             if proc.returncode != 0:
                 err = (stderr_b or b"").decode(errors="replace")[-200:].strip()
@@ -295,7 +313,13 @@ class EncoderManager:
                 stdout=asyncio.subprocess.DEVNULL,
                 stderr=asyncio.subprocess.PIPE,
             )
-            _, stderr_b = await proc.communicate()
+            try:
+                _, stderr_b = await asyncio.wait_for(proc.communicate(), timeout=30)
+            except asyncio.TimeoutError:
+                proc.kill()
+                await proc.wait()
+                logger.warning("mc alias timeout")
+                return False
             if proc.returncode == 0:
                 logger.info("mc alias kuruldu: %s → %s", alias, minio_host)
                 return True
@@ -343,7 +367,12 @@ async def _probe_duration(path: Path) -> int | None:
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.DEVNULL,
         )
-        stdout_b, _ = await proc.communicate()
+        try:
+            stdout_b, _ = await asyncio.wait_for(proc.communicate(), timeout=60)
+        except asyncio.TimeoutError:
+            proc.kill()
+            await proc.wait()
+            return None
         if proc.returncode != 0 or not stdout_b:
             return None
         data = json.loads(stdout_b)
