@@ -334,9 +334,10 @@ server {
     client_max_body_size 5m;
     limit_conn conn_limit 50;
 
-    location /api/messages/ws {
+    location ~ ^/api/(chat|auction|messages|notifications)/.*ws {
         proxy_pass http://127.0.0.1:8000;
         proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
     }
 
     location / {
