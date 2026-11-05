@@ -53,7 +53,7 @@ install_base_packages() {
         build-essential \
         auditd \
         nvme-cli smartmontools \
-        polkit
+        polkitd
     log_ok "Paketler kuruldu"
 }
 
