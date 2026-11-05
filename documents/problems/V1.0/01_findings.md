@@ -2062,7 +2062,7 @@ async def send_voip_push(token: str, payload: dict, sandbox: bool | None = None)
 
 ---
 
-### SRE-50 · 🟠 P1 (Yüksek) · Canlı Yayın Kalp Dokunuşlarında Senkron PostgreSQL Commit ve 150.000 WS/sn Mesaj Bombardımanı
+### SRE-50 · 🟠 P1 (Yüksek) · Canlı Yayın Kalp Dokunuşlarında Senkron PostgreSQL Commit ve 150.000 WS/sn Mesaj Bombardımanı ✅ Çözüldü (3a939bd1 · 2026-10-29)
 
 * **Etkilenen Dosya:** `backend/app/services/like_service.py` (Satır 180–240), `backend/app/routers/streams.py` (Satır 417)
 * **İlgili Fonksiyon:** `LikeService.add_stream_like`
@@ -2094,9 +2094,17 @@ await publish_chat(stream_id, {
 3. **Throttled WS Broadcast:** Canlı yayın chat kanalına her tekil kalp için değil, saniyede en fazla 2 kez kümülatif beğeni sayısı (`{"type": "likes_count_update", "total": 12840}`) yayımlanmalıdır.
 4. **PostgreSQL Flush:** Yayın kapandığında veya her 60 saniyede bir `stream_finalizer` Redis'teki toplam sayıyı tek bir `UPDATE live_streams SET likes_count = ...` sorgusuyla PostgreSQL'e aktarmalıdır.
 
+#### 3. Uygulanan Çözüm
+
+| Alan | Değer |
+|------|-------|
+| **Commit** | 3a939bd1 |
+| **Tarih** | 2026-10-29 |
+| **Not** | `fix(sre-105)` kapsamında uygulandı: `add_stream_like` → sadece Redis `INCRBY`; `stream_like_ticker` task saniyede 1 kez `stream_like_batch` WS yayını yapar |
+
 ---
 
-### SRE-51 · 🟠 P1 (Yüksek) · `delayed_close_stream_task` İçinde LiveKit Ağ Hatasında Yayının Haksız Yere Kapatılması
+### SRE-51 · 🟠 P1 (Yüksek) · `delayed_close_stream_task` İçinde LiveKit Ağ Hatasında Yayının Haksız Yere Kapatılması ✅ Çözüldü (e39b819f · 2026-10-29)
 
 * **Etkilenen Dosya:** `backend/app/worker.py` (Satır 2527–2536), `backend/app/routers/webhooks.py` (Satır 214–235)
 * **İlgili Fonksiyonlar:** `delayed_close_stream_task`, `_delayed_close_stream`
@@ -2130,6 +2138,14 @@ Aynı kusur `webhooks.py:214-235` içindeki fallback mantığında da mevcuttur:
 1. `_lk_list_stream()` hata verirse veya hiçbir node'a erişilemezse, varsayım olarak yayın **KAPATILMAMALI**, işlem bir sonraki kontrol döngüsüne (ARQ retry) ertelenmelidir (`raise exc` veya `return`).
 2. Canlı yayın sadece LiveKit API'si kesin olarak `200 OK` dönüp ilgili odanın aktif odalar listesinde **bulunmadığını doğruladığında** kapatılmalıdır.
 3. `webhooks.py` içindeki `allocate_node(MEDIA)` rastgele node seçimi kaldırılmalı, canlı yayının açıldığı yetkili node (`live_streams.node_id`) hedeflenmelidir.
+
+#### 3. Uygulanan Çözüm
+
+| Alan | Değer |
+|------|-------|
+| **Commit** | e39b819f |
+| **Tarih** | 2026-10-29 |
+| **Not** | `fix(sre-118-sre-119-followup)` kapsamında: DB-first yetkili node sorgusu (`stream.livekit_url`); erişilemezse `return` (fail-safe, kapatma yok) |
 
 ---
 
@@ -7915,8 +7931,8 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 96. ~~**Adım 96 (`SRE-70`):** `story_service.py:delete_story` içinde MinIO silme işlemini DB commit sonrasına taşı; hata anında yetim ve bozuk 404 story kayıtlarını önle.~~ ✅ `0fba765c`
 97. ~~**Adım 97 (`SRE-74`):** `search_alerts.py:delete_alert` satır 103'teki `'passive'` string atamasını `SearchAlertStatus.DELETED` olarak düzelt; HTTP 500 çökmesini durdur.~~ ✅ `0f5477c9` (önceden uygulanmış)
 98. ~~**Adım 98 (`SRE-49`):** `apns_service.py` içindeki 60 saniyelik global circuit breaker'ı kaldır; tekil arama hatalarında tüm iOS çağrılarının düşmesini engelle.~~ ✅ `1218a549`
-99. **Adım 99 (`SRE-50`):** `like_service.py:add_stream_like` içindeki senkron DB commit ve 150.000 WS/sn yayınını Redis sayacına ve batch yayına dönüştür; DB kilitlenmesini çöz.
-100. **Adım 100 (`SRE-51`):** `worker.py:delayed_close_stream_task` içindeki `except Exception:` durumunda yayını zorla kapatma mantığını iptal et; geçici ağ dalgalanmasında aktif yayınların kapatılmasını durdur.
+99. ~~**Adım 99 (`SRE-50`):** `like_service.py:add_stream_like` içindeki senkron DB commit ve 150.000 WS/sn yayınını Redis sayacına ve batch yayına dönüştür; DB kilitlenmesini çöz.~~ ✅ `3a939bd1` (önceden uygulanmış)
+100. ~~**Adım 100 (`SRE-51`):** `worker.py:delayed_close_stream_task` içindeki `except Exception:` durumunda yayını zorla kapatma mantığını iptal et; geçici ağ dalgalanmasında aktif yayınların kapatılmasını durdur.~~ ✅ `e39b819f` (önceden uygulanmış)
 101. **Adım 101 (`SRE-52`):** `encoder.py` içindeki FFmpeg ve `mc cp` çağrılarına `asyncio.wait_for` timeout ekle; askıda kalan süreçlerin tüm encoding kuyruğunu kilitlemesini engelle.
 102. **Adım 102 (`SRE-53`):** `redis_failover.sh` failover scriptine sanal IP (VIP) veya mesh yönlendirmesi ekle; Node1 çöktüğünde istemcilerin Node2'ye bağlanabilmesini sağla.
 103. **Adım 103 (`SRE-56`):** `story_service.py:cleanup_expired_stories` içindeki açık DB oturumunda senkron MinIO silme mantığını iki aşamalı soft-delete ve async drain mimarisine taşı.
