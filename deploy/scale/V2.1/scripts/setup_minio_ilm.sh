@@ -28,13 +28,16 @@ for line in sys.stdin:
     if not line:
         continue
     try:
-        obj = json.loads(line)
+        d = json.loads(line)
     except Exception:
         continue
-    for rule in (obj.get('config') or {}).get('rules') or []:
-        prefix = (rule.get('filter') or {}).get('prefix') or ''
+    cfg = d.get('config') or {}
+    rules = cfg.get('Rules') or cfg.get('rules') or []
+    for r in rules:
+        filt = r.get('Filter') or r.get('filter') or {}
+        prefix = filt.get('Prefix') or filt.get('prefix') or ''
         if prefix == 'recordings/':
-            print(rule.get('id',''))
+            print(r.get('ID') or r.get('id') or '')
 " 2>/dev/null || true)
 
 if [ -n "${RULE_ID}" ]; then

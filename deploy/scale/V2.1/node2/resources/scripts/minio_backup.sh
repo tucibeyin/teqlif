@@ -36,16 +36,34 @@ mirror_bucket_with_retry() {
     return 1
 }
 
-MINIO_ILM_ID="db3tiuskndq8as06c0e0"
 MINIO_ILM_NORMAL_DAYS=2
 MINIO_ILM_EMERGENCY_DAYS=7
 
 ilm_set_days() {
     local days="$1"
-    mc ilm edit --id "${MINIO_ILM_ID}" --expiry-days "${days}" node1minio/teqlif \
-        >/dev/null 2>&1 \
-        && echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) minio_backup: ILM retention=${days}d" \
-        || echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) minio_backup: WARNING ILM güncellenemedi"
+    local rule_id
+    rule_id=$(mc ilm ls node1minio/teqlif --json 2>/dev/null | python3 -c "
+import sys, json
+for line in sys.stdin:
+    try:
+        d = json.loads(line)
+        cfg = d.get('config') or {}
+        rules = cfg.get('Rules') or cfg.get('rules') or []
+        for r in rules:
+            filt = r.get('Filter') or r.get('filter') or {}
+            prefix = filt.get('Prefix') or filt.get('prefix') or ''
+            if prefix == 'recordings/':
+                print(r.get('ID') or r.get('id') or '')
+    except Exception: pass
+" 2>/dev/null | head -1)
+
+    if [[ -n "${rule_id}" ]]; then
+        mc ilm edit --id "${rule_id}" --expiry-days "${days}" node1minio/teqlif \
+            && echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) minio_backup: ILM retention=${days}d (id=${rule_id})" \
+            || echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) minio_backup: WARNING ILM güncellenemedi (id=${rule_id})"
+    else
+        echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) minio_backup: WARNING ILM kural bulunamadı — recordings/ kuralı mevcut değil"
+    fi
 }
 
 teqlif_ok=false
