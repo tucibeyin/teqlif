@@ -2879,7 +2879,7 @@ Production ortamında `teqlif-restart` çalıştırıldığında veya Uvicorn wo
 
 ---
 
-### SRE-70 · 🟠 P1 (Yüksek) · `story_service.py:delete_story` İçinde DB Commit Öncesi MinIO Nesnelerinin Silinmesi ve Hata Durumunda Yetim (Bozuk) DB Kayıtları
+### SRE-70 · 🟠 P1 (Yüksek) · `story_service.py:delete_story` İçinde DB Commit Öncesi MinIO Nesnelerinin Silinmesi ve Hata Durumunda Yetim (Bozuk) DB Kayıtları ✅ Çözüldü (0fba765c · 2026-11-05)
 
 * **Etkilenen Dosya:** `backend/app/services/story_service.py` (satırlar 554–580)
 * **İlgili Metot:** `StoryService.delete_story()`
@@ -2913,6 +2913,15 @@ MinIO nesneleri veritabanı transaction'ı commit edilmeden **ÖNCE** kalıcı o
 Dağıtık sistemlerde harici depolama silme işlemleri DB commit'i sonrasına alınmalı veya iki aşamalı (soft-delete + outbox) yapılmalıdır:
 1. `story.is_deleted = True` veya doğrudan `await self.db.delete(story)` yapılıp **önce `await self.db.commit()` başarıyla tamamlanmalıdır**.
 2. Yalnızca `commit()` başarılı olduktan sonra `try/except` bloğu içinde MinIO nesneleri silinmeli; MinIO silme hatası olsa bile DB tutarlı kalmalı, arka plandaki janitor görevi yetim S3 dosyalarını temizlemelidir.
+
+#### 3. Uygulanan Çözüm
+
+| Alan | Değer |
+|------|-------|
+| **Commit** | 0fba765c |
+| **Tarih** | 2026-11-05 |
+| **Değişen Dosya** | `backend/app/services/story_service.py` |
+| **Yöntem** | `video_path` ve `thumbnail_url` referansları commit öncesinde saklanır; DB delete+commit başarıyla tamamlanır; ardından MinIO silme try/except ile yapılır — hata → warning log, DB tutarlı kalır |
 
 ---
 
@@ -7886,7 +7895,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 93. ~~**Adım 93 (`SRE-77`):** `admin_data.py:admin_send_push` içindeki senkron FCM döngüsünü ARQ arka plan kuyruğuna taşı ve Firebase Admin SDK `send_each_for_multicast` toplu gönderimine geçir; Uvicorn worker'ın 25 dakika donmasını önle.~~ ✅ `10164029`
 94. ~~**Adım 94 (`SRE-78`):** `cleaner.py` (teqlif-agent) içindeki süresi dolan hikaye temizliğine MinIO nesne silme koordinasyonunu ekle; depolamada yüzlerce GB yetim video birikmesini engelle.~~ ✅ `0d082848`
 95. ~~**Adım 95 (`SRE-69`):** `auction.py` müzayede WebSocket handler'ını `ws_manager`'a bağla; Uvicorn restart anında soketlerin kirli kopmasını engelle.~~ ✅ `dc8fcc5b`
-96. **Adım 96 (`SRE-70`):** `story_service.py:delete_story` içinde MinIO silme işlemini DB commit sonrasına taşı; hata anında yetim ve bozuk 404 story kayıtlarını önle.
+96. ~~**Adım 96 (`SRE-70`):** `story_service.py:delete_story` içinde MinIO silme işlemini DB commit sonrasına taşı; hata anında yetim ve bozuk 404 story kayıtlarını önle.~~ ✅ `0fba765c`
 97. **Adım 97 (`SRE-74`):** `search_alerts.py:delete_alert` satır 103'teki `'passive'` string atamasını `SearchAlertStatus.DELETED` olarak düzelt; HTTP 500 çökmesini durdur.
 98. **Adım 98 (`SRE-49`):** `apns_service.py` içindeki 60 saniyelik global circuit breaker'ı kaldır; tekil arama hatalarında tüm iOS çağrılarının düşmesini engelle.
 99. **Adım 99 (`SRE-50`):** `like_service.py:add_stream_like` içindeki senkron DB commit ve 150.000 WS/sn yayınını Redis sayacına ve batch yayına dönüştür; DB kilitlenmesini çöz.
