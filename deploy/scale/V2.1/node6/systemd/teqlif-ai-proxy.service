@@ -8,7 +8,7 @@ User=tucibeyin
 WorkingDirectory=/var/www/teqlif.com/backend
 EnvironmentFile=/project/teqlif/config/.env.ai-proxy
 ExecStart=/var/www/teqlif.com/.venv/bin/uvicorn app.ai_proxy_main:app \
-    --host 0.0.0.0 \
+    --host 10.10.0.6 \
     --port 8001 \
     --workers 2 \
     --log-level info

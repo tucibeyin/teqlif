@@ -273,6 +273,9 @@ case "$NODE" in
         log "teqlif-redis-vip.timer başlatıldı"
     fi
     alembic_and_sync /project/teqlif/config/.env.staging
+    log "teqlif-ai-proxy.service yeniden başlatılıyor..."
+    systemctl restart teqlif-ai-proxy.service
+    log "teqlif-ai-proxy.service hazır"
     log "teqlif-staging.service yeniden başlatılıyor..."
     systemctl restart teqlif-staging.service
     log "teqlif-staging.service aktif — worker'lar başlatılıyor..."
