@@ -3261,6 +3261,8 @@ Aktif kullanıcıların tüm FCM token'ları çekilmekte ve **HTTP endpoint'i i�
 | **Yöntem** | `_SCHEDULE`'dan `stories` girişi kaldırıldı; ARQ `cleanup_expired_stories_task` (cron, her saat `minute=0`) DB + MinIO'yu atomik temizler — `StoryService.cleanup_expired_stories` aracılığıyla |
 | **janitor.py** | Hikaye referansı yok — değişiklik gerekmedi |
 
+> **Operasyonel Not (Geçmiş Yetim Bloblar):** Bu commit öncesinde `cleaner.py` tarafından DB'den silinmiş fakat MinIO'da kalmış olabilecek eski yetim dosyalar için acil olmayan bir bakım penceresinde tek seferlik reconciliation scripti çalıştırılabilir: MinIO `teqlif` bucket'ındaki `stories/` prefix'li nesneleri PostgreSQL `stories` tablosuyla karşılaştır, eşleşmeyenleri sil.
+
 #### 1. Sorunun Tanımı ve Arıza Modu
 `teqlif-agent` her gece 00:02 UTC'de süresi dolmuş hikayeleri temizlemek için `ScheduledCleaner` çalıştırır:
 ```python
