@@ -21,6 +21,7 @@ from app.core.exceptions import NotFoundException, BadRequestException, Forbidde
 from app.core.saga import Saga, SagaError
 from app.core.logger import get_logger, capture_exception
 from app.constants import ws_types as WS
+from app.core.ws_manager import ws_manager
 
 logger = get_logger(__name__)
 
@@ -49,55 +50,6 @@ def fmt_price(v: float) -> str:
 def auction_key(stream_id: int) -> str:
     return f"auction:{stream_id}"
 
-class AuctionConnectionManager:
-    def __init__(self):
-        self._conns = {}
-
-    def connect(self, ws, stream_id: int):
-        self._conns.setdefault(stream_id, set()).add(ws)
-        import logging
-        logging.getLogger(__name__).info("[WS] BAĞLANDI | stream_id=%s | bu_worker=%s bağlı", stream_id, len(self._conns[stream_id]))
-
-    def disconnect(self, ws, stream_id: int):
-        s = self._conns.get(stream_id)
-        if s is not None:
-            s.discard(ws)
-            if not s:
-                del self._conns[stream_id]
-
-    async def local_broadcast(self, stream_id: int, payload: dict):
-        targets = list(self._conns.get(stream_id, set()))
-        if not targets:
-            return
-
-        import asyncio
-        import json as _json
-
-        blob = _json.dumps(payload)
-
-        async def _send(ws):
-            try:
-                await asyncio.wait_for(ws.send_text(blob), timeout=5.0)
-                return True
-            except Exception:
-                return False
-
-        results = await asyncio.gather(*[_send(ws) for ws in targets], return_exceptions=True)
-        dead = {ws for ws, ok in zip(targets, results) if ok is not True}
-        if dead:
-            s = self._conns.get(stream_id)
-            if s is not None:
-                s -= dead
-                if not s:
-                    del self._conns[stream_id]
-
-    def conn_count(self, stream_id: int) -> int:
-        return len(self._conns.get(stream_id, set()))
-
-    def total_conns(self) -> int:
-        return sum(len(v) for v in self._conns.values())
-
-manager = AuctionConnectionManager()
 _PUBSUB_CHANNEL = "auction_broadcast"
 
 async def pubsub_listener():
@@ -105,7 +57,7 @@ async def pubsub_listener():
     async def _on_message(data: dict) -> None:
         stream_id = data.pop("_stream_id", None)
         if stream_id:
-            await manager.local_broadcast(stream_id, data)
+            await ws_manager.broadcast_local(f"auction:{stream_id}", data)
     await stream_listener(_PUBSUB_CHANNEL, _on_message)
 
 async def broadcast_to_stream_viewers(stream_id: int, payload: dict):

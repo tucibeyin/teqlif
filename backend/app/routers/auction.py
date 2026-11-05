@@ -29,7 +29,8 @@ from app.use_cases.stream.commerce_snapshot import get_stream_commerce_snapshot
 from app.database_clickhouse import buffer_user_event
 from app.use_cases.auctions.commands.auction_commands import AuctionCommands
 from app.use_cases.auctions.queries.auction_queries import GetBidsQuery, GetAuctionStateQuery
-from app.use_cases.auctions.auction_utils import manager, pubsub_listener
+from app.use_cases.auctions.auction_utils import pubsub_listener
+from app.core.ws_manager import ws_manager
 
 from app.constants import ws_types as WS
 
@@ -191,7 +192,7 @@ async def auction_ws(stream_id: int, websocket: WebSocket):
             )
             return
 
-    manager.connect(websocket, stream_id)
+    ws_manager.connect(websocket, f"auction:{stream_id}")
     logger.info("[AUCTION WS] BAĞLANDI | stream_id=%s user_id=%s", stream_id, user_id or "anonim")
     try:
         snapshot = await get_stream_commerce_snapshot(stream_id)
@@ -233,6 +234,6 @@ async def auction_ws(stream_id: int, websocket: WebSocket):
     except Exception as exc:
         logger.error("[WS] BEKLENMEYEN HATA | stream_id=%s | %s", stream_id, exc)
     finally:
-        manager.disconnect(websocket, stream_id)
+        ws_manager.disconnect(websocket, f"auction:{stream_id}")
         if user_id:
             await release_ws_session(user_id)

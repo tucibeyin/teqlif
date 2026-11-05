@@ -1,7 +1,7 @@
 from app.use_cases.auctions.queries.auction_queries import GetAuctionStateQuery
 
 from app.core.uow import AbstractUnitOfWork
-from app.use_cases.auctions.auction_utils import manager, fmt_price, auction_key, broadcast_to_stream_viewers, _require_host
+from app.use_cases.auctions.auction_utils import fmt_price, auction_key, broadcast_to_stream_viewers, _require_host
 """
 Açık artırma servisi — iş mantığını router'dan ayırır.
 
@@ -230,7 +230,7 @@ class AuctionCommands:
         await broadcast_to_stream_viewers(stream_id, {"type": WS.AUCTION_STATE, **state})
         logger.info(
             "[AÇIK ARTIRMA] BAŞLADI | stream_id=%s item=%r start_price=%s | ws_hedef=%s",
-            stream_id, data.item_name, data.start_price, manager.conn_count(stream_id),
+            stream_id, data.item_name, data.start_price, ws_manager.subscriber_count(f"auction:{stream_id}"),
         )
         return state
 
@@ -244,7 +244,7 @@ class AuctionCommands:
         state = await GetAuctionStateQuery().execute(stream_id)
         await broadcast_to_stream_viewers(stream_id, {"type": WS.AUCTION_STATE, **state})
         logger.info("[AÇIK ARTIRMA] DURAKLATILDI | stream_id=%s | ws_hedef=%s",
-                    stream_id, manager.conn_count(stream_id))
+                    stream_id, ws_manager.subscriber_count(f"auction:{stream_id}"))
         from app.database_clickhouse import track_user_event
         fire_and_forget(track_user_event(
             event_type="auction_paused",
@@ -265,7 +265,7 @@ class AuctionCommands:
         state = await GetAuctionStateQuery().execute(stream_id)
         await broadcast_to_stream_viewers(stream_id, {"type": WS.AUCTION_STATE, **state})
         logger.info("[AÇIK ARTIRMA] DEVAM ETTİ | stream_id=%s | ws_hedef=%s",
-                    stream_id, manager.conn_count(stream_id))
+                    stream_id, ws_manager.subscriber_count(f"auction:{stream_id}"))
         from app.database_clickhouse import track_user_event
         fire_and_forget(track_user_event(
             event_type="auction_resumed",
@@ -478,7 +478,7 @@ class AuctionCommands:
         await broadcast_to_stream_viewers(stream_id, {"type": WS.AUCTION_STATE, **state})
         logger.info(
             "[TEKLİF] KAYDEDILDI+YAYINLANDI | stream_id=%s user=%s amount=%s | ws_hedef=%s",
-            stream_id, user.username, data.amount, manager.conn_count(stream_id),
+            stream_id, user.username, data.amount, ws_manager.subscriber_count(f"auction:{stream_id}"),
         )
 
         # Push bildirimler (arka planda, non-blocking)
