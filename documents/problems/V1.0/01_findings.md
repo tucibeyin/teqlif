@@ -7994,7 +7994,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 104. ~~**Adım 104 (`SRE-58`):** `teqlif.conf` içine canlı yayın ve müzayede WebSocket rotalarını kapsayan location regex'i ekle (`Upgrade` ve `Connection` başlıkları).~~ ✅ `286bfc4b` + DR gap `01bf05fd`
 105. ~~**Adım 105 (`SRE-59`):** `livekit_subscriber.py` video rotasyon ve VP8 encode işlemlerini `run_in_executor` ile thread pool'a devret; event-loop blokajını kaldır.~~ ✅ `9ee097d3`
 106. ~~**Adım 106 (`SRE-61`):** `direct_sale_commands.py:purchase_sale` satıcının kendi ürününü satın almasını engelle (`sale.host_id == user.id`) ve bakiye/ödeme rezervasyonu ekle.~~ ✅ `fdb2d948`
-107. **Adım 107 (`SRE-64`):** `upload.py:upload_image` senkron Pillow LANCZOS thumbnail üretimini `run_in_executor` ile arka plana devret; API kilitlenmesini engelle.
+107. ~~**Adım 107 (`SRE-64`):** `upload.py:upload_image` senkron Pillow LANCZOS thumbnail üretimini `run_in_executor` ile arka plana devret; API kilitlenmesini engelle.~~ ✅ `e7844af9`
 108. **Adım 108 (`SRE-66`):** `teqlif-ai-proxy.service` (node5, node6) dinleme adresini `0.0.0.0` yerine WireGuard mesh IP'sine (`10.10.0.x`) çek; dış internete açılmayı engelle.
 109. **Adım 109 (`SRE-41`):** `minio_backup.sh` içindeki hardcoded `MINIO_ILM_ID`'yi kaldırıp dinamik kural ID keşfi ekle; video silinme riskini gider.
 110. **Adım 110 (`SRE-42`):** Node2 üzerinde `/etc/redis/redis-replica.conf` dosyasını oluştur ve bootstrap scriptine ekle; failover altyapısını çalışır kıl.
