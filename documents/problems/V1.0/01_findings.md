@@ -3065,7 +3065,7 @@ Node2 üzerinde **yalnızca istemci paketi (`postgresql-client-17`)** kurulmakta
 
 ---
 
-### SRE-74 · 🟠 P1 (Yüksek) · `search_alerts.py:delete_alert` İçinde Tanımsız Enum Değeri (`'passive'`) Ataması Nedeniyle HTTP 500 Çökmesi
+### SRE-74 · 🟠 P1 (Yüksek) · `search_alerts.py:delete_alert` İçinde Tanımsız Enum Değeri (`'passive'`) Ataması Nedeniyle HTTP 500 Çökmesi ✅ Çözüldü (0f5477c9 · 2026-10-29)
 
 * **Etkilenen Dosyalar:** `backend/app/routers/search_alerts.py` (satır 103), `backend/app/models/enums.py` (satırlar 22–25), `backend/app/models/search_alert.py` (satır 24)
 * **İlgili Endpoint:** `DELETE /api/search-alerts/{alert_id}`
@@ -3107,6 +3107,14 @@ alert.status = SearchAlertStatus.DELETED
 await db.commit()
 ```
 Böylece alarm kaydı geçerli enum değeriyle güncellenir ve HTTP 204 No Content başarıyla döner.
+
+#### 3. Uygulanan Çözüm
+
+| Alan | Değer |
+|------|-------|
+| **Commit** | 0f5477c9 |
+| **Tarih** | 2026-10-29 |
+| **Not** | `fix(sre-107)` kapsamında önceden uygulandı — `alert.status = SearchAlertStatus.DELETED` zaten yerinde |
 
 ---
 
@@ -7896,7 +7904,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 94. ~~**Adım 94 (`SRE-78`):** `cleaner.py` (teqlif-agent) içindeki süresi dolan hikaye temizliğine MinIO nesne silme koordinasyonunu ekle; depolamada yüzlerce GB yetim video birikmesini engelle.~~ ✅ `0d082848`
 95. ~~**Adım 95 (`SRE-69`):** `auction.py` müzayede WebSocket handler'ını `ws_manager`'a bağla; Uvicorn restart anında soketlerin kirli kopmasını engelle.~~ ✅ `dc8fcc5b`
 96. ~~**Adım 96 (`SRE-70`):** `story_service.py:delete_story` içinde MinIO silme işlemini DB commit sonrasına taşı; hata anında yetim ve bozuk 404 story kayıtlarını önle.~~ ✅ `0fba765c`
-97. **Adım 97 (`SRE-74`):** `search_alerts.py:delete_alert` satır 103'teki `'passive'` string atamasını `SearchAlertStatus.DELETED` olarak düzelt; HTTP 500 çökmesini durdur.
+97. ~~**Adım 97 (`SRE-74`):** `search_alerts.py:delete_alert` satır 103'teki `'passive'` string atamasını `SearchAlertStatus.DELETED` olarak düzelt; HTTP 500 çökmesini durdur.~~ ✅ `0f5477c9` (önceden uygulanmış)
 98. **Adım 98 (`SRE-49`):** `apns_service.py` içindeki 60 saniyelik global circuit breaker'ı kaldır; tekil arama hatalarında tüm iOS çağrılarının düşmesini engelle.
 99. **Adım 99 (`SRE-50`):** `like_service.py:add_stream_like` içindeki senkron DB commit ve 150.000 WS/sn yayınını Redis sayacına ve batch yayına dönüştür; DB kilitlenmesini çöz.
 100. **Adım 100 (`SRE-51`):** `worker.py:delayed_close_stream_task` içindeki `except Exception:` durumunda yayını zorla kapatma mantığını iptal et; geçici ağ dalgalanmasında aktif yayınların kapatılmasını durdur.
