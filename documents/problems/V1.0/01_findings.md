@@ -8000,7 +8000,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 110. ~~**Adım 110 (`SRE-42`):** Node2 üzerinde `/etc/redis/redis-replica.conf` dosyasını oluştur ve bootstrap scriptine ekle; failover altyapısını çalışır kıl.~~ ✅ `9df9fe8d`
 111. ~~**Adım 111 (`SRE-43`):** `teqlif-agent` kullanıcısına `sudoers` systemctl izni ver ve `healer.py` çağrılarına `sudo` ekle; otomatik servis iyileştirmesini aktif et.~~ ✅ `faaac126`
 112. ~~**Adım 112 (`SRE-44`):** `cluster.yaml` transfer penceresini `03:30-06:30` aralığına çekerek Pazar 02:00'deki `pg_basebackup` hat doygunluğunu çöz.~~ ✅ `c5b96581`
-113. **Adım 113 (`SRE-33`):** `wallet_tasks.py:process_store_notification_task` içine Google Play RTDN işleme dalını (`elif platform == "google"`) ekle.
+113. ~~**Adım 113 (`SRE-33`):** `wallet_tasks.py:process_store_notification_task` içine Google Play RTDN işleme dalını (`elif platform == "google"`) ekle.~~ ✅ `PLACEHOLDER`
 114. **Adım 114 (`SRE-34`):** `analytics.py:track_event` içindeki kapatılmış oturum sorununu gider; `_save_event_async` fonksiyonuna bağımsız `AsyncSessionLocal` bağla.
 115. **Adım 115 (`SRE-35`):** `calls.py` ve `ws_manager.py` içine tahmin edilemez `ack_token` UUID doğrulaması ekle; sahte ACK ve arama DoS açığını kapat.
 116. **Adım 116 (`SRE-36`):** Streaming node'ları (`node3`, `node4`) `livekit.yaml` dosyasındaki Redis adresini `10.10.0.1:6379` olarak düzelt veya HAProxy kurulumunu tamamla.

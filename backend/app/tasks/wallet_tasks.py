@@ -242,6 +242,10 @@ async def process_store_notification_task(
                     from app.services.store.notification_factory import StoreNotificationHandlerFactory
                     handler = StoreNotificationHandlerFactory.get(platform, session)
                     await handler.handle(signed_payload)
+            elif platform == "google":
+                from app.services.store.notification_factory import StoreNotificationHandlerFactory
+                handler = StoreNotificationHandlerFactory.get("google", session)
+                await handler.handle(signed_payload)
             else:
                 logger.warning(
                     "[StoreNotif] Bilinmeyen platform, atlandı | platform=%s", platform

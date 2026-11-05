@@ -10,4 +10,7 @@ class StoreNotificationHandlerFactory:
         if platform == "apple":
             from app.services.store.notifications.apple_handler import AppleNotificationHandler
             return AppleNotificationHandler(session)
+        if platform == "google":
+            from app.services.store.notifications.google_handler import GoogleNotificationHandler
+            return GoogleNotificationHandler(session)
         raise ValueError(f"Desteklenmeyen notification platform: {platform!r}")
