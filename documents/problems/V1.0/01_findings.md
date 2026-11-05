@@ -2401,6 +2401,16 @@ async def main() -> None:
 
 ### SRE-58 · 🟠 P1 (Yüksek) · Nginx Konfigürasyonunda Canlı Yayın ve Açık Artırma WebSocket Rotalarında Upgrade Eksikliği
 
+> ✅ **Çözüldü** (`286bfc4b` · 2026-11-06)
+>
+> | | |
+> |---|---|
+> | **Değişiklik** | `location /api/messages/ws` (prefix) → `location ~ ^/api/(chat\|auction\|messages\|notifications)/.*ws` (regex) |
+> | **Kapsam** | prod (`teqlif.conf`) + staging (`teqlif-staging.conf`); her iki server block (teqlif.com + api.teqlif.com) |
+> | **Findings'ten fark** | `notifications` rotası da eklendi (`/api/notifications/ws`), findings'te atlanmıştı |
+> | **limit_req** | WS bloğunda yok — uzun yaşayan bağlantılar rate-limit'e takılmaz |
+> | **Timeout** | `proxy_read_timeout 3600s` + `proxy_send_timeout 3600s` |
+
 * **Etkilenen Dosya:** `deploy/scale/V2.1/node1/resources/nginx/conf.d/teqlif.conf` (Satır 41–65)
 * **İlgili Rotalar:** `ws://.../api/chat/ws/{stream_id}`, `ws://.../api/auction/{stream_id}/ws`
 
@@ -7962,7 +7972,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 101. ~~**Adım 101 (`SRE-52`):** `encoder.py` içindeki FFmpeg ve `mc cp` çağrılarına `asyncio.wait_for` timeout ekle; askıda kalan süreçlerin tüm encoding kuyruğunu kilitlemesini engelle.~~ ✅ `7e232ff6`
 102. ~~**Adım 102 (`SRE-53`):** `redis_failover.sh` failover scriptine sanal IP (VIP) veya mesh yönlendirmesi ekle; Node1 çöktüğünde istemcilerin Node2'ye bağlanabilmesini sağla.~~ ✅ `851885a1` → `8f65bb96`
 103. ~~**Adım 103 (`SRE-56`):** `story_service.py:cleanup_expired_stories` içindeki açık DB oturumunda senkron MinIO silme mantığını iki aşamalı soft-delete ve async drain mimarisine taşı.~~ ✅ `f828de12`
-104. **Adım 104 (`SRE-58`):** `teqlif.conf` içine canlı yayın ve müzayede WebSocket rotalarını kapsayan location regex'i ekle (`Upgrade` ve `Connection` başlıkları).
+104. ~~**Adım 104 (`SRE-58`):** `teqlif.conf` içine canlı yayın ve müzayede WebSocket rotalarını kapsayan location regex'i ekle (`Upgrade` ve `Connection` başlıkları).~~ ✅ `286bfc4b`
 105. **Adım 105 (`SRE-59`):** `livekit_subscriber.py` video rotasyon ve VP8 encode işlemlerini `run_in_executor` ile thread pool'a devret; event-loop blokajını kaldır.
 106. **Adım 106 (`SRE-61`):** `direct_sale_commands.py:purchase_sale` satıcının kendi ürününü satın almasını engelle (`sale.host_id == user.id`) ve bakiye/ödeme rezervasyonu ekle.
 107. **Adım 107 (`SRE-64`):** `upload.py:upload_image` senkron Pillow LANCZOS thumbnail üretimini `run_in_executor` ile arka plana devret; API kilitlenmesini engelle.
