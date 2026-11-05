@@ -1,0 +1,11 @@
+[Unit]
+Description=teqlif Redis VIP — node1 erişilemezse WireGuard routing'i node2'ye güncelle
+After=network.target wg-quick@wg0.service
+Wants=wg-quick@wg0.service
+
+[Service]
+Type=oneshot
+User=tucibeyin
+ExecStart=/bin/bash /var/www/teqlif.com/deploy/scale/V2.1/scripts/redis_vip_check.sh
+StandardOutput=journal
+StandardError=journal

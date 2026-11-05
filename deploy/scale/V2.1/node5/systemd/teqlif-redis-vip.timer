@@ -1,0 +1,10 @@
+[Unit]
+Description=teqlif Redis VIP — her 10 saniyede node1 Redis erişim kontrolü
+
+[Timer]
+OnActiveSec=30
+OnUnitActiveSec=10s
+AccuracySec=1s
+
+[Install]
+WantedBy=timers.target

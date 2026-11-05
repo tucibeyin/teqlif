@@ -240,6 +240,15 @@ case "$NODE" in
 
   node3|node4)
     agent_sync
+    sync_services "$REPO/deploy/scale/V2.1/$NODE"
+    # VIP timer — ilk defa yükleniyorsa etkinleştir
+    if ! systemctl is-enabled teqlif-redis-vip.timer >/dev/null 2>&1; then
+        systemctl enable --now teqlif-redis-vip.timer
+        log "teqlif-redis-vip.timer etkinleştirildi"
+    elif ! systemctl is-active teqlif-redis-vip.timer >/dev/null 2>&1; then
+        systemctl start teqlif-redis-vip.timer
+        log "teqlif-redis-vip.timer başlatıldı"
+    fi
     if $RESTART_LIVEKIT; then
       warn "LiveKit yeniden başlatılıyor — aktif yayınlar kesilecek!"
       systemctl restart teqlif-livekit.service
@@ -256,6 +265,13 @@ case "$NODE" in
     agent_sync
     sync_services "$REPO/deploy/scale/V2.1/node5"
     sync_nginx "$REPO/deploy/scale/V2.1/node5"
+    if ! systemctl is-enabled teqlif-redis-vip.timer >/dev/null 2>&1; then
+        systemctl enable --now teqlif-redis-vip.timer
+        log "teqlif-redis-vip.timer etkinleştirildi"
+    elif ! systemctl is-active teqlif-redis-vip.timer >/dev/null 2>&1; then
+        systemctl start teqlif-redis-vip.timer
+        log "teqlif-redis-vip.timer başlatıldı"
+    fi
     alembic_and_sync /project/teqlif/config/.env.staging
     log "teqlif-staging.service yeniden başlatılıyor..."
     systemctl restart teqlif-staging.service
@@ -269,6 +285,14 @@ case "$NODE" in
 
   node6)
     agent_sync
+    sync_services "$REPO/deploy/scale/V2.1/node6"
+    if ! systemctl is-enabled teqlif-redis-vip.timer >/dev/null 2>&1; then
+        systemctl enable --now teqlif-redis-vip.timer
+        log "teqlif-redis-vip.timer etkinleştirildi"
+    elif ! systemctl is-active teqlif-redis-vip.timer >/dev/null 2>&1; then
+        systemctl start teqlif-redis-vip.timer
+        log "teqlif-redis-vip.timer başlatıldı"
+    fi
     log "teqlif-ai-proxy.service yeniden başlatılıyor..."
     systemctl restart teqlif-ai-proxy.service
     log "teqlif-ai-proxy.service hazır"
