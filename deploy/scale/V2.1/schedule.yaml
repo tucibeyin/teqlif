@@ -330,6 +330,9 @@ batch:
     minute: 30
     watchdog_m: 1500
 
+  # pg_basebackup --max-rate=40M (~40MB/s, ~320 Mbps) — 02:00'de başlar,
+  # ~02:30-02:45'te biter. transfer_window_start_utc:4 ile video transfer
+  # 04:00'e ötelenmiş; ağ darboğazı (Pazar 02:00 çakışması) ortadan kalktı.
   - name: pg_basebackup
     weekday: 6        # Pazar
     hour: 2

@@ -30,8 +30,11 @@ recording:
       redis_url_env:    STAGING_REDIS_URL
 
   # Transfer penceresi (UTC)
-  transfer_window_start_utc: 2
-  transfer_window_end_utc:   5
+  # 04:00 başlangıç: pg_basebackup (Pazar 02:00, ~40M/s ile ~02:45'te biter)
+  # ile video transfer'ın ağ darboğazı oluşturmaması için ötelenmiştir.
+  # disk_warn: 04:00–07:00 | normal: 05:00–07:00 | emergency: pencere yok
+  transfer_window_start_utc: 4
+  transfer_window_end_utc:   7
 
   # Disk guard eşikleri (GB)
   disk_warn_gb:      15   # → transfer 02:00'e çekilir (erken tetik)

@@ -31,6 +31,7 @@ PGPASSWORD="${REPL_PASSWORD}" pg_basebackup \
     --format=tar \
     --gzip \
     --compress=1 \
+    --max-rate=40M \
     -D "${DEST}"
 
 SIZE=$(du -sh "${DEST}" | cut -f1)
