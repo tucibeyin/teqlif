@@ -4604,7 +4604,7 @@ async def admin_broadcast_push_task(
     try:
         async with AsyncSessionLocal() as db:
             res = await db.execute(
-                _select(User.fcm_token).where(
+                _select(User.fcm_token.distinct()).where(
                     User.fcm_token.isnot(None),
                     User.status == UserStatus.ACTIVE,
                 )

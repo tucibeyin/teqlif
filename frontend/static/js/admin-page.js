@@ -478,7 +478,11 @@ async function sendPush() {
     if (res.ok) {
         const d = await res.json();
         resultEl.style.color = '#10b981';
-        resultEl.textContent = `✅ Gönderildi: ${d.sent} kişi${d.total_tokens ? ' / ' + d.total_tokens + ' token' : ''}`;
+        if (d.status === 'queued') {
+            resultEl.textContent = `⏳ Kuyruğa alındı: ~${d.estimated_tokens || 0} kullanıcıya arka planda iletiliyor`;
+        } else {
+            resultEl.textContent = `✅ Gönderildi: ${d.sent} kişi${d.total_tokens ? ' / ' + d.total_tokens + ' token' : ''}`;
+        }
     } else {
         const err = await res.json();
         resultEl.style.color = '#ef4444';
