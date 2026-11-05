@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 
 from fastapi import APIRouter, Depends, Request, UploadFile, File
@@ -103,7 +104,7 @@ async def upload_image(
     url = await storage.upload_bytes_async(filename, data, _IMAGE_CONTENT_TYPES[ext])
 
     try:
-        thumb_data = _make_thumbnail(data, ext)
+        thumb_data = await asyncio.to_thread(_make_thumbnail, data, ext)
         thumb_url = await storage.upload_bytes_async(
             thumb_filename,
             thumb_data,
