@@ -2320,6 +2320,14 @@ Veritabanındaki `AdCampaign.spent_budget` alanı anlık olarak değil, sadece 1
 
 ### SRE-56 · 🟠 P1 (Yüksek) · `cleanup_expired_stories` İçinde Açık DB Oturumunda Senkron MinIO Silme ve Yetim DB Kayıtları
 
+> ✅ **Çözüldü** (`f828de12` · 2026-11-06)
+>
+> | | |
+> |---|---|
+> | **Faz 1 — DB** | `DELETE FROM stories WHERE expires_at < NOW() RETURNING id, video_path, thumbnail_url` + notification cleanup tek transaction'da; hızlı commit (< 5ms). `story_views` / `StoryLike` DB CASCADE ile silinir. |
+> | **Faz 2 — MinIO** | Dönen key listesi `batch_delete_minio_objects_task` olarak ARQ kuyruğuna enqueue edilir; MinIO silme DB session kapandıktan sonra arka planda yürütülür. |
+> | **Yeni task** | `batch_delete_minio_objects_task(keys: list[str])` — `asyncio.gather` ile paralel MinIO silme, `NoSuchKey` sessizce yutulur. |
+
 * **Etkilenen Dosya:** `backend/app/services/story_service.py` (Satır 590–674)
 * **İlgili Fonksiyon:** `StoryService.cleanup_expired_stories`
 * **Zamanlama:** `worker.py:4330`: `cron(cleanup_expired_stories_task, minute=0)` (Her saat başı)
@@ -7953,7 +7961,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 100. ~~**Adım 100 (`SRE-51`):** `worker.py:delayed_close_stream_task` içindeki `except Exception:` durumunda yayını zorla kapatma mantığını iptal et; geçici ağ dalgalanmasında aktif yayınların kapatılmasını durdur.~~ ✅ `e39b819f` (önceden uygulanmış)
 101. ~~**Adım 101 (`SRE-52`):** `encoder.py` içindeki FFmpeg ve `mc cp` çağrılarına `asyncio.wait_for` timeout ekle; askıda kalan süreçlerin tüm encoding kuyruğunu kilitlemesini engelle.~~ ✅ `7e232ff6`
 102. ~~**Adım 102 (`SRE-53`):** `redis_failover.sh` failover scriptine sanal IP (VIP) veya mesh yönlendirmesi ekle; Node1 çöktüğünde istemcilerin Node2'ye bağlanabilmesini sağla.~~ ✅ `851885a1` → `8f65bb96`
-103. **Adım 103 (`SRE-56`):** `story_service.py:cleanup_expired_stories` içindeki açık DB oturumunda senkron MinIO silme mantığını iki aşamalı soft-delete ve async drain mimarisine taşı.
+103. ~~**Adım 103 (`SRE-56`):** `story_service.py:cleanup_expired_stories` içindeki açık DB oturumunda senkron MinIO silme mantığını iki aşamalı soft-delete ve async drain mimarisine taşı.~~ ✅ `f828de12`
 104. **Adım 104 (`SRE-58`):** `teqlif.conf` içine canlı yayın ve müzayede WebSocket rotalarını kapsayan location regex'i ekle (`Upgrade` ve `Connection` başlıkları).
 105. **Adım 105 (`SRE-59`):** `livekit_subscriber.py` video rotasyon ve VP8 encode işlemlerini `run_in_executor` ile thread pool'a devret; event-loop blokajını kaldır.
 106. **Adım 106 (`SRE-61`):** `direct_sale_commands.py:purchase_sale` satıcının kendi ürününü satın almasını engelle (`sale.host_id == user.id`) ve bakiye/ödeme rezervasyonu ekle.
