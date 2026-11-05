@@ -55,7 +55,7 @@ for line in sys.stdin:
             if prefix == 'recordings/':
                 print(r.get('ID') or r.get('id') or '')
     except Exception: pass
-" 2>/dev/null | head -1)
+" 2>/dev/null | head -1) || true
 
     if [[ -n "${rule_id}" ]]; then
         mc ilm edit --id "${rule_id}" --expiry-days "${days}" node1minio/teqlif \
