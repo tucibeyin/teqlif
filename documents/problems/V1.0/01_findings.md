@@ -2533,6 +2533,16 @@ bağlantısı anında `ConnectionRefusedError: [Errno 111] Connect call failed (
 
 ### SRE-61 · 🟠 P1 (Yüksek) · `purchase_sale` İçinde Satıcının Kendi Satışını Satın Alması Kontrolünün Bulunmaması ve Bakiye Doğrulamasız Sipariş Üretimi
 
+> ✅ **Çözüldü** (`fdb2d948` · 2026-11-06)
+>
+> | | |
+> |---|---|
+> | **Öz-satın alım** | `sale.host_id == user.id` → `DirectSaleSelfPurchaseException` (403, `SELLER_CANNOT_PURCHASE_OWN_SALE`) |
+> | **Sipariş durumu** | `"completed"` → `"pending"` (COD mimarisi: ödeme teslimat sonrası alınır) |
+> | **cancel_sale** | `status == "completed"` → `status.in_(["pending","completed"])` |
+> | **get_sale_summary** | Satıcı toplamı pending siparişleri de sayar |
+> | **DM metni** | "Satın alma tamamlandı!" → "Siparişiniz alındı! Satıcı iletişime geçecek." |
+
 * **Etkilenen Dosya:** `backend/app/use_cases/direct_sales/commands/direct_sale_commands.py` (Satır 370–425)
 * **İlgili Fonksiyonlar:** `purchase_sale`
 
@@ -7983,7 +7993,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 103. ~~**Adım 103 (`SRE-56`):** `story_service.py:cleanup_expired_stories` içindeki açık DB oturumunda senkron MinIO silme mantığını iki aşamalı soft-delete ve async drain mimarisine taşı.~~ ✅ `f828de12`
 104. ~~**Adım 104 (`SRE-58`):** `teqlif.conf` içine canlı yayın ve müzayede WebSocket rotalarını kapsayan location regex'i ekle (`Upgrade` ve `Connection` başlıkları).~~ ✅ `286bfc4b` + DR gap `01bf05fd`
 105. ~~**Adım 105 (`SRE-59`):** `livekit_subscriber.py` video rotasyon ve VP8 encode işlemlerini `run_in_executor` ile thread pool'a devret; event-loop blokajını kaldır.~~ ✅ `9ee097d3`
-106. **Adım 106 (`SRE-61`):** `direct_sale_commands.py:purchase_sale` satıcının kendi ürününü satın almasını engelle (`sale.host_id == user.id`) ve bakiye/ödeme rezervasyonu ekle.
+106. ~~**Adım 106 (`SRE-61`):** `direct_sale_commands.py:purchase_sale` satıcının kendi ürününü satın almasını engelle (`sale.host_id == user.id`) ve bakiye/ödeme rezervasyonu ekle.~~ ✅ `fdb2d948`
 107. **Adım 107 (`SRE-64`):** `upload.py:upload_image` senkron Pillow LANCZOS thumbnail üretimini `run_in_executor` ile arka plana devret; API kilitlenmesini engelle.
 108. **Adım 108 (`SRE-66`):** `teqlif-ai-proxy.service` (node5, node6) dinleme adresini `0.0.0.0` yerine WireGuard mesh IP'sine (`10.10.0.x`) çek; dış internete açılmayı engelle.
 109. **Adım 109 (`SRE-41`):** `minio_backup.sh` içindeki hardcoded `MINIO_ILM_ID`'yi kaldırıp dinamik kural ID keşfi ekle; video silinme riskini gider.
