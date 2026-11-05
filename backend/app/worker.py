@@ -357,17 +357,43 @@ async def process_lead_blast_task(
 
 # ── Task: Süresi Dolan Hikaye Temizliği ──────────────────────────────────────
 
+async def batch_delete_minio_objects_task(ctx: dict, *, keys: list[str]) -> None:
+    """
+    cleanup_expired_stories_task tarafından enqueue edilir.
+    DB transaction kapandıktan sonra MinIO nesnelerini paralel siler.
+    NoSuchKey hataları storage_service içinde sessizce yutulur.
+    """
+    if not keys:
+        return
+    from app.services import storage_service as storage
+    await asyncio.gather(*[storage.delete_object(k) for k in keys])
+    logger.info("[Worker] batch_delete_minio_objects: %d nesne silindi", len(keys))
+
+
 async def cleanup_expired_stories_task(ctx: dict) -> None:
     """
-    Her saat başında çalışır; expires_at geçmiş hikayeleri diskten ve DB'den siler.
-    story_views kayıtları CASCADE ile otomatik silinir.
+    Her saat başında çalışır; expires_at geçmiş hikayeleri DB'den siler.
+    MinIO silme işlemi DB transaction kapandıktan sonra batch_delete_minio_objects_task
+    ile arka planda yürütülür — açık transaction'da ağ çağrısı yapılmaz.
     """
     try:
         from app.database import AsyncSessionLocal
         from app.services.story_service import StoryService
         async with AsyncSessionLocal() as db:
-            deleted = await StoryService.cleanup_expired_stories(db)
-            logger.info("[Worker] Story cleanup tamamlandı | silinen=%d", deleted)
+            deleted, minio_keys = await StoryService.cleanup_expired_stories(db)
+            logger.info("[Worker] Story cleanup DB fazı | silinen=%d", deleted)
+
+        if minio_keys:
+            from app.core.task_queue import get_pool
+            pool = get_pool()
+            if pool:
+                await pool.enqueue_job(
+                    "batch_delete_minio_objects_task",
+                    keys=minio_keys,
+                    _job_id=f"story_minio_drain:{int(asyncio.get_event_loop().time())}",
+                )
+                logger.info("[Worker] MinIO drain enqueue edildi | key=%d", len(minio_keys))
+
         await _agent_ok(ctx, "cleanup_expired_stories_task")
     except Exception as exc:
         logger.error(
@@ -4656,6 +4682,7 @@ class WorkerSettings:
         send_welcome_email_task,
         send_push_notification_task,
         process_lead_blast_task,
+        batch_delete_minio_objects_task,
         cleanup_expired_stories_task,
         cleanup_old_notifications_task,
         cleanup_old_analytics_task,

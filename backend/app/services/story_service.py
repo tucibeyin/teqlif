@@ -562,87 +562,84 @@ class StoryService:
     # ── Süresi dolan hikayelerin temizlenmesi ─────────────────────────────────
 
     @staticmethod
-    async def cleanup_expired_stories(db: AsyncSession) -> int:
+    async def cleanup_expired_stories(db: AsyncSession) -> tuple[int, list[str]]:
         """
-        expires_at < now() olan tüm hikayeleri:
-          1. Diskten fiziksel olarak siler (video_path üzerinden).
-          2. Veritabanı kaydını siler.
+        expires_at < now() olan tüm hikayeleri iki aşamada temizler:
 
-        Dönüş: silinen hikaye sayısı (int).
+          1. Faz — DB (hızlı, < 5 ms):
+             DELETE ... RETURNING ile hikayeleri ve story_liked bildirimlerini
+             tek bir transaction'da atomik olarak siler; commit hemen yapılır.
+             story_views, StoryLike ve story_views CASCADE ON DELETE ile otomatik
+             silinir — açık transaction'da N×MinIO çağrısı yok.
 
-        Dosya Silme Kuralları:
-          - FileNotFoundError → sessizce geç (zaten silinmiş)
-          - Diğer OSError    → logla ve devam et (DB kaydı yine de silinir)
+          2. Faz — MinIO (transaction dışı, arayan halleder):
+             Silinen nesnelere ait MinIO key listesi döner. DB session kapandıktan
+             sonra arayan bu key'leri background'da siler (batch_delete_minio_objects_task).
+
+        Dönüş: (silinen_hikaye_sayısı, minio_key_listesi)
         """
+        from app.services import storage_service as storage
+
         try:
-            query = select(Story).where(Story.expires_at < func.now())
-            result = await db.execute(query)
-            expired = result.scalars().all()
-        except Exception as exc:
-            logger.error(
-                "[STORY CLEANUP] Süresi dolan hikayeler sorgulanamadı | %s",
-                exc,
-                exc_info=True,
+            # Atomik DELETE — story_views ve StoryLike DB CASCADE ile silinir
+            result = await db.execute(
+                text(
+                    "DELETE FROM stories WHERE expires_at < NOW() "
+                    "RETURNING id, video_path, thumbnail_url"
+                )
             )
+            rows = result.fetchall()
+        except Exception as exc:
+            logger.error("[STORY CLEANUP] DELETE RETURNING başarısız | %s", exc, exc_info=True)
             capture_exception(exc)
             raise DatabaseException(code="STORY_LOAD_FAILED")
 
-        deleted_count = 0
-        for story in expired:
-            # ── Fiziksel dosyaları sil (video + thumbnail) ────────────────
-            from app.services import storage_service as storage
+        if not rows:
+            return 0, []
 
-            if story.video_path:
-                if story.video_path.startswith("/"):
-                    # Eski disk path (migration öncesi kayıtlar)
-                    try:
-                        os.remove(story.video_path)
-                    except (FileNotFoundError, OSError):
-                        pass
+        story_ids = [r.id for r in rows]
+        minio_keys: list[str] = []
+        disk_paths: list[str] = []
+
+        for r in rows:
+            if r.video_path:
+                if r.video_path.startswith("/"):
+                    disk_paths.append(r.video_path)
                 else:
-                    await storage.delete_object(story.video_path)
-                logger.info("[STORY CLEANUP] video silindi | story_id=%d", story.id)
+                    minio_keys.append(r.video_path)
+            if r.thumbnail_url:
+                key = storage.url_to_key(r.thumbnail_url)
+                if key:
+                    minio_keys.append(key)
 
-            if story.thumbnail_url:
-                await storage.delete_object(storage.url_to_key(story.thumbnail_url))
-
-            # ── DB kaydını sil (story_views CASCADE ile otomatik silinir) ─
-            try:
-                await db.delete(story)
-                deleted_count += 1
-            except Exception as exc:
-                logger.error(
-                    "[STORY CLEANUP] DB kaydı silinemedi | story_id=%d | %s",
-                    story.id,
-                    exc,
-                    exc_info=True,
+        # story_liked bildirimleri aynı transaction'da temizlenir
+        try:
+            await db.execute(
+                sql_delete(Notification).where(
+                    Notification.type == "story_liked",
+                    Notification.related_id.in_(story_ids),
                 )
-                capture_exception(exc)
-
-        # story_liked bildirimlerini toplu temizle
-        expired_ids = [s.id for s in expired]
-        if expired_ids:
-            try:
-                await db.execute(
-                    sql_delete(Notification).where(
-                        Notification.type == "story_liked",
-                        Notification.related_id.in_(expired_ids),
-                    )
-                )
-            except Exception as exc:
-                logger.error(
-                    "[STORY CLEANUP] Bildirim temizleme hatası | %s", exc, exc_info=True
-                )
-                capture_exception(exc)
+            )
+        except Exception as exc:
+            logger.error("[STORY CLEANUP] Bildirim temizleme hatası | %s", exc, exc_info=True)
+            capture_exception(exc)
 
         try:
-            await db.commit()
+            await db.commit()  # Hızlı commit — MinIO çağrısı yok
         except Exception as exc:
-            logger.error(
-                "[STORY CLEANUP] Commit başarısız | %s", exc, exc_info=True
-            )
+            logger.error("[STORY CLEANUP] Commit başarısız | %s", exc, exc_info=True)
             capture_exception(exc)
             raise DatabaseException(code="STORY_LOAD_FAILED")
 
-        logger.info("[STORY CLEANUP] Tamamlandı | silinen=%d", deleted_count)
-        return deleted_count
+        # Eski disk path'leri commit sonrası sil (migration öncesi kayıtlar)
+        for path in disk_paths:
+            try:
+                os.remove(path)
+            except (FileNotFoundError, OSError):
+                pass
+
+        logger.info(
+            "[STORY CLEANUP] DB fazı tamamlandı | silinen=%d | minio_key=%d | disk=%d",
+            len(rows), len(minio_keys), len(disk_paths),
+        )
+        return len(rows), minio_keys
