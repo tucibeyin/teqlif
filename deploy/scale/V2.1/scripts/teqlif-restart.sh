@@ -158,7 +158,7 @@ sync_nginx() {
 sync_services() {
   local node_dir="$1"
   local reloaded=""
-  for svc in "$node_dir/systemd/"*.service; do
+  for svc in "$node_dir/systemd/"*.service "$node_dir/systemd/"*.timer; do
     [ -f "$svc" ] || continue
     local fname
     fname=$(basename "$svc")
