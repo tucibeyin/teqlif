@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import base64
+import concurrent.futures
 import hashlib
 import hmac
 import json
@@ -25,6 +26,8 @@ import signal
 import sys
 import time
 from pathlib import Path
+
+import numpy as np
 
 import av
 from fractions import Fraction
@@ -179,6 +182,53 @@ class MKVWriter:
             for pkt in self._astr.encode(chunk):
                 self._container.mux(pkt)
 
+    # ── Thread-pool encode arabirimi ──────────────────────────────────────────
+
+    def prepare_video_pts(self, timestamp_us: int) -> tuple[int, int]:
+        """PTS hesaplar. Event-loop'tan çağrılmalı (non-thread-safe)."""
+        if self._vstart_us is None:
+            self._vstart_us = timestamp_us
+        pts_ms = max(int((timestamp_us - self._vstart_us) // 1000), self._vpts)
+        return pts_ms, pts_ms + 1
+
+    @staticmethod
+    def encode_frame_sync(
+        raw_bytes: bytes,
+        width: int, height: int,
+        rot: int,
+        enc_w: int, enc_h: int,
+        vstr: av.VideoStream,
+        pts_ms: int,
+    ) -> list[av.Packet]:
+        """NumPy rotasyon + renk dönüşümü + VP8 encode.
+
+        GIL'i C uzantılarına bıraktığı için thread pool'da çalışırken
+        event-loop ses paketlerini işlemeye devam eder.
+        """
+        arr = np.frombuffer(raw_bytes, dtype=np.uint8).reshape(height, width, 4)
+        if rot == 90:
+            arr = np.rot90(arr, k=1)
+        elif rot == 180:
+            arr = np.rot90(arr, k=2)
+        elif rot == 270:
+            arr = np.rot90(arr, k=3)
+        frame = av.VideoFrame.from_ndarray(arr, format="bgra")
+        if frame.width != enc_w or frame.height != enc_h:
+            frame = frame.reformat(width=enc_w, height=enc_h, format="yuv420p")
+        else:
+            frame = frame.reformat(format="yuv420p")
+        frame.pts = pts_ms
+        return list(vstr.encode(frame))
+
+    def mux_video_packets(self, pkts: list[av.Packet], next_vpts: int) -> int:
+        """Encode sonrası paketleri mux eder. Event-loop'tan çağrılmalı."""
+        if self._container is None:
+            return 0
+        self._vpts = next_vpts
+        for pkt in pkts:
+            self._container.mux(pkt)
+        return len(pkts)
+
     def close(self) -> None:
         if self._container is None:
             return
@@ -212,10 +262,13 @@ async def _run(
     room     = rtc.Room()
     open_evt = asyncio.Event()   # container açıldıktan sonra set
     all_tasks: list[asyncio.Task] = []
+    loop = asyncio.get_running_loop()
+    _video_executor = concurrent.futures.ThreadPoolExecutor(
+        max_workers=2, thread_name_prefix="vp8-enc"
+    )
 
     # ── Video kaydedici ────────────────────────────────────────────────────
     async def _record_video(track: rtc.RemoteVideoTrack) -> None:
-        import numpy as np
         vs = rtc.VideoStream(track, format=rtc.VideoBufferType.BGRA)
         try:
             # BGRA: padding yok, stride = width*4 — I420'nin stride sorununu önler
@@ -235,27 +288,23 @@ async def _run(
                 writer.hint_video(dw, dh)
                 await open_evt.wait()
 
-                # BGRA numpy dizisi + rotasyon uygula
-                arr = np.frombuffer(bytes(lk.data), dtype=np.uint8).reshape(lk.height, lk.width, 4)
-                if rot == 90:
-                    arr = np.rot90(arr, k=1)   # 90° CCW: kameranın 90° CW sapmasını düzelt
-                elif rot == 180:
-                    arr = np.rot90(arr, k=2)
-                elif rot == 270:
-                    arr = np.rot90(arr, k=3)   # 90° CW: kameranın 270° CW sapmasını düzelt
-
-                frame = av.VideoFrame.from_ndarray(arr, format="bgra")
-                enc_w, enc_h = writer.vinfo
-                if frame.width != enc_w or frame.height != enc_h:
-                    # dynacast kalite geçişi — encoder boyutuna ölçekle
-                    frame = frame.reformat(width=enc_w, height=enc_h, format="yuv420p")
-                else:
-                    frame = frame.reformat(format="yuv420p")
-
+                # CPU-yoğun: numpy rotasyon + renk dönüşümü + VP8 encode → thread pool'a devret.
+                # numpy/libswscale/libvpx GIL'i bıraktığından event-loop ses
+                # paketlerini encode süresince işlemeye devam eder.
                 ts_us = int(time.monotonic() * 1_000_000)
-                pkts = writer.write_video(frame, ts_us)
+                pts_ms, next_vpts = writer.prepare_video_pts(ts_us)
+                enc_w, enc_h = writer.vinfo
+                raw_bytes = bytes(lk.data)  # await öncesi kopyala; LiveKit buffer'ı yeniden kullanabilir
+
+                pkts = await loop.run_in_executor(
+                    _video_executor,
+                    MKVWriter.encode_frame_sync,
+                    raw_bytes, lk.width, lk.height, rot,
+                    enc_w, enc_h, writer._vstr, pts_ms,
+                )
+                muxed = writer.mux_video_packets(pkts, next_vpts)
                 if vframe_count <= 3:
-                    logger.info("VIDEO encode → %d paket (frame=%d)", pkts, vframe_count)
+                    logger.info("VIDEO encode → %d paket (frame=%d)", muxed, vframe_count)
         except asyncio.CancelledError:
             pass
         except Exception as exc:
@@ -399,6 +448,7 @@ async def _run(
         task.cancel()
     await asyncio.gather(*all_tasks, return_exceptions=True)
 
+    _video_executor.shutdown(wait=False)
     writer.close()
     await room.disconnect()
 
