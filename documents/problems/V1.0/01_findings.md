@@ -2010,7 +2010,7 @@ else:
 
 ---
 
-### SRE-49 · 🟠 P1 (Yüksek) · 60 Saniyelik Global Circuit Breaker Nedeniyle Tek Hatada Tüm iOS VoIP Aramalarının Düşmesi
+### SRE-49 · 🟠 P1 (Yüksek) · 60 Saniyelik Global Circuit Breaker Nedeniyle Tek Hatada Tüm iOS VoIP Aramalarının Düşmesi ✅ Çözüldü (1218a549 · 2026-11-05)
 
 * **Etkilenen Dosya:** `backend/app/services/apns_service.py` (Satır 10–28, 107–111)
 * **İlgili Fonksiyonlar:** `get_apns_client`, `send_voip_push`
@@ -2050,6 +2050,15 @@ async def send_voip_push(token: str, payload: dict, sandbox: bool | None = None)
 1. `aioapns.APNs` HTTP/2 bağlantı havuzuna (connection pool) sahiptir. Tek bir push hatasında client komple sıfırlanmamalı ve modül seviyesinde 60 saniyelik global kilit uygulanmamalıdır.
 2. Circuit breaker sadece arka arkaya 5+ başarısız istek (`consecutive_failures >= 5`) alındığında devreye girmeli ve bekleme süresi maksimum 5–10 saniye olmalıdır.
 3. İstek bazlı geçici hatalar için 1 saniyelik exponential backoff ile 2 yeniden deneme (retry) uygulanmalıdır.
+
+#### 3. Uygulanan Çözüm
+
+| Alan | Değer |
+|------|-------|
+| **Commit** | 1218a549 |
+| **Tarih** | 2026-11-05 |
+| **Değişen Dosya** | `backend/app/services/apns_service.py` |
+| **Yöntem** | `_APNS_CIRCUIT_THRESHOLD=5` (art arda hata eşiği), `_APNS_CIRCUIT_COOLDOWN=10s` (60s yerine), `_APNS_SEND_RETRIES=2` (1s+2s backoff); başarıda sayaç sıfırlanır |
 
 ---
 
@@ -7905,7 +7914,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 95. ~~**Adım 95 (`SRE-69`):** `auction.py` müzayede WebSocket handler'ını `ws_manager`'a bağla; Uvicorn restart anında soketlerin kirli kopmasını engelle.~~ ✅ `dc8fcc5b`
 96. ~~**Adım 96 (`SRE-70`):** `story_service.py:delete_story` içinde MinIO silme işlemini DB commit sonrasına taşı; hata anında yetim ve bozuk 404 story kayıtlarını önle.~~ ✅ `0fba765c`
 97. ~~**Adım 97 (`SRE-74`):** `search_alerts.py:delete_alert` satır 103'teki `'passive'` string atamasını `SearchAlertStatus.DELETED` olarak düzelt; HTTP 500 çökmesini durdur.~~ ✅ `0f5477c9` (önceden uygulanmış)
-98. **Adım 98 (`SRE-49`):** `apns_service.py` içindeki 60 saniyelik global circuit breaker'ı kaldır; tekil arama hatalarında tüm iOS çağrılarının düşmesini engelle.
+98. ~~**Adım 98 (`SRE-49`):** `apns_service.py` içindeki 60 saniyelik global circuit breaker'ı kaldır; tekil arama hatalarında tüm iOS çağrılarının düşmesini engelle.~~ ✅ `1218a549`
 99. **Adım 99 (`SRE-50`):** `like_service.py:add_stream_like` içindeki senkron DB commit ve 150.000 WS/sn yayınını Redis sayacına ve batch yayına dönüştür; DB kilitlenmesini çöz.
 100. **Adım 100 (`SRE-51`):** `worker.py:delayed_close_stream_task` içindeki `except Exception:` durumunda yayını zorla kapatma mantığını iptal et; geçici ağ dalgalanmasında aktif yayınların kapatılmasını durdur.
 101. **Adım 101 (`SRE-52`):** `encoder.py` içindeki FFmpeg ve `mc cp` çağrılarına `asyncio.wait_for` timeout ekle; askıda kalan süreçlerin tüm encoding kuyruğunu kilitlemesini engelle.
