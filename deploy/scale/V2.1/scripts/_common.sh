@@ -303,6 +303,31 @@ EOF
     log_ok "teqlif-wg sudoers eklendi"
 }
 
+# ── Redis VIP sudoers (node2: ip addr + iptables + wg show) ──────────────────
+setup_redis_vip_sudoers_node2() {
+    log_step "Redis VIP sudoers (node2)"
+    cat > /etc/sudoers.d/teqlif-redis-vip <<'EOF'
+tucibeyin ALL=(ALL) NOPASSWD: /usr/bin/wg show wg0 dump
+tucibeyin ALL=(ALL) NOPASSWD: /usr/bin/ip addr add 10.10.0.1/32 dev lo
+tucibeyin ALL=(ALL) NOPASSWD: /usr/bin/ip addr del 10.10.0.1/32 dev lo
+tucibeyin ALL=(ALL) NOPASSWD: /sbin/iptables
+EOF
+    chmod 440 /etc/sudoers.d/teqlif-redis-vip
+    visudo -c -f /etc/sudoers.d/teqlif-redis-vip
+    log_ok "teqlif-redis-vip sudoers eklendi (node2)"
+}
+
+# ── Redis VIP sudoers (node3/4/5/6: wg show dump için) ───────────────────────
+setup_redis_vip_sudoers_client() {
+    log_step "Redis VIP sudoers (client node)"
+    cat > /etc/sudoers.d/teqlif-redis-vip <<'EOF'
+tucibeyin ALL=(ALL) NOPASSWD: /usr/bin/wg show wg0 dump
+EOF
+    chmod 440 /etc/sudoers.d/teqlif-redis-vip
+    visudo -c -f /etc/sudoers.d/teqlif-redis-vip
+    log_ok "teqlif-redis-vip sudoers eklendi (client node)"
+}
+
 # ── Sysctl uygulama ───────────────────────────────────────────────────────────
 setup_sysctl() {
     local node_dir="${1}"

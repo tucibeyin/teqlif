@@ -37,6 +37,7 @@ main() {
     setup_wg_keygen
     setup_wg_config    "${NODE_DIR}"
     setup_wg_sudoers
+    setup_redis_vip_sudoers_node2
     setup_sysctl       "${NODE_DIR}"
     setup_hdd_io_scheduler
     ufw_node2

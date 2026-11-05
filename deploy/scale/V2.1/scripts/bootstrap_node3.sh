@@ -34,6 +34,7 @@ main() {
     setup_wg_keygen
     setup_wg_config    "${NODE_DIR}"
     setup_wg_sudoers
+    setup_redis_vip_sudoers_client
     setup_sysctl       "${NODE_DIR}"
     ufw_streaming
     install_livekit
