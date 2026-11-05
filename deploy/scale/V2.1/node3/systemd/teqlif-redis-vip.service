@@ -6,6 +6,7 @@ Wants=wg-quick@wg0.service
 [Service]
 Type=oneshot
 User=tucibeyin
+StateDirectory=teqlif-redis-vip
 ExecStart=/bin/bash /var/www/teqlif.com/deploy/scale/V2.1/scripts/redis_vip_check.sh
 StandardOutput=journal
 StandardError=journal
