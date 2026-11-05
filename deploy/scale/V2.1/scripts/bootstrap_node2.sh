@@ -54,7 +54,7 @@ main() {
 
     if [ -n "${SECRETS_FILE:-}" ]; then
         apply_secrets "${SECRETS_FILE}" \
-            /project/teqlif/config /etc/wireguard /etc/clickhouse-server /etc/ssl/teqlif
+            /project/teqlif/config /etc/wireguard /etc/clickhouse-server /etc/ssl/teqlif /etc/redis
     fi
 
     print_summary "${NODE_ID}" "${WG_IP}" \
@@ -173,7 +173,7 @@ setup_redis_replica() {
     # Şablon → /etc/redis/redis-replica.conf (apply_secrets parola doldurur)
     cp "${node_dir}/resources/redis/redis-replica.conf.template" /etc/redis/redis-replica.conf
     chown root:redis /etc/redis/redis-replica.conf
-    chmod 644 /etc/redis/redis-replica.conf
+    chmod 640 /etc/redis/redis-replica.conf
     # Servis dosyası
     cp "${node_dir}/systemd/teqlif-redis-replica.service" /etc/systemd/system/
     systemctl daemon-reload
