@@ -4580,6 +4580,67 @@ async def direct_sale_overdue_check_task(ctx: dict) -> None:
     await _process_overdue_sales()
 
 
+# ── Task: Admin Toplu Push Bildirimi (SRE-77) ────────────────────────────────
+
+async def admin_broadcast_push_task(
+    ctx: dict,
+    title: str,
+    body: str,
+) -> None:
+    """
+    Admin toplu push bildirimi — HTTP handler'dan ayrılmış ARQ worker görevi.
+
+    Aktif kullanıcıların FCM token'larını çekip Firebase multicast API'si ile
+    500'lük batch'ler halinde gönderir. 10.000 token için Uvicorn'ı bloke etmek
+    yerine ~3-5 saniyede tamamlanır.
+    """
+    from sqlalchemy import select as _select
+    from app.database import AsyncSessionLocal
+    from app.models.user import User
+    from app.models.enums import UserStatus
+    from app.core.di import container
+    from app.core.ports.push_notification_port import PushNotificationPort
+
+    try:
+        async with AsyncSessionLocal() as db:
+            res = await db.execute(
+                _select(User.fcm_token).where(
+                    User.fcm_token.isnot(None),
+                    User.status == UserStatus.ACTIVE,
+                )
+            )
+            tokens = [r[0] for r in res.all() if r[0]]
+
+        if not tokens:
+            logger.info("[AdminBroadcast] Push token yok — atlandı")
+            return
+
+        BATCH = 500
+        push_port = container.resolve(PushNotificationPort)
+        total_success = 0
+        total_failure = 0
+
+        for i in range(0, len(tokens), BATCH):
+            batch = tokens[i : i + BATCH]
+            result = await push_port.send_multicast(
+                tokens=batch,
+                title=title,
+                body=body,
+                data={"type": "admin_broadcast"},
+            )
+            total_success += result.get("success", 0)
+            total_failure += result.get("failure", 0)
+
+        logger.info(
+            "[AdminBroadcast] Toplu push tamamlandı | total=%d success=%d failure=%d",
+            len(tokens), total_success, total_failure,
+        )
+    except Exception as exc:
+        logger.error("[AdminBroadcast] Toplu push başarısız | %s", exc, exc_info=True)
+        capture_exception(exc)
+        raise
+
+
 class WorkerSettings:
     """
     `arq app.worker.WorkerSettings` komutuyla başlatılır.
@@ -4677,6 +4738,7 @@ class WorkerSettings:
 
         # ── Toplu bildirim (critical değil — SRE-93) ─────────────────────────
         send_stream_started_notifications,
+        admin_broadcast_push_task,
     ]
 
     cron_jobs = [

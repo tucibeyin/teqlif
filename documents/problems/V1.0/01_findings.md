@@ -3197,7 +3197,7 @@ Cache anahtarı namespace düzeyinde değil, **kullanıcı bazlı** ayrıştır�
 
 ---
 
-### SRE-77 · 🟠 P1 (Yüksek) · `admin_data.py:admin_send_push` İçinde Senkron Döngüde 10.000 FCM Çağrısı ve Uvicorn Worker Blokajı
+### SRE-77 · 🟠 P1 (Yüksek) · `admin_data.py:admin_send_push` İçinde Senkron Döngüde 10.000 FCM Çağrısı ve Uvicorn Worker Blokajı ✅ Çözüldü (COMMIT_PLACEHOLDER · 2026-11-05)
 
 * **Etkilenen Dosya:** `backend/app/routers/admin_data.py` (satırlar 651–674)
 * **İlgili Endpoint:** `POST /api/admin-data/push/send`
@@ -3232,6 +3232,17 @@ Aktif kullanıcıların tüm FCM token'ları çekilmekte ve **HTTP endpoint'i i�
    return {"status": "queued", "total_targets": len(tokens)}
    ```
 2. Worker tarafında bildirimler tek tek değil, Firebase Admin SDK'nın **`messaging.send_each_for_multicast()`** toplu API'si ile 500'lük gruplar halinde (batch) gönderilmelidir. 10.000 bildirim 25 dakika yerine 3 saniyede tamamlanır.
+
+#### ✅ Çözüm Damgası — `COMMIT_PLACEHOLDER` (2026-11-05)
+
+| Alan | Değer |
+|------|-------|
+| Commit | `COMMIT_PLACEHOLDER` |
+| Tarih | 2026-11-05 |
+| `worker.py` | `admin_broadcast_push_task` eklendi — `PushNotificationPort.send_multicast` ile 500'lük batch'ler |
+| `admin_data.py` | Toplu yol ARQ'ya devredildi; tekil kullanıcı push endpoint içinde kaldı |
+| `WorkerSettings.functions` | `admin_broadcast_push_task` kayıt edildi |
+| Davranış değişikliği | Toplu push 25 dk → ~3-5 sn; endpoint anında `{"status": "queued"}` döner |
 
 ---
 
@@ -7849,7 +7860,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 90. ~~**Adım 90 (`SRE-82`):** `credit_service.py` ve `leads.py` içindeki TOCTOU yarış durumunu Redis Lua scripti ile atomik check-and-consume işlemine dönüştür; kullanıcıların ücretsiz haklarını (blast, boost, ai) eşzamanlı isteklerle limitsiz tüketmesini engelle.~~ ✅ `cc430785`
 91. ~~**Adım 91 (`SRE-83`):** `tcmb_service.py:fetch_and_save_tcmb_rates` fonksiyonundaki `ForexBuying` text okumasına `NoneType` kontrolü ve fallback ekle; tatil günlerinde döviz kurlarının `AttributeError` ile çökmesini durdur.~~ ✅ `e137bffd`
 92. ~~**Adım 92 (`SRE-84`):** `relationship_service.py` içindeki `is_busy` kontrolünü 1 saatlik statik izin önbelleğinden çıkarıp `GetThreadStatusQuery` anında dinamik değerlendirmeye taşı; 15 saniyelik bir telefon görüşmesinde arama butonunun 1 saat kilitli kalmasını (Cache Poisoning) engelle.~~ ✅ `612566d2`
-93. **Adım 93 (`SRE-77`):** `admin_data.py:admin_send_push` içindeki senkron FCM döngüsünü ARQ arka plan kuyruğuna taşı ve Firebase Admin SDK `send_each_for_multicast` toplu gönderimine geçir; Uvicorn worker'ın 25 dakika donmasını önle.
+93. ~~**Adım 93 (`SRE-77`):** `admin_data.py:admin_send_push` içindeki senkron FCM döngüsünü ARQ arka plan kuyruğuna taşı ve Firebase Admin SDK `send_each_for_multicast` toplu gönderimine geçir; Uvicorn worker'ın 25 dakika donmasını önle.~~ ✅ `COMMIT_PLACEHOLDER`
 94. **Adım 94 (`SRE-78`):** `cleaner.py` (teqlif-agent) içindeki süresi dolan hikaye temizliğine MinIO nesne silme koordinasyonunu ekle; depolamada yüzlerce GB yetim video birikmesini engelle.
 95. **Adım 95 (`SRE-69`):** `auction.py` müzayede WebSocket handler'ını `ws_manager`'a bağla; Uvicorn restart anında soketlerin kirli kopmasını engelle.
 96. **Adım 96 (`SRE-70`):** `story_service.py:delete_story` içinde MinIO silme işlemini DB commit sonrasına taşı; hata anında yetim ve bozuk 404 story kayıtlarını önle.

@@ -727,9 +727,9 @@ class PushRequest(BaseModel):
 
 @router.post("/push/send")
 async def admin_send_push(data: PushRequest, db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
-    from app.services.firebase_service import send_push
-
     if data.user_id:
+        # Tekil kullanıcı — hızlı, endpoint içinde gönder
+        from app.services.firebase_service import send_push
         user = await db.get(User, data.user_id)
         if not user or not user.fcm_token:
             raise BadRequestException(code="USER_FCM_NOT_FOUND")
@@ -737,17 +737,22 @@ async def admin_send_push(data: PushRequest, db: AsyncSession = Depends(get_db),
         logger.info("[ADMIN] Push gönderildi | user=%s | admin=%s", user.username, admin.email)
         return {"sent": 1}
     else:
-        res = await db.execute(select(User.fcm_token).where(User.fcm_token.isnot(None), User.status == UserStatus.ACTIVE))  # noqa: E712
-        tokens = [r[0] for r in res.all() if r[0]]
-        sent = 0
-        for token in tokens:
-            try:
-                await send_push(token=token, title=data.title, body=data.body, notif_type="admin_broadcast")
-                sent += 1
-            except Exception:
-                pass
-        logger.info("[ADMIN] Toplu push | sent=%s/%s | admin=%s", sent, len(tokens), admin.email)
-        return {"sent": sent, "total_tokens": len(tokens)}
+        # Toplu yayın — ARQ worker'a devret (SRE-77: senkron döngü Uvicorn'ı 25 dk blokluyordu)
+        from app.core.task_queue import get_pool
+        estimated = await db.scalar(
+            select(func.count()).select_from(User).where(
+                User.fcm_token.isnot(None), User.status == UserStatus.ACTIVE
+            )
+        )
+        pool = get_pool()
+        if not pool:
+            raise BadRequestException(code="WORKER_UNAVAILABLE")
+        await pool.enqueue_job("admin_broadcast_push_task", title=data.title, body=data.body)
+        logger.info(
+            "[ADMIN] Toplu push kuyruğa alındı | estimated_tokens=%s | admin=%s",
+            estimated, admin.email,
+        )
+        return {"status": "queued", "estimated_tokens": estimated}
 
 
 # ==========================================
