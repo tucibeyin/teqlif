@@ -229,9 +229,9 @@ def svc_clickhouse(cfg: dict) -> dict:
 
 
 def svc_ai_proxy(cfg: dict) -> dict:
-    port = int(cfg.get("ai_proxy_port", 8001))
+    url = cfg.get("ai_proxy_url") or f"http://127.0.0.1:{cfg.get('ai_proxy_port', 8001)}"
     try:
-        r = requests.get(f"http://localhost:{port}/health", timeout=3)
+        r = requests.get(f"{url.rstrip('/')}/health", timeout=3)
         return {"healthy": r.status_code < 500}
     except Exception as e:
         return {"healthy": False, "error": str(e)[:120]}
@@ -344,6 +344,7 @@ def main() -> None:
         "postgres_port":      "5432",
         "clickhouse_host":    _env("CLICKHOUSE_HOST", "127.0.0.1"),
         "clickhouse_port":    _env("CLICKHOUSE_PORT", "8123"),
+        "ai_proxy_url":       ai_proxy_url,
     }
 
     alerter = AlertManager(

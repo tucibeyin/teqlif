@@ -95,8 +95,10 @@ class CertWatcher:
     def _port_map(self) -> dict[str, list[tuple[str, int]]]:
         """Bu node için geçerli servis→adres haritasını döner."""
         base = dict(_STATIC_PORT_MAP)
-        # gossip-agent kendi WireGuard IP'sinde dinliyor
+        # gossip-agent ve ai-proxy WireGuard mesh IP'sinde dinliyor (0.0.0.0 bağlı değil)
         base["gossip-agent"] = [(self._cfg.wg_ip, self._cfg.gossip_port)]
+        if "ai-proxy" in base:
+            base["ai-proxy"] = [(self._cfg.wg_ip, 8001)]
         allowed = self._cfg.monitor_services
         if allowed:
             base = {k: v for k, v in base.items() if k in allowed}
