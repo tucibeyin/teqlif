@@ -2201,7 +2201,7 @@ _, stderr_b = await proc.communicate()
 
 ### SRE-53 · 🟠 P1 (Yüksek) · Eksik İstemci Yönlendirmesi Nedeniyle Sahte Failover (False Failover) ve Sistem Duruşu
 
-> ✅ **Çözüldü** (`851885a1` · 2026-11-06)
+> ✅ **Çözüldü** (`851885a1` → `8f65bb96` · 2026-11-06)
 >
 > | | |
 > |---|---|
@@ -7952,7 +7952,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 99. ~~**Adım 99 (`SRE-50`):** `like_service.py:add_stream_like` içindeki senkron DB commit ve 150.000 WS/sn yayınını Redis sayacına ve batch yayına dönüştür; DB kilitlenmesini çöz.~~ ✅ `3a939bd1` (önceden uygulanmış)
 100. ~~**Adım 100 (`SRE-51`):** `worker.py:delayed_close_stream_task` içindeki `except Exception:` durumunda yayını zorla kapatma mantığını iptal et; geçici ağ dalgalanmasında aktif yayınların kapatılmasını durdur.~~ ✅ `e39b819f` (önceden uygulanmış)
 101. ~~**Adım 101 (`SRE-52`):** `encoder.py` içindeki FFmpeg ve `mc cp` çağrılarına `asyncio.wait_for` timeout ekle; askıda kalan süreçlerin tüm encoding kuyruğunu kilitlemesini engelle.~~ ✅ `7e232ff6`
-102. ~~**Adım 102 (`SRE-53`):** `redis_failover.sh` failover scriptine sanal IP (VIP) veya mesh yönlendirmesi ekle; Node1 çöktüğünde istemcilerin Node2'ye bağlanabilmesini sağla.~~ ✅ `851885a1`
+102. ~~**Adım 102 (`SRE-53`):** `redis_failover.sh` failover scriptine sanal IP (VIP) veya mesh yönlendirmesi ekle; Node1 çöktüğünde istemcilerin Node2'ye bağlanabilmesini sağla.~~ ✅ `851885a1` → `8f65bb96`
 103. **Adım 103 (`SRE-56`):** `story_service.py:cleanup_expired_stories` içindeki açık DB oturumunda senkron MinIO silme mantığını iki aşamalı soft-delete ve async drain mimarisine taşı.
 104. **Adım 104 (`SRE-58`):** `teqlif.conf` içine canlı yayın ve müzayede WebSocket rotalarını kapsayan location regex'i ekle (`Upgrade` ve `Connection` başlıkları).
 105. **Adım 105 (`SRE-59`):** `livekit_subscriber.py` video rotasyon ve VP8 encode işlemlerini `run_in_executor` ile thread pool'a devret; event-loop blokajını kaldır.
