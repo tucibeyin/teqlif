@@ -104,7 +104,7 @@ class GoogleNotificationHandler(StoreNotificationHandler):
             return
         await self._session.execute(
             text(
-                "UPDATE users SET pro_expires_at = :exp, pro_grace_until = NULL "
+                "UPDATE users SET user_type = 'pro', pro_expires_at = :exp, pro_grace_until = NULL "
                 "WHERE id = :uid"
             ),
             {"exp": expires_at, "uid": user_id},
