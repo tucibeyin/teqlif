@@ -1,0 +1,11 @@
+bind 127.0.0.1 10.10.0.2
+port 6379
+requirepass <core_redis_pass>
+masterauth <core_redis_pass>
+replicaof 10.10.0.1 6379
+replica-read-only yes
+loglevel notice
+logfile /var/log/redis/replica.log
+dir /var/lib/redis-replica
+save ""
+appendonly no

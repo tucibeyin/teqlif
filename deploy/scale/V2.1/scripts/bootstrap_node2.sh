@@ -48,6 +48,7 @@ main() {
     install_promtail
     setup_promtail "${NODE_DIR}" "${NODE_ID}"
     install_node_exporter
+    setup_redis_replica  "${NODE_DIR}"
     setup_redis_failover "${NODE_DIR}"
     setup_dr_app "${NODE_DIR}"
 
@@ -157,6 +158,27 @@ setup_dr_app() {
     log_warn "  Gerekli değişkenler: DATABASE_URL (127.0.0.1:5432), REDIS_URL, SECRET_KEY vb."
     log_warn "CF origin sertifikası eksik: apply_secrets ile veya manuel olarak yerleştirin:"
     log_warn "  /etc/ssl/teqlif/cf-origin.crt ve cf-origin.key"
+}
+
+setup_redis_replica() {
+    local node_dir="${1}"
+    log_step "Redis Replica konfigürasyonu"
+    # Replica veri dizini
+    mkdir -p /var/lib/redis-replica
+    chown redis:redis /var/lib/redis-replica
+    chmod 750 /var/lib/redis-replica
+    # Log dizini
+    mkdir -p /var/log/redis
+    chown redis:adm /var/log/redis 2>/dev/null || chown redis:redis /var/log/redis
+    # Şablon → /etc/redis/redis-replica.conf (apply_secrets parola doldurur)
+    cp "${node_dir}/resources/redis/redis-replica.conf.template" /etc/redis/redis-replica.conf
+    chown root:redis /etc/redis/redis-replica.conf
+    chmod 644 /etc/redis/redis-replica.conf
+    # Servis dosyası
+    cp "${node_dir}/systemd/teqlif-redis-replica.service" /etc/systemd/system/
+    systemctl daemon-reload
+    systemctl enable teqlif-redis-replica.service
+    log_ok "Redis Replica konfigürasyonu kuruldu (apply_secrets ile parola doldur)"
 }
 
 setup_redis_failover() {
