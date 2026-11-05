@@ -4,7 +4,7 @@ Lider, UTC saat tablosuna göre her görevi günde bir kez çalıştırır.
 Süresi dolmuş satırları siler; büyük temizliklerde Telegram bildirir.
 
 Zamanlama (UTC — Türkiye UTC+3):
-  00:00 → bildirimler 30d, hikayeler
+  00:00 → bildirimler 30d
   00:05 → analytics 90d, user_interactions 90d
   01:00 → listing_offers 60d, calls 90d, stream_viewers 90d
   02:00 → exchange_rates 1y, live_streams 6mo, search_alerts 90d
@@ -27,10 +27,6 @@ _SCHEDULE: list[tuple[int, int, str, str, str]] = [
     (0,  0,  "notifications",
      "created_at < NOW() - INTERVAL '30 days' AND is_read = true",
      "Bildirimler 30d"),
-
-    (0,  2,  "stories",
-     "expires_at < NOW()",
-     "Hikayeler"),
 
     (0,  5,  "analytics_events",
      "created_at < NOW() - INTERVAL '90 days'",
