@@ -514,23 +514,11 @@ class StoryService:
         if story.user_id != user_id:
             raise ForbiddenException(code="STORY_DELETE_FORBIDDEN")
 
-        # Medya dosyalarını sil
-        from app.services import storage_service as storage
+        # MinIO referanslarını commit öncesinde kaydet — session expunge'dan önce
+        video_path = story.video_path
+        thumbnail_url = story.thumbnail_url
 
-        if story.video_path:
-            if story.video_path.startswith("/"):
-                # Eski disk path (migration öncesi kayıtlar)
-                try:
-                    os.remove(story.video_path)
-                except (FileNotFoundError, OSError):
-                    pass
-            else:
-                await storage.delete_object(story.video_path)
-            logger.info("[STORY DELETE] video silindi | story_id=%d", story_id)
-
-        if story.thumbnail_url:
-            await storage.delete_object(storage.url_to_key(story.thumbnail_url))
-
+        # Önce DB'yi commit et; MinIO hatası DB tutarlılığını bozmamalı
         try:
             await self.db.execute(
                 sql_delete(Notification).where(
@@ -544,6 +532,30 @@ class StoryService:
             logger.error("[STORY DELETE] DB silme hatası | story_id=%d | %s", story_id, exc, exc_info=True)
             capture_exception(exc)
             raise DatabaseException("Hikaye silinemedi")
+
+        # DB commit başarılı — MinIO nesnelerini sil
+        # Hata durumunda arka planda çalışan cleanup görevi yetim dosyaları temizler
+        from app.services import storage_service as storage
+
+        if video_path:
+            if video_path.startswith("/"):
+                # Eski disk path (migration öncesi kayıtlar)
+                try:
+                    os.remove(video_path)
+                except (FileNotFoundError, OSError):
+                    pass
+            else:
+                try:
+                    await storage.delete_object(video_path)
+                    logger.info("[STORY DELETE] video silindi | story_id=%d", story_id)
+                except Exception as exc:
+                    logger.warning("[STORY DELETE] MinIO video silinemedi | story_id=%d | %s", story_id, exc)
+
+        if thumbnail_url:
+            try:
+                await storage.delete_object(storage.url_to_key(thumbnail_url))
+            except Exception as exc:
+                logger.warning("[STORY DELETE] MinIO thumbnail silinemedi | story_id=%d | %s", story_id, exc)
 
         logger.info("[STORY DELETE] Silindi | story_id=%d | user_id=%d", story_id, user_id)
 
