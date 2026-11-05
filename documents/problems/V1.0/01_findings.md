@@ -3246,7 +3246,7 @@ Aktif kullanıcıların tüm FCM token'ları çekilmekte ve **HTTP endpoint'i i�
 
 ---
 
-### SRE-78 · 🟠 P1 (Yüksek) · `cleaner.py` (teqlif-agent) İçinde Süresi Dolan Hikayelerin DB'den Silinirken MinIO Nesnelerinin Silinmemesi ✅ Çözüldü (COMMIT_HASH · 2026-11-05)
+### SRE-78 · 🟠 P1 (Yüksek) · `cleaner.py` (teqlif-agent) İçinde Süresi Dolan Hikayelerin DB'den Silinirken MinIO Nesnelerinin Silinmemesi ✅ Çözüldü (0d082848 · 2026-11-05)
 
 * **Etkilenen Dosyalar:** `deploy/scale/V2.1/teqlif-agent/modules/cleaner.py` (satırlar 31–33, 111–125), `deploy/scale/V2.1/teqlif-agent/modules/janitor.py` (satır 149)
 * **İlgili Tablo:** `stories`
@@ -3255,7 +3255,7 @@ Aktif kullanıcıların tüm FCM token'ları çekilmekte ve **HTTP endpoint'i i�
 
 | Alan | Değer |
 |------|-------|
-| **Commit** | COMMIT_HASH |
+| **Commit** | 0d082848 |
 | **Tarih** | 2026-11-05 |
 | **Değişen Dosya** | `deploy/scale/V2.1/teqlif-agent/modules/cleaner.py` |
 | **Yöntem** | `_SCHEDULE`'dan `stories` girişi kaldırıldı; ARQ `cleanup_expired_stories_task` (cron, her saat `minute=0`) DB + MinIO'yu atomik temizler — `StoryService.cleanup_expired_stories` aracılığıyla |
@@ -7871,7 +7871,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 91. ~~**Adım 91 (`SRE-83`):** `tcmb_service.py:fetch_and_save_tcmb_rates` fonksiyonundaki `ForexBuying` text okumasına `NoneType` kontrolü ve fallback ekle; tatil günlerinde döviz kurlarının `AttributeError` ile çökmesini durdur.~~ ✅ `e137bffd`
 92. ~~**Adım 92 (`SRE-84`):** `relationship_service.py` içindeki `is_busy` kontrolünü 1 saatlik statik izin önbelleğinden çıkarıp `GetThreadStatusQuery` anında dinamik değerlendirmeye taşı; 15 saniyelik bir telefon görüşmesinde arama butonunun 1 saat kilitli kalmasını (Cache Poisoning) engelle.~~ ✅ `612566d2`
 93. ~~**Adım 93 (`SRE-77`):** `admin_data.py:admin_send_push` içindeki senkron FCM döngüsünü ARQ arka plan kuyruğuna taşı ve Firebase Admin SDK `send_each_for_multicast` toplu gönderimine geçir; Uvicorn worker'ın 25 dakika donmasını önle.~~ ✅ `10164029`
-94. ~~**Adım 94 (`SRE-78`):** `cleaner.py` (teqlif-agent) içindeki süresi dolan hikaye temizliğine MinIO nesne silme koordinasyonunu ekle; depolamada yüzlerce GB yetim video birikmesini engelle.~~ ✅ COMMIT_HASH
+94. ~~**Adım 94 (`SRE-78`):** `cleaner.py` (teqlif-agent) içindeki süresi dolan hikaye temizliğine MinIO nesne silme koordinasyonunu ekle; depolamada yüzlerce GB yetim video birikmesini engelle.~~ ✅ `0d082848`
 95. **Adım 95 (`SRE-69`):** `auction.py` müzayede WebSocket handler'ını `ws_manager`'a bağla; Uvicorn restart anında soketlerin kirli kopmasını engelle.
 96. **Adım 96 (`SRE-70`):** `story_service.py:delete_story` içinde MinIO silme işlemini DB commit sonrasına taşı; hata anında yetim ve bozuk 404 story kayıtlarını önle.
 97. **Adım 97 (`SRE-74`):** `search_alerts.py:delete_alert` satır 103'teki `'passive'` string atamasını `SearchAlertStatus.DELETED` olarak düzelt; HTTP 500 çökmesini durdur.
