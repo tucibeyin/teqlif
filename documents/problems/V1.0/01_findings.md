@@ -2467,6 +2467,15 @@ location ~ ^/api/(chat|auction|messages)/.*ws {
 
 ### SRE-59 · 🟠 P1 (Yüksek) · Video Kaydında Senkron VP8 Encode ve Matriks Rotasyonunun Event-Loop'u Kilitlemesi
 
+> ✅ **Çözüldü** (`9ee097d3` · 2026-11-06)
+>
+> | | |
+> |---|---|
+> | **Değişiklik** | `_record_video` encode patikası → `run_in_executor(ThreadPoolExecutor(max_workers=2))` |
+> | **Yeni metodlar** | `MKVWriter.prepare_video_pts`, `encode_frame_sync` (static), `mux_video_packets` |
+> | **Executor** | `shutdown(wait=False)` cleanup'ta; aktif encode thread tamamlanmaya bırakılır |
+> | **GIL** | numpy/libswscale/libvpx GIL'i C uzantısına bırakır — event-loop ses paketlerini encode süresince işler |
+
 * **Etkilenen Dosya:** `deploy/scale/V2.1/teqlif-agent/livekit_subscriber.py` (Satır 237–256)
 * **İlgili Fonksiyon:** `_record_video`
 
@@ -7973,7 +7982,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 102. ~~**Adım 102 (`SRE-53`):** `redis_failover.sh` failover scriptine sanal IP (VIP) veya mesh yönlendirmesi ekle; Node1 çöktüğünde istemcilerin Node2'ye bağlanabilmesini sağla.~~ ✅ `851885a1` → `8f65bb96`
 103. ~~**Adım 103 (`SRE-56`):** `story_service.py:cleanup_expired_stories` içindeki açık DB oturumunda senkron MinIO silme mantığını iki aşamalı soft-delete ve async drain mimarisine taşı.~~ ✅ `f828de12`
 104. ~~**Adım 104 (`SRE-58`):** `teqlif.conf` içine canlı yayın ve müzayede WebSocket rotalarını kapsayan location regex'i ekle (`Upgrade` ve `Connection` başlıkları).~~ ✅ `286bfc4b` + DR gap `01bf05fd`
-105. **Adım 105 (`SRE-59`):** `livekit_subscriber.py` video rotasyon ve VP8 encode işlemlerini `run_in_executor` ile thread pool'a devret; event-loop blokajını kaldır.
+105. ~~**Adım 105 (`SRE-59`):** `livekit_subscriber.py` video rotasyon ve VP8 encode işlemlerini `run_in_executor` ile thread pool'a devret; event-loop blokajını kaldır.~~ ✅ `9ee097d3`
 106. **Adım 106 (`SRE-61`):** `direct_sale_commands.py:purchase_sale` satıcının kendi ürününü satın almasını engelle (`sale.host_id == user.id`) ve bakiye/ödeme rezervasyonu ekle.
 107. **Adım 107 (`SRE-64`):** `upload.py:upload_image` senkron Pillow LANCZOS thumbnail üretimini `run_in_executor` ile arka plana devret; API kilitlenmesini engelle.
 108. **Adım 108 (`SRE-66`):** `teqlif-ai-proxy.service` (node5, node6) dinleme adresini `0.0.0.0` yerine WireGuard mesh IP'sine (`10.10.0.x`) çek; dış internete açılmayı engelle.
