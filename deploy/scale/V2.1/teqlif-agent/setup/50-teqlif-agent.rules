@@ -1,0 +1,21 @@
+// teqlif-agent self-healer: belirli systemd servislerini yönetme yetkisi
+polkit.addRule(function(action, subject) {
+    var MANAGE = [
+        "org.freedesktop.systemd1.manage-units",
+        "org.freedesktop.systemd1.reload-or-restart-unit",
+    ];
+    var UNITS = [
+        /^teqlif([-.]|$)/,
+        /^postgresql@17-main\.service$/,
+        /^clickhouse-server\.service$/,
+        /^haproxy\.service$/,
+        /^stalwart-mail\.service$/,
+        /^livekit([-.]|$)/,
+    ];
+    if (MANAGE.indexOf(action.id) === -1) return;
+    if (subject.user !== "teqlif-agent")  return;
+    var unit = action.lookup("unit") || "";
+    for (var i = 0; i < UNITS.length; i++) {
+        if (UNITS[i].test(unit)) return polkit.Result.YES;
+    }
+});

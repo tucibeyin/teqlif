@@ -91,32 +91,10 @@ fi
 # ── 7. Polkit kuralı (systemd kontrol) ───────────────────────────────────────
 # NoNewPrivileges=true sebebiyle sudo kullanılamaz.
 # Polkit D-Bus üzerinden çalışır ve bu kısıtlamadan etkilenmez.
+POLKIT_SRC="$(dirname "$0")/50-teqlif-agent.rules"
 POLKIT_FILE="/etc/polkit-1/rules.d/50-teqlif-agent.rules"
 mkdir -p /etc/polkit-1/rules.d
-cat > "$POLKIT_FILE" << 'POLKIT'
-// teqlif-agent self-healer: belirli systemd servislerini yönetme yetkisi
-polkit.addRule(function(action, subject) {
-    var MANAGE = [
-        "org.freedesktop.systemd1.manage-units",
-        "org.freedesktop.systemd1.reload-or-restart-unit",
-    ];
-    var UNITS = [
-        /^teqlif([-.]|$)/,
-        /^postgresql@17-main\.service$/,
-        /^clickhouse-server\.service$/,
-        /^haproxy\.service$/,
-        /^stalwart-mail\.service$/,
-        /^livekit([-.]|$)/,
-    ];
-    if (MANAGE.indexOf(action.id) === -1) return;
-    if (subject.user !== "teqlif-agent")  return;
-    var unit = action.lookup("unit") || "";
-    for (var i = 0; i < UNITS.length; i++) {
-        if (UNITS[i].test(unit)) return polkit.Result.YES;
-    }
-});
-POLKIT
-chmod 644 "$POLKIT_FILE"
+install -m 644 "$POLKIT_SRC" "$POLKIT_FILE"
 echo "    Polkit kuralı eklendi: $POLKIT_FILE"
 
 # ── 8. Systemd servis ─────────────────────────────────────────────────────────

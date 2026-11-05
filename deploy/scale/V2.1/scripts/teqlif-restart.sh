@@ -82,6 +82,16 @@ agent_sync() {
     fi
   fi
 
+  # Polkit kuralı her zaman sync et — NoNewPrivileges=true sebebiyle sudo çalışmaz
+  local polkit_src="$REPO/deploy/scale/V2.1/teqlif-agent/setup/50-teqlif-agent.rules"
+  local polkit_dst="/etc/polkit-1/rules.d/50-teqlif-agent.rules"
+  if [ -f "$polkit_src" ] && ! diff -q "$polkit_src" "$polkit_dst" >/dev/null 2>&1; then
+    mkdir -p /etc/polkit-1/rules.d
+    install -m 644 "$polkit_src" "$polkit_dst"
+    changed=true
+    log "Polkit kuralı güncellendi → $polkit_dst"
+  fi
+
   # schedule.yaml her zaman sync et — code değişikliğinden bağımsız
   local sched_src="$REPO/deploy/scale/V2.1/schedule.yaml"
   if ! diff -q "$sched_src" "$agent_dst/schedule.yaml" >/dev/null 2>&1; then
