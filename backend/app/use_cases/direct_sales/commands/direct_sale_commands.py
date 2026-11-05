@@ -24,6 +24,7 @@ from app.core.exceptions import (
     NotFoundException, ForbiddenException,
     DirectSaleNotFoundException, DirectSaleNotActiveException,
     DirectSaleAlreadyActiveException, DirectSaleInsufficientStockException,
+    DirectSaleSelfPurchaseException,
 )
 from app.core.logger import fire_and_forget
 from app.core.commerce_outbox import ds_outbox_push
@@ -297,7 +298,7 @@ async def cancel_sale(sale_id: int, data: DirectSaleCancelIn,
         orders = await uow.session.scalars(
             select(DirectSaleOrder).where(
                 DirectSaleOrder.sale_id == sale_id,
-                DirectSaleOrder.status == "completed",
+                DirectSaleOrder.status.in_(["pending", "completed"]),
             )
         )
         seen_buyers: set[int] = set()
@@ -417,8 +418,8 @@ def _build_purchase_dm(title: str, listing_id: Optional[int],
         price_line += f" ({quantity} adet × {fmt(unit_price)})"
 
     dm = (
-        f"🛍️ Satın alma tamamlandı! Tebrikler!\n"
-        f"📦 Ürün: {title}\n"
+        f"📦 Siparişiniz alındı! Satıcı teslimat için sizinle iletişime geçecek.\n"
+        f"🛍️ Ürün: {title}\n"
         f"💰 Fiyat: {price_line}"
     )
     if listing_id:
@@ -435,6 +436,9 @@ async def purchase_sale(sale_id: int, data: DirectSalePurchaseIn,
     )
     # FOR UPDATE: satır kilidi — eşzamanlı alımlar arasında Lost Update'i önler
     sale = await _get_sale(sale_id, uow.session, for_update=True)
+
+    if sale.host_id == user.id:
+        raise DirectSaleSelfPurchaseException()
 
     if sale.status != "active":
         logger.warning(
@@ -470,7 +474,9 @@ async def purchase_sale(sale_id: int, data: DirectSalePurchaseIn,
     unit_price = float(sale.price)
     stream_id = sale.stream_id
 
-    # DB: order oluştur, satış stoğunu güncelle
+    # DB: order oluştur, satış stoğunu güncelle.
+    # COD mimarisi: ödeme teslimat sırasında alınır; sipariş "pending" başlar,
+    # host ödeme aldığını teyit edince "completed" olur.
     order = DirectSaleOrder(
         sale_id=sale_id,
         seller_id=sale.host_id,
@@ -478,7 +484,7 @@ async def purchase_sale(sale_id: int, data: DirectSalePurchaseIn,
         listing_id=sale.listing_id,
         quantity=data.quantity,
         unit_price=unit_price,
-        status="completed",
+        status="pending",
     )
     uow.session.add(order)
     sale.remaining_stock = remaining
@@ -656,7 +662,7 @@ async def get_sale_summary(sale_id: int, user: User,
                 ).label("total_revenue"),
             ).where(
                 DirectSaleOrder.sale_id == sale_id,
-                DirectSaleOrder.status == "completed",
+                DirectSaleOrder.status.in_(["pending", "completed"]),
             )
         )
         agg = row.one()

@@ -191,6 +191,13 @@ class DirectSaleAlreadyActiveException(AppException):
         super().__init__(status_code=409, message=message, code="DIRECT_SALE_ALREADY_ACTIVE")
 
 
+class DirectSaleSelfPurchaseException(AppException):
+    """403 — Satıcı kendi başlattığı satışı satın alamaz."""
+
+    def __init__(self, message: str | None = None):
+        super().__init__(status_code=403, message=message, code="SELLER_CANNOT_PURCHASE_OWN_SALE")
+
+
 # ── AI Servisi ─────────────────────────────────────────────────────────────────
 
 class AIServiceBusyException(AppException):
