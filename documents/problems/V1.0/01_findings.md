@@ -2827,10 +2827,21 @@ Kullanıcının silindiği veritabanına işlenmiş olsa dahi, `get_current_user
 
 ---
 
-### SRE-69 · 🟠 P1 (Yüksek) · `auction.py` WebSocket Handler'ının `ws_manager` Yerine İzole `AuctionConnectionManager` Kullanması ve Graceful Shutdown'da Kapanmaması
+### SRE-69 · 🟠 P1 (Yüksek) · `auction.py` WebSocket Handler'ının `ws_manager` Yerine İzole `AuctionConnectionManager` Kullanması ve Graceful Shutdown'da Kapanmaması ✅ Çözüldü (dc8fcc5b · 2026-11-05)
 
 * **Etkilenen Dosyalar:** `backend/app/routers/auction.py` (satırlar 169–239), `backend/app/use_cases/auctions/auction_utils.py` (satırlar 52–110), `backend/main.py` (satırlar 155–157)
 * **İlgili Sınıflar:** `AuctionConnectionManager`, `GlobalWSManager` (`ws_manager`)
+
+#### 3. Uygulanan Çözüm
+
+| Alan | Değer |
+|------|-------|
+| **Commit** | dc8fcc5b |
+| **Tarih** | 2026-11-05 |
+| **`auction_utils.py`** | `AuctionConnectionManager` sınıfı ve `manager` örneği kaldırıldı; `pubsub_listener._on_message` → `ws_manager.broadcast_local(f"auction:{stream_id}", data)` |
+| **`auction.py`** | `manager.connect/disconnect` → `ws_manager.connect/disconnect(f"auction:{stream_id}")` |
+| **`auction_commands.py`** | `manager.conn_count(stream_id)` → `ws_manager.subscriber_count(f"auction:{stream_id}")` (4 yer) |
+| **Sonuç** | Uvicorn lifespan kapanışında `ws_manager.shutdown()` tüm müzayede soketlerini kod 1001 (Going Away) ile zarifçe kapatır |
 
 #### 1. Sorunun Tanımı ve Arıza Modu
 Platform genelinde tüm WebSocket bağlantıları (`chat`, `notifications`, `stream_likes`, `calls`) `app.core.ws_manager.GlobalWSManager` (`ws_manager`) üzerinden yönetilmektedir. `backend/main.py` dosyasındaki FastAPI lifespan shutdown hook'unda:
@@ -7874,7 +7885,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 92. ~~**Adım 92 (`SRE-84`):** `relationship_service.py` içindeki `is_busy` kontrolünü 1 saatlik statik izin önbelleğinden çıkarıp `GetThreadStatusQuery` anında dinamik değerlendirmeye taşı; 15 saniyelik bir telefon görüşmesinde arama butonunun 1 saat kilitli kalmasını (Cache Poisoning) engelle.~~ ✅ `612566d2`
 93. ~~**Adım 93 (`SRE-77`):** `admin_data.py:admin_send_push` içindeki senkron FCM döngüsünü ARQ arka plan kuyruğuna taşı ve Firebase Admin SDK `send_each_for_multicast` toplu gönderimine geçir; Uvicorn worker'ın 25 dakika donmasını önle.~~ ✅ `10164029`
 94. ~~**Adım 94 (`SRE-78`):** `cleaner.py` (teqlif-agent) içindeki süresi dolan hikaye temizliğine MinIO nesne silme koordinasyonunu ekle; depolamada yüzlerce GB yetim video birikmesini engelle.~~ ✅ `0d082848`
-95. **Adım 95 (`SRE-69`):** `auction.py` müzayede WebSocket handler'ını `ws_manager`'a bağla; Uvicorn restart anında soketlerin kirli kopmasını engelle.
+95. ~~**Adım 95 (`SRE-69`):** `auction.py` müzayede WebSocket handler'ını `ws_manager`'a bağla; Uvicorn restart anında soketlerin kirli kopmasını engelle.~~ ✅ `dc8fcc5b`
 96. **Adım 96 (`SRE-70`):** `story_service.py:delete_story` içinde MinIO silme işlemini DB commit sonrasına taşı; hata anında yetim ve bozuk 404 story kayıtlarını önle.
 97. **Adım 97 (`SRE-74`):** `search_alerts.py:delete_alert` satır 103'teki `'passive'` string atamasını `SearchAlertStatus.DELETED` olarak düzelt; HTTP 500 çökmesini durdur.
 98. **Adım 98 (`SRE-49`):** `apns_service.py` içindeki 60 saniyelik global circuit breaker'ı kaldır; tekil arama hatalarında tüm iOS çağrılarının düşmesini engelle.
