@@ -8003,7 +8003,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 113. ~~**Adım 113 (`SRE-33`):** `wallet_tasks.py:process_store_notification_task` içine Google Play RTDN işleme dalını (`elif platform == "google"`) ekle.~~ ✅ `ce5c3ccc`
 114. ~~**Adım 114 (`SRE-34`):** `analytics.py:track_event` içindeki kapatılmış oturum sorununu gider; `_save_event_async` fonksiyonuna bağımsız `AsyncSessionLocal` bağla.~~ ✅ `1f376d39`
 115. ~~**Adım 115 (`SRE-35`):** `calls.py` ve `ws_manager.py` içine tahmin edilemez `ack_token` UUID doğrulaması ekle; sahte ACK ve arama DoS açığını kapat.~~ ✅ `373309b1` / Flutter: `ff4ce313`
-116. **Adım 116 (`SRE-36`):** Streaming node'ları (`node3`, `node4`) `livekit.yaml` dosyasındaki Redis adresini `10.10.0.1:6379` olarak düzelt veya HAProxy kurulumunu tamamla.
+116. ~~**Adım 116 (`SRE-36`):** Streaming node'ları (`node3`, `node4`) `livekit.yaml` dosyasındaki Redis adresini `10.10.0.1:6379` olarak düzelt veya HAProxy kurulumunu tamamla.~~ ✅ `9e839777`
 117. **Adım 117 (`SRE-37`):** `leads.py:send-blast` döngüsünü ARQ arka plan kuyruğuna taşı ve Firebase Admin SDK `send_each_for_multicast` toplu gönderimine geçir.
 118. **Adım 118 (`SRE-19`):** `moderation_service.py` içindeki `remove_from_livekit` fonksiyonuna stream'in gerçek `livekit_url` bilgisini bağla.
 119. **Adım 119 (`SRE-23`):** `direct_sale_commands.py` satın alma işleminde DB commit hatası durumunda Redis stok iadesi (compensating transaction) ekle.
