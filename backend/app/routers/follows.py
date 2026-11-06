@@ -230,7 +230,7 @@ async def accept_follow_request(
 
     # Follow kabul edilince mesaj isteği de normal konuşmaya dönüşür
     user_a, user_b = min(follower_id, current_user.id), max(follower_id, current_user.id)
-    await db.execute(
+    res = await db.execute(
         sa_update(MessageThread)
         .where(
             MessageThread.user_a_id == user_a,
@@ -241,9 +241,22 @@ async def accept_follow_request(
     )
     await db.commit()
 
-    from app.utils.redis_client import get_redis
-    _redis = await get_redis()
-    await _redis.decr(f"msg:unread:request:{current_user.id}")
+    if res.rowcount > 0:
+        from app.utils.redis_client import get_redis
+        _redis = await get_redis()
+        await _redis.eval(
+            """
+            local cur = redis.call('get', KEYS[1])
+            if cur and tonumber(cur) > 0 then
+                return redis.call('decr', KEYS[1])
+            else
+                redis.call('set', KEYS[1], 0)
+                return 0
+            end
+            """,
+            1,
+            f"msg:unread:request:{current_user.id}",
+        )
 
     state = await RelationshipStateService.recompute_and_cache(follower_id, current_user.id, db)
     RelationshipStateService.broadcast(state)
