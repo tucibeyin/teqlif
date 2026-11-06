@@ -3,6 +3,7 @@ let currentUserId = null;
 // Admin token yalnızca bellekte tutulur — sessionStorage/localStorage'a yazılmaz.
 // XSS bu değişkene erişemez; sayfa yenilenince tekrar giriş yapılır.
 let _adminToken = null;
+let _adminTicket = null;
 
 window.onload = function () {
     if (_adminToken) { showFinalStep(); } else { initGoogleAuth(); }
@@ -19,13 +20,13 @@ function initGoogleAuth() {
 }
 async function handleCredentialResponse(r) {
     const res = await fetch('/api/admin-auth/verify-google', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: r.credential }) });
-    if (res.ok) { document.getElementById("step-google").classList.add("hidden"); document.getElementById("step-password").classList.remove("hidden"); }
+    if (res.ok) { const data = await res.json(); _adminTicket = data.ticket; document.getElementById("step-google").classList.add("hidden"); document.getElementById("step-password").classList.remove("hidden"); }
     else { alert("Erişim reddedildi."); }
 }
 async function verifyPassword() {
     const p = document.getElementById("adminPasswordInput").value;
-    const res = await fetch('/api/admin-auth/verify-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: p }) });
-    if (res.ok) { const data = await res.json(); _adminToken = data.access_token; showFinalStep(); }
+    const res = await fetch('/api/admin-auth/verify-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: p, ticket: _adminTicket }) });
+    if (res.ok) { const data = await res.json(); _adminToken = data.access_token; _adminTicket = null; showFinalStep(); }
     else { alert("Hatalı şifre!"); }
 }
 function adminLogout() { _adminToken = null; location.reload(); }
