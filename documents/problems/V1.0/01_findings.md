@@ -8013,7 +8013,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 123. ~~**Adım 123 (`SRE-13`):** `database_clickhouse.py` içindeki `_drain` fonksiyonunu en az bir kere garantili (At-least-once) hale getir; insert hatasında verinin Redis'ten silinmesini engelle.~~ ✅ `db8a5816`
 124. ~~**Adım 124 (`SRE-14`):** `thompson_sampling.py` dosyasındaki read-modify-write yapısını Redis `HINCRBYFLOAT` ile tekil atomik işleme dönüştür.~~ ✅ `f519fe9a`
 125. ~~**Adım 125 (`SRE-15`):** `send_direct_message.py` içindeki kapatılmış session kullanımını gider.~~ ✅ `5de69c87`
-126. **Adım 126 (`SRE-16`):** `churn_ml_service.py` model kaydını geçici dosya ve atomik rename ile güvenli hale getir.
+126. ~~**Adım 126 (`SRE-16`):** `churn_ml_service.py` model kaydını geçici dosya ve atomik rename ile güvenli hale getir.~~ ✅ `f7ab2d9e`
 127. **Adım 127 (`SRE-03`):** `worker.py` içinde video görevleri için bağımsız kuyruk ve uygun timeout yapılandırması tanımla.
 
 ### 🟡 Faz 3: Veritabanı, Eşzamanlılık ve Performans Optimizasyonu (P2 Öncelik — 45 Adım)
