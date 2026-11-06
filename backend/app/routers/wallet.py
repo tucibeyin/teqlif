@@ -212,8 +212,11 @@ async def get_balance(
         .limit(limit)
     )
     txns = result.scalars().all()
+    fresh_balance = await db.scalar(
+        select(User.teqlik_balance).where(User.id == current_user.id)
+    )
     return {
-        "balance": current_user.teqlik_balance,
+        "balance": fresh_balance if fresh_balance is not None else 0,
         "transactions": [_txn_dict(t) for t in txns],
     }
 
