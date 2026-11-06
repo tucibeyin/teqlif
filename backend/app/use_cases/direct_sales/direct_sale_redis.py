@@ -39,6 +39,23 @@ redis.call('SET', KEYS[1], remaining)
 return remaining
 """
 
+# ── Lua — atomik compensating restore ────────────────────────────────────────
+# DB commit başarısız olduğunda Redis'i önceki durumuna geri alır.
+# KEYS[1] = direct_sale:{stream_id}:stock
+# KEYS[2] = direct_sale:{stream_id}:state
+# ARGV[1] = iade edilecek miktar
+# Dönüş: geri yüklenen stok değeri
+
+_INCREMENT_STOCK_SCRIPT = """
+local new_stock = redis.call('INCRBY', KEYS[1], ARGV[1])
+redis.call('HSET', KEYS[2], 'remaining_stock', tostring(new_stock))
+local status = redis.call('HGET', KEYS[2], 'status')
+if status == 'sold_out' then
+    redis.call('HSET', KEYS[2], 'status', 'active')
+end
+return new_stock
+"""
+
 # ── State geçişleri ───────────────────────────────────────────────────────────
 
 async def start_sale(stream_id: int, sale_id: int, title: str, price: float,
@@ -135,6 +152,28 @@ async def decrement_stock(stream_id: int, quantity: int) -> int:
         stream_id, quantity, remaining,
     )
     return remaining
+
+
+async def increment_stock(stream_id: int, quantity: int) -> None:
+    """
+    Compensating transaction: DB commit başarısız olduğunda stoğu geri yükler.
+
+    Tek Lua call'da atomik olarak:
+      1. stock key'i quantity kadar artırır
+      2. state hash remaining_stock'ını günceller
+      3. status 'sold_out' ise 'active'e döndürür
+    """
+    from app.utils.redis_client import get_redis
+    redis = await get_redis()
+    script = redis.register_script(_INCREMENT_STOCK_SCRIPT)
+    new_stock = await script(
+        keys=[_stock_key(stream_id), _state_key(stream_id)],
+        args=[quantity],
+    )
+    logger.warning(
+        "[DIRECT_SALE][REDIS] increment (compensating) | stream=%s qty=%s → new_stock=%s",
+        stream_id, quantity, new_stock,
+    )
 
 
 async def update_remaining_stock(stream_id: int, remaining: int) -> None:

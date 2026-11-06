@@ -21,7 +21,7 @@ from app.schemas.direct_sale import (
     SellerSummaryOut, BuyerSummaryOut,
 )
 from app.core.exceptions import (
-    NotFoundException, ForbiddenException,
+    NotFoundException, ForbiddenException, DatabaseException,
     DirectSaleNotFoundException, DirectSaleNotActiveException,
     DirectSaleAlreadyActiveException, DirectSaleInsufficientStockException,
     DirectSaleSelfPurchaseException,
@@ -518,7 +518,16 @@ async def purchase_sale(sale_id: int, data: DirectSalePurchaseIn,
     if remaining == 0:
         await redis_mgr.set_sold_out(stream_id)
 
-    await uow.session.commit()
+    try:
+        await uow.session.commit()
+    except Exception as exc:
+        # DB commit başarısız → Redis compensating transaction
+        await redis_mgr.increment_stock(stream_id, data.quantity)
+        logger.error(
+            "[DIRECT_SALE][PURCHASE] commit failed, Redis stok iade edildi | sale_id=%s stream=%s qty=%s | %s",
+            sale_id, stream_id, data.quantity, exc,
+        )
+        raise DatabaseException(code="PURCHASE_COMMIT_FAILED") from exc
 
     # Telegram: satın alma bildirimi
     try:
