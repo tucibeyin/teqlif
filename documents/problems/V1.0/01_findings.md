@@ -8011,7 +8011,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 121. ~~**Adım 121 (`SRE-25`):** `stream_listener.py` içindeki `os.getpid()` kullanımını deterministik worker kimliğiyle değiştir; servis yeniden başlarken mesaj kaybını engelle.~~ ✅ `8eeff8b5`
 122. ~~**Adım 122 (`SRE-22`):** `story_service.py` içindeki senkron FFmpeg video sıkıştırmasını HTTP isteğinden çıkarıp ARQ video kuyruğuna taşı.~~ ✅ `af7464ca`
 123. ~~**Adım 123 (`SRE-13`):** `database_clickhouse.py` içindeki `_drain` fonksiyonunu en az bir kere garantili (At-least-once) hale getir; insert hatasında verinin Redis'ten silinmesini engelle.~~ ✅ `db8a5816`
-124. **Adım 124 (`SRE-14`):** `thompson_sampling.py` dosyasındaki read-modify-write yapısını Redis `HINCRBYFLOAT` ile tekil atomik işleme dönüştür.
+124. ~~**Adım 124 (`SRE-14`):** `thompson_sampling.py` dosyasındaki read-modify-write yapısını Redis `HINCRBYFLOAT` ile tekil atomik işleme dönüştür.~~ ✅ `f519fe9a`
 125. **Adım 125 (`SRE-15`):** `send_direct_message.py` içindeki kapatılmış session kullanımını gider.
 126. **Adım 126 (`SRE-16`):** `churn_ml_service.py` model kaydını geçici dosya ve atomik rename ile güvenli hale getir.
 127. **Adım 127 (`SRE-03`):** `worker.py` içinde video görevleri için bağımsız kuyruk ve uygun timeout yapılandırması tanımla.
