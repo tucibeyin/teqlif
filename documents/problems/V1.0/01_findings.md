@@ -169,7 +169,7 @@
 | **SRE-157** | 🟠 **P1 (Yüksek)** | `worker.py` / `models/message_thread.py` | `cleanup_empty_message_threads_task` İçinde `has_archive` Kontrolü Olmaması Nedeniyle Arşivli Başlıkların Silinmesi | 1 yıldan eski mesajları arşivlenmiş konuşmaların boş sanılarak silinmesi, kullanıcı izin ve arşiv bağlarının yok olması |
 | **SRE-158** | 🟠 **P1 (Yüksek)** | `leads.py` | `send_retargeting` Endpoint'inde Bakiye Düşümü Öncesinde Push Gönderilmesi Nedeniyle Karşılıksız Bildirim İstismarı | 500 kişiye önce bildirim fırlatılıp sonra bakiye düşülmeye çalışılması, bakiye yetersizliğinde dahi ücretsiz bildirim sızıntısı |
 | **SRE-159** | 🟠 **P1 (Yüksek)** | `calls.py` | `start_call` Başlatma Sırasında Yalnızca `callee_id` Üzerine Advisory Lock Alınması Nedeniyle Karşılıklı Çift Çağrı | İki kullanıcının birbirini aynı anda araması durumunda iki ayrı çağrı ve LiveKit odası oluşması, split-brain durumu |
-| **SRE-160** | 🟡 **P2 (Orta)** | `ads.py` | `create_campaign` Endpoint'inde `total_budget` ve `cpc_bid` Üzerinde Tavan Kontrolü Olmaması Nedeniyle Bütçe Enflasyonu | Satıcının 50 TEQlik flat boost ile 1 milyar bütçeli hayali kampanya açabilmesi, feed açık artırma algoritmasının manipülasyonu |
+| ~~**SRE-160**~~ ✅ `72fa2177` | 🟡 **P2 (Orta)** | `ads.py` | `create_campaign` Endpoint'inde `total_budget` ve `cpc_bid` Üzerinde Tavan Kontrolü Olmaması Nedeniyle Bütçe Enflasyonu | Satıcının 50 TEQlik flat boost ile 1 milyar bütçeli hayali kampanya açabilmesi, feed açık artırma algoritmasının manipülasyonu |
 | **SRE-161** | 🔴 **P0 (Kritik)** | `auction_commands.py` / `auction_redis_repo.py` | `accept_bid` Sırasında Redis'te Atomik Kilitleme Olmaması Nedeniyle Eşzamanlı Tekliflerle Haksız İhale Gasbı | Teklif kabul DB süreci sırasında Redis'in aktif kalması, daha yüksek tekliflerin ezilip önceki teklifin kazanan yapılması |
 | **SRE-162** | 🔴 **P0 (Kritik)** | `admin_data.py` | `purge_user` Endpoint'inde `token_version` Artırılmaması ve Session Cache/İlanların Temizlenmemesi | Anonimize edilip silinen kullanıcının JWT ve Redis oturumunun 15 dk sürmesi, ilan ve yayınların piyasada sahipsiz kalması |
 | **SRE-163** | 🟠 **P1 (Yüksek)** | `admin_data.py` | `update_user_info` İçinde Yalnızca `PASSIVE` Durumunda `token_version` Artırılması Nedeniyle Banlanan Kullanıcının Oturumunun Sürmesi | Admin tarafından `banned` veya `deleted` yapılan kötü niyetli kullanıcıların JWT oturumlarının iptal edilmemesi ve API erişimini sürdürmesi |
@@ -7101,7 +7101,7 @@ if active_call:
 
 ---
 
-### SRE-160 · 🟡 P2 (Orta) · `create_campaign` Endpoint'inde `total_budget` ve `cpc_bid` Üzerinde Tavan Kontrolü Olmaması Nedeniyle Bütçe Enflasyonu
+### ~~SRE-160~~ ✅ `72fa2177` · 🟡 P2 (Orta) · `create_campaign` Endpoint'inde `total_budget` ve `cpc_bid` Üzerinde Tavan Kontrolü Olmaması Nedeniyle Bütçe Enflasyonu
 
 #### 1. Zaafın Kök Nedeni ve Mekanizması
 * **Etkilenen Dosyalar:**
@@ -8042,7 +8042,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 134. ~~**Adım 134 (`SRE-151`):** `notifications.py:notifications_ws` ilk bağlantı sayım sorgusuna `Notification.type != 'message'` filtresi ekle; DM bildirimlerinin yanlışlıkla sayıma dahil edilmesiyle mobil bildirim rozetinde yaşanan titremeyi (flickering) ve WS bağlantısındaki çift DB oturumunu gider.~~ ✅ `3390df49`
 135. ~~**Adım 135 (`SRE-152`):** `models/call.py` ve `calls.py:get_call_history` için `ix_calls_caller_started` ve `ix_calls_callee_started` bileşik indekslerini ekle; arama geçmişi çekilirken PostgreSQL'in BitmapOr ve disk üzerinde QuickSort yaparak CPU'yu tüketmesini çöz.~~ ✅ `2c51c260`
 136. ~~**Adım 136 (`SRE-153`):** `feed.py:record_feed_signal` içindeki senkron `np.linalg.norm` vektör işlemlerini ve embedding DB sorgusunu `asyncio.to_thread` havuzuna veya Redis Stream sinyal kuyruğuna aktar; her ilan tıklamasında Uvicorn event loop'unun dondurulmasını engelle.~~ ✅ `4b9e9627`
-137. **Adım 137 (`SRE-160`):** `ads.py:CampaignCreate` şemasına `total_budget <= 5000` ve `cpc_bid <= 100` tavan doğrulaması ekle; 50 TEQlik flat boost ücretiyle 1 milyar bütçeli hayali kampanya açılmasını ve açık artırma algoritmasının manipüle edilmesini engelle.
+137. ~~**Adım 137 (`SRE-160`):** `ads.py:CampaignCreate` şemasına `total_budget <= 5000` ve `cpc_bid <= 100` tavan doğrulaması ekle; 50 TEQlik flat boost ücretiyle 1 milyar bütçeli hayali kampanya açılmasını ve açık artırma algoritmasının manipüle edilmesini engelle.~~ ✅ `72fa2177`
 138. **Adım 138 (`SRE-154`):** `admin_nodes.py:get_node` endpoint'inde tüm cluster'ı `keys("edge:metrics:*")` ile tarayan mantığı kaldırıp doğrudan `redis.get(f"edge:metrics:{node_id}")` tekil anahtar okumasına geçir; gereksiz küme taramasını ve Redis tek thread blokajını durdur.
 139. **Adım 139 (`SRE-165`):** `onboarding.py:seed_interests` içinde `subcategory=""` varsayılan değerini ekle ve `uq_user_interest` kısıtına `NULLS NOT DISTINCT` kazandır; `NULL` subcategory nedeniyle PostgreSQL unique kısıtının delinmesini ve mükerrer kategori kayıtlarıyla öneri algoritmasının bozulmasını çöz.
 140. **Adım 140 (`SRE-166`):** `bpr_service.py:train_bpr` içindeki 200 milyon iterasyonluk kontrolsüz `hard_neg_interactions` kartezyen döngüsünü kaldır veya kullanıcı başına 5 örnekle sınırla; `_WEIGHTS["_hard_neg"]` değerinin `w > 0` filtresiyle çöpe atılarak sunucunun OOM ile çökmesini engelle.
