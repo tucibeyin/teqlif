@@ -59,6 +59,18 @@ class EdgeOrchestrator:
                     for i, url in enumerate(_s.edge_livekit_urls) if url]
         return nodes
 
+    async def get_node_metrics(self, node_id: str) -> Optional[Dict[str, Any]]:
+        """Tekil node'un metriklerini döner; yoksa None."""
+        redis = await get_redis()
+        raw = await redis.get(f"edge:metrics:{node_id}")
+        if not raw:
+            return None
+        try:
+            return json.loads(raw)
+        except Exception as e:
+            logger.error("JSON parse error for node %s: %s", node_id, e)
+            return None
+
     async def is_node_healthy(self, node_id: str) -> bool:
         """edge:metrics:{node_id} anahtarı mevcutsa node sağlıklıdır.
 

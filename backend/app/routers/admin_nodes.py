@@ -24,7 +24,7 @@ async def list_nodes() -> List[Dict[str, Any]]:
 @router.get("/{node_id}", dependencies=[Depends(check_admin_access)])
 async def get_node(node_id: str) -> Dict[str, Any]:
     """Belirtilen node'un anlık metriklerini döner."""
-    for m in await orchestrator.get_all_metrics():
-        if m.get("node_id") == node_id:
-            return m
-    raise HTTPException(status_code=404, detail=f"Node '{node_id}' aktif değil")
+    m = await orchestrator.get_node_metrics(node_id)
+    if not m:
+        raise HTTPException(status_code=404, detail=f"Node '{node_id}' aktif değil")
+    return m
