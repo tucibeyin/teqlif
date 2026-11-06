@@ -539,6 +539,7 @@ class _StoryGroupItem extends ConsumerWidget {
                               cacheKey: 'user_${group.user.username}_avatar', cacheManager: TeqlifCacheManager(),
                               memCacheWidth: 400, memCacheHeight: 400, imageUrl: resolvedUrl,
                               fit: BoxFit.cover,
+                              alignment: Alignment.topCenter,
                               width: double.infinity,
                               height: double.infinity,
                               placeholder: (_, _) => _InitialAvatar(
