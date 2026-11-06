@@ -9,10 +9,11 @@ Why not pub/sub?
 
 Why Streams?
   Each worker tracks its own read position (`stream_pos:{name}:{pid}`) in
-  Redis.  On restart the worker reads from the saved position and delivers
-  every message that arrived during the downtime — in order, exactly once per
-  worker.  The stream retains the last STREAM_MAXLEN messages; anything older
-  is trimmed automatically.
+  Redis.  On a normal reconnection the saved position is reused so no messages
+  are skipped.  On restart (new PID) the worker falls back to 60 seconds ago
+  instead of "$", covering the typical deploy/crash window; client-side dedup
+  absorbs any re-delivered messages.  The stream retains the last STREAM_MAXLEN
+  messages; anything older is trimmed automatically.
 
 Fan-out semantics:
   Unlike consumer groups (each message → one consumer), every worker reads the
@@ -130,10 +131,17 @@ async def stream_listener(
         try:
             r = await get_redis_stream()
 
-            # On first-ever start use "$" (only new messages).
-            # On restart use the saved position (deliver missed messages).
+            # Saved position → continue from last delivered message.
+            # No saved position (new PID after restart/deploy) → replay the
+            # last 60 s instead of "$" (which would skip messages sent during
+            # the restart window).  60 s safely covers any rolling deploy or
+            # crash-restart cycle.  Client-side dedup (_seenKeys) absorbs any
+            # re-delivered messages that were already processed.
             saved = await r.get(pos_key)
-            last_id: str = saved if saved else "$"
+            if saved:
+                last_id: str = saved
+            else:
+                last_id = f"{max(0, int(time.time() * 1000) - 60_000)}-0"
 
             logger.info(
                 "[STREAM:%s] Dinleyici başladı | pid=%s pos=%s",
