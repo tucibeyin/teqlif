@@ -175,7 +175,7 @@
 | **SRE-163** | 🟠 **P1 (Yüksek)** | `admin_data.py` | `update_user_info` İçinde Yalnızca `PASSIVE` Durumunda `token_version` Artırılması Nedeniyle Banlanan Kullanıcının Oturumunun Sürmesi | Admin tarafından `banned` veya `deleted` yapılan kötü niyetli kullanıcıların JWT oturumlarının iptal edilmemesi ve API erişimini sürdürmesi |
 | **SRE-164** | 🟠 **P1 (Yüksek)** | `pro_insights_use_case.py` | `ProInsightsUseCase` İçinde `auctions` ve `bids` Tablolarının Çarpımsal Join Edilmesi Nedeniyle Şişirilmiş `bid_count` | Stream bazlı açık artırmalarla tekliflerin kartezyen çarpılması sonucu satıcı panelinde teklif sayısının katlanarak yanlış gösterilmesi |
 | ~~**SRE-165**~~ ✅ `639dfce8` | 🟡 **P2 (Orta)** | `onboarding.py` / `user_interest.py` | `seed_interests` Endpoint'inde `NULL` Subcategory Nedeniyle PostgreSQL Unique Constraint İhlali ve Mükerrer Kayıt | PostgreSQL'de NULL değerlerin unique kısıtını bypass etmesi sonucu her onboarding isteğinde mükerrer kategori satırları oluşması |
-| **SRE-166** | 🟡 **P2 (Orta)** | `bpr_service.py` | `train_bpr` İçinde Hard Negative Örneklemesinde 200 Milyonluk Kartezyen Döngü ve Negatif Ağırlıkların Matris Dışında Kalması | 20 bin ilan ve 10 bin kullanıcı için 200M iterasyonluk döngüyle RAM'in şişirilmesi, üretilen verinin `w > 0` filtresiyle tamamen atılması |
+| ~~**SRE-166**~~ ✅ `3c0dedfa` | 🟡 **P2 (Orta)** | `bpr_service.py` | `train_bpr` İçinde Hard Negative Örneklemesinde 200 Milyonluk Kartezyen Döngü ve Negatif Ağırlıkların Matris Dışında Kalması | 20 bin ilan ve 10 bin kullanıcı için 200M iterasyonluk döngüyle RAM'in şişirilmesi, üretilen verinin `w > 0` filtresiyle tamamen atılması |
 | **SRE-167** | 🔴 **P0 (Kritik)** | `referral_service.py` / `auth.py` / `users.py` | `apply_referral` İçinde Eksik `_get_t` Import'u Nedeniyle HTTP 500 Çökmesi ve Oturum Önbelleği İptal Edilmemesi | Davet kodu kullanımı ve onaylı kullanıcıların e-posta/SMS doğrulamasında `NameError` ile çökmesi; +50 TEQlik bakiyesinin 15 dk boyunca önbellekte güncellenmemesi |
 | **SRE-168** | 🔴 **P0 (Kritik)** | `nsfw_service.py` | `check_listing_nsfw` İçinde Eksik `ListingStatus` Import'u Nedeniyle Müstehcen İçeriklerin Askıya Alınamaması | NudeNet analizinde `max_score >= 0.85` olduğunda worker'ın `NameError: ListingStatus` ile çökmesi, pornografik ve müstehcen ilanların platformda sansürsüz yayında kalması |
 | **SRE-169** | 🟠 **P1 (Yüksek)** | `analytics.py` | Pro Analitik Endpoint'lerinde Eksik `_dt` ve `_td` Import'u Nedeniyle Tarih Filtreli İsteklerde HTTP 500 Çökmesi | `video_roi`, `gallery_stats` ve `video_perf` sorgularında `start_date` veya `end_date` verildiğinde `NameError: name '_dt' is not defined` ile çöküş |
@@ -7420,7 +7420,7 @@ LIMIT 3
 
 ---
 
-### SRE-166 · 🟡 P2 (Orta) · `train_bpr` İçinde Hard Negative Örneklemesinde 200 Milyonluk Kartezyen Döngü ve Negatif Ağırlıkların Matris Dışında Kalması (Cartesian Memory Exhaustion & Discarded Hard Negatives in BPR Training)
+### ~~SRE-166~~ ✅ · 🟡 P2 (Orta) · `train_bpr` İçinde Hard Negative Örneklemesinde 200 Milyonluk Kartezyen Döngü ve Negatif Ağırlıkların Matris Dışında Kalması (Cartesian Memory Exhaustion & Discarded Hard Negatives in BPR Training)
 
 #### 1. Zaafın Kök Nedeni ve Mekanizması
 * **Etkilenen Dosyalar:**
@@ -7458,6 +7458,12 @@ LIMIT 3
 
 #### 2. Çözüm / Refactoring Reçetesi
 [`backend/app/services/ml/bpr_service.py:180-191`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/services/ml/bpr_service.py#L180-L191) bloğunu kaldırın veya kullanıcı başına rastgele sınırlandırılmış (max 5 adet) hard negative örneklemesi uygulayarak BPR kayıp fonksiyonuna uygun pozitif/negatif çiftler halinde implicit kütüphanesine iletin.
+
+#### 3. Uygulanan Düzeltme
+- **Commit:** `3c0dedfa` — `fix(sre-166): bpr_service hard negative kartezyen döngüsünü kaldır`
+- **Tarih:** 2026-11-06
+- **Değişen Dosya:** `backend/app/services/ml/bpr_service.py`
+- **Yapılan:** 36 satırlık hard negative üretim bloğu kaldırıldı. `implicit` BPR kütüphanesi `verify_negative_samples=True` ile dahili negatif örnekleme yaptığından blok gereksizdi; CSR matrisine negatif ağırlık koymak güven-matrisi semantiğiyle de uyumsuzdu.
 
 ---
 
@@ -8051,7 +8057,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 137. ~~**Adım 137 (`SRE-160`):** `ads.py:CampaignCreate` şemasına `total_budget <= 5000` ve `cpc_bid <= 100` tavan doğrulaması ekle; 50 TEQlik flat boost ücretiyle 1 milyar bütçeli hayali kampanya açılmasını ve açık artırma algoritmasının manipüle edilmesini engelle.~~ ✅ `72fa2177`
 138. ~~**Adım 138 (`SRE-154`):** `admin_nodes.py:get_node` endpoint'inde tüm cluster'ı `keys("edge:metrics:*")` ile tarayan mantığı kaldırıp doğrudan `redis.get(f"edge:metrics:{node_id}")` tekil anahtar okumasına geçir; gereksiz küme taramasını ve Redis tek thread blokajını durdur.~~ ✅ `05a79ad6`
 139. ~~**Adım 139 (`SRE-165`):** `onboarding.py:seed_interests` içinde `subcategory=""` varsayılan değerini ekle ve `uq_user_interest` kısıtına `NULLS NOT DISTINCT` kazandır; `NULL` subcategory nedeniyle PostgreSQL unique kısıtının delinmesini ve mükerrer kategori kayıtlarıyla öneri algoritmasının bozulmasını çöz.~~ ✅ `639dfce8`
-140. **Adım 140 (`SRE-166`):** `bpr_service.py:train_bpr` içindeki 200 milyon iterasyonluk kontrolsüz `hard_neg_interactions` kartezyen döngüsünü kaldır veya kullanıcı başına 5 örnekle sınırla; `_WEIGHTS["_hard_neg"]` değerinin `w > 0` filtresiyle çöpe atılarak sunucunun OOM ile çökmesini engelle.
+140. ~~**Adım 140 (`SRE-166`):** `bpr_service.py:train_bpr` içindeki 200 milyon iterasyonluk kontrolsüz `hard_neg_interactions` kartezyen döngüsünü kaldır veya kullanıcı başına 5 örnekle sınırla; `_WEIGHTS["_hard_neg"]` değerinin `w > 0` filtresiyle çöpe atılarak sunucunun OOM ile çökmesini engelle.~~ ✅ `3c0dedfa`
 141. ~~**Adım 141 (`SRE-103`):** `story_service.py:get_story_viewers` endpoint'ine zorunlu sayfalama (`limit`/`offset`) ve sadece gerekli sütunları çeken hafif sorgu ekle; OOM çökmesini engelle.~~ ✅ `e3be467d`
 142. ~~**Adım 142 (`SRE-104`):** `video_tasks.py:capture_hype_highlight` çıktısını yerel disk yerine MinIO'ya yükle ve yerel geçici dosyayı temizle; yayın kapanışında MinIO nesnesini sil.~~ ✅ `b23b8e3a`
 143. **Adım 143 (`SRE-115`):** `chat.py` içindeki `system_join` yayınını 50 izleyicinin üzerindeki popüler yayınlarda kapat ve VIP/Whale filtresi ekle; sohbet soketlerinin kilitlenmesini durdur.
