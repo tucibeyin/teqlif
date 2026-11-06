@@ -4118,6 +4118,16 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
     );
   }
 
+  void _showTeqlikSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const _TeqlikPacksSheet(),
+    );
+  }
+
   void _showProSheet() {
     final loc = ref.read(localizationProvider);
     showModalBottomSheet(
@@ -4420,10 +4430,20 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
               isPro: _isPro,
               proExpiresAt: _proExpiresAt,
               isDark: isDark,
-              onBuyTeqlik: () => _tabController.animateTo(1),
-              onProAction: _isPro
-                  ? () => _tabController.animateTo(0)
-                  : _showProSheet,
+              onBuyTeqlik: () {
+                if (_tabController.index == 1) {
+                  _showTeqlikSheet();
+                } else {
+                  _tabController.animateTo(1);
+                }
+              },
+              onProAction: () {
+                if (_tabController.index == 0) {
+                  _showProSheet();
+                } else {
+                  _tabController.animateTo(0);
+                }
+              },
               loc: loc,
             ),
           ),
