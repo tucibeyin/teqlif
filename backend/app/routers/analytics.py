@@ -66,21 +66,23 @@ async def _is_analytics_opted_out(user_id: int | None, db: AsyncSession | None =
         return False
 
 
-async def _save_event_async(data: AnalyticsEventCreate, user_id: int | None, ip_address: str | None, db: AsyncSession):
+async def _save_event_async(data: AnalyticsEventCreate, user_id: int | None, ip_address: str | None):
+    from app.database import AsyncSessionLocal
     try:
-        event = AnalyticsEvent(
-            session_id=data.session_id,
-            user_id=user_id,
-            event_type=data.event_type,
-            url=data.url,
-            device_type=data.device_type,
-            os=data.os,
-            browser=data.browser,
-            ip_address=ip_address,
-            event_metadata=data.event_metadata,
-        )
-        db.add(event)
-        await db.commit()
+        async with AsyncSessionLocal() as session:
+            event = AnalyticsEvent(
+                session_id=data.session_id,
+                user_id=user_id,
+                event_type=data.event_type,
+                url=data.url,
+                device_type=data.device_type,
+                os=data.os,
+                browser=data.browser,
+                ip_address=ip_address,
+                event_metadata=data.event_metadata,
+            )
+            session.add(event)
+            await session.commit()
     except Exception as exc:
         logger.error("[ANALYTICS] Error saving event: %s", exc)
 
@@ -117,7 +119,7 @@ async def track_event(
         return {"status": "opted_out"}
 
     # Save to database asynchronously in the background
-    background_tasks.add_task(_save_event_async, data, user_id, ip_address, db)
+    background_tasks.add_task(_save_event_async, data, user_id, ip_address)
 
     return {"status": "queued"}
 
