@@ -2,6 +2,7 @@ from sqlalchemy import select, or_, and_
 from app.core.uow import AbstractUnitOfWork
 from app.core.logger import get_logger
 from app.core.exceptions import NotFoundException, ForbiddenException, BadRequestException
+from app.database import AsyncSessionLocal
 from app.models.message import DirectMessage
 from app.models.message_thread import MessageThread
 from app.models.block import UserBlock
@@ -203,7 +204,6 @@ class SendMediaMessageCommand:
                         is_pending_for_initiator = True
 
                 await self.uow.session.flush()
-                session = self.uow.session
         except Exception:
             for key in processed.uploaded_dm_keys:
                 await storage.delete_object_dm(key)
@@ -212,7 +212,8 @@ class SendMediaMessageCommand:
         # commit sonrası — side effects
 
         if thread_status_changed:
-            state = await RelationshipStateService.recompute_and_cache(user_a, user_b, session)
+            async with AsyncSessionLocal() as rel_session:
+                state = await RelationshipStateService.recompute_and_cache(user_a, user_b, rel_session)
             RelationshipStateService.broadcast(state)
 
         if is_new_request:

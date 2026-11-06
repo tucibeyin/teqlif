@@ -1,6 +1,7 @@
 from sqlalchemy import select
 from app.core.uow import AbstractUnitOfWork
 from app.core.exceptions import NotFoundException, ForbiddenException
+from app.database import AsyncSessionLocal
 from app.models.user import User
 from app.models.block import UserBlock
 from app.schemas.block import BlockStatusOut
@@ -16,7 +17,6 @@ class BlockUserCommand:
 
     async def execute(self, username: str, current_user: User) -> BlockStatusOut:
         target_id = None
-        session = None
 
         async with self.uow:
             target = await self.uow.session.scalar(select(User).where(User.username == username))
@@ -36,11 +36,11 @@ class BlockUserCommand:
 
             self.uow.session.add(UserBlock(blocker_id=current_user.id, blocked_id=target.id))
             target_id = target.id
-            session = self.uow.session
 
         logger.info("[USER] Kullanıcı engellendi | blocker=%s blocked=%s", current_user.username, username)
 
-        state = await RelationshipStateService.recompute_and_cache(current_user.id, target_id, session)
+        async with AsyncSessionLocal() as rel_session:
+            state = await RelationshipStateService.recompute_and_cache(current_user.id, target_id, rel_session)
         RelationshipStateService.broadcast(state)
 
         from app.core.task_queue import get_pool
@@ -58,7 +58,6 @@ class UnblockUserCommand:
 
     async def execute(self, username: str, current_user: User) -> BlockStatusOut:
         target_id = None
-        session = None
 
         async with self.uow:
             target = await self.uow.session.scalar(select(User).where(User.username == username))
@@ -76,11 +75,11 @@ class UnblockUserCommand:
 
             await self.uow.session.delete(existing)
             target_id = target.id
-            session = self.uow.session
 
         logger.info("[USER] Kullanıcı engeli kaldırıldı | blocker=%s blocked=%s", current_user.username, username)
 
-        state = await RelationshipStateService.recompute_and_cache(current_user.id, target_id, session)
+        async with AsyncSessionLocal() as rel_session:
+            state = await RelationshipStateService.recompute_and_cache(current_user.id, target_id, rel_session)
         RelationshipStateService.broadcast(state)
 
         from app.core.task_queue import get_pool

@@ -1,6 +1,7 @@
 from sqlalchemy import select
 from app.core.uow import AbstractUnitOfWork
 from app.core.exceptions import NotFoundException
+from app.database import AsyncSessionLocal
 from app.models.message_thread import MessageThread
 from app.services.relationship_service import RelationshipStateService
 from app.utils.redis_client import get_redis
@@ -30,12 +31,12 @@ class DismissMessageRequestCommand:
                 raise NotFoundException(code="MESSAGE_REQUEST_NOT_FOUND")
 
             await self.uow.session.delete(thread)
-            session = self.uow.session
 
         # Thread silinince unread request sayacını düşür
         redis = await get_redis()
         await redis.decr(f"msg:unread:request:{uid}")
 
         # Commit sonrası recompute — thread null olduğu için state "no thread" döner
-        state = await RelationshipStateService.recompute_and_cache(user_a, user_b, session)
+        async with AsyncSessionLocal() as rel_session:
+            state = await RelationshipStateService.recompute_and_cache(user_a, user_b, rel_session)
         RelationshipStateService.broadcast(state)

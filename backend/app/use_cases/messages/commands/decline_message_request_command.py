@@ -1,6 +1,7 @@
 from sqlalchemy import select
 from app.core.uow import AbstractUnitOfWork
 from app.core.exceptions import NotFoundException
+from app.database import AsyncSessionLocal
 from app.models.message_thread import MessageThread
 from app.services.relationship_service import RelationshipStateService
 from app.utils.redis_client import get_redis
@@ -26,10 +27,10 @@ class DeclineMessageRequestCommand:
 
             thread.status = "declined"
             thread.call_allowed = False
-            session = self.uow.session
 
         redis = await get_redis()
         await redis.decr(f"msg:unread:request:{uid}")
 
-        state = await RelationshipStateService.recompute_and_cache(user_a, user_b, session)
+        async with AsyncSessionLocal() as rel_session:
+            state = await RelationshipStateService.recompute_and_cache(user_a, user_b, rel_session)
         RelationshipStateService.broadcast(state)

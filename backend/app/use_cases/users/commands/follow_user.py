@@ -2,6 +2,7 @@ from sqlalchemy import select, update as sa_update, true
 from app.core.uow import AbstractUnitOfWork
 from app.core.logger import get_logger
 from app.core.exceptions import NotFoundException, ForbiddenException
+from app.database import AsyncSessionLocal
 from app.models.follow import Follow
 from app.models.message_thread import MessageThread
 from app.models.user import User
@@ -66,9 +67,8 @@ class FollowUserCommand:
                 )
                 logger.info("[FollowUserCommand] Takip edildi | follower=%s followed=%s", follower_id, followed_id)
 
-            session = self.uow.session
-
-        state = await RelationshipStateService.recompute_and_cache(follower_id, followed_id, session)
+        async with AsyncSessionLocal() as rel_session:
+            state = await RelationshipStateService.recompute_and_cache(follower_id, followed_id, rel_session)
         RelationshipStateService.broadcast(state)
 
         return {"followed_id": followed_id, "action": action}
