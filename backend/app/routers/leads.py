@@ -8,6 +8,7 @@ POST /api/leads/send-blast     — Hedef kitleye push bildirimi gönder
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import logging
 
 from fastapi import APIRouter, Depends, Query
@@ -85,17 +86,26 @@ async def audience_size(
     audience_capped = len(target_user_ids) > 10000
     target_user_ids = target_user_ids[:10000]
 
-    # PostgreSQL'den gerçek FCM token sayısı — takipçiler hariç
-    if target_user_ids:
+    # Redis cache — aynı satıcı+filtre kombinasyonu için 120 sn
+    redis = await get_redis()
+    ids_hash = hashlib.md5(",".join(str(i) for i in sorted(target_user_ids)).encode()).hexdigest()
+    cache_key = f"leads:audience:{current_user.id}:{ids_hash}"
+    cached = await redis.get(cache_key)
+    if cached is not None:
+        reachable = int(cached)
+    elif target_user_ids:
+        # NOT EXISTS — anti-join; NOT IN'e göre çok daha iyi plan
         token_count = await db.scalar(sql_text("""
-            SELECT COUNT(*) FROM users
-            WHERE id = ANY(:ids)
-              AND fcm_token IS NOT NULL AND fcm_token != ''
-              AND id NOT IN (
-                  SELECT follower_id FROM follows WHERE followed_id = :me
+            SELECT COUNT(*) FROM users u
+            WHERE u.id = ANY(:ids)
+              AND u.fcm_token IS NOT NULL AND u.fcm_token != ''
+              AND NOT EXISTS (
+                  SELECT 1 FROM follows f
+                  WHERE f.follower_id = u.id AND f.followed_id = :me
               )
         """), {"ids": target_user_ids, "me": current_user.id})
         reachable = int(token_count or 0)
+        await redis.set(cache_key, reachable, ex=120)
     else:
         reachable = 0
 
