@@ -329,6 +329,30 @@ EOF
     log_ok "teqlif-redis-vip sudoers eklendi (client node)"
 }
 
+# ── HAProxy Redis HA proxy (streaming node'ları: node3/node4) ─────────────────
+# 127.0.0.1:6379 → node1-redis (primary) / node2-redis (backup)
+# LiveKit livekit.yaml'daki redis.address=127.0.0.1:6379 bu proxy'e bağlanır.
+install_haproxy() {
+    log_step "HAProxy"
+    apt-get install -y -qq haproxy
+    log_ok "HAProxy kuruldu"
+}
+
+setup_haproxy_redis_proxy() {
+    local node_dir="${1}"
+    log_step "HAProxy Redis HA proxy config"
+    local cfg_src="${node_dir}/resources/livekit/haproxy.cfg"
+    [ -f "${cfg_src}" ] || { log_err "haproxy.cfg şablonu bulunamadı: ${cfg_src}"; return 1; }
+    mkdir -p /etc/haproxy
+    cp "${cfg_src}" /etc/haproxy/haproxy.cfg
+    chmod 640 /etc/haproxy/haproxy.cfg
+    chown root:haproxy /etc/haproxy/haproxy.cfg 2>/dev/null || true
+    # apply_secrets /etc/haproxy'yi de tarar — <core_redis_pass> sonra ikame edilir.
+    # Şimdi sadece enable et; apply_secrets + manuel restart print_summary'de.
+    systemctl enable haproxy
+    log_ok "HAProxy enable edildi (apply_secrets sonrası başlatılacak)"
+}
+
 # ── Sysctl uygulama ───────────────────────────────────────────────────────────
 setup_sysctl() {
     local node_dir="${1}"

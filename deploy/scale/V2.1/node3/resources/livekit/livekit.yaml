@@ -16,7 +16,8 @@ turn:
   cert_file: /project/teqlif/config/ssl/stream3.teqlif.com-fullchain.pem
   key_file:  /project/teqlif/config/ssl/stream3.teqlif.com-privkey.pem
 
-# HAProxy local proxy üzerinden Redis HA
+# HAProxy local proxy üzerinden Redis HA (127.0.0.1:6379 → node1/node2)
+# haproxy.cfg: deploy/scale/V2.1/node3/resources/livekit/haproxy.cfg
 redis:
   address: 127.0.0.1:6379
   db: 1

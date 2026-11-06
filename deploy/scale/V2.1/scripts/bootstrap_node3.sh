@@ -37,6 +37,8 @@ main() {
     setup_redis_vip_sudoers_client
     setup_sysctl       "${NODE_DIR}"
     ufw_streaming
+    install_haproxy
+    setup_haproxy_redis_proxy "${NODE_DIR}"
     install_livekit
     setup_livekit      "${NODE_DIR}"
     install_certbot
@@ -45,13 +47,14 @@ main() {
     install_node_exporter
 
     if [ -n "${SECRETS_FILE:-}" ]; then
-        apply_secrets "${SECRETS_FILE}" /project/teqlif/config /etc/wireguard
+        apply_secrets "${SECRETS_FILE}" /project/teqlif/config /etc/wireguard /etc/haproxy
     fi
 
     print_summary "${NODE_ID}" "${WG_IP}" \
         "wg_mesh_apply.sh çalıştır" \
         "wg-quick up wg0 && systemctl enable wg-quick@wg0" \
-        "certbot certonly --standalone -d stream.teqlif.com (LE cert)" \
+        "certbot certonly --standalone -d stream3.teqlif.com (LE cert)" \
+        "systemctl start haproxy" \
         "systemctl start teqlif-livekit"
 }
 
