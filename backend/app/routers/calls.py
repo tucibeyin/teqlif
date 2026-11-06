@@ -20,7 +20,7 @@ from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_, text, update as sa_update
+from sqlalchemy import select, or_, union_all, text, update as sa_update
 
 from app.database import get_db, AsyncSessionLocal
 from app.models.call import Call, CallParticipant
@@ -1176,27 +1176,38 @@ async def get_call_history(
         raise BadRequestException()
 
     uid = current_user.id
-
-    base_where = or_(Call.caller_id == uid, Call.callee_id == uid)
-
-    if filter == "missed":
-        filter_where = (Call.callee_id == uid) & (Call.status == "missed")
-    elif filter == "incoming":
-        filter_where = Call.callee_id == uid
-    elif filter == "outgoing":
-        filter_where = Call.caller_id == uid
-    else:
-        filter_where = base_where
-
     offset = (page - 1) * per_page
 
-    result = await db.execute(
-        select(Call)
-        .where(filter_where)
-        .order_by(Call.started_at.desc())
-        .limit(per_page)
-        .offset(offset)
-    )
+    if filter == "all":
+        # UNION ALL: her dal kendi bileşik indeksini kullanır
+        # (ix_calls_caller_started + ix_calls_callee_started) → Merge Append, disk sort yok
+        stmt = (
+            union_all(
+                select(Call).where(Call.caller_id == uid),
+                select(Call).where(Call.callee_id == uid),
+            )
+            .order_by(Call.started_at.desc())
+            .limit(per_page)
+            .offset(offset)
+        )
+    else:
+        if filter == "missed":
+            filter_where = (Call.callee_id == uid) & (Call.status == "missed")
+        elif filter == "incoming":
+            filter_where = Call.callee_id == uid
+        elif filter == "outgoing":
+            filter_where = Call.caller_id == uid
+        else:
+            filter_where = or_(Call.caller_id == uid, Call.callee_id == uid)
+        stmt = (
+            select(Call)
+            .where(filter_where)
+            .order_by(Call.started_at.desc())
+            .limit(per_page)
+            .offset(offset)
+        )
+
+    result = await db.execute(stmt)
     calls = result.scalars().all()
 
     # Collect all unique other-user IDs in one query

@@ -14,6 +14,8 @@ class Call(Base):
         Index("ix_calls_started_at", "started_at"),
         Index("ix_calls_caller_status", "caller_id", "status"),
         Index("ix_calls_callee_status", "callee_id", "status"),
+        Index("ix_calls_caller_started", "caller_id", "started_at"),
+        Index("ix_calls_callee_started", "callee_id", "started_at"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
