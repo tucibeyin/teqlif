@@ -298,6 +298,84 @@ async def delete_listing(
     return await DeleteListingCommand(uow).execute(listing_id=listing_id, user_id=current_user.id)
 
 
+@router.get("/{listing_id}/sale-reference")
+async def get_listing_sale_reference(
+    listing_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Satılmış bir ilanın satış kaydını döndürür — direkt veya açık artırma."""
+    from app.models.auction import Auction
+    from app.models.direct_sale import DirectSale
+    from app.models.user import User as UserModel
+
+    listing = await db.scalar(
+        select(Listing).where(Listing.id == listing_id, Listing.user_id == current_user.id)
+    )
+    if not listing:
+        raise HTTPException(status_code=404, detail="LISTING_NOT_FOUND")
+
+    # Önce direkt satış ara
+    ds = await db.scalar(
+        select(DirectSale)
+        .where(DirectSale.listing_id == listing_id)
+        .order_by(DirectSale.id.desc())
+        .limit(1)
+    )
+    if ds:
+        return {"type": "direct", "id": ds.id}
+
+    # Sonra açık artırma ara
+    from sqlalchemy.orm import aliased
+    winner_alias = aliased(UserModel)
+    row = await db.execute(
+        select(
+            Auction.id,
+            Auction.item_name,
+            Auction.final_price,
+            Auction.start_price,
+            Auction.is_bought_it_now,
+            Auction.bid_count,
+            Auction.started_at,
+            Auction.ended_at,
+            Auction.proof_image_url,
+            Listing.image_url,
+            Listing.thumbnail_url,
+            Listing.category,
+            winner_alias.username.label("buyer_username"),
+            winner_alias.id.label("buyer_id"),
+        )
+        .join(Listing, Listing.id == Auction.listing_id, isouter=True)
+        .join(winner_alias, winner_alias.id == Auction.winner_id, isouter=True)
+        .where(Auction.listing_id == listing_id, Auction.status == "completed")
+        .order_by(Auction.id.desc())
+        .limit(1)
+    )
+    auction = row.first()
+    if auction:
+        return {
+            "type": "auction",
+            "id": auction.id,
+            "item_name": auction.item_name,
+            "final_price": float(auction.final_price) if auction.final_price else 0.0,
+            "total_revenue": float(auction.final_price) if auction.final_price else 0.0,
+            "start_price": float(auction.start_price) if auction.start_price else 0.0,
+            "is_bought_it_now": auction.is_bought_it_now,
+            "bid_count": auction.bid_count,
+            "started_at": auction.started_at.isoformat() if auction.started_at else None,
+            "ended_at": auction.ended_at.isoformat() if auction.ended_at else None,
+            "proof_image_url": auction.proof_image_url,
+            "image_url": auction.thumbnail_url or auction.image_url,
+            "thumbnail_url": auction.thumbnail_url or auction.image_url,
+            "category": auction.category,
+            "listing_id": listing_id,
+            "buyer_username": auction.buyer_username,
+            "buyer_id": auction.buyer_id,
+        }
+
+    raise HTTPException(status_code=404, detail="SALE_NOT_FOUND")
+
+
 @router.post("/{listing_id}/offers")
 async def create_offer(
     listing_id: int,

@@ -9,6 +9,8 @@ import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'retargeting_screen.dart';
+import 'direct_sale_detail_screen.dart';
+import 'sale_detail_screen.dart';
 import 'package:teqlif/core/network/api_client.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/analytics_service.dart';
@@ -71,6 +73,12 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     final id = widget.listing['id'] as int?;
     if (id == null) return false;
     return ref.watch(listingDetailProvider(id)).isPassive;
+  }
+
+  bool get _isSold {
+    final id = widget.listing['id'] as int?;
+    if (id == null) return false;
+    return ref.watch(listingDetailProvider(id)).isSold;
   }
 
   bool get _isListingInitialized {
@@ -687,6 +695,43 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     );
   }
 
+  Future<void> _openSaleDetail(BuildContext context) async {
+    final loc = ref.read(localizationProvider);
+    final id = widget.listing['id'] as int?;
+    if (id == null) return;
+    final token = await StorageService.getToken();
+    if (token == null) return;
+    try {
+      final resp = await http.get(
+        Uri.parse('${ref.read(apiClientProvider).config.baseUrl}/listings/$id/sale-reference'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (!mounted || !context.mounted) return;
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body) as Map<String, dynamic>;
+        final saleType = data['type'] as String?;
+        final saleId = (data['id'] as num?)?.toInt();
+        if (saleType == 'direct' && saleId != null) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => DirectSaleDetailScreen(saleId: saleId)),
+          );
+        } else if (saleType == 'auction') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => SaleDetailScreen(sale: data)),
+          );
+        }
+      } else {
+        TeqSnackBar.show(message: loc.t('errSomethingWentWrong'), type: TeqSnackBarType.error);
+      }
+    } catch (_) {
+      if (mounted && context.mounted) {
+        TeqSnackBar.show(message: loc.t('errorConnection'), type: TeqSnackBarType.error);
+      }
+    }
+  }
+
   void _confirmDelete(BuildContext context) {
     final loc = ref.read(localizationProvider);
     TeqDialog.show(
@@ -1025,48 +1070,50 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
             ),
           ),
           if (isMine) ...[
-            IconButton(
-              key: const Key('listing_detail_btn_edit'),
-              icon: const Icon(Icons.edit_outlined),
-              tooltip: loc.t("editListingTitle"),
-              onPressed: () async {
-                final updated = await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => EditListingScreen(listing: listing),
-                  ),
-                );
-                if (updated == true) {
-                  if (!context.mounted) return;
-                  // Reload by pushing loader
-                  Navigator.pushReplacement(
+            if (!_isSold) ...[
+              IconButton(
+                key: const Key('listing_detail_btn_edit'),
+                icon: const Icon(Icons.edit_outlined),
+                tooltip: loc.t("editListingTitle"),
+                onPressed: () async {
+                  final updated = await Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) =>
-                          ListingDeepLinkLoader(listingId: listing['id']),
+                      builder: (_) => EditListingScreen(listing: listing),
                     ),
                   );
-                }
-              },
-            ),
-            AnimatedBuilder(
-              animation: _eyePulseAnim,
-              builder: (_, child) => Opacity(
-                opacity: _eyePulseAnim.value,
-                child: child,
+                  if (updated == true) {
+                    if (!context.mounted) return;
+                    // Reload by pushing loader
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            ListingDeepLinkLoader(listingId: listing['id']),
+                      ),
+                    );
+                  }
+                },
               ),
-              child: IconButton(
-                key: const Key('listing_detail_btn_aktif_toggle'),
-                icon: Icon(
-                  _isActive
-                      ? Icons.visibility_off_outlined
-                      : Icons.visibility_outlined,
-                  color: _isActive ? const Color(0xFF6B7280) : kPrimary,
+              AnimatedBuilder(
+                animation: _eyePulseAnim,
+                builder: (_, child) => Opacity(
+                  opacity: _eyePulseAnim.value,
+                  child: child,
                 ),
-                tooltip: _isActive ? loc.t("btnDeactivate") : loc.t("btnActivate"),
-                onPressed: _toggleActive,
+                child: IconButton(
+                  key: const Key('listing_detail_btn_aktif_toggle'),
+                  icon: Icon(
+                    _isActive
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
+                    color: _isActive ? const Color(0xFF6B7280) : kPrimary,
+                  ),
+                  tooltip: _isActive ? loc.t("btnDeactivate") : loc.t("btnActivate"),
+                  onPressed: _toggleActive,
+                ),
               ),
-            ),
+            ],
             IconButton(
               key: const Key('listing_detail_btn_sil'),
               icon: const Icon(Icons.delete_outline, color: Color(0xFFDC2626)),
@@ -1622,7 +1669,23 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
         ),
       ),
       bottomNavigationBar: isMine
-          ? (!_isListingInitialized || (!_isActive && !_isPassive && _campaignId == null))
+          ? _isSold
+                ? SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                      child: Builder(builder: (ctx) {
+                        final loc = ref.read(localizationProvider);
+                        return TeqButton(
+                          onPressed: () => _openSaleDetail(ctx),
+                          text: '🧾 ${loc.t("listingSoldGoToSaleDetail")}',
+                          type: TeqButtonType.primary,
+                          size: TeqButtonSize.large,
+                          customColor: const Color(0xFF7C3AED),
+                        );
+                      }),
+                    ),
+                  )
+                : (!_isListingInitialized || (!_isActive && !_isPassive && _campaignId == null))
                 ? const SizedBox.shrink()
                 : SafeArea(
                     child: Padding(
@@ -2246,6 +2309,17 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
   Widget _statusChipRow(String label, bool isActive) => Builder(
     builder: (context) {
       final loc = ref.read(localizationProvider);
+      final isSoldStatus = _isSold;
+      final chipColor = isSoldStatus
+          ? const Color(0xFFDC2626)
+          : isActive
+              ? const Color(0xFF10B981)
+              : const Color(0xFF9CA3AF);
+      final chipLabel = isSoldStatus
+          ? loc.t("listingStatusSold")
+          : isActive
+              ? loc.t("listingStatusActive")
+              : loc.t("listingStatusPassive");
       return Padding(
         padding: const EdgeInsets.only(bottom: 10),
         child: Row(
@@ -2263,13 +2337,11 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
               decoration: BoxDecoration(
-                color: isActive
-                    ? const Color(0xFF10B981)
-                    : const Color(0xFF9CA3AF),
+                color: chipColor,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                isActive ? loc.t("listingStatusActive") : loc.t("listingStatusPassive"),
+                chipLabel,
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 12,

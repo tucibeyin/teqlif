@@ -6,6 +6,7 @@ from app.models.listing import Listing
 from app.models.enums import ListingStatus
 from app.models.user import User
 from app.models.ad_campaign import AdCampaign
+from app.models.direct_sale import DirectSale
 from app.services.like_service import LikeService
 from app.use_cases.listings.queries.listing_utils import _fetch_seller_meta, _fetch_unique_reach, _row_dict
 from app.core.logger import get_logger
@@ -63,7 +64,17 @@ class GetListingQuery:
         impression_map: dict[int, int] = {}
         await _fetch_unique_reach(self.uow.session, impression_map, [listing.id])
 
-        return _row_dict(
+        sale_id: Optional[int] = None
+        if listing.status == ListingStatus.SOLD:
+            sale_row = await self.uow.session.execute(
+                select(DirectSale.id)
+                .where(DirectSale.listing_id == listing.id)
+                .order_by(DirectSale.id.desc())
+                .limit(1)
+            )
+            sale_id = sale_row.scalar_one_or_none()
+
+        result = _row_dict(
             listing, seller,
             counts.get(listing.id, 0), listing.id in liked_set,
             is_sponsored=bool(cid),
@@ -74,3 +85,5 @@ class GetListingQuery:
             seller_trust_score=trust_map.get(seller.id),
             seller_influence_rank=influence_map.get(seller.id),
         )
+        result["sale_id"] = sale_id
+        return result

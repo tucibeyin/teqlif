@@ -726,6 +726,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
                         return '${buf.toString()} ₺';
                       }()
                     : '';
+                final isSold = (listing['status'] as String?) == 'sold';
                 return GestureDetector(
                   key: Key('pub_profile_listing_${listing['id']}'),
                   onTap: () => Navigator.push(
@@ -791,6 +792,34 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                      if (isSold)
+                        Positioned.fill(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.45),
+                            ),
+                            alignment: Alignment.center,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFDC2626),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                loc.t('listingSoldBadge'),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
                             ),
                           ),
                         ),

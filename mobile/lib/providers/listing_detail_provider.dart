@@ -45,6 +45,7 @@ class ListingDetailState {
   // isInitialized guard: ilk frame'de default active state ile yanlış karar verilmesini önler
   bool get canReceiveOffers => isInitialized && status == ListingStatus.active;
   bool get isPassive => isInitialized && status == ListingStatus.passive;
+  bool get isSold => isInitialized && status == ListingStatus.sold;
 
   MassNotifEligibility get massNotifEligibility {
     if (!isInitialized || status != ListingStatus.active) {

@@ -4,6 +4,7 @@ from datetime import datetime, timezone, timedelta
 from app.models.listing import Listing
 from app.models.user import User
 from app.models.ad_campaign import AdCampaign
+from app.models.direct_sale import DirectSale
 from app.models.enums import ListingStatus
 from app.use_cases.listings.queries.listing_utils import _parse_image_urls, _card_dict
 from app.services.like_service import LikeService
@@ -36,11 +37,18 @@ class SearchListingsQuery:
     ) -> list:
         logger.info("[SearchListingsQuery] Başlatıldı | q=%s category=%s date_from=%s date_to=%s sort_by=%s", q, category, date_from, date_to, sort_by)
         
+        # Profil görünümünde (user_id verildiğinde) satılmış ilanlar da dahil edilir.
+        profile_view = bool(user_id)
+        status_filter = (
+            Listing.status.in_([ListingStatus.ACTIVE, ListingStatus.SOLD])
+            if profile_view
+            else Listing.status == ListingStatus.ACTIVE
+        )
         q_stmt = (
             select(Listing, User)
             .join(User, User.id == Listing.user_id)
             .where(
-                Listing.status == ListingStatus.ACTIVE,
+                status_filter,
                 Listing.status != ListingStatus.DELETED,
                 or_(Listing.expires_at == None, Listing.expires_at > datetime.now(timezone.utc)),
             )
@@ -124,6 +132,19 @@ class SearchListingsQuery:
         listing_ids = [listing.id for listing, _ in rows]
         counts, liked_set = await LikeService.batch_listing_likes(db_session, listing_ids, current_user_id)
 
+        # Profil görünümünde satılmış ilanlar için en son direct_sale id'sini getir.
+        sale_id_map: dict[int, int] = {}
+        if profile_view:
+            sold_ids = [listing.id for listing, _ in rows if listing.status == ListingStatus.SOLD]
+            if sold_ids:
+                sale_rows = await db_session.execute(
+                    select(DirectSale.listing_id, DirectSale.id)
+                    .where(DirectSale.listing_id.in_(sold_ids))
+                    .order_by(DirectSale.id.desc())
+                )
+                for lid, sid in sale_rows.all():
+                    sale_id_map.setdefault(lid, sid)
+
         return [
             {
                 **_card_dict(
@@ -142,6 +163,7 @@ class SearchListingsQuery:
                 "is_highlight": listing.is_highlight,
                 "active_room_id": listing.active_room_id,
                 "video_url": listing.video_url,
+                "sale_id": sale_id_map.get(listing.id),
             }
             for listing, user in rows
         ]
