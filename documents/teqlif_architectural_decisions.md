@@ -4,7 +4,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Kasım 2026 — §43 Hediye bildirimleri + Toplu Bildirim butonu düzeltmeleri (commit 9b999cd9)
+**Son güncelleme:** Kasım 2026 — §44 Satılmış ilanları profilde göster + satış detayı navigasyonu (commit 3a350bd8)
 
 ---
 
@@ -36,6 +36,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 40. [Merkezi CreditGate Sistemi — Tek Execution Noktası](#40-merkezi-creditgate-sistemi--tek-execution-noktası-commit-b0071cea)
 42. [teqlif-agent İzleme Düzeltmeleri — i18n Key Format + Watchdog Registry Guard](#42-teqlif-agent-i̇zleme-düzeltmeleri--i18n-key-format--watchdog-registry-guard-commit-7e15262a)
 43. [Hediye Bildirimleri + Toplu Bildirim Butonu Düzeltmeleri](#43-hediye-bildirimleri--toplu-bildirim-butonu-düzeltmeleri-commit-234e4183-9b999cd9)
+44. [Satılmış İlanları Profilde Göster + Satış Detayı Navigasyonu](#44-satılmış-i̇lanları-profilde-göster--satış-detayı-navigasyonu-commit-3a350bd8)
 
 ---
 
@@ -2976,3 +2977,41 @@ _gift_arb_key = "giftName" + "".join(p.title() for p in body.gift_name.split("_"
 | `backend/app/services/notification_service.py` | `_fmt`: `giftName*` prefix resolver eklendi |
 | `documents/language/app_{tr,en,de,ar,ru}.arb` | `notifGiftReceivedTitle` + `notifGiftReceivedBody` eklendi |
 | `backend/app/use_cases/listings/commands/toggle_listing.py` | Toggle sonrası `invalidate_cache(f"listing:{id}")` |
+
+## 44. Satılmış İlanları Profilde Göster + Satış Detayı Navigasyonu (commit `3a350bd8`)
+
+### Problem
+
+Public profil ekranında başka bir kullanıcı, `tucibeyin`'in satılmış ilanlarını hiç göremiyordu (2/15). Sahip kendi profilinde 15 görüyordu çünkü `GetMyListingsQuery` tüm statüleri döndürüyor; `SearchListingsQuery` ise yalnızca `ACTIVE` filtreliyordu. Satılmış ilanların `Satıldı` badge'i yoktu ve detay ekranında satış kaydına giden bir yol da yoktu.
+
+### Karar
+
+**Profil görünümünde** (`user_id` verildiğinde) `SearchListingsQuery` artık hem `ACTIVE` hem `SOLD` ilanları döndürüyor.  
+Satılmış ilanlar için `DirectSale` tablosundan `sale_id` batch lookup yapılıyor ve response'a ekleniyor.
+
+`GET /listings/{id}/sale-reference` yeni endpoint'i, satılmış ilanın kaydını arar (önce DirectSale, sonra Auction) ve type+data döndürür — mobile, `DirectSaleDetailScreen` veya `SaleDetailScreen`'e navigate eder.
+
+### UI Değişiklikleri
+
+| Yer | Değişiklik |
+|-----|------------|
+| `PublicProfileScreen` grid | Satılmış ilan üzerine kırmızı `Satıldı` overlay banner |
+| `ListingDetailScreen` AppBar | Sold durumda edit/toggle butonları gizlenir; delete her zaman görünür |
+| `ListingDetailScreen` bottom bar | Sold + isMine iken `🧾 Satış Detayına Git` (mor, TeqButton) |
+| `_statusChipRow` | Sold → kırmızı chip, `listingStatusSold` ARB key |
+
+### ARB Anahtarları (5 dil)
+
+`listingStatusSold`, `listingSoldBadge`, `listingSoldGoToSaleDetail`
+
+### Etkilenen Dosyalar
+
+| Dosya | Değişiklik |
+|-------|------------|
+| `backend/app/use_cases/listings/queries/search_listings_query.py` | SOLD dahil; sale_id batch lookup |
+| `backend/app/use_cases/listings/queries/get_listing.py` | SOLD ise sale_id döndür |
+| `backend/app/routers/listings.py` | `GET /{id}/sale-reference` endpoint eklendi |
+| `mobile/lib/providers/listing_detail_provider.dart` | `isSold` getter |
+| `mobile/lib/screens/public_profile_screen.dart` | Satıldı banner overlay |
+| `mobile/lib/screens/listing_detail_screen.dart` | sold UI, _openSaleDetail, bottom bar butonu |
+| `documents/language/app_{tr,en,de,ar,ru}.arb` | 3 yeni key |
