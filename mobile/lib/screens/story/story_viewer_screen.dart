@@ -822,6 +822,7 @@ class _GroupPageState extends ConsumerState<_GroupPage> with TickerProviderState
                             cacheManager: TeqlifCacheManager(),
                             memCacheWidth: 80,
                             fit: BoxFit.cover,
+                            alignment: Alignment.topCenter,
                             errorWidget: (_, _, _) =>
                                 _InitialsBubble(username: user.username),
                           )
@@ -1077,6 +1078,7 @@ class _GroupPageState extends ConsumerState<_GroupPage> with TickerProviderState
                       cacheManager: TeqlifCacheManager(),
                       memCacheWidth: 80,
                       fit: BoxFit.cover,
+                      alignment: Alignment.topCenter,
                       errorWidget: (_, _, _) =>
                           _InitialsBubble(username: user.username),
                     )
