@@ -449,13 +449,15 @@ def _parse_dt(val) -> datetime:
 
 
 async def _drain(redis, buf_key: str) -> list[list]:
-    """Buffer'dan atomik olarak MAX_BATCH satır çeker, kalanı bırakır."""
-    async with redis.pipeline(transaction=True) as pipe:
-        await pipe.lrange(buf_key, 0, MAX_BATCH - 1)
-        await pipe.ltrim(buf_key, MAX_BATCH, -1)
-        results = await pipe.execute()
+    """
+    Buffer'dan MAX_BATCH satır OKUR — henüz silmez (at-least-once).
+    Insert başarılı olduktan sonra _trim() çağrılmalıdır.
+    Insert başarısız olursa veri Redis'te kalmaya devam eder ve
+    sonraki flush döngüsünde yeniden denenir.
+    """
+    raw_items = await redis.lrange(buf_key, 0, MAX_BATCH - 1)
     out = []
-    for raw in results[0]:
+    for raw in raw_items:
         try:
             out.append(json.loads(raw))
         except Exception:
@@ -463,36 +465,50 @@ async def _drain(redis, buf_key: str) -> list[list]:
     return out
 
 
+async def _trim(redis, buf_key: str, count: int) -> None:
+    """
+    At-least-once: insert başarılı olduktan sonra ilk `count` öğeyi siler.
+    Insert başarısız olduğunda bu fonksiyon çağrılmaz; veri Redis'te korunur.
+    rpush yeni öğeleri listenin SONUNA eklediğinden, LTRIM baştaki (eski)
+    `count` öğeyi güvenle siler — arada gelen yeni öğeleri etkilemez.
+    """
+    if count <= 0:
+        return
+    await redis.ltrim(buf_key, count, -1)
+
+
 async def flush_all_buffers() -> None:
     """
     Tüm buffer'ları boşaltır ve ClickHouse'a batch insert yapar.
-    Hata oluşursa satırlar kaybedilir (analytics fire-and-forget kabul edilebilir).
-    Finansal veri için bu pattern kullanılmamalıdır.
+
+    At-least-once garantisi: her tablo kendi try-except ile korunur.
+    Insert başarılıysa _trim() ile Redis'ten silinir; hata olursa veri
+    Redis'te kalır ve FLUSH_INTERVAL sonraki döngüde yeniden denenir.
     """
     if _client is None:
         return
 
-    try:
-        from app.utils.redis_client import get_redis
-        redis = await get_redis()
+    from app.utils.redis_client import get_redis
+    redis = await get_redis()
 
-        # ── user_events ────────────────────────────────────────────────────────
-        # Row format: [user_id, item_id, item_type, event_type, price_point, duration_seconds, timestamp, subcategory?]
-        rows = await _drain(redis, _BUF_USER_EVENTS)
-        if rows:
-            data = [
-                [
-                    r[0],                                      # user_id
-                    int(r[1]),                                 # item_id
-                    str(r[2]),                                 # item_type
-                    str(r[3]),                                 # event_type
-                    r[4],                                      # price_point
-                    r[5],                                      # duration_seconds
-                    _parse_dt(r[6]),                           # timestamp
-                    str(r[7]) if len(r) > 7 else "",           # subcategory (yeni alan)
-                ]
-                for r in rows
+    # ── user_events ────────────────────────────────────────────────────────
+    # Row format: [user_id, item_id, item_type, event_type, price_point, duration_seconds, timestamp, subcategory?]
+    rows = await _drain(redis, _BUF_USER_EVENTS)
+    if rows:
+        data = [
+            [
+                r[0],                                      # user_id
+                int(r[1]),                                 # item_id
+                str(r[2]),                                 # item_type
+                str(r[3]),                                 # event_type
+                r[4],                                      # price_point
+                r[5],                                      # duration_seconds
+                _parse_dt(r[6]),                           # timestamp
+                str(r[7]) if len(r) > 7 else "",           # subcategory (yeni alan)
             ]
+            for r in rows
+        ]
+        try:
             await _client.insert(
                 "user_events",
                 data,
@@ -501,60 +517,74 @@ async def flush_all_buffers() -> None:
                     "price_point", "duration_seconds", "timestamp", "subcategory",
                 ],
             )
+            await _trim(redis, _BUF_USER_EVENTS, len(rows))
             logger.debug("[ClickHouse] user_events flush | %d satır", len(data))
+        except Exception as exc:
+            logger.warning(
+                "[ClickHouse] user_events insert başarısız | %d satır Redis'te kaldı | %s",
+                len(rows), exc,
+            )
 
-        # ── search_events ──────────────────────────────────────────────────────
-        # Row format: [timestamp, user_id, query, category, result_count, intent, subcategory?]
-        rows = await _drain(redis, _BUF_SEARCH_EVENTS)
-        if rows:
-            data = [
-                [
-                    _parse_dt(r[0]),                           # timestamp
-                    r[1],                                      # user_id
-                    str(r[2]),                                 # query
-                    str(r[3]),                                 # category
-                    int(r[4]),                                 # result_count
-                    str(r[5]) if len(r) > 5 else "",           # intent
-                    str(r[6]) if len(r) > 6 else "",           # subcategory (yeni alan)
-                ]
-                for r in rows
+    # ── search_events ──────────────────────────────────────────────────────
+    # Row format: [timestamp, user_id, query, category, result_count, intent, subcategory?]
+    rows = await _drain(redis, _BUF_SEARCH_EVENTS)
+    if rows:
+        data = [
+            [
+                _parse_dt(r[0]),                           # timestamp
+                r[1],                                      # user_id
+                str(r[2]),                                 # query
+                str(r[3]),                                 # category
+                int(r[4]),                                 # result_count
+                str(r[5]) if len(r) > 5 else "",           # intent
+                str(r[6]) if len(r) > 6 else "",           # subcategory (yeni alan)
             ]
+            for r in rows
+        ]
+        try:
             await _client.insert(
                 "search_events",
                 data,
                 column_names=["timestamp", "user_id", "query", "category", "result_count", "intent", "subcategory"],
             )
+            await _trim(redis, _BUF_SEARCH_EVENTS, len(rows))
             logger.debug("[ClickHouse] search_events flush | %d satır", len(data))
+        except Exception as exc:
+            logger.warning(
+                "[ClickHouse] search_events insert başarısız | %d satır Redis'te kaldı | %s",
+                len(rows), exc,
+            )
 
-        # ── direct_sale_events ────────────────────────────────────────────────
-        # Row format: [event_type, sale_id, stream_id, host_id, user_id, order_id,
-        #              listing_id, category, quantity, unit_price, total_price,
-        #              remaining_stock_before, remaining_stock_after, viewer_count,
-        #              end_reason, orders_voided, created_at]
-        rows = await _drain(redis, _BUF_DIRECT_SALE_EVENTS)
-        if rows:
-            data = [
-                [
-                    str(r[0]),                                        # event_type
-                    int(r[1]),                                        # sale_id
-                    int(r[2]),                                        # stream_id
-                    int(r[3]),                                        # host_id
-                    int(r[4]),                                        # user_id
-                    int(r[5]) if r[5] is not None else 0,             # order_id
-                    int(r[6]) if r[6] is not None else 0,             # listing_id
-                    str(r[7]) if r[7] else None,                      # category
-                    int(r[8]) if r[8] is not None else 0,             # quantity
-                    float(r[9]) if r[9] is not None else 0.0,         # unit_price
-                    float(r[10]) if r[10] is not None else 0.0,       # total_price
-                    int(r[11]) if r[11] is not None else 0,           # remaining_stock_before
-                    int(r[12]) if r[12] is not None else 0,           # remaining_stock_after
-                    int(r[13]) if r[13] is not None else 0,           # viewer_count
-                    str(r[14]) if r[14] else None,                    # end_reason
-                    bool(r[15]) if r[15] is not None else None,       # orders_voided
-                    _parse_dt(r[16]),                                  # created_at
-                ]
-                for r in rows
+    # ── direct_sale_events ────────────────────────────────────────────────
+    # Row format: [event_type, sale_id, stream_id, host_id, user_id, order_id,
+    #              listing_id, category, quantity, unit_price, total_price,
+    #              remaining_stock_before, remaining_stock_after, viewer_count,
+    #              end_reason, orders_voided, created_at]
+    rows = await _drain(redis, _BUF_DIRECT_SALE_EVENTS)
+    if rows:
+        data = [
+            [
+                str(r[0]),                                        # event_type
+                int(r[1]),                                        # sale_id
+                int(r[2]),                                        # stream_id
+                int(r[3]),                                        # host_id
+                int(r[4]),                                        # user_id
+                int(r[5]) if r[5] is not None else 0,             # order_id
+                int(r[6]) if r[6] is not None else 0,             # listing_id
+                str(r[7]) if r[7] else None,                      # category
+                int(r[8]) if r[8] is not None else 0,             # quantity
+                float(r[9]) if r[9] is not None else 0.0,         # unit_price
+                float(r[10]) if r[10] is not None else 0.0,       # total_price
+                int(r[11]) if r[11] is not None else 0,           # remaining_stock_before
+                int(r[12]) if r[12] is not None else 0,           # remaining_stock_after
+                int(r[13]) if r[13] is not None else 0,           # viewer_count
+                str(r[14]) if r[14] else None,                    # end_reason
+                bool(r[15]) if r[15] is not None else None,       # orders_voided
+                _parse_dt(r[16]),                                  # created_at
             ]
+            for r in rows
+        ]
+        try:
             await _client.insert(
                 "direct_sale_events",
                 data,
@@ -566,10 +596,13 @@ async def flush_all_buffers() -> None:
                     "orders_voided", "created_at",
                 ],
             )
+            await _trim(redis, _BUF_DIRECT_SALE_EVENTS, len(rows))
             logger.debug("[ClickHouse] direct_sale_events flush | %d satır", len(data))
-
-    except Exception as exc:
-        logger.warning("[ClickHouse] flush_all_buffers başarısız: %s", exc)
+        except Exception as exc:
+            logger.warning(
+                "[ClickHouse] direct_sale_events insert başarısız | %d satır Redis'te kaldı | %s",
+                len(rows), exc,
+            )
 
 
 async def _flush_loop() -> None:
