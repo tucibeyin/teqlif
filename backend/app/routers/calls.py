@@ -14,9 +14,11 @@ Flow:
 import asyncio
 import secrets
 import time
+import uuid
 from datetime import datetime, timezone, timedelta
 
 from fastapi import APIRouter, Depends
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_, text, update as sa_update
 
@@ -405,6 +407,17 @@ async def _send_call_push(
     _stored_lk_url = (_call_row.livekit_url if _call_row and _call_row.livekit_url
                       else (await orchestrator.allocate_node(ServiceType.MEDIA))["livekit_url"])
 
+    # ack_token'ı Redis'ten çek — push payload'una göm (güvenli ACK doğrulaması için)
+    _ack_token = ""
+    try:
+        from app.utils.redis_client import get_redis as _get_redis_push
+        _r = await _get_redis_push()
+        _stored = await _r.get(f"call_ack_token:{call_id}")
+        if _stored:
+            _ack_token = _stored
+    except Exception as _exc:
+        logger.warning("[CALL_PROCESS][PUSH] ack_token fetch failed | call_id=%d %s", call_id, _exc)
+
     # FCM payload: tam veri — Android flutter_callkit_incoming extra dict'i doğru map eder
     fcm_extra_data = {
         "call_id": str(call_id),
@@ -414,6 +427,7 @@ async def _send_call_push(
         "caller_avatar": caller.profile_image_thumb_url or caller.profile_image_url or "",
         "livekit_url": _stored_lk_url,
         "callee_token": callee_token,
+        "ack_token": _ack_token,
     }
 
     # VoIP (APNs) payload: self-contained — callee_token + livekit_url dahil.
@@ -426,6 +440,7 @@ async def _send_call_push(
         "caller_avatar": caller.profile_image_thumb_url or caller.profile_image_url or "",
         "livekit_url": _stored_lk_url,
         "callee_token": callee_token,
+        "ack_token": _ack_token,
     }
 
     # Token yaşını hesapla
@@ -648,6 +663,10 @@ async def start_call(
     token = _make_livekit_token(room_name, current_user)
     callee_token = _make_livekit_token(room_name, callee)
 
+    # ACK token: UUID4 — push/WS payload'a gömülür, callee ACK'inde doğrulanır
+    ack_token = str(uuid.uuid4())
+    await ws_manager.store_call_ack_token(call.id, ack_token)
+
     # Notify callee via WS (foreground) + FCM (background)
     ws_payload = {
         "type": "call_incoming",
@@ -658,6 +677,7 @@ async def start_call(
         "caller_avatar": current_user.profile_image_thumb_url or current_user.profile_image_url or "",
         "livekit_url": call.livekit_url,
         "callee_token": callee_token,
+        "ack_token": ack_token,
     }
     await _ws_broadcast(callee_id, ws_payload)
     callee_ws_connected = await ws_manager.is_dm_online(callee_id)
@@ -716,16 +736,18 @@ async def start_call(
 
 # ── POST /api/calls/{id}/ack ─────────────────────────────────────────────────
 
+class CallAckBody(BaseModel):
+    ack_token: str
+
+
 @router.post("/{call_id}/ack")
-async def call_incoming_ack_http(call_id: int):
+async def call_incoming_ack_http(call_id: int, body: CallAckBody):
     """
     Unauthenticated. Android FCM background isolate bu endpoint'i push alındıktan
-    sonra çağırır — auth token'a background isolate'den erişilemez; call_id payload'da
-    gömülü olduğundan kimlik doğrulama görevi görür (yanlış call_id'yi yalnızca
-    push'u alan kişi bilebilir). Kötüye kullanım etkisi minimumdur: 10 saniyelik
-    Redis key'ini tetikler.
+    sonra çağırır — auth token'a background isolate'den erişilemez.
+    ack_token push payload'ında gömülü UUID4 ile doğrulanır; geçersiz token reddedilir.
     """
-    await ws_manager.store_call_ack(call_id)
+    await ws_manager.store_call_ack(call_id, body.ack_token)
     logger.info("[CALL_PROCESS][ACK] HTTP call_incoming_ack | call_id=%d", call_id)
     return {"ok": True}
 

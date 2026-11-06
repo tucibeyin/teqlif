@@ -316,10 +316,26 @@ class GlobalWSManager:
     # If no ACK (timeout or WS race) → push sent as fallback.
     # Redis lpush/blpop bridges the gap across uvicorn workers.
 
-    async def store_call_ack(self, call_id: int) -> None:
-        """Client'ın WS üzerinden gönderdiği call_incoming_ack'i Redis'e yazar."""
+    async def store_call_ack_token(self, call_id: int, ack_token: str) -> None:
+        """Yeni arama için ack_token'ı Redis'e yazar (60s TTL)."""
         try:
             r = await get_redis()
+            await r.setex(f"call_ack_token:{call_id}", 60, ack_token)
+            logger.debug("[WS GATEWAY] call_ack_token stored | call_id=%d", call_id)
+        except Exception as exc:
+            logger.warning("[WS GATEWAY] store_call_ack_token failed | call_id=%d | %s", call_id, exc)
+
+    async def store_call_ack(self, call_id: int, ack_token: str) -> None:
+        """Client'ın call_incoming_ack'ini Redis'e yazar; ack_token geçersizse reddeder."""
+        try:
+            r = await get_redis()
+            stored = await r.get(f"call_ack_token:{call_id}")
+            if stored is None or stored != ack_token:
+                logger.warning(
+                    "[WS GATEWAY] store_call_ack REJECTED (invalid token) | call_id=%d",
+                    call_id,
+                )
+                return
             key = f"call_ack:{call_id}"
             await r.lpush(key, 1)
             await r.expire(key, 10)

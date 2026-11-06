@@ -468,9 +468,10 @@ async def messages_ws(websocket: WebSocket):
                                     })
                             elif msg_type == "call_incoming_ack":
                                 call_id = msg.get("call_id")
+                                ack_token = msg.get("ack_token", "")
                                 if call_id is not None:
                                     try:
-                                        await ws_manager.store_call_ack(int(call_id))
+                                        await ws_manager.store_call_ack(int(call_id), str(ack_token))
                                     except (ValueError, TypeError):
                                         pass
                     except (ValueError, TypeError):
