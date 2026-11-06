@@ -1,13 +1,13 @@
 """user_interests.subcategory NOT NULL default empty string
 
-Revision ID: zzzzzfh_user_interests_subcat_notnull
+Revision ID: zzzzzfh_ui_subcat_notnull
 Revises: zzzzzfg_calls_composite_idx
 Create Date: 2026-11-06
 """
 from alembic import op
 import sqlalchemy as sa
 
-revision = "zzzzzfh_user_interests_subcat_notnull"
+revision = "zzzzzfh_ui_subcat_notnull"
 down_revision = "zzzzzfg_calls_composite_idx"
 branch_labels = None
 depends_on = None
