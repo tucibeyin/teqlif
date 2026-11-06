@@ -12,7 +12,7 @@
 | :---: | :---: | :--- | :--- | :--- |
 | **SRE-01** | 🔴 **P0 (Kritik)** | `stream_concat_task.py` | "Zehirli Hap" (Poison Pill) Sonsuz Döngüsü | CPU & Disk I/O tükenmesi |
 | **SRE-02** | 🔴 **P0 (Kritik)** | `faiss_service.py` | Atomik Olmayan Index Yazımı & Yarış Durumu (Race Condition) | Canlı arama çökmesi (Segfault) |
-| **SRE-03** | 🟠 **P1 (Yüksek)** | `worker.py` & `stream_concat_task.py` | ARQ Timeout (300s) vs Video Süresi Çelişkisi | Görevlerin yarıda kesilip ölmesi |
+| ~~**SRE-03**~~ ✅ `80352d6b` | 🟠 **P1 (Yüksek)** | `worker.py` & `stream_concat_task.py` | ARQ Timeout (300s) vs Video Süresi Çelişkisi | Görevlerin yarıda kesilip ölmesi |
 | **SRE-04** | 🟠 **P1 (Yüksek)** | `bpr_service.py` & `feed_als_ml.py` | Sınırsız Veri Çekimi (Unbounded Query) & OOM Riski | Linux OOM Killer, worker çökmesi |
 | **SRE-05** | 🟠 **P1 (Yüksek)** | `foryou_worker.py` | N+1 Sıralı Ağ Çağrısı & Pasif Kullanıcı Hesaplaması | Worker thread kilitlenmesi, Redis RAM israfı |
 | **SRE-06** | 🟠 **P1 (Yüksek)** | `feed_als_ml.py` & `swipe_live_ml.py` | Sınırsız Redis Pipeline Yüklemesi (Buffer Bloat) | Redis event-loop donması, socket timeout |
@@ -8014,7 +8014,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 124. ~~**Adım 124 (`SRE-14`):** `thompson_sampling.py` dosyasındaki read-modify-write yapısını Redis `HINCRBYFLOAT` ile tekil atomik işleme dönüştür.~~ ✅ `f519fe9a`
 125. ~~**Adım 125 (`SRE-15`):** `send_direct_message.py` içindeki kapatılmış session kullanımını gider.~~ ✅ `5de69c87`
 126. ~~**Adım 126 (`SRE-16`):** `churn_ml_service.py` model kaydını geçici dosya ve atomik rename ile güvenli hale getir.~~ ✅ `f7ab2d9e`
-127. **Adım 127 (`SRE-03`):** `worker.py` içinde video görevleri için bağımsız kuyruk ve uygun timeout yapılandırması tanımla.
+127. ~~**Adım 127 (`SRE-03`):** `worker.py` içinde video görevleri için bağımsız kuyruk ve uygun timeout yapılandırması tanımla.~~ ✅ `80352d6b`
 
 ### 🟡 Faz 3: Veritabanı, Eşzamanlılık ve Performans Optimizasyonu (P2 Öncelik — 45 Adım)
 128. **Adım 128 (`SRE-125`):** `recommendation_service.py` içindeki `SELECT DISTINCT category` sorgusunu kaldırıp kategori önbelleğine bağla; `ORDER BY hashtext()` fonksiyonel sıralamasını Redis ID örneklemesiyle değiştir.
