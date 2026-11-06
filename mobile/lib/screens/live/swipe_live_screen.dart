@@ -2248,8 +2248,7 @@ class _ListingVideoPageState extends ConsumerState<_ListingVideoPage> {
     final title = listing['title']?.toString() ?? '';
     final price = listing['price'];
     final categoryKey = listing['category']?.toString() ?? '';
-    final locale = Localizations.localeOf(context).languageCode;
-    final category = CategoryService.labelFor(categoryKey, locale: locale);
+    final category = CategoryService.localizedLabelFor(loc, categoryKey);
     final location = listing['location']?.toString() ?? '';
     final username = (listing['user'] as Map<String, dynamic>?)?['username']?.toString() ?? '';
     final thumbUrl = listing['thumbnail_url']?.toString() ??
