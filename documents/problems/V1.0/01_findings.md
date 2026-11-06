@@ -134,7 +134,7 @@
 | **SRE-122** | 🟠 **P1 (Yüksek)** | `story_service.py` | Story Yükleme Sırasında Senkron FFmpeg Transcoding ile Uvicorn Event Loop Açlığı | Video yüklemelerinde 120s süren FFmpeg ile CPU %100, teklif ve DM isteklerinde 504 Gateway Timeout |
 | **SRE-123** | 🟠 **P1 (Yüksek)** | `worker.py` | PgBouncer Transaction Pooling Altında `VACUUM ANALYZE` Nedeniyle Task Çökmesi ve Kilitsiz Silme | Arka plan temizlik görevlerinin her gün çökmesi ve tek sorguda milyonluk silmeyle replication lag patlaması |
 | **SRE-124** | 🟠 **P1 (Yüksek)** | `influence_service.py` | Limitsiz `SELECT * FROM follows` Bellek Patlaması (OOM) ve Devasa Redis Pipeline Kilitlenmesi | Yüz binlerce takip ilişkisinin tek sorguda belleğe alınarak worker'ın çökmesi ve Redis soket tıkanması |
-| **SRE-125** | 🟡 **P2 (Orta)** | `recommendation_service.py` | Her Feed İsteğinde `SELECT DISTINCT category FROM listings` Full Table Scan ve İndekssiz Sort | Milyonlarca ilanın her feed çağrısında taranması ve `ORDER BY hashtext()` ile DB CPU %100 darboğazı |
+| ~~**SRE-125**~~ ✅ `282cee24` `dcc955c9` | 🟡 **P2 (Orta)** | `recommendation_service.py` | Her Feed İsteğinde `SELECT DISTINCT category FROM listings` Full Table Scan ve İndekssiz Sort | Milyonlarca ilanın her feed çağrısında taranması ve `ORDER BY hashtext()` ile DB CPU %100 darboğazı |
 | **SRE-126** | 🟡 **P2 (Orta)** | `reports.py` | Şikayet Endpoint'inde Pydantic Şeması ve Karakter Sınırı Olmaması (Disk DoS ve TOCTOU) | Sınırsız metin yüküyle veritabanı şişirme ve eşzamanlı çift istekte IntegrityError 500 çökmesi |
 | **SRE-127** | 🔴 **P0 (Kritik)** | `analytics_processor.py` | `calculate_user_budgets` Fonksiyonunda On Binlerce Sıralı UPDATE ve Uzun Açık Transaction | Dakikalarca süren tek transaction, satır kilitleri, PgBouncer pool tıkanması ve tek hatada toplu rollback |
 | **SRE-128** | 🔴 **P0 (Kritik)** | `bid_validation_service.py` | Doğrulanmış Hesaplarda Tavan Sınır (Hard Ceiling) Olmaması Nedeniyle Müzayede Sabotajı (Troll Bid Bypass) | Telefon doğrulamalı bir kullanıcının 100 TL'lik canlı yayın ürününe 1 milyar TL teklif verip yayını kilitlemesi |
@@ -5361,6 +5361,8 @@ async def get_listing_offers(
 
 ### SRE-125 · 🟡 P2 (Orta) · Her Feed İsteğinde `SELECT DISTINCT category FROM listings` Full Table Scan ve İndekssiz Sort
 
+> ✅ **Çözüldü** — Commit `282cee24` (category_cache) · `dcc955c9` (TABLESAMPLE) · 2026-10-31/11-01
+
 * **Etkilenen Dosya:** [`services/recommendation_service.py`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/services/recommendation_service.py#L315-L321) (Satır 315–321, 390–394)
 * **İlgili Fonksiyonlar:** `get_personalized_feed`, `_ids_from_categories`
 
@@ -8017,7 +8019,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 127. ~~**Adım 127 (`SRE-03`):** `worker.py` içinde video görevleri için bağımsız kuyruk ve uygun timeout yapılandırması tanımla.~~ ✅ `80352d6b`
 
 ### 🟡 Faz 3: Veritabanı, Eşzamanlılık ve Performans Optimizasyonu (P2 Öncelik — 45 Adım)
-128. **Adım 128 (`SRE-125`):** `recommendation_service.py` içindeki `SELECT DISTINCT category` sorgusunu kaldırıp kategori önbelleğine bağla; `ORDER BY hashtext()` fonksiyonel sıralamasını Redis ID örneklemesiyle değiştir.
+128. ~~**Adım 128 (`SRE-125`):** `recommendation_service.py` içindeki `SELECT DISTINCT category` sorgusunu kaldırıp kategori önbelleğine bağla; `ORDER BY hashtext()` fonksiyonel sıralamasını Redis ID örneklemesiyle değiştir.~~ ✅ `282cee24` `dcc955c9`
 129. **Adım 129 (`SRE-126`):** `reports.py:report_listing` endpoint'ine katı `ReportCreateSchema` ve 1.000 karakterlik `max_length` ekle; `ON CONFLICT DO NOTHING` ile çift tıklama 500 hatasını engelle.
 130. **Adım 130 (`SRE-137`):** `follows.py:accept_follow_request` içinde `sa_update(MessageThread)` sonucunda gerçekten bir satır güncellendiyse (`result.rowcount > 0`) ve sayaç sıfırdan büyükse `_redis.decr` çalıştır; okunmamış mesaj istek sayacının negatif sayılara düşmesini engelle.
 131. **Adım 131 (`SRE-138`):** `ratings.py:mark_read` içindeki tüm ORM nesnelerini belleğe çekip Python döngüsüyle tek tek güncelleme yapısını kaldır; tek bir toplu `update(Rating)` SQL sorgusuna çevir ve `ratings:unread:{user_id}` Redis önbelleğini sıfırla.
