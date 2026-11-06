@@ -6670,5 +6670,7 @@
   "iapPurchasePending": "Покупка ожидает подтверждения…",
   "walletProManageGooglePlay": "Управление в Google Play",
   "walletProManageWeb": "Управление подпиской",
-  "walletNegativeBalanceNote": "Отрицательный баланс из-за возврата"
+  "walletNegativeBalanceNote": "Отрицательный баланс из-за возврата",
+  "tooltipGridView": "Сетка",
+  "tooltipListView": "Список"
 }

@@ -14,6 +14,8 @@ import '../services/feed_telemetry_service.dart';
 import '../services/image_cache_manager.dart';
 import '../services/storage_service.dart';
 import '../ui_library/components/buttons/teq_button.dart';
+import '../ui_library/components/buttons/teq_view_toggle.dart';
+import '../ui_library/components/cards/listing_list_row.dart';
 import '../ui_library/components/inputs/teq_text_field.dart';
 import '../ui_library/components/overlays/teq_snackbar.dart';
 import '../widgets/network_error_widget.dart';
@@ -38,6 +40,7 @@ class SearchScreen extends ConsumerStatefulWidget {
 class SearchScreenState extends ConsumerState<SearchScreen> {
   final _controller = TextEditingController();
   Timer? _debounce;
+  bool _isListView = false;
 
   final ScrollController _scrollCtrl = ScrollController();
   final ScrollController _forYouScrollCtrl = ScrollController();
@@ -61,6 +64,17 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
     _forYouScrollCtrl.removeListener(_onForYouScroll);
     _forYouScrollCtrl.dispose();
     super.dispose();
+  }
+
+  String _fmtPrice(dynamic price) {
+    if (price == null) return '';
+    final s = (price as num).toInt().toString();
+    final buf = StringBuffer();
+    for (int i = 0; i < s.length; i++) {
+      if (i > 0 && (s.length - i) % 3 == 0) buf.write('.');
+      buf.write(s[i]);
+    }
+    return '${buf.toString()} ₺';
   }
 
   Future<void> _showAlertSheet(BuildContext context) async {
@@ -824,39 +838,32 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
               child: Divider(height: 1, indent: 16, endIndent: 16),
             ),
             SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsetsDirectional.fromSTEB(16, 14, 16, 8),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.grid_view_rounded,
-                      size: 15,
-                      color: Colors.grey,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      loc.t("listingsSelectedForYou"),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
+              child: _SectionHeader(
+                icon: Icons.grid_view_rounded,
+                label: loc.t("listingsSelectedForYou"),
+                trailing: TeqViewToggle(
+                  isListView: _isListView,
+                  onChanged: (v) => setState(() => _isListView = v),
+                  gridTooltip: loc.t("tooltipGridView"),
+                  listTooltip: loc.t("tooltipListView"),
                 ),
               ),
             ),
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 2),
-              sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 2,
-                  mainAxisSpacing: 2,
-                ),
+            if (_isListView)
+              SliverList(
                 delegate: SliverChildBuilderDelegate((ctx, i) {
                   final listing = state.recentListings[i] as Map<String, dynamic>;
-                  return _ListingTile(
-                    listing: listing,
+                  final imgs = listing['image_urls'] as List? ?? [];
+                  final raw = imgs.isNotEmpty ? imgs[0] as String : listing['image_url'] as String?;
+                  final photo = raw != null ? ref.read(apiClientProvider).imgUrl(raw) : null;
+                  return ListingListRow(
+                    title: listing['title'] as String?,
+                    price: _fmtPrice(listing['price']),
+                    imageUrl: photo,
+                    location: (listing['province'] as String?)?.trim() ?? listing['location'] as String?,
+                    category: listing['category'] as String?,
+                    subcategory: listing['subcategory'] as String?,
+                    isSponsored: listing['is_sponsored'] == true,
                     onLongPress: () {
                       final id = listing['id'] as int?;
                       if (id != null && state.isLoggedIn) {
@@ -871,8 +878,36 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
                     ),
                   );
                 }, childCount: state.recentListings.length),
+              )
+            else
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                sliver: SliverGrid(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    crossAxisSpacing: 2,
+                    mainAxisSpacing: 2,
+                  ),
+                  delegate: SliverChildBuilderDelegate((ctx, i) {
+                    final listing = state.recentListings[i] as Map<String, dynamic>;
+                    return _ListingTile(
+                      listing: listing,
+                      onLongPress: () {
+                        final id = listing['id'] as int?;
+                        if (id != null && state.isLoggedIn) {
+                          _showNotInterestedMenu(id, 'recent');
+                        }
+                      },
+                      onTap: () => Navigator.push(
+                        ctx,
+                        MaterialPageRoute(
+                          builder: (_) => ListingDetailScreen(listing: listing),
+                        ),
+                      ),
+                    );
+                  }, childCount: state.recentListings.length),
+                ),
               ),
-            ),
             if (state.recentLoadingMore)
               const SliverToBoxAdapter(
                 child: Padding(
@@ -953,10 +988,12 @@ class _SectionHeader extends ConsumerWidget {
   final IconData icon;
   final String label;
   final Color? iconColor;
+  final Widget? trailing;
   const _SectionHeader({
     required this.icon,
     required this.label,
     this.iconColor,
+    this.trailing,
   });
 
   @override
@@ -975,6 +1012,10 @@ class _SectionHeader extends ConsumerWidget {
               color: Color(0xFF374151),
             ),
           ),
+          if (trailing != null) ...[
+            const Spacer(),
+            trailing!,
+          ],
         ],
       ),
     );

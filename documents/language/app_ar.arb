@@ -6670,5 +6670,7 @@
   "iapPurchasePending": "الشراء في انتظار الموافقة…",
   "walletProManageGooglePlay": "إدارة في Google Play",
   "walletProManageWeb": "إدارة الاشتراك",
-  "walletNegativeBalanceNote": "رصيد سالب بسبب الاسترداد"
+  "walletNegativeBalanceNote": "رصيد سالب بسبب الاسترداد",
+  "tooltipGridView": "عرض الشبكة",
+  "tooltipListView": "عرض القائمة"
 }
