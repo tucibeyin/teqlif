@@ -4251,6 +4251,10 @@ async def compute_analytics_cache_task(ctx: dict) -> None:
     from app.utils.i18n import _get_t
     from sqlalchemy import text as _sql_text
     import json as _json
+    import decimal as _decimal
+
+    def _json_dumps_safe(obj: object) -> str:
+        return _json.dumps(obj, default=lambda o: float(o) if isinstance(o, _decimal.Decimal) else str(o))
 
     _SUPPORTED_LOCALES = ["tr", "en", "ru", "ar", "de"]
     _DEMAND_PERIODS = [7, 30, 90]
@@ -4331,7 +4335,7 @@ async def compute_analytics_cache_task(ctx: dict) -> None:
         }
         pipe = redis.pipeline()
         for locale in _SUPPORTED_LOCALES:
-            pipe.setex(f"cache:market_trends_global_{locale}", TTL, _json.dumps(market_data))
+            pipe.setex(f"cache:market_trends_global_{locale}", TTL, _json_dumps_safe(market_data))
         await pipe.execute()
         logger.info("[AnalyticsCache] market_trends önbelleğe alındı (%d locale)", len(_SUPPORTED_LOCALES))
 
