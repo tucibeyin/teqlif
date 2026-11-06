@@ -10,6 +10,7 @@ import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../models/stream.dart';
 import '../services/analytics_service.dart';
+import '../services/category_service.dart';
 import '../services/feed_telemetry_service.dart';
 import '../services/image_cache_manager.dart';
 import '../services/storage_service.dart';
@@ -871,8 +872,8 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
                     price: _fmtPrice(listing['price']),
                     imageUrl: photo,
                     location: (listing['province'] as String?)?.trim() ?? listing['location'] as String?,
-                    category: listing['category'] as String?,
-                    subcategory: listing['subcategory'] as String?,
+                    category: listing['category'] != null ? CategoryService.localizedLabelFor(loc, listing['category'] as String) : null,
+                    subcategory: listing['subcategory'] != null ? loc.t('subcat_${listing['subcategory']}') : null,
                     isSponsored: listing['is_sponsored'] == true,
                     onLongPress: () {
                       final id = listing['id'] as int?;

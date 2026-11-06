@@ -19,6 +19,7 @@ import '../ui_library/components/buttons/teq_view_toggle.dart';
 import '../ui_library/components/cards/listing_list_row.dart';
 import '../ui_library/components/overlays/teq_snackbar.dart';
 import '../ui_library/components/overlays/teq_toast.dart';
+import '../services/category_service.dart';
 import '../services/listing_service.dart';
 import '../providers/listing_interaction_provider.dart';
 import '../widgets/shimmer_loading.dart';
@@ -526,8 +527,8 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                               price: _fmtPrice(item['price']),
                               imageUrl: photo,
                               location: (item['province'] as String?)?.trim() ?? item['location'] as String?,
-                              category: item['category'] as String?,
-                              subcategory: item['subcategory'] as String?,
+                              category: item['category'] != null ? CategoryService.localizedLabelFor(loc, item['category'] as String) : null,
+                              subcategory: item['subcategory'] != null ? loc.t('subcat_${item['subcategory']}') : null,
                               isSponsored: item['is_sponsored'] == true,
                               onLongPress: () => ref.read(homeViewModelProvider.notifier).removeRecent(i),
                               onTap: () {
