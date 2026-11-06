@@ -154,7 +154,7 @@
 | **SRE-142** | 🟠 **P1 (Yüksek)** | `upload.py` | İlan Videosu Yüklemede Senkron FFmpeg/FFprobe ile 504 Timeout ve CPU %100 Açlığı | 60s süren video remuxing sırasında mobil ağın kopması, Nginx 504 hatası ve aynı sunucudaki Postgres'in kilitlenmesi |
 | **SRE-143** | 🟠 **P1 (Yüksek)** | `admin_data.py` | Admin Dashboard'da 16 Sıralı Aggregate SQL ve 7 Günlük Döngü ile Postgres CPU Doygunluğu | Her dashboard açılışında full-table scan ile bakiye toplamı ve 7 ayrı tarih sorgusunun DB'yi kilitlemesi |
 | **SRE-144** | 🟠 **P1 (Yüksek)** | `admin_data.py` | Analytics Summary Endpoint'inde ClickHouse Yerine PostgreSQL'de `COUNT(DISTINCT)` Kirlenmesi | Milyonlarca analitik satırında unindexed session_id sort/hash ile Postgres buffer cache'inin boşaltılması ve kilitlenme |
-| **SRE-145** | 🟡 **P2 (Orta)** | `leads.py` | `/audience-size` Endpoint'inde 10.000 ID'lik `ANY(:ids)` Parametresi ve Önbelleksiz Cross-DB Yükü | Her filtre değişiminde ClickHouse'dan 10.000 ID çekilip Postgres'e devasa array olarak fırlatılması |
+| ~~**SRE-145**~~ ✅ `2042c78d` | 🟡 **P2 (Orta)** | `leads.py` | `/audience-size` Endpoint'inde 10.000 ID'lik `ANY(:ids)` Parametresi ve Önbelleksiz Cross-DB Yükü | Her filtre değişiminde ClickHouse'dan 10.000 ID çekilip Postgres'e devasa array olarak fırlatılması |
 | **SRE-146** | 🟡 **P2 (Orta)** | `wallet.py` / `auth.py` | Cüzdan Bakiyesinin 15 Dakikalık Redis Session Cache'inden, İşlemlerin DB'den Çekilmesi Tutarsızlığı | Para transferi ve airdroplarda alıcının işlemler listesinde parayı görmesine rağmen tepedeki bakiyenin 15 dk eski kalması |
 | **SRE-147** | 🔴 **P0 (Kritik)** | `auth.py` | Refresh Token Kaydında `token_version` Denetimi Olmaması Nedeniyle Şifre Sıfırlama Sonrası Oturumun Düşmemesi | Çalınan refresh token ile şifre sıfırlanmasına rağmen `/refresh` ile yeni token_version'lı geçerli access token alınabilmesi |
 | **SRE-148** | 🟠 **P1 (Yüksek)** | `stream_recording_tasks.py` | `notify_new_recordings_task` İçindeki 6 Saatlik Sınır Nedeniyle Geciken Kayıtların Askıda Kalması ve MinIO Sızıntısı | 6 saatten eski hazır kayıtların bildirim alamaması, expires_at'in sonsuza dek NULL kalarak MinIO'dan silinememesi |
@@ -6312,6 +6312,9 @@ GROUP BY device_type;
 ---
 
 ### SRE-145 · 🟡 P2 (Orta) · `/audience-size` Endpoint'inde 10.000 ID'lik `ANY(:ids)` Parametresi ve Önbelleksiz Cross-DB Yükü
+
+> ✅ **Çözüldü** — Commit `2042c78d` · 2026-11-06
+
 * **Etkilenen Dosya:** `backend/app/routers/leads.py`
 * **İlgili Satırlar:** 89–96
 * **İlgili Fonksiyon:** `get_audience_size`
@@ -8031,7 +8034,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 129. ~~**Adım 129 (`SRE-126`):** `reports.py:report_listing` endpoint'ine katı `ReportCreateSchema` ve 1.000 karakterlik `max_length` ekle; `ON CONFLICT DO NOTHING` ile çift tıklama 500 hatasını engelle.~~ ✅ `5af9b711`
 130. ~~**Adım 130 (`SRE-137`):** `follows.py:accept_follow_request` içinde `sa_update(MessageThread)` sonucunda gerçekten bir satır güncellendiyse (`result.rowcount > 0`) ve sayaç sıfırdan büyükse `_redis.decr` çalıştır; okunmamış mesaj istek sayacının negatif sayılara düşmesini engelle.~~ ✅ `51915481`
 131. ~~**Adım 131 (`SRE-138`):** `ratings.py:mark_read` içindeki tüm ORM nesnelerini belleğe çekip Python döngüsüyle tek tek güncelleme yapısını kaldır; tek bir toplu `update(Rating)` SQL sorgusuna çevir ve `ratings:unread:{user_id}` Redis önbelleğini sıfırla.~~ ✅ `764436cd`
-132. **Adım 132 (`SRE-145`):** `leads.py:get_audience_size` içindeki 10.000 ID'lik `id = ANY(:ids)` PostgreSQL sorgusunu satıcı ve ilan filtrelerine göre Redis'te 120 saniye önbellekle; `NOT IN` anti-join yapısını `LEFT JOIN / IS NULL` veya ClickHouse bitmap fonksiyonlarına geçirerek cross-database darboğazını çöz.
+132. ~~**Adım 132 (`SRE-145`):** `leads.py:get_audience_size` içindeki 10.000 ID'lik `id = ANY(:ids)` PostgreSQL sorgusunu satıcı ve ilan filtrelerine göre Redis'te 120 saniye önbellekle; `NOT IN` anti-join yapısını `LEFT JOIN / IS NULL` veya ClickHouse bitmap fonksiyonlarına geçirerek cross-database darboğazını çöz.~~ ✅ `2042c78d`
 133. **Adım 133 (`SRE-146`):** `wallet.py:get_balance` endpoint'inde bakiye bilgisini 15 dakikalık `session:user:{id}` Redis oturumundan değil doğrudan `select(User.teqlik_balance)` ile veritabanından taze oku; bakiye başlığı ile işlem listesi arasındaki 15 dakikalık senkronizasyon kopukluğunu gider.
 134. **Adım 134 (`SRE-151`):** `notifications.py:notifications_ws` ilk bağlantı sayım sorgusuna `Notification.type != 'message'` filtresi ekle; DM bildirimlerinin yanlışlıkla sayıma dahil edilmesiyle mobil bildirim rozetinde yaşanan titremeyi (flickering) ve WS bağlantısındaki çift DB oturumunu gider.
 135. **Adım 135 (`SRE-152`):** `models/call.py` ve `calls.py:get_call_history` için `ix_calls_caller_started` ve `ix_calls_callee_started` bileşik indekslerini ekle; arama geçmişi çekilirken PostgreSQL'in BitmapOr ve disk üzerinde QuickSort yaparak CPU'yu tüketmesini çöz.
