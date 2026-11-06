@@ -8006,7 +8006,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 116. ~~**Adım 116 (`SRE-36`):** Streaming node'ları (`node3`, `node4`) `livekit.yaml` dosyasındaki Redis adresini `10.10.0.1:6379` olarak düzelt veya HAProxy kurulumunu tamamla.~~ ✅ `9e839777`
 117. ~~**Adım 117 (`SRE-37`):** `leads.py:send-blast` döngüsünü ARQ arka plan kuyruğuna taşı ve Firebase Admin SDK `send_each_for_multicast` toplu gönderimine geçir.~~ ✅ `1f13485a` / FCM paralel: `098444e4`
 118. ~~**Adım 118 (`SRE-19`):** `moderation_service.py` içindeki `remove_from_livekit` fonksiyonuna stream'in gerçek `livekit_url` bilgisini bağla.~~ ✅ `7e69e892`
-119. **Adım 119 (`SRE-23`):** `direct_sale_commands.py` satın alma işleminde DB commit hatası durumunda Redis stok iadesi (compensating transaction) ekle.
+119. ~~**Adım 119 (`SRE-23`):** `direct_sale_commands.py` satın alma işleminde DB commit hatası durumunda Redis stok iadesi (compensating transaction) ekle.~~ ✅ `7250b2d3`
 120. **Adım 120 (`SRE-24`):** `ad_service.py` içindeki Lua scriptine `current <= 0` kontrolü ekleyerek negatif bütçe sızıntısını durdur.
 121. **Adım 121 (`SRE-25`):** `stream_listener.py` içindeki `os.getpid()` kullanımını deterministik worker kimliğiyle değiştir; servis yeniden başlarken mesaj kaybını engelle.
 122. **Adım 122 (`SRE-22`):** `story_service.py` içindeki senkron FFmpeg video sıkıştırmasını HTTP isteğinden çıkarıp ARQ video kuyruğuna taşı.
