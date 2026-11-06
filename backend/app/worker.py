@@ -2270,8 +2270,8 @@ async def cleanup_old_impressions_task(ctx: dict) -> None:
             while True:
                 result = await db.execute(text("""
                     DELETE FROM listing_impressions
-                    WHERE id IN (
-                        SELECT id FROM listing_impressions
+                    WHERE (user_id, listing_id) IN (
+                        SELECT user_id, listing_id FROM listing_impressions
                         WHERE seen_at < NOW() - INTERVAL '30 days'
                         LIMIT 5000
                     )

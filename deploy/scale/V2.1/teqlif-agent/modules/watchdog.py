@@ -58,6 +58,9 @@ _CONTINUOUS_REGISTRY: dict[str, int] = {
     "backfill_listing_quality_scores_task": 60,
     "cleanup_stale_streams_task":      2,
     "retry_failed_chat_dumps_task":    30,
+    # run_ml_training_pipeline_task alt adımları — haftalık pipeline içinde çalışır
+    "train_feed_als_task":            10080,
+    "compute_influence_scores_task":  10080,
 }
 
 _COOLDOWN_SEC = 2 * 60 * 60   # aynı job için 2 saatte bir uyarı
