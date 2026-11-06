@@ -798,9 +798,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
                       if (isSold)
                         Positioned.fill(
                           child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.45),
-                            ),
+                            color: Colors.black.withOpacity(0.5),
                             alignment: Alignment.center,
                             child: Container(
                               padding: const EdgeInsets.symmetric(

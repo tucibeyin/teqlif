@@ -62,6 +62,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
   late final PageController _pageCtrl;
   late final List<String> _images;
   int? _myUserId;
+  bool _isMyIdLoading = true;
 
   bool get _isActive {
     final id = widget.listing['id'] as int?;
@@ -77,8 +78,11 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
 
   bool get _isSold {
     final id = widget.listing['id'] as int?;
-    if (id == null) return false;
-    return ref.watch(listingDetailProvider(id)).isSold;
+    final fallback = (widget.listing['status'] as String?) == 'sold';
+    if (id == null) return fallback;
+    final prov = ref.watch(listingDetailProvider(id));
+    if (!prov.isInitialized) return fallback;
+    return prov.isSold;
   }
 
   bool get _isListingInitialized {
@@ -233,7 +237,10 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     }
 
     if (!mounted || !context.mounted) return;
-    setState(() => _myUserId = userId);
+    setState(() {
+      _myUserId = userId;
+      _isMyIdLoading = false;
+    });
     if (token != null && _myUserId != null) {
       final listingUserId = (widget.listing['user'] as Map?)?['id'];
       if (listingUserId != _myUserId) {
@@ -1668,7 +1675,9 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
           ],
         ),
       ),
-      bottomNavigationBar: isMine
+      bottomNavigationBar: _isMyIdLoading
+          ? const SizedBox.shrink()
+          : isMine
           ? _isSold
                 ? SafeArea(
                     child: Padding(
