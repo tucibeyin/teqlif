@@ -4,7 +4,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Ekim 2026 — §41 CreditGate fetchCreditGateData hata düzeltmesi (commit 2798f516)
+**Son güncelleme:** Kasım 2026 — §43 Hediye bildirimleri + Toplu Bildirim butonu düzeltmeleri (commit 9b999cd9)
 
 ---
 
@@ -35,6 +35,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 31. [MinIO ILM Acil Freni + Off-site Sync Altyapısı](#31-minio-ilm-acil-freni--off-site-sync-altyapısı)
 40. [Merkezi CreditGate Sistemi — Tek Execution Noktası](#40-merkezi-creditgate-sistemi--tek-execution-noktası-commit-b0071cea)
 42. [teqlif-agent İzleme Düzeltmeleri — i18n Key Format + Watchdog Registry Guard](#42-teqlif-agent-i̇zleme-düzeltmeleri--i18n-key-format--watchdog-registry-guard-commit-7e15262a)
+43. [Hediye Bildirimleri + Toplu Bildirim Butonu Düzeltmeleri](#43-hediye-bildirimleri--toplu-bildirim-butonu-düzeltmeleri-commit-234e4183-9b999cd9)
 
 ---
 
@@ -2935,3 +2936,43 @@ await self._db.mark_ok(job_name, last_ok_at=ts, expected_every_m=expected)
 | `deploy/scale/V2.1/teqlif-agent/modules/certs.py` | `pack:{lang}` → `i18n:{lang}`, `version:{lang}` kaldırıldı |
 | `deploy/scale/V2.1/teqlif-agent/modules/watchdog.py` | Registry dışı job'lar DB'ye yazılmıyor |
 | `backend/app/use_cases/wallet/commands/verify_purchase_command.py` | Fallback fiyatlar güncellendi |
+
+---
+
+## 43. Hediye Bildirimleri + Toplu Bildirim Butonu Düzeltmeleri (commit `234e4183` `9b999cd9`)
+
+### Problem 1 — Hediye Push Bildirimleri Boş
+
+8 hediye tier'ına (clap/tea/fire/diamond/crown/golden_hammer/rocket/trophy) genişletme sonrası push bildirimleri tamamen boş geliyordu. Backend `wallet.py` `push_notification()` çağrısında `title` ve `body` hiç set edilmiyordu: `i18n` dict olmadan `notif.get("title", "") → ""`.
+
+**Karar:**
+
+`wallet.py send_gift` endpoint'ine `i18n` dict eklendi:
+```python
+_gift_arb_key = "giftName" + "".join(p.title() for p in body.gift_name.split("_"))
+# golden_hammer → giftNameGoldenHammer
+"i18n": {
+    "title_key": "notifGiftReceivedTitle",
+    "body_key": "notifGiftReceivedBody",
+    "body_params": {"sender": ..., "gift_name": _gift_arb_key, "teqlik": ...},
+}
+```
+
+`notification_service.py _fmt` resolver'ı `giftName*` prefix değerlerini `cat_*` gibi ARB'den çözecek şekilde genişletildi. 5 dil ARB'e (`app_tr/en/de/ar/ru.arb`) `notifGiftReceivedTitle` + `notifGiftReceivedBody` eklendi.
+
+### Problem 2 — Toplu Kitle Bildirimi Butonu Pasif İlan Aktifleşince Güncellenmiyordu
+
+`GET /listings/{id}` 60 saniyelik Redis cache (`cqrs:listing:{id}:*`) kullanıyor. `ToggleListingCommand` ilan durumunu DB'de güncelliyordu ama bu cache'i **asla silmiyordu**. Kullanıcı ilanı aktif ettikten hemen sonra `_refreshListingData()` cache'den bayat `status: "passive"` alıyordu → `massNotifEligibility → MassNotifUnavailable` → buton pasif kalıyordu.
+
+**Karar:**
+
+`toggle_listing.py`'de commit sonrası `invalidate_cache(f"listing:{listing_id}")` eklendi — hem aktif→pasif hem pasif→aktif geçişte detail cache temizleniyor.
+
+### Etkilenen Dosyalar
+
+| Dosya | Değişiklik |
+|-------|-----------|
+| `backend/app/routers/wallet.py` | `send_gift`: `i18n` dict + gift ARB key hesaplama |
+| `backend/app/services/notification_service.py` | `_fmt`: `giftName*` prefix resolver eklendi |
+| `documents/language/app_{tr,en,de,ar,ru}.arb` | `notifGiftReceivedTitle` + `notifGiftReceivedBody` eklendi |
+| `backend/app/use_cases/listings/commands/toggle_listing.py` | Toggle sonrası `invalidate_cache(f"listing:{id}")` |
