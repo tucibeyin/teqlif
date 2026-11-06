@@ -135,7 +135,7 @@
 | **SRE-123** | 🟠 **P1 (Yüksek)** | `worker.py` | PgBouncer Transaction Pooling Altında `VACUUM ANALYZE` Nedeniyle Task Çökmesi ve Kilitsiz Silme | Arka plan temizlik görevlerinin her gün çökmesi ve tek sorguda milyonluk silmeyle replication lag patlaması |
 | **SRE-124** | 🟠 **P1 (Yüksek)** | `influence_service.py` | Limitsiz `SELECT * FROM follows` Bellek Patlaması (OOM) ve Devasa Redis Pipeline Kilitlenmesi | Yüz binlerce takip ilişkisinin tek sorguda belleğe alınarak worker'ın çökmesi ve Redis soket tıkanması |
 | ~~**SRE-125**~~ ✅ `282cee24` `dcc955c9` | 🟡 **P2 (Orta)** | `recommendation_service.py` | Her Feed İsteğinde `SELECT DISTINCT category FROM listings` Full Table Scan ve İndekssiz Sort | Milyonlarca ilanın her feed çağrısında taranması ve `ORDER BY hashtext()` ile DB CPU %100 darboğazı |
-| **SRE-126** | 🟡 **P2 (Orta)** | `reports.py` | Şikayet Endpoint'inde Pydantic Şeması ve Karakter Sınırı Olmaması (Disk DoS ve TOCTOU) | Sınırsız metin yüküyle veritabanı şişirme ve eşzamanlı çift istekte IntegrityError 500 çökmesi |
+| ~~**SRE-126**~~ ✅ `5af9b711` | 🟡 **P2 (Orta)** | `reports.py` | Şikayet Endpoint'inde Pydantic Şeması ve Karakter Sınırı Olmaması (Disk DoS ve TOCTOU) | Sınırsız metin yüküyle veritabanı şişirme ve eşzamanlı çift istekte IntegrityError 500 çökmesi |
 | **SRE-127** | 🔴 **P0 (Kritik)** | `analytics_processor.py` | `calculate_user_budgets` Fonksiyonunda On Binlerce Sıralı UPDATE ve Uzun Açık Transaction | Dakikalarca süren tek transaction, satır kilitleri, PgBouncer pool tıkanması ve tek hatada toplu rollback |
 | **SRE-128** | 🔴 **P0 (Kritik)** | `bid_validation_service.py` | Doğrulanmış Hesaplarda Tavan Sınır (Hard Ceiling) Olmaması Nedeniyle Müzayede Sabotajı (Troll Bid Bypass) | Telefon doğrulamalı bir kullanıcının 100 TL'lik canlı yayın ürününe 1 milyar TL teklif verip yayını kilitlemesi |
 | **SRE-129** | 🔴 **P0 (Kritik)** | `bootstrap_node1.sh` | Node1 Kurulum Scriptinde `postgresql-17-pgvector` Paketinin Eksik Olması ve Vektör Extension Çökmesi | `vector.control` dosyasının bulunamaması, `CREATE EXTENSION` sessiz hata yutması ve `Vector(384)` sorgularında 500 çökmesi |
@@ -5383,6 +5383,8 @@ async def get_listing_offers(
 
 ### SRE-126 · 🟡 P2 (Orta) · Şikayet Endpoint'inde Pydantic Şeması ve Karakter Sınırı Olmaması (Disk DoS ve TOCTOU)
 
+> ✅ **Çözüldü** — Commit `5af9b711` · 2026-11-06
+
 * **Etkilenen Dosya:** [`routers/reports.py`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/routers/reports.py#L16-L41) (Satır 16–41)
 * **İlgili Fonksiyon:** `report_listing`
 
@@ -8020,7 +8022,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 
 ### 🟡 Faz 3: Veritabanı, Eşzamanlılık ve Performans Optimizasyonu (P2 Öncelik — 45 Adım)
 128. ~~**Adım 128 (`SRE-125`):** `recommendation_service.py` içindeki `SELECT DISTINCT category` sorgusunu kaldırıp kategori önbelleğine bağla; `ORDER BY hashtext()` fonksiyonel sıralamasını Redis ID örneklemesiyle değiştir.~~ ✅ `282cee24` `dcc955c9`
-129. **Adım 129 (`SRE-126`):** `reports.py:report_listing` endpoint'ine katı `ReportCreateSchema` ve 1.000 karakterlik `max_length` ekle; `ON CONFLICT DO NOTHING` ile çift tıklama 500 hatasını engelle.
+129. ~~**Adım 129 (`SRE-126`):** `reports.py:report_listing` endpoint'ine katı `ReportCreateSchema` ve 1.000 karakterlik `max_length` ekle; `ON CONFLICT DO NOTHING` ile çift tıklama 500 hatasını engelle.~~ ✅ `5af9b711`
 130. **Adım 130 (`SRE-137`):** `follows.py:accept_follow_request` içinde `sa_update(MessageThread)` sonucunda gerçekten bir satır güncellendiyse (`result.rowcount > 0`) ve sayaç sıfırdan büyükse `_redis.decr` çalıştır; okunmamış mesaj istek sayacının negatif sayılara düşmesini engelle.
 131. **Adım 131 (`SRE-138`):** `ratings.py:mark_read` içindeki tüm ORM nesnelerini belleğe çekip Python döngüsüyle tek tek güncelleme yapısını kaldır; tek bir toplu `update(Rating)` SQL sorgusuna çevir ve `ratings:unread:{user_id}` Redis önbelleğini sıfırla.
 132. **Adım 132 (`SRE-145`):** `leads.py:get_audience_size` içindeki 10.000 ID'lik `id = ANY(:ids)` PostgreSQL sorgusunu satıcı ve ilan filtrelerine göre Redis'te 120 saniye önbellekle; `NOT IN` anti-join yapısını `LEFT JOIN / IS NULL` veya ClickHouse bitmap fonksiyonlarına geçirerek cross-database darboğazını çöz.
