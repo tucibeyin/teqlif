@@ -146,7 +146,7 @@
 | **SRE-134** | 🟠 **P1 (Yüksek)** | `livekit_service.py` | `lk_list_all_rooms` ve `lk_broadcast_delete` İçinde Sıralı (Sequential) Döngü ile Blokaj | 1 media node erişilemez olduğunda arka plan temizlik ve senkronizasyonunun 16-60 saniye boyunca kilitlenmesi |
 | **SRE-135** | 🟠 **P1 (Yüksek)** | `messages.py` / `media_processor.py` | `_read_streaming` Bellek Çiftlemesi ve HTTP Handler İçinde Senkron Pillow/FFmpeg Süreç Blokajı | 50 MB dosyayı bellekte birleştirip CPU-yoğun thumbnail ve 50s'lik ffmpeg çalıştırma ile Uvicorn event loop açlığı |
 | **SRE-136** | 🟠 **P1 (Yüksek)** | `upsert_rating.py` | `upsert_rating` Eşzamanlı İsteklerinde IntegrityError (HTTP 500) Yarışı ve Erken Session Commit Tutarsızlığı | Çift tıkta `ratings_rater_id_rated_id_key` 500 çökmesi ve UoW context'i içinde kontrolsüz commit yapılması |
-| **SRE-137** | 🟡 **P2 (Orta)** | `follows.py` | `accept_follow_request` İçinde Koşulsuz `_redis.decr` Nedeniyle Mesaj İstek Sayacının Negatife Düşmesi | Aralarında mesaj isteği olmasa bile sayacın `-1, -2` olması ve mobil badge'in hatalı gösterilmesi |
+| ~~**SRE-137**~~ ✅ `51915481` | 🟡 **P2 (Orta)** | `follows.py` | `accept_follow_request` İçinde Koşulsuz `_redis.decr` Nedeniyle Mesaj İstek Sayacının Negatife Düşmesi | Aralarında mesaj isteği olmasa bile sayacın `-1, -2` olması ve mobil badge'in hatalı gösterilmesi |
 | **SRE-138** | 🟡 **P2 (Orta)** | `ratings.py` | `mark_read` Endpoint'inde Tüm Nesnelerin Belleğe Çekilip Python Döngüsüyle Tek Tek Güncellenmesi | Tek SQL UPDATE yerine yüzlerce ayrı UPDATE sorgusu atılması ve Redis unread badge önbelleğinin güncellenmemesi |
 | **SRE-139** | 🔴 **P0 (Kritik)** | `stream_concat_task.py` | Concat Sonucu Kayıtta `available_at` Eksikliği Nedeniyle Bildirim ve Yaşam Döngüsü Felci | Bildirimlerin gitmemesi, expires_at'in NULL kalması, MinIO ILM ve Node2 yedekleme zincirinin kilitlenmesi |
 | **SRE-140** | 🔴 **P0 (Kritik)** | `utils/i18n.py` | `_get_t` İçinde Senkron `create_engine` ile Havuz Sızıntısı ve 3s Uvicorn Event Loop Donması | DB TTL bitiminde her çağrıda unclosed connection pool sızması, Uvicorn'un 3s kilitlenmesi ve WebSocket donmaları |
@@ -5863,6 +5863,9 @@ await self.uow.session.execute(stmt)
 ---
 
 ### SRE-137 · 🟡 P2 (Orta) · `accept_follow_request` İçinde Koşulsuz `_redis.decr` Nedeniyle Mesaj İstek Sayacının Negatife Düşmesi
+
+> ✅ **Çözüldü** — Commit `51915481` · 2026-11-06
+
 * **Etkilenen Dosya:** `backend/app/routers/follows.py`
 * **İlgili Satırlar:** 213–228
 * **İlgili Fonksiyon:** `accept_follow_request`
@@ -8023,7 +8026,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 ### 🟡 Faz 3: Veritabanı, Eşzamanlılık ve Performans Optimizasyonu (P2 Öncelik — 45 Adım)
 128. ~~**Adım 128 (`SRE-125`):** `recommendation_service.py` içindeki `SELECT DISTINCT category` sorgusunu kaldırıp kategori önbelleğine bağla; `ORDER BY hashtext()` fonksiyonel sıralamasını Redis ID örneklemesiyle değiştir.~~ ✅ `282cee24` `dcc955c9`
 129. ~~**Adım 129 (`SRE-126`):** `reports.py:report_listing` endpoint'ine katı `ReportCreateSchema` ve 1.000 karakterlik `max_length` ekle; `ON CONFLICT DO NOTHING` ile çift tıklama 500 hatasını engelle.~~ ✅ `5af9b711`
-130. **Adım 130 (`SRE-137`):** `follows.py:accept_follow_request` içinde `sa_update(MessageThread)` sonucunda gerçekten bir satır güncellendiyse (`result.rowcount > 0`) ve sayaç sıfırdan büyükse `_redis.decr` çalıştır; okunmamış mesaj istek sayacının negatif sayılara düşmesini engelle.
+130. ~~**Adım 130 (`SRE-137`):** `follows.py:accept_follow_request` içinde `sa_update(MessageThread)` sonucunda gerçekten bir satır güncellendiyse (`result.rowcount > 0`) ve sayaç sıfırdan büyükse `_redis.decr` çalıştır; okunmamış mesaj istek sayacının negatif sayılara düşmesini engelle.~~ ✅ `51915481`
 131. **Adım 131 (`SRE-138`):** `ratings.py:mark_read` içindeki tüm ORM nesnelerini belleğe çekip Python döngüsüyle tek tek güncelleme yapısını kaldır; tek bir toplu `update(Rating)` SQL sorgusuna çevir ve `ratings:unread:{user_id}` Redis önbelleğini sıfırla.
 132. **Adım 132 (`SRE-145`):** `leads.py:get_audience_size` içindeki 10.000 ID'lik `id = ANY(:ids)` PostgreSQL sorgusunu satıcı ve ilan filtrelerine göre Redis'te 120 saniye önbellekle; `NOT IN` anti-join yapısını `LEFT JOIN / IS NULL` veya ClickHouse bitmap fonksiyonlarına geçirerek cross-database darboğazını çöz.
 133. **Adım 133 (`SRE-146`):** `wallet.py:get_balance` endpoint'inde bakiye bilgisini 15 dakikalık `session:user:{id}` Redis oturumundan değil doğrudan `select(User.teqlik_balance)` ile veritabanından taze oku; bakiye başlığı ile işlem listesi arasındaki 15 dakikalık senkronizasyon kopukluğunu gider.
