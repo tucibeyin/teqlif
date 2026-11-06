@@ -73,16 +73,19 @@ async def publish_mod_event(
 
 
 # ── LiveKit yardımcısı ───────────────────────────────────────────────────────
-async def remove_from_livekit(room_name: str, user_id: int) -> None:
+async def remove_from_livekit(room_name: str, user_id: int, livekit_url: str | None = None) -> None:
     """Katılımcıyı LiveKit odasından zorla çıkar (non-critical)."""
     try:
         logger.info(
             "[MOD] LiveKit katılımcı çıkarılıyor | room=%s user_id=%s identity=%s",
             room_name, user_id, str(user_id),
         )
-        from app.services.edge_orchestrator import orchestrator, ServiceType
-        node = await orchestrator.allocate_node(ServiceType.MEDIA)
-        api_url = node["livekit_url"]
+        if livekit_url:
+            api_url = livekit_url
+        else:
+            from app.services.edge_orchestrator import orchestrator, ServiceType
+            node = await orchestrator.allocate_node(ServiceType.MEDIA)
+            api_url = node["livekit_url"]
         async with aiohttp.ClientSession() as session:
             svc = RoomService(session, api_url, settings.livekit_api_key, settings.livekit_api_secret)
             req = RoomParticipantIdentity()
@@ -214,8 +217,8 @@ class ModerationService:
         await redis.expire(kick_key(stream_id), _TTL)
 
         await publish_mod_event(stream_id, WS.KICKED, target.id)
-        # LiveKit odasından zorla çıkar
-        await remove_from_livekit(stream.room_name, target.id)
+        # LiveKit odasından zorla çıkar — stream'in atandığı node'u kullan
+        await remove_from_livekit(stream.room_name, target.id, stream.livekit_url)
         logger.info(
             "[MOD] KICK | stream_id=%s by=%s target=%s",
             stream_id, current_user.username, target.username,
