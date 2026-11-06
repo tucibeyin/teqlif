@@ -8007,7 +8007,7 @@ Tüm 174 zaafın mimari bağımlılıklarına ve etki büyüklüklerine göre ek
 117. ~~**Adım 117 (`SRE-37`):** `leads.py:send-blast` döngüsünü ARQ arka plan kuyruğuna taşı ve Firebase Admin SDK `send_each_for_multicast` toplu gönderimine geçir.~~ ✅ `1f13485a` / FCM paralel: `098444e4`
 118. ~~**Adım 118 (`SRE-19`):** `moderation_service.py` içindeki `remove_from_livekit` fonksiyonuna stream'in gerçek `livekit_url` bilgisini bağla.~~ ✅ `7e69e892`
 119. ~~**Adım 119 (`SRE-23`):** `direct_sale_commands.py` satın alma işleminde DB commit hatası durumunda Redis stok iadesi (compensating transaction) ekle.~~ ✅ `7250b2d3`
-120. **Adım 120 (`SRE-24`):** `ad_service.py` içindeki Lua scriptine `current <= 0` kontrolü ekleyerek negatif bütçe sızıntısını durdur.
+120. ~~**Adım 120 (`SRE-24`):** `ad_service.py` içindeki Lua scriptine `current <= 0` kontrolü ekleyerek negatif bütçe sızıntısını durdur.~~ ✅ `7d751881`
 121. **Adım 121 (`SRE-25`):** `stream_listener.py` içindeki `os.getpid()` kullanımını deterministik worker kimliğiyle değiştir; servis yeniden başlarken mesaj kaybını engelle.
 122. **Adım 122 (`SRE-22`):** `story_service.py` içindeki senkron FFmpeg video sıkıştırmasını HTTP isteğinden çıkarıp ARQ video kuyruğuna taşı.
 123. **Adım 123 (`SRE-13`):** `database_clickhouse.py` içindeki `_drain` fonksiyonunu en az bir kere garantili (At-least-once) hale getir; insert hatasında verinin Redis'ten silinmesini engelle.
