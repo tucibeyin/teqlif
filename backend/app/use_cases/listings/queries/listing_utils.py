@@ -92,6 +92,8 @@ def _card_dict(
         "image_url": listing.image_url,
         "thumbnail_url": listing.thumbnail_url,
         "province": listing.province,
+        "category": listing.category,
+        "subcategory": listing.subcategory,
         "status": listing.status.value if hasattr(listing.status, 'value') else str(listing.status),
         "is_highlight": listing.is_highlight,
         "likes_count": likes_count,
