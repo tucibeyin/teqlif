@@ -24,7 +24,7 @@
 | **SRE-12** | 🔴 **P0 (Kritik)** | `main.py` & `teqlif.service` | Uvicorn 8 Worker Çoğaltması Nedeniyle Arka Plan Scheduler ve Flush Görevlerinin 8 Kat Çalışması | 8 kat DB polling, ClickHouse batch kirliliği, CPU israfı |
 | **SRE-13** | 🟠 **P1 (Yüksek)** | `database_clickhouse.py` | ClickHouse Buffer Boşaltımında Sessiz Veri Kaybı ve Finansal Event Riski | Doğrudan satış sipariş ve stok denetim loglarının yok olması |
 | ~~**SRE-14**~~ | ~~🟠 **P1 (Yüksek)**~~ | ~~`thompson_sampling.py`~~ | ~~Thompson Sampling Redis Read-Modify-Write Yarış Durumu~~ | ~~Kullanıcı ilgi alanı parametrelerinin ezilmesi (Lost Updates)~~ ✅ f519fe9a |
-| **SRE-15** | 🟠 **P1 (Yüksek)** | `send_direct_message.py` | Kapatılmış SQLAlchemy Session'ı Üzerinde Çalıştırma ve İşlem Sızıntısı | `InvalidRequestError` / sessiz connection kirliliği |
+| ~~**SRE-15**~~ | ~~🟠 **P1 (Yüksek)**~~ | ~~`send_direct_message.py`~~ | ~~Kapatılmış SQLAlchemy Session'ı Üzerinde Çalıştırma ve İşlem Sızıntısı~~ | ~~`InvalidRequestError` / sessiz connection kirliliği~~ ✅ 5de69c87 |
 | **SRE-16** | 🟠 **P1 (Yüksek)** | `churn_ml_service.py` | Churn Modelinde Atomik Olmayan Model (Pickle) Kaydı | Canlı tahmin anında truncated pickle ve crash |
 | **SRE-17** | 🟡 **P2 (Orta)** | `listing_tasks.py` | İlan Pasifleştirmede ORM Nesne Şişmesi & IN Parametre Patlaması | Bellek şişmesi, Postgres parse darboğazı |
 | **SRE-18** | 🟡 **P2 (Orta)** | `analytics_tasks.py` | Churn Airdrop Dağıtımında Toplu Kilit ve Tablo Blokajı | `users` tablosunda uzun satır kilitleri, login blokajı |
@@ -663,7 +663,7 @@ Redis'in yerel atomik kayan noktalı artırma komutu olan **`HINCRBYFLOAT`** kul
 
 ---
 
-### SRE-15 · 🟠 P1 (Yüksek) · Kapatılmış SQLAlchemy Session'ı Üzerinde Çalıştırma ve İşlem Sızıntısı
+### ~~SRE-15 · 🟠 P1 (Yüksek) · Kapatılmış SQLAlchemy Session'ı Üzerinde Çalıştırma ve İşlem Sızıntısı~~ ✅ 5de69c87
 
 * **Etkilenen Dosyalar:** 
   * `backend/app/use_cases/messages/commands/send_direct_message.py` (satır 145–155)
