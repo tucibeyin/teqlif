@@ -116,20 +116,37 @@ async def notifications_ws(websocket: WebSocket):
         return
     user_id_var.set(str(user_id))
 
-    # ── 3. DB doğrulama ───────────────────────────────────────────────────────
+    # ── 3. Doğrulama — önce Redis session, DB'ye gitmeden ───────────────────────
     try:
-        async with AsyncSessionLocal() as db:
-            result = await db.execute(select(User).where(User.id == user_id))
-            user = result.scalar_one_or_none()
-            if not user or user.status != UserStatus.ACTIVE:
+        import json as _json
+        from app.utils.redis_client import get_redis as _get_redis
+        _redis = await _get_redis()
+        _cached_raw = await _redis.get(f"session:user:{user_id}")
+        if _cached_raw:
+            _udata = _json.loads(_cached_raw)
+            _status_val = _udata.get("status", "")
+            _tok_ver = _udata.get("token_version")
+            if _status_val != UserStatus.ACTIVE.value:
                 await websocket.close(code=4001)
                 return
-            if _decode_token_version(token) != user.token_version:
-                logger.warning("[NOTIF WS] Geçersiz token_version | user_id=%s", user_id)
+            if _tok_ver is not None and _decode_token_version(token) != int(_tok_ver):
+                logger.warning("[NOTIF WS] Geçersiz token_version (cache) | user_id=%s", user_id)
                 await websocket.close(code=4001)
                 return
+        else:
+            # Cache miss — DB'ye git
+            async with AsyncSessionLocal() as db:
+                result = await db.execute(select(User.status, User.token_version).where(User.id == user_id))
+                row = result.one_or_none()
+                if not row or row.status != UserStatus.ACTIVE:
+                    await websocket.close(code=4001)
+                    return
+                if _decode_token_version(token) != row.token_version:
+                    logger.warning("[NOTIF WS] Geçersiz token_version (db) | user_id=%s", user_id)
+                    await websocket.close(code=4001)
+                    return
     except Exception as exc:
-        logger.error("[NOTIF WS] DB doğrulama hatası | user_id=%s | %s", user_id, exc, exc_info=True)
+        logger.error("[NOTIF WS] Doğrulama hatası | user_id=%s | %s", user_id, exc, exc_info=True)
         try:
             await websocket.close(code=1011)
         except Exception:
@@ -151,12 +168,13 @@ async def notifications_ws(websocket: WebSocket):
     logger.info("[NOTIF WS] BAĞLANDI | user_id=%s", user_id)
 
     try:
-        # Bağlantı kurulunca mevcut okunmamış sayısını gönder
+        # Bağlantı kurulunca mevcut okunmamış sayısını gönder — DM'ler hariç (REST ile tutarlı)
         async with AsyncSessionLocal() as db:
             result = await db.execute(
                 select(func.count()).where(
                     Notification.user_id == user_id,
                     Notification.is_read == False,  # noqa: E712
+                    Notification.type != "message",  # DM'ler zaten ayrı sayılıyor
                 )
             )
             count = result.scalar_one()
