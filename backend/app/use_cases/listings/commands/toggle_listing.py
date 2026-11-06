@@ -100,6 +100,12 @@ class ToggleListingCommand:
             )
 
         try:
+            from app.core.read_cache import invalidate_cache
+            asyncio.create_task(invalidate_cache(f"listing:{listing_id}"))
+        except Exception:
+            pass
+
+        try:
             if reactivating:
                 from app.services.feed.listing_cache_service import build_listing_snapshot, cache_listing_snapshot, push_to_recent_feed_cache
                 snapshot = build_listing_snapshot(listing)
