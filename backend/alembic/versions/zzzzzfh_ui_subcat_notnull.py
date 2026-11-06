@@ -14,6 +14,17 @@ depends_on = None
 
 
 def upgrade():
+    # subcategory IS NULL olan satırlar arasında (user_id, category) duplicate'leri
+    # temizle — NULL != NULL olduğundan kısıt daha önce çalışmadı.
+    op.execute("""
+        DELETE FROM user_interests a
+        USING user_interests b
+        WHERE a.user_id = b.user_id
+          AND a.category = b.category
+          AND a.subcategory IS NULL
+          AND b.subcategory IS NULL
+          AND a.id < b.id
+    """)
     op.execute(
         "UPDATE user_interests SET subcategory = '' WHERE subcategory IS NULL"
     )
