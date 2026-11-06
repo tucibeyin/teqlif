@@ -105,6 +105,10 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
   bool _heartVisible = false;
   AnimationController? _heartAnimCtrl;
 
+  // Pasif ilan göz butonu pulse animasyonu
+  late AnimationController _eyePulseCtrl;
+  late Animation<double> _eyePulseAnim;
+
   // Teklif state'i
   final _offersNotifier = ValueNotifier<List<ListingOffer>>([]);
   bool _offersLoading = true;
@@ -143,6 +147,18 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
         }
       });
     }
+
+    _eyePulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    );
+    _eyePulseAnim = Tween<double>(begin: 0.5, end: 1.0).animate(
+      CurvedAnimation(parent: _eyePulseCtrl, curve: Curves.easeInOut),
+    );
+    // İlk frame'den sonra pasifse animasyonu başlat
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && !_isActive) _eyePulseCtrl.repeat(reverse: true);
+    });
 
     _likesCount = widget.listing['likes_count'] as int? ?? 0;
     _videoUrl = widget.listing['video_url'] as String?;
@@ -499,6 +515,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
         }
       }
     }
+    _eyePulseCtrl.dispose();
     _heartAnimCtrl?.stop();
     _heartAnimCtrl?.dispose();
     _chewieCtrl?.dispose();
@@ -952,6 +969,18 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     final listingDetailId = widget.listing['id'] as int?;
     if (listingDetailId != null) ref.watch(listingDetailProvider(listingDetailId));
 
+    // Göz butonu pulse: pasifken yanıp söner, aktif olunca durur.
+    if (listingDetailId != null) {
+      ref.listen(listingDetailProvider(listingDetailId), (_, next) {
+        if (next.canReceiveOffers) {
+          _eyePulseCtrl.stop();
+          _eyePulseCtrl.value = 1.0;
+        } else if (next.isPassive && !_eyePulseCtrl.isAnimating) {
+          _eyePulseCtrl.repeat(reverse: true);
+        }
+      });
+    }
+
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
@@ -1020,16 +1049,23 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                 }
               },
             ),
-            IconButton(
-              key: const Key('listing_detail_btn_aktif_toggle'),
-              icon: Icon(
-                _isActive
-                    ? Icons.visibility_off_outlined
-                    : Icons.visibility_outlined,
-                color: _isActive ? const Color(0xFF6B7280) : kPrimary,
+            AnimatedBuilder(
+              animation: _eyePulseAnim,
+              builder: (_, child) => Opacity(
+                opacity: _eyePulseAnim.value,
+                child: child,
               ),
-              tooltip: _isActive ? loc.t("btnDeactivate") : loc.t("btnActivate"),
-              onPressed: _toggleActive,
+              child: IconButton(
+                key: const Key('listing_detail_btn_aktif_toggle'),
+                icon: Icon(
+                  _isActive
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                  color: _isActive ? const Color(0xFF6B7280) : kPrimary,
+                ),
+                tooltip: _isActive ? loc.t("btnDeactivate") : loc.t("btnActivate"),
+                onPressed: _toggleActive,
+              ),
             ),
             IconButton(
               key: const Key('listing_detail_btn_sil'),

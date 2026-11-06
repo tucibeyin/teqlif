@@ -6,6 +6,7 @@ import '../../services/api_service.dart';
 import '../../services/storage_service.dart';
 import '../../services/wallet_service.dart';
 import '../../core/logger_service.dart';
+import '../../core/event_bus.dart';
 import '../../models/listing_filter_state.dart';
 
 class ProfileUiState {
@@ -91,6 +92,7 @@ class ProfileViewModel extends AutoDisposeAsyncNotifier<ProfileUiState> {
   StreamSubscription? _profileSub;
   StreamSubscription? _listingsSub;
   StreamSubscription? _walletSub;
+  StreamSubscription? _statusSub;
 
   @override
   FutureOr<ProfileUiState> build() async {
@@ -107,6 +109,18 @@ class ProfileViewModel extends AutoDisposeAsyncNotifier<ProfileUiState> {
       _profileSub?.cancel();
       _listingsSub?.cancel();
       _walletSub?.cancel();
+      _statusSub?.cancel();
+    });
+
+    _statusSub = eventBus.on<ListingStatusChangedEvent>().listen((e) {
+      if (!state.hasValue) return;
+      final listings = state.value!.listings;
+      final idx = listings.indexWhere((l) => (l as Map)['id'] == e.listingId);
+      if (idx == -1) return;
+      final updated = List<dynamic>.from(listings);
+      updated[idx] = Map<String, dynamic>.from(updated[idx] as Map)
+        ..['status'] = e.isActive ? 'active' : 'passive';
+      state = AsyncValue.data(state.value!.copyWith(listings: updated));
     });
 
     return ProfileUiState(
