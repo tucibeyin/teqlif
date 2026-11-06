@@ -922,9 +922,14 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
     final loc = ref.read(localizationProvider);
     // (backendKey, localizedLabel, cost) — backendKey DB'ye yazılır, label UI'da gösterilir
     final gifts = [
-      ('fire',    loc.t('giftNameFire'),    10),
-      ('diamond', loc.t('giftNameDiamond'), 50),
-      ('crown',   loc.t('giftNameCrown'),  100),
+      ('clap',          loc.t('giftNameClap'),         1),
+      ('tea',           loc.t('giftNameTea'),           5),
+      ('fire',          loc.t('giftNameFire'),         10),
+      ('diamond',       loc.t('giftNameDiamond'),      50),
+      ('crown',         loc.t('giftNameCrown'),       100),
+      ('golden_hammer', loc.t('giftNameGoldenHammer'),250),
+      ('rocket',        loc.t('giftNameRocket'),      500),
+      ('trophy',        loc.t('giftNameTrophy'),     1000),
     ];
 
     await showModalBottomSheet<void>(
@@ -1894,52 +1899,65 @@ class _GiftSheetState extends ConsumerState<_GiftSheet> {
               ),
             )
           else
-            Row(
+            GridView.count(
+              crossAxisCount: 4,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+              childAspectRatio: 0.85,
               children: widget.gifts.map((g) {
-                const keyEmoji = {'fire': '🔥', 'diamond': '💎', 'crown': '👑'};
+                const keyEmoji = {
+                  'clap': '👏',
+                  'tea': '🍵',
+                  'fire': '🔥',
+                  'diamond': '💎',
+                  'crown': '👑',
+                  'golden_hammer': '🔨',
+                  'rocket': '🚀',
+                  'trophy': '🏆',
+                };
                 final (backendKey, label, cost) = g;
                 final emoji = keyEmoji[backendKey] ?? '🎁';
-                return Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: GestureDetector(
-                      onTap: () => _send(backendKey, cost),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF312E81), Color(0xFF1E1B4B)],
-                            begin: AlignmentDirectional.topStart,
-                            end: AlignmentDirectional.bottomEnd,
-                          ),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: Colors.white12),
-                        ),
-                        child: Column(
-                          children: [
-                            Text(emoji, style: const TextStyle(fontSize: 32)),
-                            const SizedBox(height: 6),
-                            Text(
-                              label,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 12,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${NumberFormat('#,##0', 'tr_TR').format(cost)} teqlik',
-                              style: const TextStyle(
-                                color: Color(0xFFA78BFA),
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
+                return GestureDetector(
+                  onTap: () => _send(backendKey, cost),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF312E81), Color(0xFF1E1B4B)],
+                        begin: AlignmentDirectional.topStart,
+                        end: AlignmentDirectional.bottomEnd,
                       ),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.white12),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(emoji, style: const TextStyle(fontSize: 28)),
+                        const SizedBox(height: 4),
+                        Text(
+                          label,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 11,
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${NumberFormat('#,##0', 'tr_TR').format(cost)}',
+                          style: const TextStyle(
+                            color: Color(0xFFA78BFA),
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 );
