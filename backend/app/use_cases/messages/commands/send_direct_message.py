@@ -3,6 +3,7 @@ from app.core.uow import AbstractUnitOfWork
 from app.core.logger import get_logger
 from app.core.exceptions import NotFoundException, ForbiddenException
 from app.core.auto_mod import analyze_text_all
+from app.database import AsyncSessionLocal
 from app.models.message import DirectMessage
 from app.models.message_thread import MessageThread
 from app.models.block import UserBlock
@@ -144,13 +145,16 @@ class SendDirectMessageCommand:
 
             await self.uow.session.flush()
             msg_id = msg.id
-            session = self.uow.session
 
         # commit sonrası — side effects
 
-        # Thread durumu değiştiyse relationship cache'i güncelle ve her iki tarafa broadcast et
+        # Thread durumu değiştiyse relationship cache'i güncelle ve her iki tarafa broadcast et.
+        # Bağımsız temiz session kullanılır: UoW context'inden çıkıldığında
+        # _owns_session=True ise session kapatılır; =False ise transaction
+        # commit edilmiş olup aynı session üzerinde yeni sorgu hayalet transaction açar.
         if thread_status_changed:
-            state = await RelationshipStateService.recompute_and_cache(user_a, user_b, session)
+            async with AsyncSessionLocal() as rel_session:
+                state = await RelationshipStateService.recompute_and_cache(user_a, user_b, rel_session)
             RelationshipStateService.broadcast(state)
 
         if is_new_request:
