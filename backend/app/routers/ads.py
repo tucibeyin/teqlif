@@ -37,8 +37,8 @@ router = APIRouter(prefix="/api/ads", tags=["ads"])
 
 class CampaignCreate(BaseModel):
     listing_id: int
-    total_budget: int = Field(gt=0)
-    cpc_bid: int = Field(gt=0)
+    total_budget: int = Field(gt=0, le=5000)
+    cpc_bid: int = Field(gt=0, le=100)
 
 
 # ── Kampanya Oluştur ──────────────────────────────────────────────────────────
