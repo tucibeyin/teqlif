@@ -1446,8 +1446,8 @@ async def compute_user_interests_task(ctx: dict) -> None:
 
             # Toplu upsert — executemany tek round-trip
             upsert_sql = text("""
-                INSERT INTO user_interests (user_id, category, score, raw_signals, updated_at)
-                VALUES (:uid, :cat, :score, :raw, NOW())
+                INSERT INTO user_interests (user_id, category, subcategory, score, raw_signals, updated_at)
+                VALUES (:uid, :cat, :subcat, :score, :raw, NOW())
                 ON CONFLICT ON CONSTRAINT uq_user_interest
                 DO UPDATE SET score = EXCLUDED.score,
                               raw_signals = EXCLUDED.raw_signals,
@@ -1460,6 +1460,7 @@ async def compute_user_interests_task(ctx: dict) -> None:
                 params.append({
                     "uid": row.user_id,
                     "cat": row.category,
+                    "subcat": "",
                     "score": float(row.score),
                     "raw": json.dumps({"raw_total": float(row.raw)}),
                 })

@@ -53,6 +53,7 @@ async def seed_interests(
             {
                 "user_id": current_user.id,
                 "category": cat,
+                "subcategory": "",
                 "score": _ONBOARDING_SCORE,
                 "raw_signals": {"raw_total": _ONBOARDING_SCORE, "source": "onboarding"},
             }
