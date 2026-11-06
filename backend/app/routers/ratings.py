@@ -1,7 +1,7 @@
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select, func
+from sqlalchemy import select, func, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.enums import UserStatus
@@ -83,12 +83,16 @@ async def mark_read(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    ratings = await db.scalars(
-        select(Rating).where(Rating.rated_id == current_user.id, Rating.is_read == False)
+    await db.execute(
+        update(Rating)
+        .where(Rating.rated_id == current_user.id, Rating.is_read == False)
+        .values(is_read=True)
     )
-    for r in ratings:
-        r.is_read = True
     await db.commit()
+
+    from app.utils.redis_client import get_redis
+    _redis = await get_redis()
+    await _redis.set(f"ratings:unread:{current_user.id}", 0)
     return {"ok": True}
 
 
