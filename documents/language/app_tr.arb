@@ -202,6 +202,8 @@
   "giftNameGoldenHammer": "Altın Çekiç",
   "giftNameRocket": "Roket",
   "giftNameTrophy": "Kupa",
+  "notifGiftReceivedTitle": "Hediye Aldın! 🎁",
+  "notifGiftReceivedBody": "{sender} sana {gift_name} gönderdi ({teqlik} teqlik)",
   "walletConvertToTeqlik": "teqlik'e Dönüştür (+%10 Bonus)",
   "walletIbanPreRegistrationTitle": "IBAN Ön Kaydı",
   "walletIbanRegistrationSuccess": "IBAN kaydedildi. Kurumsal banka entegrasyonu tamamlandığında işleminiz başlayacak.",

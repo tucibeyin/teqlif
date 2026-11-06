@@ -1937,6 +1937,8 @@
   "giftNameGoldenHammer": "Золотой молот",
   "giftNameRocket": "Ракета",
   "giftNameTrophy": "Кубок",
+  "notifGiftReceivedTitle": "Вы получили подарок! 🎁",
+  "notifGiftReceivedBody": "{sender} отправил вам {gift_name} ({teqlik} teqlik)",
   "walletConvertToTeqlik": "Конвертировать в teqlik (+10% бонус)",
   "walletIbanPreRegistrationTitle": "Предрегистрация IBAN",
   "walletIbanRegistrationSuccess": "IBAN сохранён. Вывод будет обработан после завершения банковской интеграции.",

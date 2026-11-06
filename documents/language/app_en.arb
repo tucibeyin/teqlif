@@ -194,6 +194,8 @@
   "giftNameGoldenHammer": "Golden Hammer",
   "giftNameRocket": "Rocket",
   "giftNameTrophy": "Trophy",
+  "notifGiftReceivedTitle": "You Received a Gift! 🎁",
+  "notifGiftReceivedBody": "{sender} sent you {gift_name} ({teqlik} teqlik)",
   "walletConvertToTeqlik": "Convert to teqlik (+10% Bonus)",
   "walletIbanPreRegistrationTitle": "IBAN Pre-Registration",
   "walletIbanRegistrationSuccess": "IBAN saved. Your withdrawal will be processed once corporate banking integration is complete.",

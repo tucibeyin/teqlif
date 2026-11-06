@@ -96,9 +96,9 @@ async def push_notification(
             raw = t.get(key, "")
             if not raw:
                 return ""
-            # Resolve cat_* param values to localized category labels
+            # Resolve cat_* and giftName* param values to localized labels
             resolved = {
-                k: t.get(v, v) if isinstance(v, str) and v.startswith("cat_") else v
+                k: t.get(v, v) if isinstance(v, str) and (v.startswith("cat_") or v.startswith("giftName")) else v
                 for k, v in params.items()
             }
             try:

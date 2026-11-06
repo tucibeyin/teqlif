@@ -349,6 +349,7 @@ async def send_gift(
     try:
         from app.services.notification_service import push_notification
         from app.core.logger import fire_and_forget
+        _gift_arb_key = "giftName" + "".join(p.title() for p in body.gift_name.split("_"))
         fire_and_forget(push_notification(
             result["receiver_id"],
             {
@@ -356,6 +357,15 @@ async def send_gift(
                 "sender_username": current_user.username,
                 "gift_name": body.gift_name,
                 "earned_teqlik": result["earned_teqlik"],
+                "i18n": {
+                    "title_key": "notifGiftReceivedTitle",
+                    "body_key": "notifGiftReceivedBody",
+                    "body_params": {
+                        "sender": current_user.username,
+                        "gift_name": _gift_arb_key,
+                        "teqlik": str(result["earned_teqlik"]),
+                    },
+                },
             },
             pref_key="gift_received",
         ))

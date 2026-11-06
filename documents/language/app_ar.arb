@@ -174,6 +174,8 @@
   "giftNameGoldenHammer": "مطرقة ذهبية",
   "giftNameRocket": "صاروخ",
   "giftNameTrophy": "كأس",
+  "notifGiftReceivedTitle": "تلقيت هدية! 🎁",
+  "notifGiftReceivedBody": "أرسل لك {sender} {gift_name} ({teqlik} teqlik)",
   "walletConvertToTeqlik": "تحويل إلى teqlik (+10% مكافأة)",
   "walletIbanPreRegistrationTitle": "التسجيل المسبق لـ IBAN",
   "walletIbanRegistrationSuccess": "تم حفظ IBAN. ستتم معالجة طلبك عند اكتمال تكامل البنك المؤسسي.",
