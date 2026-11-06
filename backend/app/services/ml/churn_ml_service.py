@@ -166,8 +166,10 @@ def _train_sync(X: list[list[float]], y: list[int]) -> None:
 
     model_path = _model_path()
     model_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(model_path, "wb") as f:
+    tmp_path = model_path.with_suffix(".tmp")
+    with open(tmp_path, "wb") as f:
         pickle.dump({"scaler": scaler, "clf": clf, "val_acc": val_acc}, f)
+    os.replace(tmp_path, model_path)  # atomik POSIX rename — canlı okuyucu yarım dosya görmez
     logger.info("[ChurnML] Model kaydedildi: %s", model_path)
 
 
