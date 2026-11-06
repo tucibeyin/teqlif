@@ -838,14 +838,24 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
               child: Divider(height: 1, indent: 16, endIndent: 16),
             ),
             SliverToBoxAdapter(
-              child: _SectionHeader(
-                icon: Icons.grid_view_rounded,
-                label: loc.t("listingsSelectedForYou"),
-                trailing: TeqViewToggle(
-                  isListView: _isListView,
-                  onChanged: (v) => setState(() => _isListView = v),
-                  gridTooltip: loc.t("tooltipGridView"),
-                  listTooltip: loc.t("tooltipListView"),
+              child: Padding(
+                padding: const EdgeInsetsDirectional.fromSTEB(16, 14, 16, 8),
+                child: Row(
+                  children: [
+                    const Icon(Icons.grid_view_rounded, size: 15, color: Colors.grey),
+                    const SizedBox(width: 6),
+                    Text(
+                      loc.t("listingsSelectedForYou"),
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                    ),
+                    const Spacer(),
+                    TeqViewToggle(
+                      isListView: _isListView,
+                      onChanged: (v) => setState(() => _isListView = v),
+                      gridTooltip: loc.t("tooltipGridView"),
+                      listTooltip: loc.t("tooltipListView"),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -988,12 +998,10 @@ class _SectionHeader extends ConsumerWidget {
   final IconData icon;
   final String label;
   final Color? iconColor;
-  final Widget? trailing;
   const _SectionHeader({
     required this.icon,
     required this.label,
     this.iconColor,
-    this.trailing,
   });
 
   @override
@@ -1012,10 +1020,6 @@ class _SectionHeader extends ConsumerWidget {
               color: Color(0xFF374151),
             ),
           ),
-          if (trailing != null) ...[
-            const Spacer(),
-            trailing!,
-          ],
         ],
       ),
     );

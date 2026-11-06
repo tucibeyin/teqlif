@@ -15,6 +15,8 @@ import '../services/image_cache_manager.dart';
 
 import '../services/storage_service.dart';
 import '../ui_library/components/buttons/teq_button.dart';
+import '../ui_library/components/buttons/teq_view_toggle.dart';
+import '../ui_library/components/cards/listing_list_row.dart';
 import '../ui_library/components/overlays/teq_snackbar.dart';
 import '../ui_library/components/overlays/teq_toast.dart';
 import '../services/listing_service.dart';
@@ -42,7 +44,19 @@ class HomeScreen extends ConsumerStatefulWidget {
 class HomeScreenState extends ConsumerState<HomeScreen> {
   void refresh({bool bypassCache = true}) => ref.read(homeViewModelProvider.notifier).refresh(bypassCache: bypassCache);
 
+  String _fmtPrice(dynamic price) {
+    if (price == null) return '';
+    final s = (price as num).toInt().toString();
+    final buf = StringBuffer();
+    for (int i = 0; i < s.length; i++) {
+      if (i > 0 && (s.length - i) % 3 == 0) buf.write('.');
+      buf.write(s[i]);
+    }
+    return '${buf.toString()} ₺';
+  }
+
   bool _isLoggedIn = false;
+  bool _isListView = false;
   final ScrollController _scrollCtrl = ScrollController();
 
   bool _showOnboardingBanner = false;
@@ -450,6 +464,13 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
+                            const Spacer(),
+                            TeqViewToggle(
+                              isListView: _isListView,
+                              onChanged: (v) => setState(() => _isListView = v),
+                              gridTooltip: loc.t("tooltipGridView"),
+                              listTooltip: loc.t("tooltipListView"),
+                            ),
                           ],
                         ),
                       ),
@@ -490,6 +511,60 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                               style: const TextStyle(color: Colors.grey),
                             ),
                           ),
+                        ),
+                      )
+                    else if (_isListView)
+                      SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (ctx, i) {
+                            final item = state.recentListings[i] as Map<String, dynamic>;
+                            final imgs = item['image_urls'] as List? ?? [];
+                            final raw = imgs.isNotEmpty ? imgs[0] as String : item['image_url'] as String?;
+                            final photo = raw != null ? ref.read(apiClientProvider).imgUrl(raw) : null;
+                            return ListingListRow(
+                              title: item['title'] as String?,
+                              price: _fmtPrice(item['price']),
+                              imageUrl: photo,
+                              location: (item['province'] as String?)?.trim() ?? item['location'] as String?,
+                              category: item['category'] as String?,
+                              subcategory: item['subcategory'] as String?,
+                              isSponsored: item['is_sponsored'] == true,
+                              onLongPress: () => ref.read(homeViewModelProvider.notifier).removeRecent(i),
+                              onTap: () {
+                                if (item['is_sponsored'] == true) {
+                                  final cid = item['campaign_id'];
+                                  if (cid != null) {
+                                    ref.read(analyticsServiceProvider).trackAdClick(cid as int);
+                                  }
+                                } else if (_isLoggedIn) {
+                                  final id = item['id'] as int?;
+                                  if (id != null) {
+                                    final ownerId = (item['user'] as Map?)?['id'] as int?;
+                                    unawaited(
+                                      ref.read(analyticsServiceProvider).logInteraction(
+                                        itemId: id,
+                                        itemType: 'listing',
+                                        interactionType: 'click',
+                                        ownerId: ownerId,
+                                        pricePoint: item['price'] != null
+                                            ? (item['price'] as num).toDouble()
+                                            : null,
+                                      ),
+                                    );
+                                  }
+                                }
+                                Navigator.push(
+                                  ctx,
+                                  MaterialPageRoute(
+                                    builder: (_) => ListingDetailScreen(
+                                      listing: Map<String, dynamic>.from(item),
+                                    ),
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                          childCount: state.recentListings.length,
                         ),
                       )
                     else
