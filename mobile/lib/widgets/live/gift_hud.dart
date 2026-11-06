@@ -47,17 +47,34 @@ class _GiftHudState extends ConsumerState<GiftHud> with SingleTickerProviderStat
     super.dispose();
   }
 
-  static const _keyEmoji = {'fire': '🔥', 'diamond': '💎', 'crown': '👑'};
+  static const _keyEmoji = {
+    'clap':          '👏',
+    'tea':           '🍵',
+    'fire':          '🔥',
+    'diamond':       '💎',
+    'crown':         '👑',
+    'golden_hammer': '🔨',
+    'rocket':        '🚀',
+    'trophy':        '🏆',
+  };
 
-  String get _emoji =>
-      _keyEmoji[widget.giftName] ?? widget.giftName.split(' ').first;
+  static const _keyArb = {
+    'clap':          'giftNameClap',
+    'tea':           'giftNameTea',
+    'fire':          'giftNameFire',
+    'diamond':       'giftNameDiamond',
+    'crown':         'giftNameCrown',
+    'golden_hammer': 'giftNameGoldenHammer',
+    'rocket':        'giftNameRocket',
+    'trophy':        'giftNameTrophy',
+  };
 
-  String _displayName(TranslationPack loc) => switch (widget.giftName) {
-        'fire'    => loc.t("giftNameFire"),
-        'diamond' => loc.t("giftNameDiamond"),
-        'crown'   => loc.t("giftNameCrown"),
-        _         => widget.giftName, // eski Türkçe keyler için geriye uyumlu
-      };
+  String get _emoji => _keyEmoji[widget.giftName] ?? '🎁';
+
+  String _displayName(TranslationPack loc) {
+    final arbKey = _keyArb[widget.giftName];
+    return arbKey != null ? loc.t(arbKey) : widget.giftName;
+  }
 
   @override
   Widget build(BuildContext context) {
