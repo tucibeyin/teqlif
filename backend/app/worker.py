@@ -4318,7 +4318,7 @@ async def compute_analytics_cache_task(ctx: dict) -> None:
                 """)
                 spend_row = (await db.execute(spend_q)).one_or_none()
                 if spend_row and spend_row.recent_avg and spend_row.prev_avg and spend_row.prev_avg > 0:
-                    avg_spend_growth = round((spend_row.recent_avg - spend_row.prev_avg) / spend_row.prev_avg * 100, 1)
+                    avg_spend_growth = float(round((spend_row.recent_avg - spend_row.prev_avg) / spend_row.prev_avg * 100, 1))
                 elif spend_row and spend_row.recent_avg:
                     avg_spend_growth = 0.0
         except Exception as e:
