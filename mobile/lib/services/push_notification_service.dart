@@ -66,8 +66,13 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     // _showCallNotification() Hive init + CallKit foreground service başlatır (2-4s),
     // bu yüzden ACK ondan önce gitmelidir.
     if (callId.isNotEmpty) {
+      final ackToken = message.data['ack_token'] ?? '';
       try {
-        await http.post(Uri.parse('$_bgBaseUrl/calls/$callId/ack')).timeout(const Duration(seconds: 5));
+        await http.post(
+          Uri.parse('$_bgBaseUrl/calls/$callId/ack'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'ack_token': ackToken}),
+        ).timeout(const Duration(seconds: 5));
         debugPrint('[FCM][BG] HTTP ACK sent | callId=$callId');
       } catch (e) {
         debugPrint('[FCM][BG] HTTP ACK failed (non-fatal) | callId=$callId | $e');
@@ -81,6 +86,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       roomName:       message.data['room_name']       ?? '',
       livekitUrl:     message.data['livekit_url']     ?? '',
       calleeToken:    message.data['callee_token']    ?? '',
+      ackToken:       message.data['ack_token']       ?? '',
     );
   } else if (message.data['type'] == 'call_ended' || message.data['type'] == 'call_missed' || message.data['type'] == 'call_rejected') {
     debugPrint('[FCM][BG][${DateTime.now().toIso8601String()}] Call cancelled by caller (${message.data['type']}). Ending CallKit.');
@@ -122,6 +128,7 @@ Future<void> _showCallNotification({
   String roomName     = '',
   String livekitUrl   = '',
   String calleeToken  = '',
+  String ackToken     = '',
 }) async {
   debugPrint('[FCM][BG][${DateTime.now().toIso8601String()}] _showCallNotification başlıyor | callId=$callId caller=$callerUsername');
 
@@ -159,6 +166,7 @@ Future<void> _showCallNotification({
       'room_name': roomName,
       'livekit_url': livekitUrl,
       'callee_token': calleeToken,
+      'ack_token': ackToken,
     },
     android: AndroidParams(
       isCustomNotification: true,
@@ -404,8 +412,13 @@ class PushNotificationService {
         // Background handler'daki pattern'le aynı: ACK fire-and-forget.
         if (Platform.isAndroid) {
           final callId = data['call_id']?.toString() ?? '';
+          final ackToken = data['ack_token']?.toString() ?? '';
           if (callId.isNotEmpty) {
-            http.post(Uri.parse('${providerContainer.read(apiClientProvider).config.baseUrl}/calls/$callId/ack'))
+            http.post(
+              Uri.parse('${providerContainer.read(apiClientProvider).config.baseUrl}/calls/$callId/ack'),
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode({'ack_token': ackToken}),
+            )
                 .timeout(const Duration(seconds: 5))
                 .then((_) {}, onError: (_) {});
             debugPrint('[FCM] Foreground Android ACK fired | callId=$callId');
@@ -477,7 +490,12 @@ class PushNotificationService {
         // burada ACK gönderir (background isolate'in providerContainer'ı başlatılmamış
         // olabileceğinden background'daki await ACK güvenilmez).
         if (callId != 'NULL') {
-          http.post(Uri.parse('${providerContainer.read(apiClientProvider).config.baseUrl}/calls/$callId/ack'))
+          final ackToken = data['ack_token']?.toString() ?? '';
+          http.post(
+            Uri.parse('${providerContainer.read(apiClientProvider).config.baseUrl}/calls/$callId/ack'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'ack_token': ackToken}),
+          )
               .timeout(const Duration(seconds: 5))
               .then((_) {}, onError: (_) {});
           _cpLog('PUSH', 'CallEventActionCallIncoming | HTTP ACK fired | callId=$callId');

@@ -221,8 +221,9 @@ class WsService with WidgetsBindingObserver {
               _lastCallEventTs = DateTime.now().millisecondsSinceEpoch / 1000.0;
               if (type == 'call_incoming') {
                 final callId = data['call_id'];
+                final ackToken = data['ack_token']?.toString() ?? '';
                 if (callId != null) {
-                  sendJson({'type': 'call_incoming_ack', 'call_id': callId});
+                  sendJson({'type': 'call_incoming_ack', 'call_id': callId, 'ack_token': ackToken});
                   debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] WsService sent call_incoming_ack | call_id=$callId');
                 }
               }

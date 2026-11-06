@@ -268,6 +268,7 @@ import StoreKit
       // Dart tarafı bunları extra'dan okuyarak HTTP fetch'i atlayabilir.
       let livekitUrl   = dictionary["livekit_url"] as? String ?? ""
       let calleeToken  = dictionary["callee_token"] as? String ?? ""
+      let ackToken     = dictionary["ack_token"] as? String ?? ""
       print("[CALL_PROCESS][\(ts())][PUSH] VoIP Push received | callId=\(callId) caller=\(callerUsername) roomName=\(roomName) callerId=\(callerId) hasCalleeToken=\(!calleeToken.isEmpty)")
       
       // CallId'yi UUID'ye çeviriyoruz (Dart _formatToUuid ile aynı: sola sıfır dolgulama)
@@ -308,6 +309,7 @@ import StoreKit
           "room_name":         roomName,
           "livekit_url":       livekitUrl,    // self-contained → Dart HTTP fetch'ini atlar
           "callee_token":      calleeToken,   // self-contained → pre-connect hemen başlar
+          "ack_token":         ackToken,      // ACK doğrulaması için backend UUID4
           "app_was_foreground": appIsActive,  // read by Flutter to set _callKitAutoDismissExpected
       ]
       // isShowMissedCallNotification defaults to true in the plugin. saveEndCall uses
