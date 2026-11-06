@@ -11,5 +11,5 @@ class Report(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     listing_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("listings.id", ondelete="SET NULL"), nullable=True, index=True)
     reporter_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
-    reason: Mapped[str] = mapped_column(String(200), nullable=False)
+    reason: Mapped[str] = mapped_column(String(1000), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
