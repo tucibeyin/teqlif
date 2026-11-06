@@ -37,6 +37,7 @@ _DEDUCT_SCRIPT = """
 local current = tonumber(redis.call('GET', KEYS[1]))
 if not current or current <= 0 then return nil end
 local bid = tonumber(ARGV[1])
+if current < bid then return nil end
 local new_val = math.floor(current - bid)
 redis.call('SET', KEYS[1], tostring(new_val))
 return tostring(new_val)
