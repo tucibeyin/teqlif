@@ -1,3 +1,4 @@
+import asyncio
 import json
 import base64
 from typing import Literal, Optional
@@ -155,6 +156,32 @@ class FeedSignalPayload(BaseModel):
     event: Literal["click", "skip"]
 
 
+def _normalize_embedding(emb_row) -> str:
+    """pgvector listesini normalleştirilmiş float32 vektörünün base64'üne çevirir."""
+    vec = np.array(emb_row, dtype=np.float32)
+    norm = np.linalg.norm(vec)
+    if norm > 0:
+        vec /= norm
+    return base64.b64encode(vec.tobytes()).decode()
+
+
+def _blend_session_vector(emb_b64, existing_b64) -> str:
+    """Session vektörüne yeni embedding EMA ile karıştırır (α=0.3). Thread-safe."""
+    new_vec = np.frombuffer(base64.b64decode(emb_b64), dtype=np.float32).copy()
+    if existing_b64:
+        try:
+            alpha = 0.3
+            old_vec = np.frombuffer(base64.b64decode(existing_b64), dtype=np.float32)
+            blended = (1 - alpha) * old_vec + alpha * new_vec
+            bn = np.linalg.norm(blended)
+            if bn > 0:
+                blended /= bn
+            new_vec = blended
+        except Exception:
+            pass
+    return base64.b64encode(new_vec.tobytes()).decode()
+
+
 @router.post("/signal", status_code=204)
 async def record_feed_signal(
     payload: FeedSignalPayload,
@@ -170,36 +197,28 @@ async def record_feed_signal(
     if payload.event != "click":
         return
 
-    emb_row = await db.scalar(
-        select(Listing.embedding).where(
-            Listing.id == payload.listing_id,
-            Listing.embedding.isnot(None),
-        )
-    )
-    if emb_row is None:
-        return
-
-    new_vec = np.array(emb_row, dtype=np.float32)
-    norm = np.linalg.norm(new_vec)
-    if norm > 0:
-        new_vec /= norm
-
     redis = await get_redis()
-    key = f"feed:session:{current_user.id}"
-    existing = await redis.get(key)
+    emb_cache_key = f"feed:emb:{payload.listing_id}"
+    session_key = f"feed:session:{current_user.id}"
 
-    if existing:
-        try:
-            alpha = 0.3
-            old_vec = np.frombuffer(base64.b64decode(existing), dtype=np.float32)
-            blended = (1 - alpha) * old_vec + alpha * new_vec
-            bn = np.linalg.norm(blended)
-            if bn > 0:
-                blended /= bn
-            new_vec = blended
-        except Exception:
-            pass
-    await redis.setex(key, 1800, base64.b64encode(new_vec.tobytes()).decode())
+    # 1. Embedding: Redis önbellek (24s) → DB fallback; her ilan için yalnızca bir kez hesaplanır
+    emb_b64 = await redis.get(emb_cache_key)
+    if emb_b64 is None:
+        emb_row = await db.scalar(
+            select(Listing.embedding).where(
+                Listing.id == payload.listing_id,
+                Listing.embedding.isnot(None),
+            )
+        )
+        if emb_row is None:
+            return
+        emb_b64 = await asyncio.to_thread(_normalize_embedding, emb_row)
+        await redis.setex(emb_cache_key, 86400, emb_b64)
+
+    # 2. Session vektörü: thread havuzunda EMA karıştırma — event loop serbest kalır
+    existing = await redis.get(session_key)
+    new_b64 = await asyncio.to_thread(_blend_session_vector, emb_b64, existing)
+    await redis.setex(session_key, 1800, new_b64)
 
 
 @router.get("/hesitated")
