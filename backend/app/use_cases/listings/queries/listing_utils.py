@@ -102,6 +102,7 @@ def _card_dict(
         "is_sponsored": is_sponsored,
         "campaign_id": campaign_id,
         "is_trending": is_trending,
+        "seller_badge": seller_badge,
         "user": {
             "id": user.id,
             "username": user.username,

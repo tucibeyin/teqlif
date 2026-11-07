@@ -6,7 +6,7 @@ from app.models.user import User
 from app.models.ad_campaign import AdCampaign
 from app.models.direct_sale import DirectSale
 from app.models.enums import ListingStatus
-from app.use_cases.listings.queries.listing_utils import _parse_image_urls, _card_dict
+from app.use_cases.listings.queries.listing_utils import _parse_image_urls, _card_dict, _fetch_seller_meta
 from app.services.like_service import LikeService
 from app.core.logger import get_logger
 
@@ -132,6 +132,9 @@ class SearchListingsQuery:
         listing_ids = [listing.id for listing, _ in rows]
         counts, liked_set = await LikeService.batch_listing_likes(db_session, listing_ids, current_user_id)
 
+        all_uids = list({user.id for _, user in rows})
+        badge_map, _trending_cats, trending_lids, _trust, _influence = await _fetch_seller_meta(all_uids)
+
         # Profil görünümünde satılmış ilanlar için en son direct_sale id'sini getir.
         sale_id_map: dict[int, int] = {}
         if profile_view:
@@ -152,6 +155,8 @@ class SearchListingsQuery:
                     likes_count=counts.get(listing.id, 0),
                     is_liked=listing.id in liked_set,
                     is_favorited=listing.id in liked_set,
+                    seller_badge=badge_map.get(user.id),
+                    is_trending=listing.id in trending_lids,
                 ),
                 # Search sonuçlarına özgü ek alanlar (feed kartında olmayan)
                 "category": listing.category,
