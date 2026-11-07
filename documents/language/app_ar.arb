@@ -186,7 +186,7 @@
   "@walletPendingEarningsDesc": [["placeholders", [["amount", [["type", "int"]]], ["days", [["type", "int"]]]]]],
   "walletStartStreamCta": "ابدأ البث",
   "walletEarningsTitle": "أرباح الهدايا",
-  "walletPendingLabel": "مقفل (T+14)",
+  "walletPendingLabel": "قيد المعالجة (14 يومًا)",
   "walletAvailableLabel": "متاح",
   "walletNoEarningsYet": "لا توجد أرباح هدايا بعد. ابدأ البث لكسب teqlik.",
   "walletConvertLegalNotice": "الخيار C: سيتم تحويل رصيدك المتاح إلى teqlik ولا يمكن سحبه نقداً مرة أخرى. تأكيد؟",

@@ -6487,27 +6487,49 @@ class _EarningsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final hasPendingWithdrawal = activeWithdrawalId != null;
     final hasEarnings = pendingTeqlik > 0 || availableTeqlik > 0;
+
+    final gradientColors = isDark
+        ? (cashoutEnabled
+            ? [const Color(0xFF064E3B), const Color(0xFF065F46), const Color(0xFF047857)]
+            : [const Color(0xFF1E293B), const Color(0xFF0F172A)])
+        : (cashoutEnabled
+            ? [const Color(0xFFECFDF5), const Color(0xFFD1FAE5)]
+            : [const Color(0xFFF8FAFC), const Color(0xFFEEF2FF)]);
+
+    final shadowColor = isDark
+        ? (cashoutEnabled ? const Color(0xFF34D399) : const Color(0xFF6366F1)).withValues(alpha: 0.2)
+        : (cashoutEnabled ? const Color(0xFF10B981) : const Color(0xFF6366F1)).withValues(alpha: 0.08);
+
+    final textPrimary = isDark ? Colors.white : const Color(0xFF1E293B);
+    final textSecondary = isDark ? Colors.white60 : const Color(0xFF64748B);
+    final textMuted = isDark ? Colors.white38 : const Color(0xFF94A3B8);
+    final borderColor = isDark ? Colors.white24 : Colors.black12;
+    final overlayBg = isDark
+        ? Colors.white.withValues(alpha: 0.08)
+        : Colors.black.withValues(alpha: 0.04);
+    final highlightColor = isDark ? const Color(0xFF6EE7B7) : const Color(0xFF059669);
+    final cancelColor = isDark ? const Color(0xFFFCA5A5) : const Color(0xFFDC2626);
+    final convertColor = isDark ? const Color(0xFF6EE7B7) : const Color(0xFF059669);
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: cashoutEnabled
-              ? [const Color(0xFF064E3B), const Color(0xFF065F46), const Color(0xFF047857)]
-              : [const Color(0xFF1E293B), const Color(0xFF0F172A)],
+          colors: gradientColors,
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
+        border: isDark ? null : Border.all(
+          color: cashoutEnabled ? const Color(0xFFA7F3D0) : const Color(0xFFCBD5E1),
+        ),
         boxShadow: [
           BoxShadow(
-            color: (cashoutEnabled
-                    ? const Color(0xFF34D399)
-                    : const Color(0xFF6366F1))
-                .withValues(alpha: 0.2),
+            color: shadowColor,
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
@@ -6519,7 +6541,7 @@ class _EarningsCard extends StatelessWidget {
           // Başlık
           Text(
             loc.t('walletEarningsTitle'),
-            style: const TextStyle(color: Colors.white70, fontSize: 12, letterSpacing: .5),
+            style: TextStyle(color: textSecondary, fontSize: 12, letterSpacing: .5),
           ),
           const SizedBox(height: 10),
 
@@ -6532,6 +6554,10 @@ class _EarningsCard extends StatelessWidget {
                   ? '≈ ₺${(pendingTeqlik * tryRate).toStringAsFixed(2)}'
                   : null,
               icon: Icons.lock_clock_outlined,
+              textPrimary: textPrimary,
+              textSecondary: textSecondary,
+              textMuted: textMuted,
+              highlightColor: highlightColor,
             ),
             const SizedBox(height: 6),
             _EarningsRow(
@@ -6542,12 +6568,16 @@ class _EarningsCard extends StatelessWidget {
                   : null,
               icon: Icons.check_circle_outline,
               highlight: availableTeqlik > 0,
+              textPrimary: textPrimary,
+              textSecondary: textSecondary,
+              textMuted: textMuted,
+              highlightColor: highlightColor,
             ),
             const SizedBox(height: 14),
           ] else ...[
             Text(
               loc.t('walletNoEarningsYet'),
-              style: const TextStyle(color: Colors.white38, fontSize: 13),
+              style: TextStyle(color: textMuted, fontSize: 13),
             ),
             const SizedBox(height: 14),
           ],
@@ -6557,25 +6587,25 @@ class _EarningsCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.08),
+                color: overlayBg,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white24),
+                border: Border.all(color: borderColor),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.list_alt_rounded, color: Colors.white70, size: 18),
+                  Icon(Icons.list_alt_rounded, color: textSecondary, size: 18),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       loc.t('walletQueueNumber', {'id': activeWithdrawalId.toString()}),
-                      style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+                      style: TextStyle(color: textPrimary, fontSize: 13, fontWeight: FontWeight.w600),
                     ),
                   ),
                   TextButton(
                     onPressed: () => onCancelWithdrawal(activeWithdrawalId!),
                     style: TextButton.styleFrom(
                       padding: const EdgeInsets.symmetric(horizontal: 8),
-                      foregroundColor: const Color(0xFFFCA5A5),
+                      foregroundColor: cancelColor,
                     ),
                     child: Text(loc.t('cancel'), style: const TextStyle(fontSize: 12)),
                   ),
@@ -6583,7 +6613,7 @@ class _EarningsCard extends StatelessWidget {
                     onPressed: onConvert,
                     style: TextButton.styleFrom(
                       padding: const EdgeInsets.symmetric(horizontal: 8),
-                      foregroundColor: const Color(0xFF6EE7B7),
+                      foregroundColor: convertColor,
                     ),
                     child: Text(loc.t('walletConvertToTeqlik'), style: const TextStyle(fontSize: 12)),
                   ),
@@ -6619,8 +6649,8 @@ class _EarningsCard extends StatelessWidget {
                   icon: const Icon(Icons.account_balance_outlined, size: 18),
                   label: Text(loc.t('walletIbanPreRegistrationTitle')),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white70,
-                    side: const BorderSide(color: Colors.white24),
+                    foregroundColor: textSecondary,
+                    side: BorderSide(color: borderColor),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
@@ -6657,6 +6687,10 @@ class _EarningsRow extends StatelessWidget {
   final String? sub;
   final IconData icon;
   final bool highlight;
+  final Color textPrimary;
+  final Color textSecondary;
+  final Color textMuted;
+  final Color highlightColor;
 
   const _EarningsRow({
     required this.label,
@@ -6664,15 +6698,19 @@ class _EarningsRow extends StatelessWidget {
     this.sub,
     required this.icon,
     this.highlight = false,
+    required this.textPrimary,
+    required this.textSecondary,
+    required this.textMuted,
+    required this.highlightColor,
   });
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, size: 15, color: highlight ? const Color(0xFF6EE7B7) : Colors.white38),
+        Icon(icon, size: 15, color: highlight ? highlightColor : textMuted),
         const SizedBox(width: 6),
-        Text(label, style: const TextStyle(color: Colors.white60, fontSize: 12)),
+        Text(label, style: TextStyle(color: textSecondary, fontSize: 12)),
         const Spacer(),
         Column(
           crossAxisAlignment: CrossAxisAlignment.end,
@@ -6680,14 +6718,14 @@ class _EarningsRow extends StatelessWidget {
             Text(
               value,
               style: TextStyle(
-                color: highlight ? const Color(0xFF6EE7B7) : Colors.white,
+                color: highlight ? highlightColor : textPrimary,
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
                 fontFeatures: const [FontFeature.tabularFigures()],
               ),
             ),
             if (sub != null)
-              Text(sub!, style: const TextStyle(color: Colors.white38, fontSize: 11)),
+              Text(sub!, style: TextStyle(color: textMuted, fontSize: 11)),
           ],
         ),
       ],

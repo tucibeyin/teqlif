@@ -1949,7 +1949,7 @@
   "@walletPendingEarningsDesc": [["placeholders", [["amount", [["type", "int"]]], ["days", [["type", "int"]]]]]],
   "walletStartStreamCta": "Начать трансляцию",
   "walletEarningsTitle": "ДОХОД ОТ ПОДАРКОВ",
-  "walletPendingLabel": "Заблокировано (T+14)",
+  "walletPendingLabel": "В обработке (14 дней)",
   "walletAvailableLabel": "Доступно",
   "walletNoEarningsYet": "Дохода от подарков пока нет. Начните трансляцию, чтобы зарабатывать teqlik.",
   "walletConvertLegalNotice": "Вариант C: ваш доступный баланс будет конвертирован в teqlik и не может быть снят снова. Подтвердить?",

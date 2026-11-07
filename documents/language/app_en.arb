@@ -206,7 +206,7 @@
   "@walletPendingEarningsDesc": [["placeholders", [["amount", [["type", "int"]]], ["days", [["type", "int"]]]]]],
   "walletStartStreamCta": "Start Stream",
   "walletEarningsTitle": "GIFT EARNINGS",
-  "walletPendingLabel": "Locked (T+14)",
+  "walletPendingLabel": "Processing (14 days)",
   "walletAvailableLabel": "Available",
   "walletNoEarningsYet": "No gift earnings yet. Start streaming to earn teqlik.",
   "walletConvertLegalNotice": "Option C: your available balance will be converted to teqlik and cannot be cashed out again. Confirm?",

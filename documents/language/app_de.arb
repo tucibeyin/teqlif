@@ -206,7 +206,7 @@
   "@walletPendingEarningsDesc": [["placeholders", [["amount", [["type", "int"]]], ["days", [["type", "int"]]]]]],
   "walletStartStreamCta": "Stream starten",
   "walletEarningsTitle": "GESCHENKEINNAHMEN",
-  "walletPendingLabel": "Gesperrt (T+14)",
+  "walletPendingLabel": "In Bearbeitung (14 Tage)",
   "walletAvailableLabel": "Verfügbar",
   "walletNoEarningsYet": "Noch keine Geschenkeinnahmen. Starte einen Stream, um teqlik zu verdienen.",
   "walletConvertLegalNotice": "Option C: Dein verfügbares Guthaben wird in teqlik umgewandelt und kann nicht mehr ausgezahlt werden. Bestätigen?",
