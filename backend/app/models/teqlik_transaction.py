@@ -1,6 +1,7 @@
 from datetime import datetime
+from decimal import Decimal
 from typing import Optional
-from sqlalchemy import Integer, String, DateTime, ForeignKey, Index, func
+from sqlalchemy import Integer, Numeric, String, DateTime, ForeignKey, Index, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -25,5 +26,6 @@ class TeqlikTransaction(Base):
     product_type: Mapped[str] = mapped_column(
         String(20), nullable=False, default="consumable", server_default="'consumable'"
     )
+    try_amount: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2), nullable=True)
 
 

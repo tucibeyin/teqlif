@@ -220,6 +220,7 @@ def _txn_dict(t: TeqlikTransaction) -> dict:
         "created_at": t.created_at.isoformat(),
         "reference_id": t.reference_id,
         "reference_type": t.reference_type,
+        "try_amount": float(t.try_amount) if t.try_amount is not None else None,
     }
 
 

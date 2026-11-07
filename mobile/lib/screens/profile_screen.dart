@@ -4355,11 +4355,18 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
     }
   }
 
+  String _formatTryPrice(double v) {
+    if (v == v.truncateToDouble()) return '₺${v.toInt()}';
+    return '₺${v.toStringAsFixed(2).replaceAll('.', ',')}';
+  }
+
   Widget _buildTxnRow(dynamic t, TranslationPack loc) {
     final amount = t['amount'] as int? ?? 0;
     final type = t['transaction_type'] as String? ?? '';
     final label = _typeLabels(loc)[type] ?? (t['label'] as String? ?? type);
-    final isPos = amount > 0;
+    final tryAmount = (t['try_amount'] as num?)?.toDouble();
+    final hasTry = tryAmount != null && tryAmount > 0;
+    final isPos = hasTry ? false : amount > 0;
     final dateStr = t['created_at'] as String? ?? '';
     String formattedTime = '';
     try {
@@ -4421,7 +4428,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  '${isPos ? '+' : ''}$amount',
+                  hasTry ? _formatTryPrice(tryAmount!) : '${isPos ? '+' : ''}$amount',
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
@@ -4459,7 +4466,8 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
     final label =
         _typeLabels(loc)[t['transaction_type'] as String? ?? ''] ??
         (t['label'] as String? ?? t['transaction_type'] as String? ?? '');
-    final isPos = amount > 0;
+    final tryAmount = (t['try_amount'] as num?)?.toDouble();
+    final isPos = (tryAmount != null && tryAmount > 0) ? false : amount > 0;
     final dateStr = t['created_at'] as String? ?? '';
     String formattedDate = '';
     try {
@@ -4478,6 +4486,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
         txnId: txnId,
         label: label,
         amount: amount,
+        tryAmount: tryAmount,
         isPositive: isPos,
         formattedDate: formattedDate,
         loc: loc,
@@ -7133,6 +7142,7 @@ class _TxnDetailSheet extends ConsumerStatefulWidget {
   final int? txnId;
   final String label;
   final int amount;
+  final double? tryAmount;
   final bool isPositive;
   final String formattedDate;
   final TranslationPack loc;
@@ -7141,6 +7151,7 @@ class _TxnDetailSheet extends ConsumerStatefulWidget {
     required this.txnId,
     required this.label,
     required this.amount,
+    this.tryAmount,
     required this.isPositive,
     required this.formattedDate,
     required this.loc,
@@ -7154,6 +7165,11 @@ class _TxnDetailSheetState extends ConsumerState<_TxnDetailSheet> {
   Map<String, dynamic>? _detail;
   bool _loading = true;
   bool _error = false;
+
+  String _formatTryPriceStatic(double v) {
+    if (v == v.truncateToDouble()) return '₺${v.toInt()}';
+    return '₺${v.toStringAsFixed(2).replaceAll('.', ',')}';
+  }
 
   @override
   void initState() {
@@ -7303,7 +7319,9 @@ class _TxnDetailSheetState extends ConsumerState<_TxnDetailSheet> {
                           ),
                         ),
                         Text(
-                          '${widget.isPositive ? '+' : ''}${widget.amount} teqlik',
+                          widget.tryAmount != null && widget.tryAmount! > 0
+                              ? _formatTryPriceStatic(widget.tryAmount!)
+                              : '${widget.isPositive ? '+' : ''}${widget.amount} teqlik',
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w800,

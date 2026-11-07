@@ -143,7 +143,11 @@ class VerifyPurchaseCommand:
                     result.product_id, result.transaction_id,
                 )
                 raise BadRequestException(code="IAP_MISSING_EXPIRY")
-            return await self._handle_subscription(user_id, platform, result)
+            stored_try_amount = (
+                try_amount if try_amount > 0
+                else _PRODUCT_TRY_PRICES.get(result.product_id, 0.0)
+            )
+            return await self._handle_subscription(user_id, platform, result, stored_try_amount)
 
     async def _handle_consumable(
         self, user_id: int, platform: str, result: PurchaseResult
@@ -200,7 +204,8 @@ class VerifyPurchaseCommand:
         return {"status": "ok", "product_type": "consumable", "teqlik_added": teqlik_amount}
 
     async def _handle_subscription(
-        self, user_id: int, platform: str, result: PurchaseResult
+        self, user_id: int, platform: str, result: PurchaseResult,
+        try_amount: float = 0.0,
     ) -> dict:
         plan_type = _PLAN_TYPE.get(result.product_id, "monthly")
         now = datetime.now(timezone.utc)
@@ -226,12 +231,13 @@ class VerifyPurchaseCommand:
             },
         )
 
+        stored_try = try_amount if try_amount > 0 else None
         sub_tx_row = await self._session.execute(
             text(
                 "INSERT INTO teqlik_transactions "
                 "(user_id, amount, transaction_type, store_platform, "
-                " store_transaction_id, raw_payload, product_type) "
-                "VALUES (:uid, 0, :tx_type, :platform, :tx_id, :raw, 'subscription') "
+                " store_transaction_id, raw_payload, product_type, try_amount) "
+                "VALUES (:uid, 0, :tx_type, :platform, :tx_id, :raw, 'subscription', :try_amt) "
                 "RETURNING id"
             ),
             {
@@ -240,6 +246,7 @@ class VerifyPurchaseCommand:
                 "platform": platform,
                 "tx_id": result.transaction_id,
                 "raw": result.raw_payload,
+                "try_amt": stored_try,
             },
         )
         sub_tx_id = sub_tx_row.fetchone()[0]
