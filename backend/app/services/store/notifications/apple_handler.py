@@ -58,7 +58,10 @@ class AppleNotificationHandler(StoreNotificationHandler):
 
         user_id = user[0]
 
-        if notification_type == "DID_RENEW" and not subtype:
+        if notification_type == "SUBSCRIBED":
+            await self._handle_subscribed(user_id, tx_claims)
+
+        elif notification_type == "DID_RENEW" and not subtype:
             await self._handle_did_renew(user_id, tx_claims)
 
         elif notification_type == "DID_RENEW" and subtype == "BILLING_RETRY":
@@ -71,10 +74,20 @@ class AppleNotificationHandler(StoreNotificationHandler):
             await self._handle_upgrade(user_id, tx_claims)
 
         elif notification_type == "DID_CHANGE_RENEWAL_PREF" and subtype == "DOWNGRADE":
-            # Mevcut dönem hala üst planda devam eder; plan değişimi bir sonraki DID_RENEW'da gerçekleşir
-            logger.info(
-                "[AppleNotif] DOWNGRADE (pending, işlem yok) | user=%s", user_id
-            )
+            # Mevcut dönem üst planda devam eder; plan değişimi bir sonraki DID_RENEW'da gerçekleşir
+            logger.info("[AppleNotif] DOWNGRADE (pending, işlem yok) | user=%s", user_id)
+
+        elif notification_type == "DID_FAIL_TO_RENEW" and subtype == "GRACE_PERIOD":
+            # Grace period aktif — DID_RENEW+BILLING_RETRY ile aynı mantık
+            await self._handle_billing_retry(user_id, tx_claims)
+
+        elif notification_type == "DID_FAIL_TO_RENEW":
+            # Fatura başarısız, grace period yok; abonelik expiresDate'e kadar hala geçerli
+            logger.info("[AppleNotif] DID_FAIL_TO_RENEW (billing retry, işlem yok) | user=%s", user_id)
+
+        elif notification_type == "DID_CHANGE_RENEWAL_STATUS":
+            # AUTO_RENEW_ENABLED / AUTO_RENEW_DISABLED — kullanıcı tercihi, DB değişikliği yok
+            logger.info("[AppleNotif] DID_CHANGE_RENEWAL_STATUS | subtype=%s user=%s", subtype, user_id)
 
         elif notification_type in ("EXPIRED",) or subtype == "GRACE_PERIOD_EXPIRED":
             await self._handle_expired(user_id)
@@ -82,11 +95,32 @@ class AppleNotificationHandler(StoreNotificationHandler):
         elif notification_type == "REVOKE":
             await self._handle_revoke(user_id)
 
+        elif notification_type in ("TEST", "CONSUMPTION_REQUEST", "REFUND_DECLINED"):
+            logger.info("[AppleNotif] %s | user=%s", notification_type, user_id)
+
         else:
-            logger.info(
-                "[AppleNotif] İşlenmeyen event | type=%s subtype=%s user=%s",
+            logger.warning(
+                "[AppleNotif] Bilinmeyen event | type=%s subtype=%s user=%s",
                 notification_type, subtype, user_id,
             )
+
+    async def _handle_subscribed(self, user_id: int, tx_claims: dict) -> None:
+        product_id = tx_claims.get("productId", "")
+        plan_type = _PLAN_TYPE.get(product_id)
+        expires_ms = tx_claims.get("expiresDate", 0)
+        expires_at = datetime.fromtimestamp(expires_ms / 1000, tz=timezone.utc) if expires_ms else None
+        if not plan_type or not expires_at:
+            logger.warning("[AppleNotif] SUBSCRIBED eksik veri | product=%s user=%s", product_id, user_id)
+            return
+        await self._session.execute(
+            text(
+                "UPDATE users SET user_type = 'pro', plan_type = :plan, "
+                "pro_expires_at = :exp, pro_grace_until = NULL "
+                "WHERE id = :uid"
+            ),
+            {"plan": plan_type, "exp": expires_at, "uid": user_id},
+        )
+        logger.info("[AppleNotif] SUBSCRIBED | user=%s plan=%s expires=%s", user_id, plan_type, expires_at)
 
     async def _handle_did_renew(self, user_id: int, tx_claims: dict) -> None:
         expires_ms = tx_claims.get("expiresDate", 0)
@@ -146,7 +180,8 @@ class AppleNotificationHandler(StoreNotificationHandler):
     async def _handle_revoke(self, user_id: int) -> None:
         await self._session.execute(
             text(
-                "UPDATE users SET user_type = 'standard', pro_expires_at = NULL "
+                "UPDATE users SET user_type = 'standard', plan_type = NULL, "
+                "pro_expires_at = NULL, pro_grace_until = NULL "
                 "WHERE id = :uid"
             ),
             {"uid": user_id},

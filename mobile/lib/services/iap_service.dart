@@ -115,7 +115,7 @@ class IAPService {
     }
   }
 
-  Future<bool> _verifyWithBackend(PurchaseDetails purchase) async {
+  Future<bool> _verifyWithBackend(PurchaseDetails purchase, {int attempt = 1}) async {
     try {
       final token = await StorageService.getToken();
       if (token == null) return false;
@@ -146,9 +146,19 @@ class IAPService {
       if (resp.statusCode == 200) return true;
       // 409 = replay (zaten işlendi) — başarılı say
       if (resp.statusCode == 409) return true;
+      // 5xx hatası ve ilk deneme — 2 saniye bekle, bir kez daha dene
+      if (resp.statusCode >= 500 && attempt == 1) {
+        await Future.delayed(const Duration(seconds: 2));
+        return _verifyWithBackend(purchase, attempt: 2);
+      }
       debugPrint('[IAP] backend verify failed: ${resp.statusCode} ${resp.body}');
       return false;
     } catch (e) {
+      // Ağ hatası ve ilk deneme — 2 saniye bekle, bir kez daha dene
+      if (attempt == 1) {
+        await Future.delayed(const Duration(seconds: 2));
+        return _verifyWithBackend(purchase, attempt: 2);
+      }
       debugPrint('[IAP] verify error: $e');
       return false;
     }
