@@ -1067,12 +1067,26 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
     }
   }
 
-  /// StorageService'ten güncel PRO statüsünü çeker.
-  /// Admin panelinden yapılan değişiklikler profil açılışında
-  /// saveUserInfo ile kaydedildiğinden burada güncel değer okunur.
   String? _settingsPlanType;
 
+  static String _planLabel(TranslationPack loc, String? type) {
+    switch (type) {
+      case 'monthly':
+      case 'teqlif_pro_1m':  return loc.t('proMonthly');
+      case 'quarterly':
+      case 'teqlif_pro_3m':  return loc.t('proQuarterly');
+      case 'biannual':
+      case 'teqlif_pro_6m':  return loc.t('proBiannual');
+      case 'annual':
+      case 'yearly':
+      case 'teqlif_pro_12m': return loc.t('proAnnual');
+      case 'lifetime':       return loc.t('planLifetime');
+      default:               return loc.t('settingsProActive');
+    }
+  }
+
   Future<void> _loadPremiumStatus() async {
+    // Cache-first: anlık gösterim
     final info = await StorageService.getUserInfo();
     if (mounted && info != null) {
       setState(() {
@@ -1081,6 +1095,28 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
         _settingsPlanType = info['plan_type'] as String?;
       });
     }
+    // Ağdan tazele: plan_type/user_type admin panelinden değişmiş olabilir
+    try {
+      final user = await ref.read(authServiceProvider).me();
+      if (mounted) {
+        setState(() {
+          _isPremium = user.isPremium;
+          _settingsPlanType = user.planType;
+        });
+        await StorageService.saveUserInfo(
+          id: user.id,
+          email: user.email,
+          username: user.username,
+          fullName: user.fullName,
+          userType: user.userType,
+          planType: user.planType,
+          onboardingCompleted: user.onboardingCompleted,
+          isVerified: user.isVerified,
+          phoneVerified: user.phoneVerified,
+          isPrivate: user.isPrivate,
+        );
+      }
+    } catch (_) {}
   }
 
   Future<void> _togglePrivateAccount(bool val) async {
@@ -1718,7 +1754,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                             ),
                             const SizedBox(width: 3),
                             Text(
-                              _settingsPlanType ?? loc.t('settingsProActive'),
+                              _planLabel(loc, _settingsPlanType),
                               style: const TextStyle(
                                 fontSize: 9,
                                 fontWeight: FontWeight.w800,

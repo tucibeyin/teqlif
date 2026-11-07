@@ -323,9 +323,17 @@ class _ProStatusCard extends ConsumerWidget {
 
   String _getPlanName(TranslationPack loc, String? type) {
     switch (type) {
-      case 'yearly': return loc.t('planYearly');
-      case 'lifetime': return loc.t('planLifetime');
-      default: return loc.t('planMonthly');
+      case 'monthly':
+      case 'teqlif_pro_1m':  return loc.t('proMonthly');
+      case 'quarterly':
+      case 'teqlif_pro_3m':  return loc.t('proQuarterly');
+      case 'biannual':
+      case 'teqlif_pro_6m':  return loc.t('proBiannual');
+      case 'annual':
+      case 'yearly':
+      case 'teqlif_pro_12m': return loc.t('proAnnual');
+      case 'lifetime':       return loc.t('planLifetime');
+      default:               return loc.t('proMonthly');
     }
   }
 
