@@ -6731,6 +6731,7 @@
   "@walletProRenewalDate": [["placeholders", [["date", [["type", "String"]]]]]],
   "walletProDaysRemaining": "{days} days left",
   "@walletProDaysRemaining": [["placeholders", [["days", [["type", "int"]]]]]],
+  "walletProDaysUnit": "days left",
   "walletProManageAppStore": "Manage on App Store",
   "walletProMonthlyCreditsTitle": "Monthly Credits",
   "walletProFinancialTitle": "Financial Privileges",

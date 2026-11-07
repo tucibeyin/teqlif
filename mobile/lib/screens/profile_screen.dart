@@ -5961,19 +5961,23 @@ class _ProTab extends ConsumerWidget {
         // ── Aktif Abonelik Kartı ─────────────────────────────────────────
         Container(
           margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.fromLTRB(20, 22, 20, 22),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [Color(0xFF92400E), Color(0xFFB45309)],
+              colors: [Color(0xFF1C1200), Color(0xFF3B2200)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: const Color(0xFFD97706).withValues(alpha: 0.55),
+              width: 1.5,
+            ),
             boxShadow: [
               BoxShadow(
                 color: const Color(0xFFD97706).withValues(alpha: 0.28),
-                blurRadius: 20,
-                offset: const Offset(0, 4),
+                blurRadius: 24,
+                offset: const Offset(0, 6),
               ),
             ],
           ),
@@ -5982,31 +5986,56 @@ class _ProTab extends ConsumerWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const FaIcon(FontAwesomeIcons.crown, size: 13, color: Colors.white),
-                  const SizedBox(width: 6),
+                  const FaIcon(FontAwesomeIcons.crown, size: 14, color: Color(0xFFFFD700)),
+                  const SizedBox(width: 7),
                   Text(
                     _upgradePlans.where((p) => p.$1 == activePlanType).map((p) => loc.t(p.$2)).firstOrNull ?? 'PRO',
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: Color(0xFFFBBF24),
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
-                      letterSpacing: -0.5,
+                      letterSpacing: -0.3,
                     ),
                   ),
                 ],
               ),
-              if (daysRemaining != null) ...[
-                const SizedBox(height: 6),
-                Text(
-                  loc.t('walletProDaysRemaining', {'days': '$daysRemaining'}),
-                  style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: -0.5),
+              if (daysRemaining != null && daysRemaining > 0) ...[
+                const SizedBox(height: 14),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Text(
+                      '$daysRemaining',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 52,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -2,
+                        height: 1.0,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      loc.t('walletProDaysUnit'),
+                      style: const TextStyle(
+                        color: Color(0xFFD97706),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
               ],
               if (expiryDisplay.isNotEmpty) ...[
-                const SizedBox(height: 4),
+                const SizedBox(height: 8),
                 Text(
                   loc.t('walletProRenewalDate', {'date': expiryDisplay}),
-                  style: const TextStyle(color: Colors.white60, fontSize: 12),
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.45),
+                    fontSize: 12,
+                  ),
                 ),
               ],
             ],
