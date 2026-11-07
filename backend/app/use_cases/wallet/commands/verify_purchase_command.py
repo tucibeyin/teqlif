@@ -225,11 +225,12 @@ class VerifyPurchaseCommand:
                 "INSERT INTO teqlik_transactions "
                 "(user_id, amount, transaction_type, store_platform, "
                 " store_transaction_id, raw_payload, product_type) "
-                "VALUES (:uid, 0, 'pro_subscription', :platform, :tx_id, :raw, 'subscription') "
+                "VALUES (:uid, 0, :tx_type, :platform, :tx_id, :raw, 'subscription') "
                 "RETURNING id"
             ),
             {
                 "uid": user_id,
+                "tx_type": f"pro_subscription_{plan_type}",
                 "platform": platform,
                 "tx_id": result.transaction_id,
                 "raw": result.raw_payload,

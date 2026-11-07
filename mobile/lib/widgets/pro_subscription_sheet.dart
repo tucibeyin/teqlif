@@ -12,32 +12,48 @@ class _PlanOption {
   final String labelKey;
   final String? savingKey;
   final bool highlighted;
-  final String? badgeLabel;
+  final String? badgeLabelKey;
+  final int tierIndex;
 
   const _PlanOption({
     required this.productId,
     required this.labelKey,
+    required this.tierIndex,
     this.savingKey,
     this.highlighted = false,
-    this.badgeLabel,
+    this.badgeLabelKey,
   });
 }
 
 const _plans = [
-  _PlanOption(productId: 'teqlif_pro_1m', labelKey: 'proMonthly'),
-  _PlanOption(productId: 'teqlif_pro_3m', labelKey: 'proQuarterly', savingKey: 'proSave10', highlighted: true, badgeLabel: 'Popüler'),
-  _PlanOption(productId: 'teqlif_pro_6m', labelKey: 'proBiannual', savingKey: 'proSave20'),
-  _PlanOption(productId: 'teqlif_pro_12m', labelKey: 'proAnnual', savingKey: 'proSave30', badgeLabel: 'En İyi'),
+  _PlanOption(productId: 'teqlif_pro_1m',  labelKey: 'proMonthly',   tierIndex: 0),
+  _PlanOption(productId: 'teqlif_pro_3m',  labelKey: 'proQuarterly', tierIndex: 1, savingKey: 'proSave10', highlighted: true, badgeLabelKey: 'proPopularBadge'),
+  _PlanOption(productId: 'teqlif_pro_6m',  labelKey: 'proBiannual',  tierIndex: 2, savingKey: 'proSave20'),
+  _PlanOption(productId: 'teqlif_pro_12m', labelKey: 'proAnnual',    tierIndex: 3, savingKey: 'proSave30', badgeLabelKey: 'proPlanBadgeBest'),
 ];
+
+// DB plan_type → tier indeksi (IAP product ID üzerinden)
+const _kPlanTier = {
+  'teqlif_pro_1m':  0,
+  'teqlif_pro_3m':  1,
+  'teqlif_pro_6m':  2,
+  'teqlif_pro_12m': 3,
+};
 
 class ProSubscriptionSheet extends StatefulWidget {
   final TranslationPack loc;
   final VoidCallback? onPurchaseSuccess;
+  /// Mevcut IAP plan product ID (ör. 'teqlif_pro_6m'). Null = PRO değil, tüm planlar gösterilir.
+  final String? currentPlanId;
+  /// Açılışta seçili plan. Null ise mevcut tier'ın üzerindeki ilk plan seçilir.
+  final String? initialPlanId;
 
   const ProSubscriptionSheet({
     super.key,
     required this.loc,
     this.onPurchaseSuccess,
+    this.currentPlanId,
+    this.initialPlanId,
   });
 
   @override
@@ -46,13 +62,25 @@ class ProSubscriptionSheet extends StatefulWidget {
 
 class _ProSubscriptionSheetState extends State<ProSubscriptionSheet> {
   final _iap = IAPService();
-  String _selectedPlanId = 'teqlif_pro_1m';
+  late String _selectedPlanId;
   bool _loading = false;
   StreamSubscription<PurchaseDetails>? _sub;
 
   @override
   void initState() {
     super.initState();
+    // Mevcut tier'ın üzerindeki planları filtrele
+    final currentTier = _kPlanTier[widget.currentPlanId] ?? -1;
+    final visibleIds = _plans
+        .where((p) => p.tierIndex > currentTier)
+        .map((p) => p.productId)
+        .toList();
+    // initialPlanId görünür planlardaysa onu seç, yoksa ilk görünür planı seç
+    if (widget.initialPlanId != null && visibleIds.contains(widget.initialPlanId)) {
+      _selectedPlanId = widget.initialPlanId!;
+    } else {
+      _selectedPlanId = visibleIds.firstOrNull ?? 'teqlif_pro_1m';
+    }
     _sub = _iap.purchaseStream.listen(_onPurchase);
     if (_iap.products.isEmpty) {
       _iap.loadProducts().then((_) {
@@ -116,6 +144,11 @@ class _ProSubscriptionSheetState extends State<ProSubscriptionSheet> {
   @override
   Widget build(BuildContext context) {
     final loc = widget.loc;
+    final currentTier = _kPlanTier[widget.currentPlanId] ?? -1;
+    final isUpgradeMode = widget.currentPlanId != null;
+    final visiblePlans = _plans.where((p) => p.tierIndex > currentTier).toList();
+    final isVip = isUpgradeMode && visiblePlans.isEmpty;
+
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -149,7 +182,9 @@ class _ProSubscriptionSheetState extends State<ProSubscriptionSheet> {
               ),
               const SizedBox(width: 9),
               Text(
-                loc.t('proSheetTitle'),
+                isUpgradeMode
+                    ? loc.t('proUpgradeSheetTitle')
+                    : loc.t('proSheetTitle'),
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 20,
@@ -160,73 +195,97 @@ class _ProSubscriptionSheetState extends State<ProSubscriptionSheet> {
           ),
           const SizedBox(height: 6),
           Text(
-            loc.t('proSheetSubtitle'),
+            isUpgradeMode
+                ? loc.t('proUpgradeSheetSubtitle')
+                : loc.t('proSheetSubtitle'),
             textAlign: TextAlign.center,
             style: const TextStyle(color: Colors.white54, fontSize: 13),
           ),
           const SizedBox(height: 20),
 
-          // PRO fayda listesi
-          _ProBenefits(loc: loc),
-          const SizedBox(height: 20),
+          if (isVip) ...[
+            // Yıllık plan sahibi — zaten en yüksek tier
+            const FaIcon(FontAwesomeIcons.crown, color: Color(0xFFFFD700), size: 32),
+            const SizedBox(height: 12),
+            Text(
+              loc.t('walletProTopPlanTitle'),
+              style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              loc.t('walletProTopPlanDesc'),
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white54, fontSize: 13),
+            ),
+            const SizedBox(height: 24),
+          ] else ...[
+            // PRO fayda listesi (sadece yeni üye akışında)
+            if (!isUpgradeMode) ...[
+              _ProBenefits(loc: loc),
+              const SizedBox(height: 20),
+            ],
 
-          // Plan seçim kartları
-          ...(_plans.map((plan) => _PlanCard(
-                plan: plan,
-                price: _priceFor(plan.productId),
-                selected: _selectedPlanId == plan.productId,
-                onTap: () => setState(() => _selectedPlanId = plan.productId),
-                loc: loc,
-              ))),
-          const SizedBox(height: 20),
+            // Plan seçim kartları (tier filtreli)
+            ...visiblePlans.map((plan) => _PlanCard(
+                  plan: plan,
+                  price: _priceFor(plan.productId),
+                  selected: _selectedPlanId == plan.productId,
+                  onTap: () => setState(() => _selectedPlanId = plan.productId),
+                  loc: loc,
+                )),
+            const SizedBox(height: 20),
 
-          // Otomatik yenileme uyarısı (Apple zorunluluğu)
-          Text(
-            loc.t('proAutoRenewNotice'),
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white38, fontSize: 10, height: 1.5),
-          ),
-          const SizedBox(height: 16),
+            // Otomatik yenileme uyarısı (Apple zorunluluğu)
+            Text(
+              loc.t('proAutoRenewNotice'),
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white38, fontSize: 10, height: 1.5),
+            ),
+            const SizedBox(height: 16),
 
-          // Abone ol CTA
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: _loading ? null : _subscribe,
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFFD97706),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              ),
-              child: _loading
-                  ? const SizedBox(
-                      width: 20, height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                    )
-                  : Text(
-                      loc.t('proSubscribeButton'),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 16,
+            // CTA butonu
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: _loading ? null : _subscribe,
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFFD97706),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                child: _loading
+                    ? const SizedBox(
+                        width: 20, height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : Text(
+                        isUpgradeMode
+                            ? loc.t('proUpgradeButton')
+                            : loc.t('proSubscribeButton'),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 16,
+                        ),
                       ),
-                    ),
+              ),
             ),
-          ),
-          const SizedBox(height: 10),
+            const SizedBox(height: 10),
 
-          // Satın alımları geri yükle (Apple Guideline 3.1.1 zorunlu)
-          TextButton(
-            onPressed: _loading ? null : _restore,
-            child: Text(
-              loc.t('proRestorePurchases'),
-              style: const TextStyle(color: Colors.white38, fontSize: 12),
-            ),
-          ),
-          const SizedBox(height: 4),
+            // Satın alımları geri yükle (Apple Guideline 3.1.1 zorunlu — sadece yeni üye akışında)
+            if (!isUpgradeMode)
+              TextButton(
+                onPressed: _loading ? null : _restore,
+                child: Text(
+                  loc.t('proRestorePurchases'),
+                  style: const TextStyle(color: Colors.white38, fontSize: 12),
+                ),
+              ),
+            const SizedBox(height: 4),
 
-          // EULA + Privacy Policy (Apple Guideline 3.1.2 zorunlu)
-          _LegalLinks(loc: loc),
+            // EULA + Privacy Policy (Apple Guideline 3.1.2 zorunlu)
+            _LegalLinks(loc: loc),
+          ],
         ],
       ),
     );
@@ -326,7 +385,7 @@ class _PlanCard extends StatelessWidget {
                 ],
               ),
             ),
-            if (plan.badgeLabel != null) ...[
+            if (plan.badgeLabelKey != null) ...[
               Container(
                 margin: const EdgeInsets.only(right: 8),
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -337,7 +396,7 @@ class _PlanCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
-                  plan.badgeLabel!,
+                  loc.t(plan.badgeLabelKey!),
                   style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700),
                 ),
               ),

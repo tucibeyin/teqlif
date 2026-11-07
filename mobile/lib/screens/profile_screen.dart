@@ -4087,6 +4087,11 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
     'referral_bonus': loc.t('walletTxnReferralBonus'),
     'welcome_bonus': loc.t('walletTxnWelcomeBonus'),
     'iap_purchase': loc.t('walletTxnIapPurchase'),
+    'pro_subscription_monthly':   loc.t('walletTxnProMonthly'),
+    'pro_subscription_quarterly': loc.t('walletTxnProQuarterly'),
+    'pro_subscription_biannual':  loc.t('walletTxnProBiannual'),
+    'pro_subscription_annual':    loc.t('walletTxnProAnnual'),
+    'pro_subscription':           loc.t('walletTxnProSubscription'),
   };
 
   @override
@@ -4213,7 +4218,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
     );
   }
 
-  void _showProSheet() {
+  void _showProSheet({String? targetPlanId}) {
     final loc = ref.read(localizationProvider);
     showModalBottomSheet(
       context: context,
@@ -4222,6 +4227,8 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
       backgroundColor: Colors.transparent,
       builder: (_) => ProSubscriptionSheet(
         loc: loc,
+        currentPlanId: _isPro ? _activePlanType : null,
+        initialPlanId: targetPlanId,
         onPurchaseSuccess: () {
           setState(() => _isPro = true);
           _load();
@@ -4651,6 +4658,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
                   isDark: isDark,
                   needsRestore: _needsRestore,
                   onSubscribe: _showProSheet,
+                  onUpgradeTap: (planId) => _showProSheet(targetPlanId: planId),
                   loc: loc,
                 ),
 
@@ -5824,6 +5832,7 @@ class _ProTab extends ConsumerWidget {
   final bool isDark;
   final bool needsRestore;
   final VoidCallback onSubscribe;
+  final void Function(String planId) onUpgradeTap;
   final TranslationPack loc;
 
   const _ProTab({
@@ -5834,6 +5843,7 @@ class _ProTab extends ConsumerWidget {
     required this.isDark,
     this.needsRestore = false,
     required this.onSubscribe,
+    required this.onUpgradeTap,
     required this.loc,
   });
 
@@ -6244,7 +6254,7 @@ class _ProTab extends ConsumerWidget {
                         savingText: p.$3 > 0 ? loc.t('walletProUpgradeSaving', {'percent': '${p.$3}'}) : '',
                         price: price,
                         isDark: isDark,
-                        onTap: product != null ? () => iap.buy(product) : null,
+                        onTap: () => onUpgradeTap(p.$1),
                       );
                     }),
               ],
