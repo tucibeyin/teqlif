@@ -4044,6 +4044,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
   late bool _isPro;
   String? _proExpiresAt;
   String? _activePlanType;
+  bool _needsRestore = false; // store_subscription_id yoksa Apple sync mümkün değil
 
   // Kart 2 — kazanç özeti
   int _pendingTeqlik = 0;
@@ -4119,6 +4120,8 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
     if (!mounted) return;
     final balanceData = results[0];
     final summaryData = results[1];
+
+    bool isPro = _isPro;
     setState(() {
       _loading = false;
       if (balanceData != null) {
@@ -4134,9 +4137,33 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
         _activeWithdrawalId = summaryData['active_withdrawal_id'] as int?;
         if (summaryData.containsKey('is_pro')) {
           _isPro = summaryData['is_pro'] as bool? ?? false;
+          isPro = _isPro;
         }
         _proExpiresAt   = summaryData['pro_expires_at'] as String?;
         _activePlanType = summaryData['plan_type'] as String?;
+      }
+    });
+
+    // PRO kullanıcılar için Apple Server API üzerinden sessiz reconciliation
+    if (isPro) {
+      _syncSubscriptionSilently();
+    }
+  }
+
+  void _syncSubscriptionSilently() {
+    WalletService.syncSubscription().then((sync) {
+      if (!mounted || sync == null) return;
+      if (sync['needs_restore'] == true && !_needsRestore) {
+        setState(() => _needsRestore = true);
+      }
+      if (sync['changed'] == true) {
+        final newPlan = sync['plan_type'] as String?;
+        final newExpires = sync['expires_at'] as String?;
+        setState(() {
+          if (newPlan != null) _activePlanType = newPlan;
+          if (newExpires != null) _proExpiresAt = newExpires;
+          _needsRestore = false;
+        });
       }
     });
   }
@@ -4613,6 +4640,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
                   proExpiresAt: _proExpiresAt,
                   activePlanType: _activePlanType,
                   isDark: isDark,
+                  needsRestore: _needsRestore,
                   onSubscribe: _showProSheet,
                   loc: loc,
                 ),
@@ -5785,6 +5813,7 @@ class _ProTab extends ConsumerWidget {
   final String? proExpiresAt;
   final String? activePlanType;
   final bool isDark;
+  final bool needsRestore;
   final VoidCallback onSubscribe;
   final TranslationPack loc;
 
@@ -5794,6 +5823,7 @@ class _ProTab extends ConsumerWidget {
     required this.proExpiresAt,
     this.activePlanType,
     required this.isDark,
+    this.needsRestore = false,
     required this.onSubscribe,
     required this.loc,
   });
@@ -5869,6 +5899,38 @@ class _ProTab extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.only(bottom: 32),
       children: [
+        // ── Restore banner — store_subscription_id yoksa göster ──────────
+        if (needsRestore)
+          GestureDetector(
+            onTap: () async => await iap.restorePurchases(),
+            child: Container(
+              margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E3A5F),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFF3B82F6).withValues(alpha: 0.5)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.sync_rounded, color: Color(0xFF60A5FA), size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      loc.t('walletRestorePrompt'),
+                      style: const TextStyle(
+                        color: Color(0xFF93C5FD),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right_rounded, color: Color(0xFF60A5FA), size: 18),
+                ],
+              ),
+            ),
+          ),
+
         // ── Aktif Abonelik Kartı ─────────────────────────────────────────
         Container(
           margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),

@@ -206,6 +206,7 @@
   "@walletPendingEarningsDesc": [["placeholders", [["amount", [["type", "int"]]], ["days", [["type", "int"]]]]]],
   "walletStartStreamCta": "Stream starten",
   "walletEarningsTitle": "GESCHENKEINNAHMEN",
+  "walletRestorePrompt": "Tippe, um dein Abonnement wiederherzustellen",
   "walletPendingLabel": "In Bearbeitung (14 Tage)",
   "walletAvailableLabel": "Verfügbar",
   "walletNoEarningsYet": "Noch keine Geschenkeinnahmen. Starte einen Stream, um teqlik zu verdienen.",

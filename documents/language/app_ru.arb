@@ -1949,6 +1949,7 @@
   "@walletPendingEarningsDesc": [["placeholders", [["amount", [["type", "int"]]], ["days", [["type", "int"]]]]]],
   "walletStartStreamCta": "Начать трансляцию",
   "walletEarningsTitle": "ДОХОД ОТ ПОДАРКОВ",
+  "walletRestorePrompt": "Нажмите, чтобы восстановить подписку",
   "walletPendingLabel": "В обработке (14 дней)",
   "walletAvailableLabel": "Доступно",
   "walletNoEarningsYet": "Дохода от подарков пока нет. Начните трансляцию, чтобы зарабатывать teqlik.",

@@ -87,6 +87,14 @@ class Settings(BaseSettings):
     apns_use_sandbox: bool = False
     iap_allow_sandbox: bool = False  # True yalnızca test/staging — production'da False zorunlu
 
+    # App Store Server API (subscription reconciliation için — App Store Connect API key)
+    # App Store Connect → Users and Access → Integrations → App Store Connect API
+    # Rol: App Manager veya Developer
+    appstore_issuer_id: str = ""          # UUID formatında Issuer ID
+    appstore_key_id: str = ""             # 10 karakterlik Key ID (AuthKey_KEYID.p8)
+    appstore_private_key_path: str = ""   # /path/to/AuthKey_KEYID.p8
+    appstore_private_key: str = ""        # PEM içeriği (alternatif — path yoksa kullanılır)
+
     model_config = SettingsConfigDict(
         env_file=os.environ.get("TEQLIF_ENV_FILE", ".env.production"),
         env_ignore_empty=True,

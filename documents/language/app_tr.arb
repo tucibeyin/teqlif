@@ -214,6 +214,7 @@
   "@walletPendingEarningsDesc": [["placeholders", [["amount", [["type", "int"]]], ["days", [["type", "int"]]]]]],
   "walletStartStreamCta": "Yayın Başlat",
   "walletEarningsTitle": "HEDİYE KAZANCINIZ",
+  "walletRestorePrompt": "Aboneliğini geri yüklemek için dokun",
   "walletPendingLabel": "İşlemde (14 gün)",
   "walletAvailableLabel": "Serbest",
   "walletNoEarningsYet": "Henüz hediye kazancı yok. Yayın başlatarak teqlik kazanın.",

@@ -95,6 +95,42 @@ async def wallet_summary(
     return await GetWalletSummaryQuery(db).execute(current_user.id)
 
 
+# ── Subscription Reconciliation (Apple pull) ───────────────────────────────────
+
+@router.post("/subscription/sync")
+async def sync_subscription(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    redis=Depends(get_redis),
+):
+    """Apple Server API üzerinden subscription durumunu senkronize eder.
+
+    Rate limit: kullanıcı başına 5 dakikada 1 istek.
+    PRO olmayan kullanıcılar için hızlıca {"changed": false} döner.
+    store_subscription_id yoksa {"needs_restore": true} döner.
+    """
+    from app.use_cases.wallet.commands.reconcile_subscription_command import ReconcileSubscriptionCommand
+
+    _RATE_KEY = f"sub_sync:{current_user.id}"
+    _RATE_TTL = 300  # 5 dakika
+
+    if await redis.get(_RATE_KEY):
+        # Rate limit — cached response gönder (Apple API çağrısı yok)
+        return {"changed": False, "rate_limited": True}
+
+    result = await ReconcileSubscriptionCommand(db).execute(current_user.id)
+
+    if result.get("changed"):
+        await db.commit()
+        await invalidate_user_session_cache(current_user.id)
+
+    # Başarılı sorguyu rate-limit et (sync_unavailable değilse)
+    if not result.get("sync_unavailable") and not result.get("error"):
+        await redis.set(_RATE_KEY, "1", ex=_RATE_TTL)
+
+    return result
+
+
 # ── Cashout (withdraw) ──────────────────────────────────────────────────────────
 
 class WithdrawRequest(BaseModel):

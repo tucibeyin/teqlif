@@ -130,6 +130,24 @@ class WalletService {
     }
   }
 
+  /// POST /api/wallet/subscription/sync — Apple Server API üzerinden plan_type reconciliation.
+  /// PRO kullanıcılar için wallet screen açılışında sessizce çağrılır.
+  /// Dönüş: {"changed": bool, "plan_type": str, "needs_restore": bool?, ...}
+  static Future<Map<String, dynamic>?> syncSubscription() async {
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return null;
+      final resp = await http.post(
+        Uri.parse('${providerContainer.read(apiClientProvider).config.baseUrl}/wallet/subscription/sync'),
+        headers: await _headers(token),
+      );
+      if (resp.statusCode == 200) {
+        return jsonDecode(resp.body) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return null;
+  }
+
   static Future<Map<String, dynamic>?> getBalance({int limit = 5}) async {
     try {
       final token = await StorageService.getToken();
