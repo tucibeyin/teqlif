@@ -6687,6 +6687,7 @@
   "proAnnualFull": "Годовой PRO",
   "iapProductsNotLoaded": "Загрузка информации о продукте, пожалуйста, подождите.",
   "iapPurchasePending": "Покупка ожидает подтверждения…",
+  "iapVerifyFailed": "Не удалось подтвердить покупку. Попробуйте «Восстановить покупки».",
   "walletProManageGooglePlay": "Управление в Google Play",
   "walletProManageWeb": "Управление подпиской",
   "walletNegativeBalanceNote": "Отрицательный баланс из-за возврата",

@@ -71,6 +71,18 @@ class ReconcileSubscriptionCommand:
                 "expires_at": pro_expires_at.isoformat() if pro_expires_at else None,
             }
 
+        # Aktif olmayan aboneliği client-side reconcile etme — downgrade S2S notification'ın işi
+        if not apple_status.is_active:
+            logger.info(
+                "[SubReconcile] Apple aktif değil (status=%s), reconcile atlandı | user=%s",
+                apple_status.status, user_id,
+            )
+            return {
+                "changed": False,
+                "plan_type": plan_type,
+                "expires_at": pro_expires_at.isoformat() if pro_expires_at else None,
+            }
+
         apple_plan = _PLAN_TYPE.get(apple_status.product_id)
         if not apple_plan:
             logger.warning(

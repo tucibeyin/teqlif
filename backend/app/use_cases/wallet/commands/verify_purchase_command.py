@@ -137,6 +137,12 @@ class VerifyPurchaseCommand:
         if result.product_id in VALID_CONSUMABLE_IDS:
             return await self._handle_consumable(user_id, platform, result)
         else:
+            if result.expires_at is None:
+                logger.error(
+                    "[VerifyPurchase] Abonelik için expiresDate eksik | product=%s tx=%s",
+                    result.product_id, result.transaction_id,
+                )
+                raise BadRequestException(code="IAP_MISSING_EXPIRY")
             return await self._handle_subscription(user_id, platform, result)
 
     async def _handle_consumable(
@@ -248,11 +254,12 @@ class VerifyPurchaseCommand:
             text(
                 "INSERT INTO wallet_ledger "
                 "(user_id, delta_teqlik, balance_after, tx_type, reference_id, reference_type) "
-                "VALUES (:uid, 0, :bal, 'iap_purchase', :ref_id, 'teqlik_transaction')"
+                "VALUES (:uid, 0, :bal, :tx_type, :ref_id, 'teqlik_transaction')"
             ),
             {
                 "uid": user_id,
                 "bal": sub_balance_after,
+                "tx_type": f"pro_subscription_{plan_type}",
                 "ref_id": sub_tx_id,
             },
         )

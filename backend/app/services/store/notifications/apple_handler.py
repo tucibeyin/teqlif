@@ -67,8 +67,14 @@ class AppleNotificationHandler(StoreNotificationHandler):
         elif notification_type == "DID_RENEW" and subtype == "UPGRADE":
             await self._handle_upgrade(user_id, tx_claims)
 
-        elif notification_type == "DID_CHANGE_RENEWAL_PREF" and subtype in ("UPGRADE", "DOWNGRADE"):
+        elif notification_type == "DID_CHANGE_RENEWAL_PREF" and subtype == "UPGRADE":
             await self._handle_upgrade(user_id, tx_claims)
+
+        elif notification_type == "DID_CHANGE_RENEWAL_PREF" and subtype == "DOWNGRADE":
+            # Mevcut dönem hala üst planda devam eder; plan değişimi bir sonraki DID_RENEW'da gerçekleşir
+            logger.info(
+                "[AppleNotif] DOWNGRADE (pending, işlem yok) | user=%s", user_id
+            )
 
         elif notification_type in ("EXPIRED",) or subtype == "GRACE_PERIOD_EXPIRED":
             await self._handle_expired(user_id)
@@ -129,7 +135,7 @@ class AppleNotificationHandler(StoreNotificationHandler):
     async def _handle_expired(self, user_id: int) -> None:
         await self._session.execute(
             text(
-                "UPDATE users SET user_type = 'standard', "
+                "UPDATE users SET user_type = 'standard', plan_type = NULL, "
                 "pro_expires_at = NULL, pro_grace_until = NULL "
                 "WHERE id = :uid"
             ),

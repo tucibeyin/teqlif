@@ -6687,6 +6687,7 @@
   "proAnnualFull": "PRO سنوي",
   "iapProductsNotLoaded": "جارٍ تحميل معلومات المنتج، يرجى الانتظار.",
   "iapPurchasePending": "الشراء في انتظار الموافقة…",
+  "iapVerifyFailed": "تعذّر التحقق من الشراء. يرجى تجربة 'استعادة المشتريات'.",
   "walletProManageGooglePlay": "إدارة في Google Play",
   "walletProManageWeb": "إدارة الاشتراك",
   "walletNegativeBalanceNote": "رصيد سالب بسبب الاسترداد",

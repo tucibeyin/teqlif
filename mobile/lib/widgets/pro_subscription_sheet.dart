@@ -81,7 +81,16 @@ class _ProSubscriptionSheetState extends State<ProSubscriptionSheet> {
     } else {
       _selectedPlanId = visibleIds.firstOrNull ?? 'teqlif_pro_1m';
     }
-    _sub = _iap.purchaseStream.listen(_onPurchase);
+    _sub = _iap.purchaseStream.listen(
+      _onPurchase,
+      onError: (_) {
+        if (!mounted) return;
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(widget.loc.t('iapVerifyFailed'))),
+        );
+      },
+    );
     if (_iap.products.isEmpty) {
       _iap.loadProducts().then((_) {
         if (mounted) setState(() {});

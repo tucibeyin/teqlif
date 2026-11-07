@@ -95,25 +95,30 @@ class IAPService {
     await _iap.restorePurchases();
   }
 
-  void _onPurchaseUpdates(List<PurchaseDetails> purchases) {
+  Future<void> _onPurchaseUpdates(List<PurchaseDetails> purchases) async {
     for (final purchase in purchases) {
+      if (purchase.pendingCompletePurchase) {
+        _iap.completePurchase(purchase);
+      }
       if (purchase.status == PurchaseStatus.purchased ||
           purchase.status == PurchaseStatus.restored) {
-        _verifyWithBackend(purchase);
+        final ok = await _verifyWithBackend(purchase);
+        if (ok) {
+          _purchaseController.add(purchase);
+        } else {
+          _purchaseController.addError(Exception('IAP_BACKEND_FAILED'));
+        }
       } else if (purchase.status == PurchaseStatus.error) {
         debugPrint('[IAP] purchase error: ${purchase.error}');
         _purchaseController.add(purchase);
       }
-      if (purchase.pendingCompletePurchase) {
-        _iap.completePurchase(purchase);
-      }
     }
   }
 
-  Future<void> _verifyWithBackend(PurchaseDetails purchase) async {
+  Future<bool> _verifyWithBackend(PurchaseDetails purchase) async {
     try {
       final token = await StorageService.getToken();
-      if (token == null) return;
+      if (token == null) return false;
 
       final payload = purchase.verificationData.serverVerificationData;
       final productId = purchase.productID;
@@ -138,16 +143,14 @@ class IAPService {
         }),
       );
 
-      if (resp.statusCode == 200) {
-        _purchaseController.add(purchase);
-      } else {
-        debugPrint('[IAP] backend verify failed: ${resp.statusCode} ${resp.body}');
-        // Yine de tamamla — Apple pending purchase cezası uygular
-        _purchaseController.add(purchase);
-      }
+      if (resp.statusCode == 200) return true;
+      // 409 = replay (zaten işlendi) — başarılı say
+      if (resp.statusCode == 409) return true;
+      debugPrint('[IAP] backend verify failed: ${resp.statusCode} ${resp.body}');
+      return false;
     } catch (e) {
       debugPrint('[IAP] verify error: $e');
-      _purchaseController.add(purchase);
+      return false;
     }
   }
 
