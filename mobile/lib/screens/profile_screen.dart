@@ -4040,6 +4040,14 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
   List<dynamic> _txns = [];
   bool _loading = false;
 
+  // DB plan_type → IAP product ID dönüşümü (currentTierIndex hesabı için gerekli)
+  static const _kDbToIapPlan = {
+    'monthly':   'teqlif_pro_1m',
+    'quarterly': 'teqlif_pro_3m',
+    'biannual':  'teqlif_pro_6m',
+    'annual':    'teqlif_pro_12m',
+  };
+
   // Kart 1 — PRO durumu
   late bool _isPro;
   String? _proExpiresAt;
@@ -4140,7 +4148,8 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
           isPro = _isPro;
         }
         _proExpiresAt   = summaryData['pro_expires_at'] as String?;
-        _activePlanType = summaryData['plan_type'] as String?;
+        final rawPlan   = summaryData['plan_type'] as String?;
+        _activePlanType = _kDbToIapPlan[rawPlan] ?? rawPlan;
       }
     });
 
@@ -4160,7 +4169,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
         final newPlan = sync['plan_type'] as String?;
         final newExpires = sync['expires_at'] as String?;
         setState(() {
-          if (newPlan != null) _activePlanType = newPlan;
+          if (newPlan != null) _activePlanType = _kDbToIapPlan[newPlan] ?? newPlan;
           if (newExpires != null) _proExpiresAt = newExpires;
           _needsRestore = false;
         });
@@ -5896,37 +5905,55 @@ class _ProTab extends ConsumerWidget {
         .firstOrNull ?? 0;
     final isAnnual = activePlanType == 'teqlif_pro_12m';
 
+    // Kalan gün hesabı (0'ın altı 0 olarak gösterilir)
+    int? daysRemaining;
+    if (proExpiresAt != null) {
+      try {
+        final exp = DateTime.parse(proExpiresAt!).toLocal();
+        daysRemaining = exp.difference(DateTime.now()).inDays.clamp(0, 9999);
+      } catch (_) {}
+    }
+
     return ListView(
       padding: const EdgeInsets.only(bottom: 32),
       children: [
         // ── Restore banner — store_subscription_id yoksa göster ──────────
         if (needsRestore)
-          GestureDetector(
-            onTap: () async => await iap.restorePurchases(),
-            child: Container(
-              margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1E3A5F),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: Material(
+              color: const Color(0xFF1E3A5F),
+              borderRadius: BorderRadius.circular(14),
+              child: InkWell(
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFF3B82F6).withValues(alpha: 0.5)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.sync_rounded, color: Color(0xFF60A5FA), size: 20),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      loc.t('walletRestorePrompt'),
-                      style: const TextStyle(
-                        color: Color(0xFF93C5FD),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+                onTap: () async {
+                  HapticFeedback.lightImpact();
+                  await iap.restorePurchases();
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFF3B82F6).withValues(alpha: 0.5)),
                   ),
-                  const Icon(Icons.chevron_right_rounded, color: Color(0xFF60A5FA), size: 18),
-                ],
+                  child: Row(
+                    children: [
+                      const Icon(Icons.sync_rounded, color: Color(0xFF60A5FA), size: 20),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          loc.t('walletRestorePrompt'),
+                          style: const TextStyle(
+                            color: Color(0xFF93C5FD),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right_rounded, color: Color(0xFF60A5FA), size: 18),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
@@ -5968,38 +5995,74 @@ class _ProTab extends ConsumerWidget {
                   ),
                 ],
               ),
-              if (expiryDisplay.isNotEmpty) ...[
+              if (daysRemaining != null) ...[
                 const SizedBox(height: 6),
                 Text(
-                  loc.t('walletProRenewalDate', {'date': expiryDisplay}),
-                  style: const TextStyle(color: Colors.white70, fontSize: 13),
+                  loc.t('walletProDaysRemaining', {'days': '$daysRemaining'}),
+                  style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: -0.5),
                 ),
               ],
-              const SizedBox(height: 14),
-              GestureDetector(
-                onTap: () async {
-                  final uri = _subscriptionManageUri();
-                  if (await canLaunchUrl(uri)) {
-                    launchUrl(uri, mode: LaunchMode.externalApplication);
-                  }
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    _subscriptionManageLabel(loc),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
+              if (expiryDisplay.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  loc.t('walletProRenewalDate', {'date': expiryDisplay}),
+                  style: const TextStyle(color: Colors.white60, fontSize: 12),
+                ),
+              ],
+            ],
+          ),
+        ),
+
+        // ── App Store / Play Store Yönet Butonu ──────────────────────────
+        Container(
+          margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1C1C1C) : Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isDark ? const Color(0xFF333333) : const Color(0xFFE5E7EB),
+            ),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(14),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: () async {
+                HapticFeedback.lightImpact();
+                final uri = _subscriptionManageUri();
+                if (await canLaunchUrl(uri)) {
+                  launchUrl(uri, mode: LaunchMode.externalApplication);
+                }
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.open_in_new_rounded,
+                      size: 18,
+                      color: isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280),
                     ),
-                  ),
+                    const SizedBox(width: 10),
+                    Text(
+                      _subscriptionManageLabel(loc),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? const Color(0xFFE5E7EB) : const Color(0xFF374151),
+                      ),
+                    ),
+                    const Spacer(),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      size: 18,
+                      color: isDark ? const Color(0xFF6B7280) : const Color(0xFF9CA3AF),
+                    ),
+                  ],
                 ),
               ),
-            ],
+            ),
           ),
         ),
 

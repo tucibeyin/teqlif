@@ -6657,6 +6657,8 @@
   "@walletProDaysBadge": [["placeholders", [["days", [["type", "int"]]]]]],
   "walletProRenewalDate": "التجديد: {date}",
   "@walletProRenewalDate": [["placeholders", [["date", [["type", "String"]]]]]],
+  "walletProDaysRemaining": "متبقٍ {days} أيام",
+  "@walletProDaysRemaining": [["placeholders", [["days", [["type", "int"]]]]]],
   "walletProManageAppStore": "إدارة في App Store",
   "walletProMonthlyCreditsTitle": "الرصيد الشهري",
   "walletProFinancialTitle": "المزايا المالية",

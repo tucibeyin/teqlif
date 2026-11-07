@@ -6657,6 +6657,8 @@
   "@walletProDaysBadge": [["placeholders", [["days", [["type", "int"]]]]]],
   "walletProRenewalDate": "Yenileme: {date}",
   "@walletProRenewalDate": [["placeholders", [["date", [["type", "String"]]]]]],
+  "walletProDaysRemaining": "{days} gün kaldı",
+  "@walletProDaysRemaining": [["placeholders", [["days", [["type", "int"]]]]]],
   "walletProManageAppStore": "App Store'da Yönet",
   "walletProMonthlyCreditsTitle": "Aylık Krediler",
   "walletProFinancialTitle": "Finansal Ayrıcalıklar",
