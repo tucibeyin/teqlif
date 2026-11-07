@@ -795,32 +795,36 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
                             ),
                           ),
                         ),
-                      if (isSold)
+                      if (isSold) ...[
                         Positioned.fill(
                           child: Container(
-                            color: Colors.black.withOpacity(0.5),
-                            alignment: Alignment.center,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 3,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFDC2626),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                loc.t('listingSoldBadge'),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 0.3,
-                                ),
+                            color: Colors.black.withOpacity(0.45),
+                          ),
+                        ),
+                        Positioned(
+                          top: 5,
+                          right: 5,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 5,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFDC2626),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              loc.t('listingSoldBadge'),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: .2,
                               ),
                             ),
                           ),
                         ),
+                      ],
                     ],
                   ),
                 );

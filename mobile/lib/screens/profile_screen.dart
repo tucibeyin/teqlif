@@ -796,6 +796,7 @@ class _ListingGridItem extends ConsumerWidget {
     final isSponsored = listing['is_sponsored'] == true;
     final status = ListingStatusExtension.fromJson(listing);
     final isPassive = status == ListingStatus.passive;
+    final isSold = status == ListingStatus.sold;
 
     return GestureDetector(
       onTap: () => Navigator.push(
@@ -819,8 +820,8 @@ class _ListingGridItem extends ConsumerWidget {
                   errorWidget: (_, _, _) => _placeholder(context),
                 )
               : _placeholder(context),
-          // Pasif ilanlar için karartma overlay
-          if (isPassive)
+          // Pasif / Satıldı ilanlar için karartma overlay
+          if (isPassive || isSold)
             Positioned.fill(
               child: Container(color: Colors.black.withValues(alpha: 0.45)),
             ),
@@ -850,7 +851,7 @@ class _ListingGridItem extends ConsumerWidget {
                 ),
               ),
             ),
-          // Pasif badge — sol üst köşe
+          // Sol üst köşe badge — Pasif ya da Sponsorlu
           if (isPassive)
             Positioned(
               top: 5,
@@ -872,7 +873,7 @@ class _ListingGridItem extends ConsumerWidget {
                 ),
               ),
             )
-          else if (isSponsored)
+          else if (!isSold && isSponsored)
             Positioned(
               top: 5,
               left: 5,
@@ -886,6 +887,28 @@ class _ListingGridItem extends ConsumerWidget {
                   ref.read(localizationProvider).t('badgeSponsored'),
                   style: const TextStyle(
                     color: Color(0xFF7c5700),
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: .2,
+                  ),
+                ),
+              ),
+            ),
+          // Satıldı badge — sağ üst köşe
+          if (isSold)
+            Positioned(
+              top: 5,
+              right: 5,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFDC2626),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  ref.read(localizationProvider).t('listingSoldBadge'),
+                  style: const TextStyle(
+                    color: Colors.white,
                     fontSize: 9,
                     fontWeight: FontWeight.w800,
                     letterSpacing: .2,
