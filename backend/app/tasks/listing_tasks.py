@@ -15,7 +15,7 @@ from __future__ import annotations
 import asyncio
 from datetime import datetime, timezone, timedelta
 
-from sqlalchemy import update
+from sqlalchemy import update, or_
 
 from app.models.enums import ListingStatus
 from app.core.logger import get_logger, capture_exception
@@ -49,6 +49,7 @@ async def deactivate_expired_listings_task(ctx: dict) -> None:
                     Listing.status == ListingStatus.ACTIVE,
                     Listing.expires_at.is_(None),
                     Listing.created_at < cutoff,
+                    or_(Listing.reactivated_at.is_(None), Listing.reactivated_at < cutoff),
                 )
                 .values(status=ListingStatus.PASSIVE, deactivated_at=now)
                 .returning(Listing.id, Listing.user_id, Listing.title)
