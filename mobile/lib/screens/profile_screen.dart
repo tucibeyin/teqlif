@@ -4973,7 +4973,7 @@ class _ProDaysBadge extends StatelessWidget {
           const FaIcon(FontAwesomeIcons.crown, size: 9, color: Colors.white),
           const SizedBox(width: 4),
           Text(
-            daysLeft != null
+            (daysLeft != null && daysLeft > 0)
                 ? loc.t('walletProDaysBadge', {'days': '$daysLeft'})
                 : 'PRO',
             style: const TextStyle(
@@ -5964,19 +5964,15 @@ class _ProTab extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(20, 22, 20, 22),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [Color(0xFF1C1200), Color(0xFF3B2200)],
+              colors: [Color(0xFFD97706), Color(0xFFF59E0B), Color(0xFFFFD700)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: const Color(0xFFD97706).withValues(alpha: 0.55),
-              width: 1.5,
-            ),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFFD97706).withValues(alpha: 0.28),
-                blurRadius: 24,
+                color: const Color(0xFFD97706).withValues(alpha: 0.4),
+                blurRadius: 20,
                 offset: const Offset(0, 6),
               ),
             ],
@@ -5986,12 +5982,12 @@ class _ProTab extends ConsumerWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const FaIcon(FontAwesomeIcons.crown, size: 14, color: Color(0xFFFFD700)),
+                  const FaIcon(FontAwesomeIcons.crown, size: 14, color: Colors.white),
                   const SizedBox(width: 7),
                   Text(
                     _upgradePlans.where((p) => p.$1 == activePlanType).map((p) => loc.t(p.$2)).firstOrNull ?? 'PRO',
                     style: const TextStyle(
-                      color: Color(0xFFFBBF24),
+                      color: Colors.white,
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
                       letterSpacing: -0.3,
@@ -6019,8 +6015,8 @@ class _ProTab extends ConsumerWidget {
                     const SizedBox(width: 6),
                     Text(
                       loc.t('walletProDaysUnit'),
-                      style: const TextStyle(
-                        color: Color(0xFFD97706),
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.85),
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                       ),
@@ -6033,7 +6029,7 @@ class _ProTab extends ConsumerWidget {
                 Text(
                   loc.t('walletProRenewalDate', {'date': expiryDisplay}),
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.45),
+                    color: Colors.white.withValues(alpha: 0.7),
                     fontSize: 12,
                   ),
                 ),
