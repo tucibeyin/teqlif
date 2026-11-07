@@ -82,7 +82,7 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
           padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 32),
         children: [
           // ── Durum Kartı ────────────────────────────────────────────────────
-          if (isPremium) _ProStatusCard(renewalDate: state.blastCredits?['renewal_date'] as String?, planType: state.planType) else _UpgradeBanner(),
+          if (isPremium) _ProStatusCard(renewalDate: state.proExpiresAt, planType: state.planType) else _UpgradeBanner(),
 
           if (!isPremium) ...[
             const SizedBox(height: 20),

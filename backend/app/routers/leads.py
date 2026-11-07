@@ -153,6 +153,7 @@ async def blast_credits(
         "per_blast_cap":  cap,  # geriye dönük uyumluluk
         "teqlik_balance": current_user.teqlik_balance,
         "renewal_date":   renewal_date,
+        "pro_expires_at": current_user.pro_expires_at.isoformat() if current_user.pro_expires_at else None,
     }
 
 

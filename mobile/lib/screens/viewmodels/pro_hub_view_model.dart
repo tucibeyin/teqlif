@@ -13,6 +13,7 @@ class ProHubState {
   final bool isLoading;
   final bool isPremium;
   final String? planType;
+  final String? proExpiresAt;
 
   const ProHubState({
     this.blastCredits,
@@ -22,6 +23,7 @@ class ProHubState {
     this.isLoading = true,
     this.isPremium = false,
     this.planType,
+    this.proExpiresAt,
   });
 
   ProHubState copyWith({
@@ -32,6 +34,7 @@ class ProHubState {
     bool? isLoading,
     bool? isPremium,
     String? planType,
+    String? proExpiresAt,
   }) {
     return ProHubState(
       blastCredits: blastCredits ?? this.blastCredits,
@@ -41,6 +44,7 @@ class ProHubState {
       isLoading: isLoading ?? this.isLoading,
       isPremium: isPremium ?? this.isPremium,
       planType: planType ?? this.planType,
+      proExpiresAt: proExpiresAt ?? this.proExpiresAt,
     );
   }
 }
@@ -96,11 +100,13 @@ class ProHubViewModel extends AutoDisposeFamilyNotifier<ProHubState, bool> {
       ref.read(analyticsServiceProvider).getReactivationCredits(),
     ]);
 
+    final blast = results[0];
     state = state.copyWith(
-      blastCredits: results[0],
+      blastCredits: blast,
       boostCredits: results[1],
       aiDescCredits: results[2],
       reactivationCredits: results[3],
+      proExpiresAt: blast?['pro_expires_at'] as String?,
       isLoading: false,
     );
   }
