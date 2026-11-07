@@ -12,8 +12,9 @@ from app.services.store.base import PurchaseResult, StoreVerifier
 
 # Apple Root CA G3 — SHA-256 fingerprint (MITM koruması için hardcoded)
 # Kaynak: https://www.apple.com/certificateauthority/  (Apple Root CA - G3)
+# Doğrulama: cryptography kütüphanesi cert.fingerprint(SHA256).hex() — sandbox + production aynı cert
 _APPLE_ROOT_CA_FINGERPRINT = (
-    "b631f459f5acef09d79c6e6c46d69af44e0c03d2f5df4c7b02aba55e94abfcf4"
+    "63343abfb89a6a03ebb57e9b3f5fa7be7c4f5c756f3017b3a8c488c3653e9179"
 )
 
 VALID_CONSUMABLE_IDS: frozenset[str] = frozenset({
