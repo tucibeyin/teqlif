@@ -5444,7 +5444,10 @@ class _TeqlikPacksSheetState extends State<_TeqlikPacksSheet> {
     setState(() => _loading = false);
     if (purchase.status == PurchaseStatus.purchased ||
         purchase.status == PurchaseStatus.restored) {
-      Navigator.pop(context);
+      // Sadece consumable için kapat — subscription ProSubscriptionSheet tarafından kapatılır
+      if (kConsumableIds.contains(purchase.productID)) {
+        Navigator.pop(context);
+      }
     }
   }
 

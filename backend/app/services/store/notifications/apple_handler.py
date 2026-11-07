@@ -10,6 +10,13 @@ from app.services.store.notifications.base import StoreNotificationHandler
 
 logger = get_logger(__name__)
 
+_PLAN_TYPE: dict[str, str] = {
+    "teqlif_pro_1m":  "monthly",
+    "teqlif_pro_3m":  "quarterly",
+    "teqlif_pro_6m":  "biannual",
+    "teqlif_pro_12m": "annual",
+}
+
 
 class AppleNotificationHandler(StoreNotificationHandler):
     """App Store Server Notifications V2 — abonelik yaşam döngüsü."""
@@ -57,6 +64,12 @@ class AppleNotificationHandler(StoreNotificationHandler):
         elif notification_type == "DID_RENEW" and subtype == "BILLING_RETRY":
             await self._handle_billing_retry(user_id, tx_claims)
 
+        elif notification_type == "DID_RENEW" and subtype == "UPGRADE":
+            await self._handle_upgrade(user_id, tx_claims)
+
+        elif notification_type == "DID_CHANGE_RENEWAL_PREF" and subtype in ("UPGRADE", "DOWNGRADE"):
+            await self._handle_upgrade(user_id, tx_claims)
+
         elif notification_type in ("EXPIRED",) or subtype == "GRACE_PERIOD_EXPIRED":
             await self._handle_expired(user_id)
 
@@ -80,6 +93,26 @@ class AppleNotificationHandler(StoreNotificationHandler):
             {"exp": expires_at, "uid": user_id},
         )
         logger.info("[AppleNotif] DID_RENEW | user=%s expires=%s", user_id, expires_at)
+
+    async def _handle_upgrade(self, user_id: int, tx_claims: dict) -> None:
+        product_id = tx_claims.get("productId", "")
+        plan_type = _PLAN_TYPE.get(product_id)
+        expires_ms = tx_claims.get("expiresDate", 0)
+        expires_at = datetime.fromtimestamp(expires_ms / 1000, tz=timezone.utc)
+        if plan_type:
+            await self._session.execute(
+                text(
+                    "UPDATE users SET plan_type = :plan, pro_expires_at = :exp, "
+                    "pro_grace_until = NULL WHERE id = :uid"
+                ),
+                {"plan": plan_type, "exp": expires_at, "uid": user_id},
+            )
+            logger.info("[AppleNotif] UPGRADE | user=%s plan=%s", user_id, plan_type)
+        else:
+            logger.warning(
+                "[AppleNotif] UPGRADE bilinmeyen ürün | product_id=%s user=%s",
+                product_id, user_id,
+            )
 
     async def _handle_billing_retry(self, user_id: int, tx_claims: dict) -> None:
         grace_ms = tx_claims.get("gracePeriodExpiresDate", 0)

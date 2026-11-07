@@ -23,6 +23,7 @@ import 'services/push_notification_service.dart';
 import 'services/background_audio_handler.dart';
 import 'services/localization_service.dart';
 import 'services/catalog_service.dart';
+import 'services/iap_service.dart';
 import 'ui_library/components/overlays/teq_toast.dart';
 import 'widgets/global_keyboard_accessory.dart';
 import 'widgets/global_call_overlay.dart';
@@ -113,6 +114,7 @@ void main() async {
       PushNotificationService.initEarly();
       debugPrint('[STARTUP][${DateTime.now().toIso8601String()}] PushNotificationService.initEarly done | ${sw.elapsedMilliseconds}ms');
       FeedTelemetryService.instance.init();
+      await IAPService().init();
       await initBackgroundAudio();
       debugPrint('[STARTUP][${DateTime.now().toIso8601String()}] initBackgroundAudio done | ${sw.elapsedMilliseconds}ms');
 
