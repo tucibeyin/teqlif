@@ -3399,6 +3399,7 @@ async def _do_ml_training_pipeline(ctx: dict) -> None:
     except ImportError:
         logger.warning("[MLPipeline] 6/6 networkx yüklü değil, influence_scores atlandı")
         steps_ok.append("influence_scores")
+        await _agent_ok(ctx, "compute_influence_scores_task")
     except Exception as exc:
         logger.error("[MLPipeline] 6/6 influence_scores başarısız | %s", exc, exc_info=True)
         capture_exception(exc)
