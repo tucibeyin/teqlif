@@ -25,6 +25,7 @@ enum MainNavigationEvent {
   toDirectSaleDetail,
   toRecordingDetail,
   toProHub,
+  toMyRecordings,
 }
 
 class MainNavigationData {
@@ -323,12 +324,7 @@ class MainViewModel extends AutoDisposeAsyncNotifier<MainState> {
         break;
 
       case 'recording_available':
-        final sid = streamId();
-        if (sid != null) {
-          _navigate(MainNavigationEvent.toRecordingDetail, sid);
-        } else {
-          _navigate(MainNavigationEvent.toNotificationsTab, null);
-        }
+        _navigate(MainNavigationEvent.toMyRecordings, null);
         break;
 
       case 'recording_upsell':

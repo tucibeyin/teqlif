@@ -3799,7 +3799,7 @@
   ],
   "notifAuctionCancelledBodyNoItem": "Ставка не принята",
   "notifRecordingAvailableTitle": "Запись трансляции готова 🎬",
-  "notifRecordingAvailableBody": "Посмотрите запись и ознакомьтесь со статистикой продаж.",
+  "notifRecordingAvailableBody": "{title} · Посмотрите запись и ознакомьтесь со статистикой продаж.",
   "notifRecordingUpsellTitle": "Запись вашего стрима готова 🎬",
   "notifRecordingUpsellBody": "Перейдите на PRO и получите доступ к записи на 24 часа.",
   "notifStreamStarted": "@{username} начал(-а) прямой эфир",

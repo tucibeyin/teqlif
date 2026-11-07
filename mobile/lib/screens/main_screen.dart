@@ -2,6 +2,7 @@ import '../services/analytics_service.dart';
 import '../services/category_service.dart';
 import '../services/storage_service.dart';
 import 'direct_sale_detail_screen.dart';
+import 'my_recordings_screen.dart';
 import 'pro_hub_screen.dart';
 import 'recording_detail_screen.dart';
 import 'home_screen.dart';
@@ -344,6 +345,18 @@ class _MainScreenState extends ConsumerState<MainScreen> with WidgetsBindingObse
                   builder: (_) => ProHubScreen(isPremium: false, scrollToLiveSection: true),
                 ),
               );
+              break;
+            case MainNavigationEvent.toMyRecordings:
+              StorageService.getUserInfo().then((info) {
+                if (!context.mounted) return;
+                final isPremium = info?['user_type'] == 'pro';
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => MyRecordingsScreen(isPremium: isPremium),
+                  ),
+                );
+              });
               break;
             case MainNavigationEvent.none:
               break;

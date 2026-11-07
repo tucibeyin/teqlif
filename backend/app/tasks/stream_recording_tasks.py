@@ -53,7 +53,7 @@ async def notify_new_recordings_task(ctx: dict) -> None:
         # ─── 1. Bildirim gönderilmemiş tüm available kayıtları seç (zaman sınırı yok)
         async with AsyncSessionLocal() as session:
             rows = (await session.execute(text("""
-                SELECT sr.id, sr.stream_id, ls.host_id, u.user_type
+                SELECT sr.id, sr.stream_id, ls.host_id, u.user_type, COALESCE(ls.title, '') AS title
                 FROM stream_recordings sr
                 JOIN live_streams ls ON ls.id = sr.stream_id
                 JOIN users u         ON u.id  = ls.host_id
@@ -62,7 +62,7 @@ async def notify_new_recordings_task(ctx: dict) -> None:
             """))).fetchall()
 
         notified = 0
-        for rec_id, stream_id, host_id, user_type in (rows or []):
+        for rec_id, stream_id, host_id, user_type, stream_title in (rows or []):
             is_pro = user_type == 'pro'
             try:
                 if is_pro:
@@ -71,6 +71,7 @@ async def notify_new_recordings_task(ctx: dict) -> None:
                         "i18n": {
                             "title_key": "notifRecordingAvailableTitle",
                             "body_key":  "notifRecordingAvailableBody",
+                            "body_params": {"title": stream_title or "—"},
                         },
                         "stream_id":    str(stream_id),
                         "recording_id": str(rec_id),
