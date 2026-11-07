@@ -6101,76 +6101,6 @@ class _ProTab extends ConsumerWidget {
           ),
         ),
 
-        // ── Aylık Kredi Paneli ───────────────────────────────────────────
-        const SizedBox(height: 16),
-        if (hub.isLoading)
-          const Center(child: Padding(
-            padding: EdgeInsets.all(16),
-            child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFD97706)),
-          ))
-        else
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1C1C1C) : Colors.white,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  loc.t('walletProMonthlyCreditsTitle'),
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: isDark ? Colors.white : const Color(0xFF111827),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                _CreditRow(label: loc.t('proCreditsBlastName'), credits: hub.blastCredits, isDark: isDark),
-                _CreditRow(label: loc.t('proCreditsBoostName'), credits: hub.boostCredits, isDark: isDark),
-                _CreditRow(label: loc.t('proCreditsAiDescName'), credits: hub.aiDescCredits, isDark: isDark),
-                _CreditRow(label: loc.t('proCreditsReactivationName'), credits: hub.reactivationCredits, isDark: isDark, isLast: true),
-              ],
-            ),
-          ),
-
-        // ── Finansal Ayrıcalık Kartı ─────────────────────────────────────
-        const SizedBox(height: 12),
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: const Color(0xFF10B981).withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.2)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.percent_rounded, color: Color(0xFF10B981), size: 18),
-                  const SizedBox(width: 6),
-                  Text(
-                    loc.t('walletProFinancialTitle'),
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF10B981),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              _PrivilegeRow(label: loc.t('walletProEarningsRateLabel'), value: '%95', subtext: 'Standart: %70', isDark: isDark),
-              const SizedBox(height: 6),
-              _PrivilegeRow(label: loc.t('walletProCommissionLabel'), value: '%0', subtext: loc.t('walletProCommissionNote'), isDark: isDark),
-            ],
-          ),
-        ),
-
         // ── Yükseltme veya VIP Paneli ────────────────────────────────────
         const SizedBox(height: 12),
         if (isAnnual)
@@ -6260,6 +6190,76 @@ class _ProTab extends ConsumerWidget {
               ],
             ),
           ),
+
+        // ── Aylık Kredi Paneli ───────────────────────────────────────────
+        const SizedBox(height: 16),
+        if (hub.isLoading)
+          const Center(child: Padding(
+            padding: EdgeInsets.all(16),
+            child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFD97706)),
+          ))
+        else
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1C1C1C) : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  loc.t('walletProMonthlyCreditsTitle'),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? Colors.white : const Color(0xFF111827),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _CreditRow(label: loc.t('proCreditsBlastName'), credits: hub.blastCredits, isDark: isDark),
+                _CreditRow(label: loc.t('proCreditsBoostName'), credits: hub.boostCredits, isDark: isDark),
+                _CreditRow(label: loc.t('proCreditsAiDescName'), credits: hub.aiDescCredits, isDark: isDark),
+                _CreditRow(label: loc.t('proCreditsReactivationName'), credits: hub.reactivationCredits, isDark: isDark, isLast: true),
+              ],
+            ),
+          ),
+
+        // ── Finansal Ayrıcalık Kartı ─────────────────────────────────────
+        const SizedBox(height: 12),
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF10B981).withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.2)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.percent_rounded, color: Color(0xFF10B981), size: 18),
+                  const SizedBox(width: 6),
+                  Text(
+                    loc.t('walletProFinancialTitle'),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF10B981),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              _PrivilegeRow(label: loc.t('walletProEarningsRateLabel'), value: '%95', subtext: 'Standart: %70', isDark: isDark),
+              const SizedBox(height: 6),
+              _PrivilegeRow(label: loc.t('walletProCommissionLabel'), value: '%0', subtext: loc.t('walletProCommissionNote'), isDark: isDark),
+            ],
+          ),
+        ),
       ],
     );
   }
