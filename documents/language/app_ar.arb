@@ -1154,6 +1154,7 @@
   "planMonthly": "شهري",
   "planYearly": "سنوي",
   "planLifetime": "مدى الحياة",
+  "proLifetime": "مدى الحياة",
   "proStatusDesc": "جميع أدوات التحليل نشطة",
   "proRenewalDate": "التجديد: {date}",
   "@proRenewalDate": [

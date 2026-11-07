@@ -1151,6 +1151,7 @@
   "planMonthly": "Aylık",
   "planYearly": "Yıllık",
   "planLifetime": "Ömür Boyu",
+  "proLifetime": "Ömür Boyu",
   "proStatusDesc": "Tüm analitik araçlara erişiminiz aktif",
   "proRenewalDate": "Yenileme: {date}",
   "@proRenewalDate": [

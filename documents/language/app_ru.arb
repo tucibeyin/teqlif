@@ -2511,6 +2511,7 @@
   "planMonthly": "Ежемесячно",
   "planYearly": "Ежегодно",
   "planLifetime": "Срок службы",
+  "proLifetime": "Срок службы",
   "proStatusDesc": "Все инструменты аналитики активны",
   "proRenewalDate": "Обновления: {date}",
   "proUnlockTitle": "Разблокировать PRO",

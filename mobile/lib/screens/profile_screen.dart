@@ -1070,19 +1070,9 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
   String? _settingsPlanType;
 
   static String _planLabel(TranslationPack loc, String? type) {
-    switch (type) {
-      case 'monthly':
-      case 'teqlif_pro_1m':  return loc.t('proMonthly');
-      case 'quarterly':
-      case 'teqlif_pro_3m':  return loc.t('proQuarterly');
-      case 'biannual':
-      case 'teqlif_pro_6m':  return loc.t('proBiannual');
-      case 'annual':
-      case 'yearly':
-      case 'teqlif_pro_12m': return loc.t('proAnnual');
-      case 'lifetime':       return loc.t('planLifetime');
-      default:               return loc.t('settingsProActive');
-    }
+    if (type == null || type.isEmpty) return loc.t('settingsProActive');
+    final key = 'pro${type[0].toUpperCase()}${type.substring(1)}';
+    return loc.tOr(key, loc.t('settingsProActive'));
   }
 
   Future<void> _loadPremiumStatus() async {

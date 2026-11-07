@@ -1151,6 +1151,7 @@
   "planMonthly": "Monatlich",
   "planYearly": "Jährlich",
   "planLifetime": "Lebenslang",
+  "proLifetime": "Lebenslang",
   "proStatusDesc": "Alle Analysetools sind aktiv",
   "proRenewalDate": "Erneuert sich am: {date}",
   "@proRenewalDate": [
