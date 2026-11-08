@@ -3298,6 +3298,45 @@ async def train_feed_als_task(ctx: dict) -> None:
         raise
 
 
+async def _catchup_ml_pipeline_if_missed(ctx: dict) -> None:
+    """Worker startup'ta haftalık ML pipeline'ının kaçırılıp kaçırılmadığını kontrol eder.
+
+    Son çalışma zamanı 7 günden eskiyse pipeline'ı hemen kuyruğa ekler.
+    Dağıtık kilit mevcutsa (pipeline zaten çalışıyorsa) sessizce çıkar.
+    Amaç: deployment race condition veya worker crash sonrası otomatik kurtarma.
+    """
+    _THRESHOLD_DAYS = 7
+    _PIPELINE_JOB_KEY = "run_ml_training_pipeline_task"
+    try:
+        from datetime import datetime, timezone, timedelta
+        from app.utils.redis_client import get_redis
+        from app.core.task_queue import get_pool
+
+        redis = await get_redis()
+        raw = await redis.hget("teqlif:agent:job_ok", _PIPELINE_JOB_KEY)
+        if raw:
+            last_ok = datetime.fromisoformat(raw if isinstance(raw, str) else raw.decode())
+            age = datetime.now(timezone.utc) - last_ok
+            if age <= timedelta(days=_THRESHOLD_DAYS):
+                return  # Son çalışma taze, catch-up gerekmez
+
+        # 7+ gün geçmiş veya hiç çalışmamış → pipeline'ı kuyruğa ekle
+        # Kilit mevcutsa (zaten çalışıyor) run_ml_training_pipeline_task kendi içinde çıkar
+        pool = get_pool()
+        if pool is None:
+            logger.warning("[Catchup] ARQ pool hazır değil, catch-up atlandı")
+            return
+        await pool.enqueue_job("run_ml_training_pipeline_task")
+        logger.warning(
+            "[Catchup] ML pipeline %s gündür çalışmamış — catch-up kuyruğa eklendi",
+            raw and (datetime.now(timezone.utc) - datetime.fromisoformat(
+                raw if isinstance(raw, str) else raw.decode()
+            )).days or "?",
+        )
+    except Exception as exc:
+        logger.warning("[Catchup] ML pipeline catch-up kontrolü başarısız: %s", exc)
+
+
 async def run_ml_training_pipeline_task(ctx: dict) -> None:
     """
     Her Pazar 05:00 UTC — Haftalık ML eğitim pipeline'ı (ardışık adımlar).
@@ -4832,6 +4871,7 @@ class WorkerSettings:
         init_di()
         set_pool(ctx["redis"])
         await preload_i18n_cache()
+        asyncio.create_task(_catchup_ml_pipeline_if_missed(ctx))
 
     @staticmethod
     async def on_shutdown(_ctx: dict) -> None:
