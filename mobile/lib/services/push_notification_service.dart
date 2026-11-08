@@ -447,7 +447,8 @@ class PushNotificationService {
       debugPrint('[FCM] Cold-start FCM tap | type=${initial.data['type']} | data=${initial.data}');
       if (initial.data.isNotEmpty) {
         _pendingNavData = Map<String, dynamic>.from(initial.data);
-        Future.microtask(() => notificationStream.add(_pendingNavData!));
+        final _snap = _pendingNavData;
+        Future.microtask(() { if (_snap != null) notificationStream.add(_snap); });
       }
     } else {
       debugPrint('[FCM] Cold-start: FCM tıklaması yok');
