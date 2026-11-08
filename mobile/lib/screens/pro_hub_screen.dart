@@ -36,15 +36,18 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
     super.initState();
     if (widget.scrollToLiveSection) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        final ctx = _liveAccordionKey.currentContext;
-        if (ctx != null) {
-          Scrollable.ensureVisible(
-            ctx,
-            duration: const Duration(milliseconds: 500),
-            curve: Curves.easeInOut,
-            alignment: 0.1,
-          );
-        }
+        ModalRoute.of(context)?.didPush().then((_) {
+          if (!mounted) return;
+          final ctx = _liveAccordionKey.currentContext;
+          if (ctx != null) {
+            Scrollable.ensureVisible(
+              ctx,
+              duration: const Duration(milliseconds: 500),
+              curve: Curves.easeInOut,
+              alignment: 0.1,
+            );
+          }
+        });
       });
     }
   }

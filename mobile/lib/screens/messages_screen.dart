@@ -56,6 +56,7 @@ import '../utils/call_permission_helper.dart';
 import 'package:shimmer/shimmer.dart';
 import '../utils/snackbar_helper.dart';
 import 'my_ratings_screen.dart';
+import 'pro_hub_screen.dart';
 import 'viewmodels/messages_view_model.dart';
 import 'viewmodels/direct_chat_request_view_model.dart';
 import 'viewmodels/message_thread_view_model.dart';
@@ -1057,6 +1058,23 @@ class _NotificationsTabState extends ConsumerState<_NotificationsTab> {
         Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const MyRatingsScreen()),
+        );
+      case 'recording_available':
+        final info = await StorageService.getUserInfo();
+        if (!mounted) return;
+        final isPremium = info?['user_type'] == 'pro';
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ProHubScreen(isPremium: isPremium, scrollToLiveSection: true),
+          ),
+        );
+      case 'recording_upsell':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ProHubScreen(isPremium: false, scrollToLiveSection: true),
+          ),
         );
     }
   }
