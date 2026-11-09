@@ -19,7 +19,7 @@ import '../services/share_service.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../models/listing_offer.dart';
-import '../services/cache_service.dart';
+import '../services/wallet_service.dart';
 import '../services/category_service.dart';
 import '../services/listing_service.dart';
 import '../providers/listing_interaction_provider.dart';
@@ -823,7 +823,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
       notifier.startCooldown(secs);
       TeqSnackBar.show(message: _formatCooldown(secs), type: TeqSnackBarType.warning);
     } else if (result.success) {
-      ref.read(cacheServiceProvider).clearData(StorageService.cacheWalletData);
+      await WalletService.invalidateBalance();
       eventBus.fire(const CreditsChangedEvent());
       notifier.startCooldown(86400);
       TeqSnackBar.show(message: loc.t('audienceMassSendSuccess'), type: TeqSnackBarType.success);
@@ -858,7 +858,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
 
     if (result.success) {
       final wasFree = result.payload?['is_free'] == true;
-      ref.read(cacheServiceProvider).clearData(StorageService.cacheWalletData);
+      await WalletService.invalidateBalance();
       if (!wasFree) eventBus.fire(const CreditsChangedEvent());
       setState(() {
         _campaignId = result.payload?['id'] as int?;

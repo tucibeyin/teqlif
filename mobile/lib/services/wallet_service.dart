@@ -192,4 +192,7 @@ class WalletService {
         bypassCache: bypassCache,
         fromJson: (raw) => raw as Map<String, dynamic>,
       );
+
+  static Future<void> invalidateBalance() =>
+      providerContainer.read(cacheServiceProvider).clearData(StorageService.cacheWalletData);
 }

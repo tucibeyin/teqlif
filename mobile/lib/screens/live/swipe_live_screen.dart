@@ -20,7 +20,6 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:teqlif/core/network/api_client.dart';
 import '../../config/theme.dart';
 import '../../models/stream.dart';
-import '../../services/cache_service.dart';
 import '../../services/storage_service.dart';
 import '../../services/stream_service.dart';
 import '../../services/wallet_service.dart';
@@ -1806,7 +1805,7 @@ class _GiftSheetState extends ConsumerState<_GiftSheet> {
     if (!mounted) return;
     setState(() => _sending = false);
     if (result['ok'] == true) {
-      ref.read(cacheServiceProvider).clearData(StorageService.cacheWalletData);
+      await WalletService.invalidateBalance();
       ref.read(analyticsServiceProvider).logInteraction(
         itemId: widget.streamId,
         itemType: 'stream',
