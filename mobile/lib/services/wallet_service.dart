@@ -187,7 +187,7 @@ class WalletService {
   }) =>
       ApiService(providerContainer.read(apiClientProvider), providerContainer.read(cacheServiceProvider)).get<Map<String, dynamic>>(
         url: '${providerContainer.read(apiClientProvider).config.baseUrl}/wallet/balance?limit=$limit',
-        cacheKey: 'user_wallet_data',
+        cacheKey: StorageService.cacheWalletData,
         cacheTtl: const Duration(minutes: 2),
         bypassCache: bypassCache,
         fromJson: (raw) => raw as Map<String, dynamic>,

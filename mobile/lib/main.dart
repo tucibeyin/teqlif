@@ -101,6 +101,11 @@ void main() async {
       // Süresi dolmuş Hive kayıtlarını arka planda temizle — startup'ı bloke etme
       CacheService.clearExpired().ignore();
       await StorageService.restoreAvatarUrl();
+      // CACHE-02: _cachedToken'ı startup'ta doldur.
+      // currentUserIdSync, ViewModel.build() içinde user-scoped cache key
+      // üretirken token'a senkron erişir. Warm-up olmadan ilk build'da
+      // 'anon' döner ve kullanıcıya ait cache ilk açılışta yüklenmez.
+      await StorageService.getToken();
       debugPrint('[STARTUP][${DateTime.now().toIso8601String()}] StorageService.restoreAvatarUrl done | ${sw.elapsedMilliseconds}ms');
       await OfflineQueueService.init();
       debugPrint('[STARTUP][${DateTime.now().toIso8601String()}] OfflineQueueService.init done | ${sw.elapsedMilliseconds}ms');

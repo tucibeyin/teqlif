@@ -9,6 +9,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import '../../config/theme.dart';
 import '../../models/stream.dart';
 import '../../services/cache_service.dart';
+import '../../services/storage_service.dart';
 import '../../services/stream_service.dart';
 import 'viewmodels/host_stream_view_model.dart';
 import 'seller_report_screen.dart';
@@ -281,7 +282,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
           );
       if (!mounted) return;
       if (result != null && result['error'] == null) {
-        ref.read(cacheServiceProvider).clearData('user_wallet_data');
+        ref.read(cacheServiceProvider).clearData(StorageService.cacheWalletData);
         final sent = result['sent'] as int? ?? _audienceSize;
         final msg = sent > 0
             ? loc.t('blastSent', {'count': sent.toString()})

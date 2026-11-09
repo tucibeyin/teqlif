@@ -196,7 +196,7 @@ class RetargetingViewModel extends AutoDisposeNotifier<RetargetingState> {
     );
     
     if (result != null && result['error'] == null) {
-      _cache.clearData('user_wallet_data');
+      _cache.clearData(StorageService.cacheWalletData);
       final sent = result['sent'] as int? ?? actualCount;
       state = state.copyWith(
         sent: true,

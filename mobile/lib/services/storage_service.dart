@@ -30,27 +30,48 @@ class StorageService {
   static String? _cachedToken;
   static String? _cachedRefreshToken;
 
-  // ── Kasa (Cache) key sabitleri ────────────────────────────────────────────
-  static const cacheMessages         = 'cache_messages';
-  static const cacheMessageRequests  = 'cache_message_requests';
-  static const cacheNotifications    = 'cache_notifications';
-  static const cacheFeed          = 'cache_feed';
-  static const cacheProfile       = 'cache_profile';       // tam user profili (profile_image_url dahil)
-  static const cacheUserListings  = 'cache_user_listings'; // kendi ilanları
-  static const cacheAuctions      = 'cache_auctions';
-  static const cacheStreams       = 'cache_streams';
-  static const cacheStories       = 'cache_stories';
-  static const cacheMyStories     = 'cache_my_stories';
-  static const cacheSales                  = 'cache_sales';
-  static const cacheMyRatingsReceived      = 'cache_my_ratings_received';
-  static const cacheMyRatingsGiven         = 'cache_my_ratings_given';
-  static const cacheNotificationSettings   = 'cache_notification_settings';
-  static const cacheBlockedUsers           = 'cache_blocked_users';
+  // ── Cache key yardımcısı (CACHE-02) ──────────────────────────────────────
+  /// Aktif kullanıcının ID'siyle namespace'lenmiş api_cache anahtarı döner.
+  /// Login öncesi (token yüklenmemiş) 'anon' kullanır; bu durum hassas veri
+  /// içermez çünkü auth gerektiren endpoint'ler login sonrası çağrılır.
+  static String userScopedKey(String baseKey) {
+    final uid = currentUserIdSync ?? 'anon';
+    return 'u_${uid}_$baseKey';
+  }
 
-  // DM thread cache — dinamik anahtarlar (metot bazlı)
-  static String cacheThreadKey(int userId) => 'cache_chat_$userId';
-  static String cacheDmImageKey(int msgId)  => 'dm_img_$msgId';
-  static String cacheDmThumbKey(int msgId)  => 'dm_thumb_$msgId';
+  // ── Kasa (Cache) key sabitleri ────────────────────────────────────────────
+  // Kullanıcıya özel olanlar static getter — her çağrıda aktif kullanıcı
+  // ID'siyle namespace'lenir (CACHE-02). Call site değişmez; Dart syntax aynı.
+  static String get cacheMessages         => userScopedKey('cache_messages');
+  static String get cacheMessageRequests  => userScopedKey('cache_message_requests');
+  static String get cacheNotifications    => userScopedKey('cache_notifications');
+  static const cacheFeed                  = 'cache_feed'; // kullanılmıyor; global tutuldu
+  static String get cacheProfile          => userScopedKey('cache_profile');
+  static String get cacheUserListings     => userScopedKey('cache_user_listings');
+  static String get cacheAuctions         => userScopedKey('cache_auctions');
+  static String get cacheStreams          => userScopedKey('cache_streams');
+  static String get cacheStories          => userScopedKey('cache_stories');
+  static String get cacheMyStories        => userScopedKey('cache_my_stories');
+  static String get cacheSales            => userScopedKey('cache_sales');
+  static String get cacheMyRatingsReceived     => userScopedKey('cache_my_ratings_received');
+  static String get cacheMyRatingsGiven        => userScopedKey('cache_my_ratings_given');
+  static String get cacheNotificationSettings  => userScopedKey('cache_notification_settings');
+  static String get cacheBlockedUsers          => userScopedKey('cache_blocked_users');
+  static String get cacheWalletData            => userScopedKey('user_wallet_data');
+
+  // DM thread cache — dinamik anahtarlar (currentUserId + otherUserId) (CACHE-02)
+  static String cacheThreadKey(int otherUserId) {
+    final uid = currentUserIdSync ?? 'anon';
+    return 'u_${uid}_chat_$otherUserId';
+  }
+  static String cacheDmImageKey(int msgId) {
+    final uid = currentUserIdSync ?? 'anon';
+    return 'u_${uid}_dm_img_$msgId';
+  }
+  static String cacheDmThumbKey(int msgId) {
+    final uid = currentUserIdSync ?? 'anon';
+    return 'u_${uid}_dm_thumb_$msgId';
+  }
 
   /// Mevcut oturumdaki kullanıcının ID'sini JWT token üzerinden çözer.
   static Future<int?> getCurrentUserId() async {

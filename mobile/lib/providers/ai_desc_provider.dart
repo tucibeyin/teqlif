@@ -62,7 +62,7 @@ class AiDescNotifier extends StateNotifier<AiDescState> {
       final teqlikSpent = (data['teqlik_spent'] as num?)?.toInt() ?? 0;
 
       if (teqlikSpent > 0) {
-        _cache.clearData('user_wallet_data');
+        _cache.clearData(StorageService.cacheWalletData);
       }
 
       state = AiDescState(
