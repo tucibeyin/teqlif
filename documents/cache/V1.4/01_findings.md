@@ -795,21 +795,40 @@ flowchart TD
 
 ## 🚀 5. Bütünsel Uygulama ve İyileştirme Yol Haritası
 
-### Faz 1: P0 Güvenlik ve Veri Sızıntısı İyileştirmeleri (Acil)
-1. **[CACHE-01]** `mobile/lib/services/cache_service.dart` içine `HiveAesCipher` şifrelemesinin entegre edilmesi.
-2. **[CACHE-02]** Mobil cache anahtarlarının kullanıcı kimliği ile namespace'lenmesi (`u_{uid}_*`).
-3. **[CACHE-03]** `StorageService.clear()` içine `offline_messages_queue`, `searchCache` ve bellek içi değişkenlerin temizliğinin eklenmesi.
-4. **[CACHE-04]** `CachedNetworkImageProvider` çağrılarından statik `cacheKey`'in kaldırılarak URL hash'ine bağlanması (stale avatar hatası çözümü).
+### ✅ Faz 1: P0 Güvenlik ve Veri Sızıntısı İyileştirmeleri — Tamamlandı
+1. **[CACHE-01]** ✅ `HiveAesCipher` şifrelemesi entegre edildi (`47c4db17`).
+2. **[CACHE-02]** ✅ Mobil cache anahtarları `u_{uid}_*` ile namespace'lendi (`ec1247aa`).
+3. **[CACHE-03]** ✅ `StorageService.clear()` kapsamlı temizlik eklendi (`025717a2`).
+4. **[CACHE-04]** ✅ Statik `cacheKey` kaldırıldı; URL hash'e bağlandı (`3951a831`).
 
-### Faz 2: P1 Mimari ve Protokol Düzeltmeleri
-1. **[CACHE-05]** `backend/app/security/etag_middleware.py` içine zayıf ETag (`W/`) normalizasyonunun eklenmesi.
-2. **[CACHE-06 & CACHE-07]** `mobile/lib/services/api_service.dart` içindeki `!isStale` early-return'ünün kaldırılması ve 401/403/404 HTTP hatalarının yutulmasının engellenmesi.
-3. **[CACHE-08]** `mobile/lib/repositories/message_repository.dart` içine `_threadLocks` (AsyncLock) eklenerek mesaj ezilme yarış durumunun çözülmesi.
-4. **[CACHE-17 & CACHE-18]** `backend/app/core/read_cache.py` içindeki `scan_iter`'ın Tag Versioning ile O(1)'e indirilmesi ve single-flight mutex eklenmesi.
-5. **[CACHE-23]** WebSocket üzerinden `cache_invalidate` push mekanizmasının kurulması.
+### ✅ Faz 2: P1 Mimari ve Protokol Düzeltmeleri — Tamamlandı
+1. **[CACHE-05]** ✅ Weak ETag (`W/`) normalizasyonu eklendi (`c79aade5` + `a259322d`).
+2. **[CACHE-06 & CACHE-07]** ✅ Gerçek SWR ve 401/403/404 hata işleme (`d1d97277`).
+3. **[CACHE-08]** ✅ `_threadLocks` AsyncLock ile serial RMW queue (`ab778503`).
+4. **[CACHE-17 & CACHE-18]** ✅ Tag Versioning O(1) invalidate + stampede mutex (`d0264833` + `c1280225`).
+5. **[CACHE-23]** ✅ WebSocket `cache_invalidate` push + live UI update + resume sweep (`07819c09` + `a6767e3b`).
 
-### Faz 3: P2/P3 Clean Architecture ve Performans İyileştirmeleri
-1. **[CACHE-09 & CACHE-10]** UI'dan doğrudan yapılan `clearData()` çağrılarının Repository'lere taşınması; `HomeRepository`'nin merkezi `ApiService` ile birleştirilmesi (ADR §8 uyumu).
-2. **[CACHE-11]** `CacheService.clearExpired()` algoritmasının FIFO'dan gerçek LRU'ya dönüştürülmesi.
-3. **[CACHE-13]** 304 Not Modified durumunda tüm JSON'ın tekrar serialize edilmesinin önlenmesi.
-4. **[CACHE-19]** `auth.py` içindeki `db.merge(load=False)` yapısının hafif Value Object modeline evrilmesi.
+### ✅ Faz 3: P2/P3 Clean Architecture ve Performans İyileştirmeleri — Tamamlandı
+1. **[CACHE-09 & CACHE-10]** ✅ `HomeRepository` → `ApiService`; View'dan `clearData` çağrısı kaldırıldı (`3d4f4fc4` + `f80b519d`).
+2. **[CACHE-11]** ✅ FIFO → gerçek LRU (frequency-weighted eviction) (`311bef48`).
+3. **[CACHE-13 & CACHE-14]** ✅ 304 body yeniden serialize kaldırıldı; `Cache-Control` direktifleri uygulandı (`3fbdcc86`).
+4. **[CACHE-19]** ✅ `db.merge(load=False)` → hafif Value Object modeli (`c0d4fcbe`).
+5. **[CACHE-20]** ✅ Pre-route ETag store; DB+CPU tasarrufu (`5724a48c`).
+6. **[CACHE-21]** ✅ ClickHouse 30s buffer scan + merge; Eventual Consistency penceresi kapatıldı (`4b43fc37`).
+7. **[CACHE-22]** ✅ PgBouncer `max_prepared_statements = 200`; asyncpg statement cache yeniden etkin (`4b43fc37`).
+
+---
+
+## ✅ 6. Kapanış
+
+**Tüm 23 bulgu tamamlandı — 2026-11-09**
+
+| Seviye | Toplam | Tamamlanan |
+| :--- | :---: | :---: |
+| 🔴 P0 (Kritik) | 4 | 4 ✅ |
+| 🟠 P1 (Yüksek) | 10 | 10 ✅ |
+| 🟡 P2 (Orta) | 8 | 8 ✅ |
+| 🟢 P3 (Düşük) | 1 | 1 ✅ |
+| **Toplam** | **23** | **23 ✅** |
+
+Son commit: `9e06cdab` · Tüm node'lar güncel.
