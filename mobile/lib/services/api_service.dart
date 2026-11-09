@@ -180,19 +180,22 @@ class ApiService {
     }
   }
 
-  /// Aynı URL için eş zamanlı gelen istekleri tek bir `getRaw` çağrısında
-  /// birleştirir.  İstek tamamlanınca (başarı veya hata) map'ten temizlenir.
+  /// Aynı URL + auth token için eş zamanlı gelen istekleri tek bir `getRaw`
+  /// çağrısında birleştirir.  Anahtar `url|token` şeklinde oluşturulur:
+  /// farklı oturumlardaki istekler asla aynı Future'ı paylaşmaz.
+  /// İstek tamamlanınca (başarı veya hata) map'ten temizlenir.
   Future<http.Response> _getRaw(
     String url,
     Map<String, String> headers,
     Duration timeout,
   ) {
-    final existing = _inFlight[url];
+    final key = '$url|${headers['Authorization'] ?? ''}';
+    final existing = _inFlight[key];
     if (existing != null) return existing;
     final future = _api
         .getRaw(url, headers, timeout: timeout)
-        .whenComplete(() => _inFlight.remove(url));
-    _inFlight[url] = future;
+        .whenComplete(() => _inFlight.remove(key));
+    _inFlight[key] = future;
     return future;
   }
 
