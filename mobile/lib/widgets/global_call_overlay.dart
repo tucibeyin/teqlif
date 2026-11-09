@@ -209,7 +209,7 @@ class _GlobalCallOverlayState extends ConsumerState<GlobalCallOverlay> {
                                   backgroundImage: cs.otherAvatar!.isNotEmpty
                                       ? CachedNetworkImageProvider(
                                           ref.read(apiClientProvider).imgUrl(cs.otherAvatar!),
-                                          cacheKey: cs.otherUsername != null ? 'user_${cs.otherUsername}_avatar' : null,
+                                          cacheKey: cs.otherUsername != null ? TeqlifCacheManager.avatarCacheKey(cs.otherUsername, ref.read(apiClientProvider).imgUrl(cs.otherAvatar!)) : null,
                                           cacheManager: TeqlifCacheManager())
                                       : null,
                                   child: cs.otherAvatar!.isEmpty &&
