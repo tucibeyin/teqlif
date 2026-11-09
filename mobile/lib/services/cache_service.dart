@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 /// Hive tabanlı anahtar-değer önbellek servisi.
@@ -16,17 +17,50 @@ import 'package:hive_flutter/hive_flutter.dart';
 ///   • DIP — [cacheServiceProvider] aracılığıyla Riverpod'a enjekte edilir;
 ///     testlerde `ProviderContainer` ile mock subclass geçilebilir.
 class CacheService {
-  static const _boxName         = 'api_cache';
+  static const _boxName            = 'api_cache';
   // §12.8 — version bump'ı entity store formatına geçişi tetikler.
-  static const _kApiCacheVersion = 2;
-  static const _kVersionKey      = '__api_cache_v';
+  static const _kApiCacheVersion   = 2;
+  static const _kVersionKey        = '__api_cache_v';
+  // CACHE-01 — AES-256 şifreleme anahtarı adı (Android Keystore / iOS Keychain)
+  static const _kEncryptionKeyName = 'teqlif_hive_encryption_key';
   static late Box<String> _box;
 
   /// Uygulama başlangıcında (runApp öncesi) çağrılmalıdır.
   static Future<void> init() async {
     await Hive.initFlutter();
-    _box = await Hive.openBox<String>(_boxName);
+    final keyBytes = await _getOrCreateEncryptionKey();
+    try {
+      _box = await Hive.openBox<String>(
+        _boxName,
+        encryptionCipher: HiveAesCipher(keyBytes),
+      );
+    } catch (_) {
+      // Eski şifresiz box → sil ve şifreli olarak yeniden aç.
+      // Mevcut stale cache temizlenir; uygulama açılışında SWR ile yeniden dolar.
+      await Hive.deleteBoxFromDisk(_boxName);
+      _box = await Hive.openBox<String>(
+        _boxName,
+        encryptionCipher: HiveAesCipher(keyBytes),
+      );
+    }
     await _migrate();
+  }
+
+  /// Android Keystore / iOS Keychain'de saklanan 256-bit AES anahtarını döner.
+  /// İlk çalıştırmada rastgele üretir ve güvenli depoya yazar.
+  static Future<List<int>> _getOrCreateEncryptionKey() async {
+    const secureStorage = FlutterSecureStorage(
+      aOptions: AndroidOptions(encryptedSharedPreferences: true),
+      iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
+    );
+    final existing = await secureStorage.read(key: _kEncryptionKeyName);
+    if (existing != null) return base64Decode(existing);
+    final key = Hive.generateSecureKey();
+    await secureStorage.write(
+      key: _kEncryptionKeyName,
+      value: base64Encode(key),
+    );
+    return key;
   }
 
   static Future<void> _migrate() async {
