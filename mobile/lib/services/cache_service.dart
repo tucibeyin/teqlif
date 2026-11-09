@@ -23,7 +23,13 @@ class CacheService {
   static const _kVersionKey        = '__api_cache_v';
   // CACHE-01 — AES-256 şifreleme anahtarı adı (Android Keystore / iOS Keychain)
   static const _kEncryptionKeyName = 'teqlif_hive_encryption_key';
+  // CACHE-11: 200 anahtar limiti ve her 20 yazmada arka plan tahliyesi
+  static const _kMaxKeys       = 200;
+  static const _kEvictInterval = 20;
   static late Box<String> _box;
+  // LRU: son erişim zamanını in-memory tutar; senkron read sözleşmesini bozmaz.
+  static final Map<String, int> _lastRead = {};
+  static int _writeCount = 0;
 
   /// Uygulama başlangıcında (runApp öncesi) çağrılmalıdır.
   static Future<void> init() async {
@@ -78,13 +84,16 @@ class CacheService {
   ///
   /// Box zaten şifreli ve açık olduğundan doğrudan `.clear()` çağrılır;
   /// StorageService'in Hive.openBox('api_cache') ile şifresiz açmasına gerek kalmaz.
-  static Future<void> clearBox() => _box.clear();
+  static Future<void> clearBox() async {
+    await _box.clear();
+    _lastRead.clear();
+  }
 
   static Future<void> _migrate() async {
     final stored = int.tryParse(_box.get(_kVersionKey) ?? '0') ?? 0;
     if (stored < _kApiCacheVersion) {
-      // Eski tam-JSON cache'leri temizle; entity store sıfırdan dolar.
       await _box.clear();
+      _lastRead.clear();
       await _box.put(_kVersionKey, _kApiCacheVersion.toString());
     }
   }
@@ -106,6 +115,7 @@ class CacheService {
         final ttlMs = (decoded['_x'] as num?)?.toInt() ?? 300000;
         final age = DateTime.now().millisecondsSinceEpoch - savedAt;
         if (age > ttlMs) return null;
+        _lastRead[key] = DateTime.now().millisecondsSinceEpoch;
         return decoded['_d'];
       }
       return decoded;
@@ -129,6 +139,7 @@ class CacheService {
         final savedAt = (decoded['_t'] as num).toInt();
         final ttlMs = (decoded['_x'] as num?)?.toInt() ?? 300000;
         final age = DateTime.now().millisecondsSinceEpoch - savedAt;
+        _lastRead[key] = DateTime.now().millisecondsSinceEpoch;
         return (data: decoded['_d'], isStale: age > ttlMs);
       }
       return (data: decoded, isStale: false);
@@ -167,14 +178,19 @@ class CacheService {
     };
     if (etag != null) wrapper['_e'] = etag;
     await _box.put(key, jsonEncode(wrapper));
+    _lastRead[key] = DateTime.now().millisecondsSinceEpoch;
+    // CACHE-11: her _kEvictInterval yazışta arka planda TTL+LRU tahliyesi
+    if (++_writeCount % _kEvictInterval == 0) clearExpired().ignore();
   }
 
   /// Belirli bir [key] silerek ya da [key] verilmezse tüm kutuyu temizler.
   Future<void> clearData([String? key]) async {
     if (key != null) {
       await _box.delete(key);
+      _lastRead.remove(key);
     } else {
       await _box.clear();
+      _lastRead.clear();
     }
   }
 
@@ -194,7 +210,10 @@ class CacheService {
       getData('entity_${type}_$id') as Map<String, dynamic>?;
 
   /// api_cache box'unu tamamen temizler (migration için).
-  Future<void> clearAll() => _box.clear();
+  Future<void> clearAll() async {
+    await _box.clear();
+    _lastRead.clear();
+  }
 
   /// Süresi dolmuş tüm kayıtları siler (arka plan bakımı için).
   static Future<void> clearExpired() async {
@@ -215,10 +234,10 @@ class CacheService {
       }
     }
     await _box.deleteAll(toDelete);
+    for (final k in toDelete) { _lastRead.remove(k); }
 
-    // LRU kırpma: 200 anahtar limitini aşınca en eski kayıtları sil
-    const maxKeys = 200;
-    if (_box.length > maxKeys) {
+    // CACHE-11: LRU kırpma — sırala: son erişim zamanı (in-memory), yoksa oluşturma zamanı
+    if (_box.length > _kMaxKeys) {
       final entries = <MapEntry<String, int>>[];
       for (final key in _box.keys.cast<String>()) {
         final raw = _box.get(key);
@@ -226,16 +245,18 @@ class CacheService {
         try {
           final decoded = jsonDecode(raw);
           if (decoded is Map && decoded.containsKey('_t')) {
-            entries.add(MapEntry(key, (decoded['_t'] as num).toInt()));
+            final lruTime = _lastRead[key] ?? (decoded['_t'] as num).toInt();
+            entries.add(MapEntry(key, lruTime));
           }
         } catch (_) {}
       }
       entries.sort((a, b) => a.value.compareTo(b.value));
       final keysToDelete = entries
-          .take(_box.length - maxKeys)
+          .take(_box.length - _kMaxKeys)
           .map((e) => e.key)
           .toList();
       await _box.deleteAll(keysToDelete);
+      for (final k in keysToDelete) { _lastRead.remove(k); }
     }
   }
 }
