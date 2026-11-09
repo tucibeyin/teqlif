@@ -252,6 +252,11 @@ async def end_sale(sale_id: int, user: User, uow: SqlAlchemyUnitOfWork) -> None:
     }
     fire_and_forget(redis_mgr.publish_direct_sale(sale.stream_id, ended_payload))
     fire_and_forget(ds_outbox_push(sale.stream_id, ended_payload))
+    # CACHE-23: Listing cache invalidation push
+    if sale.listing_id:
+        fire_and_forget(ws_manager.publish(_DM_CHANNEL, f"notif:{user.id}", {
+            "type": WS.CACHE_INVALIDATE, "scope": "listing", "id": sale.listing_id,
+        }))
     fire_and_forget(buffer_direct_sale_event(
         event_type="sale_ended",
         sale_id=sale_id,
@@ -368,6 +373,11 @@ async def cancel_sale(sale_id: int, data: DirectSaleCancelIn,
     }
     fire_and_forget(redis_mgr.publish_direct_sale(sale.stream_id, cancelled_payload))
     fire_and_forget(ds_outbox_push(sale.stream_id, cancelled_payload))
+    # CACHE-23: Listing cache invalidation push
+    if sale.listing_id:
+        fire_and_forget(ws_manager.publish(_DM_CHANNEL, f"notif:{user.id}", {
+            "type": WS.CACHE_INVALIDATE, "scope": "listing", "id": sale.listing_id,
+        }))
     fire_and_forget(buffer_direct_sale_event(
         event_type="sale_cancelled",
         sale_id=sale_id,
@@ -617,6 +627,12 @@ async def purchase_sale(sale_id: int, data: DirectSalePurchaseIn,
     }
     fire_and_forget(ws_manager.publish(_DM_CHANNEL, f"dm:{user.id}", dm_payload))
     fire_and_forget(ws_manager.publish(_DM_CHANNEL, f"dm:{sale.host_id}", dm_payload))
+
+    # CACHE-23: Listing cache invalidation push
+    if sale.listing_id:
+        _inval = {"type": WS.CACHE_INVALIDATE, "scope": "listing", "id": sale.listing_id}
+        fire_and_forget(ws_manager.publish(_DM_CHANNEL, f"notif:{sale.host_id}", _inval))
+        fire_and_forget(ws_manager.publish(_DM_CHANNEL, f"notif:{user.id}", _inval))
 
     # Push notification → buyer
     try:

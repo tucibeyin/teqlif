@@ -117,11 +117,11 @@ Sistemdeki en büyük mimari zaaf, katmanlar arasındaki önbellek yaşam döng�
 | **CACHE-16** | 🟠 **P1** | **Backend** | `read_cache.py` & `routers/` | Dağıtık Cache Parçalanması ve Merkezi Cache Manager Eksikliği | Tutarsız TTL'ler, dağınık Redis erişimi ve mimari kirlilik | ✅ `d0264833` (2026-11-09) |
 | **CACHE-17** | 🟠 **P1** | **Backend** | `read_cache.py` | CQRS Read Cache'te Cache Stampede / Thundering Herd Açığı | Cache süresi dolduğunda binlerce isteğin aynı anda DB'yi vurması | ✅ `d0264833` + `c1280225` (2026-11-09) |
 | **CACHE-18** | 🟠 **P1** | **Backend** | `read_cache.py` | `invalidate_cache` İçinde O(N) `redis.scan_iter` ile Redis Blokajı | Yüksek anahtar hacminde Redis CPU'sunun kilitlenmesi | ✅ `d0264833` (2026-11-09) |
-| **CACHE-19** | 🟠 **P1** | **Backend** | `auth.py` | Redis Session Cache Deserializasyonunda `db.merge(load=False)` Riskleri | DetachedInstanceError ve ilişkili alanlarda asenkron crash | ⏳ Açık |
+| **CACHE-19** | 🟠 **P1** | **Backend** | `auth.py` | Redis Session Cache Deserializasyonunda `db.merge(load=False)` Riskleri | DetachedInstanceError ve ilişkili alanlarda asenkron crash | ✅ `c0d4fcbe` (2026-11-09) |
 | **CACHE-20** | 🟡 **P2** | **Backend** | `etag_middleware.py` | Post-Computation ETag Nedeniyle DB ve CPU Tasarrufu Sağlanamaması | Her istekte DB sorgusu ve ORM çalışması, 0 CPU tasarrufu | ⏳ Açık |
 | **CACHE-21** | 🟡 **P2** | **DB** | `database_clickhouse.py` | Write-Behind Tamponlamada 30 Saniyelik Körlük (Read Lag) | Canlı analitik ve son 30 saniyelik tıklamaların okunamaması | ⏳ Açık |
 | **CACHE-22** | 🟡 **P2** | **DB** | `database.py` & PgBouncer | `prepared_statement_cache_size: 0` Nedeniyle SQL Parse Yükü | Her sorgunun DB CPU'sunda tekrar tekrar planlanması | ⏳ Açık |
-| **CACHE-23** | 🟠 **P1** | **Cross** | Client ↔ Backend ↔ DB | Event-Driven Cache Invalidation (WebSocket Push) Yokluğu | DB'de değişen ilanın mobilde 30 dk bayat kalması (Desync) | ⏳ Açık |
+| **CACHE-23** | 🟠 **P1** | **Cross** | Client ↔ Backend ↔ DB | Event-Driven Cache Invalidation (WebSocket Push) Yokluğu | DB'de değişen ilanın mobilde 30 dk bayat kalması (Desync) | ✅ `TBD` (2026-11-09) |
 
 ---
 
@@ -599,6 +599,11 @@ yapılmaktadır.
 #### Çözüm Reçetesi
 Kullanıcı kimlik doğrulama oturumu tam bir SQLAlchemy ORM nesnesi olarak merge edilmek yerine, hafif bir Pydantic Value Object (`CurrentUserDTO`) olarak dönmeli; veritabanı mutasyonları gerektiğinde taze ORM nesnesi çekilmelidir.
 
+#### Durum: ✅ Kapatıldı — `c0d4fcbe` (2026-11-09)
+
+#### Uygulanan Çözüm
+`CurrentUserDTO(BaseModel)` Value Object eklendi (`app/schemas/user.py`). Tüm `User` skalar alanlarını barındırır; `is_verified` Pydantic v2 `@computed_field` olarak tanımlandı. `_fetch_and_cache_user` cache-hit path'ten `db.merge(load=False)` tamamen kaldırıldı; cache JSON → `CurrentUserDTO.model_validate(data)` (Pydantic v2 datetime ISO, Decimal str, Enum value otomatik parse eder; `_get_datetime_col_names`/`_get_numeric_col_names` yardımcıları silindi). DB-hit path: ORM fetch → Redis serialize → `CurrentUserDTO.model_validate(user, from_attributes=True)`. `get_current_user` / `get_current_user_optional` dönüş tipleri `CurrentUserDTO` olarak güncellendi. `auth.py` router mutation endpoint'leri (`update_me`, `update_consent`, `change_password_confirm`) başına `user = await db.get(User, current_user.id)` eklendi; tüm ORM mutasyonları taze nesne üzerinden yapılıyor. `update_consent`'teki eksik `invalidate_user_session_cache` çağrısı eklendi (SRE-146 kök nedeni). `me` (GET /me) endpoint'inde `current_user.onboarding_completed = True` (noop on DTO) kaldırıldı; `model_copy(update={"onboarding_completed": True})` ile response doğru değer dönüyor.
+
 ---
 
 ### CACHE-20 · 🟡 P2 (Orta) · Post-Computation ETag Nedeniyle DB ve CPU Tasarrufu Sağlanamaması
@@ -657,6 +662,33 @@ Veritabanında bir ilanın fiyatı değiştiğinde veya ilan satıldığında, b
 }
 ```
 Mobil istemci bu eventi aldığında `CacheService.clearData('entity_listing_12345')` çağırarak anında önbelleği düşürmelidir.
+
+#### Durum: ✅
+
+#### Uygulanan Çözüm
+
+**Backend (`dm_broadcast` stream, `notif:{user_id}` topic):**
+
+| Mutation Noktası | Dosya | Satıcı | Alıcı/Kazanan |
+|---|---|---|---|
+| `end_auction` | `auction_commands.py` | ✅ | ✅ (winner_id_str) |
+| `accept_bid` | `auction_commands.py` | ✅ | ✅ (winner_user_id) |
+| `accept_buy_it_now` | `auction_commands.py` | ✅ | ✅ (buyer_id) |
+| `end_sale` (direct) | `direct_sale_commands.py` | ✅ | — |
+| `cancel_sale` (direct) | `direct_sale_commands.py` | ✅ | — |
+| `purchase_sale` (direct) | `direct_sale_commands.py` | ✅ (host_id) | ✅ (buyer) |
+| `update_listing` | `routers/listings.py` | ✅ | — |
+| `toggle_listing` | `routers/listings.py` | ✅ | — |
+| `delete_listing` | `routers/listings.py` | ✅ | — |
+
+**`ws_types.py`:** `CACHE_INVALIDATE = "cache_invalidate"` eklendi.
+
+**Mobile (`main_view_model.dart`):** `_wsCacheInvalidateSub` — `cache_invalidate` mesajı gelince `CacheService.clearData('entity_listing_$id')` çağırır.
+
+Mesaj formatı:
+```json
+{"type": "cache_invalidate", "scope": "listing", "id": 12345}
+```
 
 ---
 

@@ -363,6 +363,14 @@ class AuctionCommands:
             stream_id, state["current_bidder"], state["current_bid"], state["bid_count"],
         )
 
+        # CACHE-23: Listing cache invalidation push
+        if lid_str:
+            _lid_int = int(lid_str)
+            _inval = {"type": WS.CACHE_INVALIDATE, "scope": "listing", "id": _lid_int}
+            fire_and_forget(ws_manager.publish(_DM_CHANNEL, f"notif:{user.id}", _inval))
+            if winner_id_str:
+                fire_and_forget(ws_manager.publish(_DM_CHANNEL, f"notif:{int(winner_id_str)}", _inval))
+
         # Teklif verenlere artırma sona erdi bildirimi
         from app.core.task_queue import get_pool as _get_pool
         _pool = _get_pool()
@@ -718,6 +726,12 @@ class AuctionCommands:
         except Exception as exc:
             logger.error("[HEMEN AL KABUL] DM WS broadcast başarısız | %s", exc)
 
+        # CACHE-23: Listing cache invalidation push
+        if listing_id:
+            _inval = {"type": WS.CACHE_INVALIDATE, "scope": "listing", "id": listing_id}
+            fire_and_forget(ws_manager.publish(_DM_CHANNEL, f"notif:{user.id}", _inval))
+            fire_and_forget(ws_manager.publish(_DM_CHANNEL, f"notif:{buyer_id}", _inval))
+
         # Commit sonrası bildirim (non-blocking)
         try:
             await push_notification(
@@ -1071,6 +1085,13 @@ class AuctionCommands:
             "[AÇIK ARTIRMA] TEKLİF KABUL EDİLDİ | stream_id=%s winner=%s price=%s",
             stream_id, winner_name, final_price,
         )
+
+        # CACHE-23: Listing cache invalidation push
+        if listing_id:
+            _inval = {"type": WS.CACHE_INVALIDATE, "scope": "listing", "id": listing_id}
+            fire_and_forget(ws_manager.publish(_DM_CHANNEL, f"notif:{user.id}", _inval))
+            if winner_user_id:
+                fire_and_forget(ws_manager.publish(_DM_CHANNEL, f"notif:{winner_user_id}", _inval))
 
         # Kaybedenlere bildirim (kazanan hariç tüm teklif verenler)
         from app.core.task_queue import get_pool as _get_pool

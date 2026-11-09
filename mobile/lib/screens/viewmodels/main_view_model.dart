@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../services/analytics_service.dart';
 import '../../../services/auth_service.dart';
+import '../../../services/cache_service.dart';
 import '../../../services/deep_link_service.dart';
 import '../../../services/notification_service.dart';
 import '../../../services/push_notification_service.dart';
@@ -63,6 +64,7 @@ class MainViewModel extends AutoDisposeAsyncNotifier<MainState> {
   Timer? _badgeTimer;
   StreamSubscription<RemoteMessage>? _fcmSub;
   StreamSubscription<Map<String, dynamic>>? _notifStreamSub;
+  StreamSubscription<Map<String, dynamic>>? _wsCacheInvalidateSub;
   StreamSubscription<void>? _badgeRefreshSub;
   StreamSubscription<Uri>? _deepLinkSub;
   StreamSubscription<void>? _authFailedSub;
@@ -89,6 +91,7 @@ class MainViewModel extends AutoDisposeAsyncNotifier<MainState> {
       _badgeTimer?.cancel();
       _fcmSub?.cancel();
       _notifStreamSub?.cancel();
+      _wsCacheInvalidateSub?.cancel();
       _badgeRefreshSub?.cancel();
       _deepLinkSub?.cancel();
       _authFailedSub?.cancel();
@@ -131,6 +134,16 @@ class MainViewModel extends AutoDisposeAsyncNotifier<MainState> {
     });
     
     _deepLinkSub = DeepLinkService.uriStream.listen(handleDeepLink);
+
+    // CACHE-23: WS cache_invalidate → Hive entity cache temizleme
+    _wsCacheInvalidateSub = ref.read(wsServiceProvider).messageStream.stream.listen((data) {
+      if (data['type'] == 'cache_invalidate' && data['scope'] == 'listing') {
+        final id = data['id'];
+        if (id != null) {
+          ref.read(cacheServiceProvider).clearData('entity_listing_$id');
+        }
+      }
+    });
   }
 
   Future<void> _refreshBadges() async {

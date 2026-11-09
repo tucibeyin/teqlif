@@ -11,6 +11,9 @@ from sqlalchemy.sql import text as sql_text
 
 from app.database import get_db, get_uow
 from app.core.uow import SqlAlchemyUnitOfWork
+from app.core.logger import fire_and_forget
+from app.core.ws_manager import ws_manager
+from app.constants.ws_types import CACHE_INVALIDATE as _WS_CACHE_INVALIDATE
 from app.models.enums import ListingStatus
 from app.models.listing import Listing
 from app.models.mass_notification import MassNotificationCampaign
@@ -47,6 +50,8 @@ from app.core.read_cache import cache_get, cache_set
 from app.utils.redis_client import get_redis
 
 logger = logging.getLogger(__name__)
+
+_DM_CHANNEL = "dm_broadcast"
 
 router = APIRouter(prefix="/api/listings", tags=["listings"])
 
@@ -268,6 +273,10 @@ async def update_listing(
         extra_fields=payload.get("extra_fields"),
         **media_kwargs,
     )
+    # CACHE-23: invalidate mobile entity cache
+    fire_and_forget(ws_manager.publish(_DM_CHANNEL, f"notif:{current_user.id}", {
+        "type": _WS_CACHE_INVALIDATE, "scope": "listing", "id": listing_id,
+    }))
     return result
 
 
@@ -286,7 +295,12 @@ async def toggle_listing(
     current_user: User = Depends(get_current_user),
     uow: SqlAlchemyUnitOfWork = Depends(get_uow),
 ):
-    return await ToggleListingCommand(uow).execute(listing_id, current_user)
+    result = await ToggleListingCommand(uow).execute(listing_id, current_user)
+    # CACHE-23: invalidate mobile entity cache
+    fire_and_forget(ws_manager.publish(_DM_CHANNEL, f"notif:{current_user.id}", {
+        "type": _WS_CACHE_INVALIDATE, "scope": "listing", "id": listing_id,
+    }))
+    return result
 
 
 @router.delete("/{listing_id}")
@@ -295,7 +309,12 @@ async def delete_listing(
     current_user: User = Depends(get_current_user),
     uow: SqlAlchemyUnitOfWork = Depends(get_uow),
 ):
-    return await DeleteListingCommand(uow).execute(listing_id=listing_id, user_id=current_user.id)
+    result = await DeleteListingCommand(uow).execute(listing_id=listing_id, user_id=current_user.id)
+    # CACHE-23: invalidate mobile entity cache
+    fire_and_forget(ws_manager.publish(_DM_CHANNEL, f"notif:{current_user.id}", {
+        "type": _WS_CACHE_INVALIDATE, "scope": "listing", "id": listing_id,
+    }))
+    return result
 
 
 @router.get("/{listing_id}/sale-reference")

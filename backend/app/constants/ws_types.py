@@ -61,6 +61,9 @@ DIRECT_SALE_CANCELLED  = "direct_sale_cancelled"
 DIRECT_SALE_PURCHASED  = "direct_sale_purchased"
 DIRECT_SALE_SOLD_OUT   = "direct_sale_sold_out"
 
+# ── Cache Invalidation ───────────────────────────────────────────────────────
+CACHE_INVALIDATE = "cache_invalidate"  # {"type": "cache_invalidate", "scope": "listing", "id": <int>}
+
 # ── Grup Sesli/Görüntülü Arama ────────────────────────────────────────────────
 # Davete çağrılan kişiye
 CALL_GROUP_INVITE         = "call_group_invite"
