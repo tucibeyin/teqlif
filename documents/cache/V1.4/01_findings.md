@@ -121,7 +121,7 @@ Sistemdeki en büyük mimari zaaf, katmanlar arasındaki önbellek yaşam döng�
 | **CACHE-20** | 🟡 **P2** | **Backend** | `etag_middleware.py` | Post-Computation ETag Nedeniyle DB ve CPU Tasarrufu Sağlanamaması | Her istekte DB sorgusu ve ORM çalışması, 0 CPU tasarrufu | ⏳ Açık |
 | **CACHE-21** | 🟡 **P2** | **DB** | `database_clickhouse.py` | Write-Behind Tamponlamada 30 Saniyelik Körlük (Read Lag) | Canlı analitik ve son 30 saniyelik tıklamaların okunamaması | ⏳ Açık |
 | **CACHE-22** | 🟡 **P2** | **DB** | `database.py` & PgBouncer | `prepared_statement_cache_size: 0` Nedeniyle SQL Parse Yükü | Her sorgunun DB CPU'sunda tekrar tekrar planlanması | ⏳ Açık |
-| **CACHE-23** | 🟠 **P1** | **Cross** | Client ↔ Backend ↔ DB | Event-Driven Cache Invalidation (WebSocket Push) Yokluğu | DB'de değişen ilanın mobilde 30 dk bayat kalması (Desync) | ✅ `TBD` (2026-11-09) |
+| **CACHE-23** | 🟠 **P1** | **Cross** | Client ↔ Backend ↔ DB | Event-Driven Cache Invalidation (WebSocket Push) Yokluğu | DB'de değişen ilanın mobilde 30 dk bayat kalması (Desync) | ✅ `07819c09` (2026-11-09) |
 
 ---
 
