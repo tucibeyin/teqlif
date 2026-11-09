@@ -113,7 +113,7 @@ Sistemdeki en büyük mimari zaaf, katmanlar arasındaki önbellek yaşam döng�
 | **CACHE-12** | 🟡 **P2** | **Client** | `cache_service.dart` | Ana UI İş Parçacığında (UI Isolate) Senkron `jsonDecode` Blokajı | Feed ve mesaj listeleri yüklenirken frame düşmesi (UI Jank) | ✅ `d7d8155b` (2026-11-09) |
 | **CACHE-13** | 🟡 **P2** | **Client** | `api_service.dart` | HTTP 304 Durumunda Tüm Body'nin Yeniden Serialize Edilmesi | Gereksiz disk yazma I/O'su ve ETag kaybı | ✅ `3fbdcc86` (2026-11-09) |
 | **CACHE-14** | 🟡 **P2** | **Client** | `api_service.dart` | Sunucu `Cache-Control` (`no-store`, `no-cache`) Direktiflerinin Yoksayılması | Sunucunun saklama dediği verinin istemcide zorla diske yazılması | ✅ `3fbdcc86` (2026-11-09) |
-| **CACHE-15** | 🟢 **P3** | **Client** | `api_service.dart` | Uçuşan İsteklerin Birleştirilmemesi (In-flight Request Coalescing Yokluğu) | Aynı anda açılan bileşenlerde paralel mükerrer HTTP GET çağrıları | ✅ `PLACEHOLDER` (2026-11-09) |
+| **CACHE-15** | 🟢 **P3** | **Client** | `api_service.dart` | Uçuşan İsteklerin Birleştirilmemesi (In-flight Request Coalescing Yokluğu) | Aynı anda açılan bileşenlerde paralel mükerrer HTTP GET çağrıları | ✅ `2c5214ba` (2026-11-09) |
 | **CACHE-16** | 🟠 **P1** | **Backend** | `read_cache.py` & `routers/` | Dağıtık Cache Parçalanması ve Merkezi Cache Manager Eksikliği | Tutarsız TTL'ler, dağınık Redis erişimi ve mimari kirlilik | ⏳ Açık |
 | **CACHE-17** | 🟠 **P1** | **Backend** | `read_cache.py` | CQRS Read Cache'te Cache Stampede / Thundering Herd Açığı | Cache süresi dolduğunda binlerce isteğin aynı anda DB'yi vurması | ⏳ Açık |
 | **CACHE-18** | 🟠 **P1** | **Backend** | `read_cache.py` | `invalidate_cache` İçinde O(N) `redis.scan_iter` ile Redis Blokajı | Yüksek anahtar hacminde Redis CPU'sunun kilitlenmesi | ⏳ Açık |
@@ -504,6 +504,11 @@ Yanıt başlığında `no-store` varsa `cache.saveData` adımı atlanmalıdır.
 
 #### Kök Neden ve Problem Analizi
 Aynı ekranda iki ayrı bileşen aynı `cacheKey` ve URL için SWR başlattığında iki paralel HTTP GET isteği fırlatılır (Cache Stampede). Uçuşan istekleri tek bir `Future` altında birleştiren deduplication mekanizması eksiktir.
+
+#### Durum: ✅ Kapatıldı — `2c5214ba` (2026-11-09)
+
+#### Uygulanan Çözüm
+`ApiService` sınıfına `static final Map<String, Future<http.Response>> _inFlight = {}` eklendi. `_getRaw(url, headers, timeout)` yardımcı metodu: URL için aktif in-flight Future varsa aynı nesneyi döner — ek HTTP isteği atılmaz; yoksa `_api.getRaw(...)` başlatır, `whenComplete` ile map'ten temizler (başarı ve hata). `get()` içindeki `_api.getRaw(...)` çağrısı `_getRaw(...)` ile değiştirildi. Paralel bileşen açılışlarında N istek → 1 ağ çağrısı; N bileşen aynı yanıtı paylaşır.
 
 ---
 
