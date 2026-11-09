@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:async';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
 import '../core/network/api_client.dart';
 import '../core/app_exception.dart';
 import 'cache_service.dart';
@@ -36,6 +37,10 @@ class ApiService {
   final ApiClient _api;
   final CacheService _cache;
   ApiService(this._api, this._cache);
+
+  // CACHE-15: aynı URL için paralel SWR isteklerini tek bir HTTP GET'te birleştirir.
+  // URL key: aynı endpoint'e eş zamanlı yapılan N istek → tek ağ çağrısı, N yanıt.
+  static final Map<String, Future<http.Response>> _inFlight = {};
 
   Future<Map<String, String>> _headers({bool auth = true}) async {
     final token = auth ? await StorageService.getToken() : null;
@@ -93,7 +98,8 @@ class ApiService {
       }
 
       // ApiClient.getRaw: 401 alınırsa tryRefresh+retry yapar; raw response döner.
-      final resp = await _api.getRaw(url, headers, timeout: timeout);
+      // CACHE-15: paralel aynı-URL isteklerini tek Future'da birleştirir.
+      final resp = await _getRaw(url, headers, timeout);
 
       if (resp.statusCode == 304 && cacheKey != null) {
         // CACHE-13: veri değişmedi — gövdeyi yeniden encode etme; sadece TTL +
@@ -172,6 +178,22 @@ class ApiService {
       if (!cacheYielded) rethrow;
       debugPrint('[ApiService] Ağ hatası — cache korunuyor ($cacheKey): $e');
     }
+  }
+
+  /// Aynı URL için eş zamanlı gelen istekleri tek bir `getRaw` çağrısında
+  /// birleştirir.  İstek tamamlanınca (başarı veya hata) map'ten temizlenir.
+  Future<http.Response> _getRaw(
+    String url,
+    Map<String, String> headers,
+    Duration timeout,
+  ) {
+    final existing = _inFlight[url];
+    if (existing != null) return existing;
+    final future = _api
+        .getRaw(url, headers, timeout: timeout)
+        .whenComplete(() => _inFlight.remove(url));
+    _inFlight[url] = future;
+    return future;
   }
 
   Map<String, dynamic> _safeBody(String raw) {
