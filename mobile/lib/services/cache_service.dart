@@ -48,12 +48,23 @@ class CacheService {
 
   /// Android Keystore / iOS Keychain'de saklanan 256-bit AES anahtarını döner.
   /// İlk çalıştırmada rastgele üretir ve güvenli depoya yazar.
+  ///
+  /// Android Keystore transient-null koruması: Doze modu veya bazı OEM
+  /// uygulamalarında var olan anahtar tek bir okumada null dönebilir. Üç
+  /// denemede null gelirse gerçekten yoktur; yeni anahtar üretilir.
   static Future<List<int>> _getOrCreateEncryptionKey() async {
     const secureStorage = FlutterSecureStorage(
       aOptions: AndroidOptions(encryptedSharedPreferences: true),
       iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
     );
-    final existing = await secureStorage.read(key: _kEncryptionKeyName);
+    String? existing;
+    for (var i = 0; i < 3; i++) {
+      try {
+        existing = await secureStorage.read(key: _kEncryptionKeyName);
+        if (existing != null) break;
+      } catch (_) {}
+      if (i < 2) await Future.delayed(const Duration(milliseconds: 50));
+    }
     if (existing != null) return base64Decode(existing);
     final key = Hive.generateSecureKey();
     await secureStorage.write(
@@ -62,6 +73,12 @@ class CacheService {
     );
     return key;
   }
+
+  /// Logout anında api_cache'i temizler.
+  ///
+  /// Box zaten şifreli ve açık olduğundan doğrudan `.clear()` çağrılır;
+  /// StorageService'in Hive.openBox('api_cache') ile şifresiz açmasına gerek kalmaz.
+  static Future<void> clearBox() => _box.clear();
 
   static Future<void> _migrate() async {
     final stored = int.tryParse(_box.get(_kVersionKey) ?? '0') ?? 0;

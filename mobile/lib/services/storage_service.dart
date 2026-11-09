@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'cache_service.dart';
 
 class StorageService {
   static const _tokenKey = 'teqlif_token';
@@ -234,11 +235,19 @@ class StorageService {
   }
 
   static Future<void> _clearHiveBoxes() async {
+    // homeCache şifresiz; doğrudan açılabilir.
     try {
-      final homeCache = await Hive.openBox('homeCache');
-      await homeCache.clear();
-      final apiCache = await Hive.openBox('api_cache');
-      await apiCache.clear();
+      if (Hive.isBoxOpen('homeCache')) {
+        await Hive.box('homeCache').clear();
+      } else {
+        await (await Hive.openBox('homeCache')).clear();
+      }
+    } catch (_) {}
+    // api_cache AES-256 şifreli; CacheService'in açık tuttuğu box üzerinden temizle.
+    // Hive.openBox('api_cache') şifre anahtarı olmadan çağrılırsa HiveError fırlatır
+    // ve catch(_ ){} içinde yutularak logout cache temizliği sessizce başarısız olur.
+    try {
+      await CacheService.clearBox();
     } catch (_) {}
   }
 
