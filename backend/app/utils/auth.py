@@ -9,11 +9,12 @@ from fastapi import Cookie, Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from decimal import Decimal
-from sqlalchemy import select, DateTime as _SA_DateTime, Numeric as _SA_Numeric
+from sqlalchemy import select
 
 from app.models.enums import UserStatus
 from app.config import settings
 from app.database import get_db
+from app.schemas.user import CurrentUserDTO
 
 REFRESH_TOKEN_TTL = 60 * 60 * 24 * 30  # 30 gün (saniye)
 
@@ -95,32 +96,6 @@ def _decode_token_version(token: str) -> int:
 
 
 _USER_SESSION_TTL = 900  # 15 dakika
-_USER_DATETIME_COLS: frozenset[str] | None = None
-_USER_NUMERIC_COLS: frozenset[str] | None = None
-
-
-def _get_datetime_col_names() -> frozenset[str]:
-    """User modelindeki tüm DateTime sütun adlarını döner — ilk çağrıda hesaplanır."""
-    global _USER_DATETIME_COLS
-    if _USER_DATETIME_COLS is None:
-        from app.models.user import User as _User
-        _USER_DATETIME_COLS = frozenset(
-            col.name for col in _User.__table__.columns
-            if isinstance(col.type, _SA_DateTime)
-        )
-    return _USER_DATETIME_COLS
-
-
-def _get_numeric_col_names() -> frozenset[str]:
-    """User modelindeki tüm Numeric sütun adlarını döner — ilk çağrıda hesaplanır."""
-    global _USER_NUMERIC_COLS
-    if _USER_NUMERIC_COLS is None:
-        from app.models.user import User as _User
-        _USER_NUMERIC_COLS = frozenset(
-            col.name for col in _User.__table__.columns
-            if isinstance(col.type, _SA_Numeric)
-        )
-    return _USER_NUMERIC_COLS
 
 
 def _serialize_user(user) -> dict:
@@ -141,7 +116,22 @@ def _serialize_user(user) -> dict:
     return data
 
 
-async def _fetch_and_cache_user(db: AsyncSession, user_id: int):
+async def _fetch_and_cache_user(db: AsyncSession, user_id: int) -> "CurrentUserDTO | None":
+    """
+    Kullanıcıyı önce Redis'ten, yoksa DB'den çeker ve ``CurrentUserDTO``
+    döner (CACHE-19).
+
+    Cache hit: JSON → Pydantic deserializasyon (datetime/Decimal/Enum
+    dönüşümleri Pydantic v2 tarafından otomatik yapılır).  ORM session'ına
+    hiçbir nesne eklenmez; identity map kirliliği ve DetachedInstanceError
+    riski yoktur.
+
+    Cache miss: DB'den ORM nesnesi çekilir, serileştirilip Redis'e yazılır,
+    ardından ORM'den ``CurrentUserDTO`` üretilir.
+
+    Mutasyon gerektiren endpoint'ler taze ORM nesnesi çeker:
+        user = await db.get(User, current_user.id)
+    """
     from app.models.user import User
     from app.utils.redis_client import get_redis
     from app.core.logger import get_logger
@@ -150,41 +140,23 @@ async def _fetch_and_cache_user(db: AsyncSession, user_id: int):
         redis = await get_redis()
         cached = await redis.get(f"session:user:{user_id}")
         if cached:
-            data = json.loads(cached)
-            for dt_col in _get_datetime_col_names():
-                val = data.get(dt_col)
-                if val and isinstance(val, str):
-                    try:
-                        data[dt_col] = datetime.fromisoformat(val.replace("Z", "+00:00"))
-                    except (ValueError, TypeError):
-                        data[dt_col] = None
-            for num_col in _get_numeric_col_names():
-                val = data.get(num_col)
-                if val is not None and isinstance(val, str):
-                    try:
-                        data[num_col] = Decimal(val)
-                    except Exception:
-                        data[num_col] = None
-            if data.get("status"):
-                try:
-                    data["status"] = UserStatus(data["status"])
-                except ValueError:
-                    data["status"] = UserStatus.ACTIVE
-            user = User(**data)
-            return await db.merge(user, load=False)
+            # Pydantic v2: datetime ISO-str, Decimal str, Enum value otomatik parse edilir.
+            return CurrentUserDTO.model_validate(json.loads(cached))
     except Exception as exc:
         get_logger(__name__).debug("[AUTH] Redis session cache read error for user_id=%s: %s", user_id, exc)
 
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
-    if user and user.status == UserStatus.ACTIVE:
+    if user is None:
+        return None
+    if user.status == UserStatus.ACTIVE:
         try:
             redis = await get_redis()
             data = _serialize_user(user)
             await redis.setex(f"session:user:{user_id}", _USER_SESSION_TTL, json.dumps(data, ensure_ascii=False))
         except Exception as exc:
             get_logger(__name__).debug("[AUTH] Redis session cache write error for user_id=%s: %s", user_id, exc)
-    return user
+    return CurrentUserDTO.model_validate(user, from_attributes=True)
 
 
 async def invalidate_user_session_cache(user_id: int) -> None:
@@ -202,7 +174,7 @@ async def get_current_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
     cookie_token: Optional[str] = Cookie(default=None, alias=ACCESS_COOKIE),
     db: AsyncSession = Depends(get_db),
-):
+) -> CurrentUserDTO:
     # Bearer header öncelikli (mobile), sonra cookie (web tarayıcı)
     raw_token = (credentials.credentials if credentials else None) or cookie_token
     if not raw_token:
@@ -216,24 +188,24 @@ async def get_current_user(
         get_logger(__name__).error(f"[AUTH] get_current_user 401: Geçersiz token (raw_token={raw_token[:10]}...)")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Geçersiz token")
 
-    user = await _fetch_and_cache_user(db, user_id)
+    current_user = await _fetch_and_cache_user(db, user_id)
 
-    if not user or user.status != UserStatus.ACTIVE:
+    if not current_user or current_user.status != UserStatus.ACTIVE:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Kullanıcı bulunamadı")
 
-    if _decode_token_version(raw_token) != user.token_version:
+    if _decode_token_version(raw_token) != current_user.token_version:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Oturum sonlandırıldı")
 
     # Hata handler'larının kullanıcıya erişebilmesi için state'e yaz
-    request.state.user = user
-    return user
+    request.state.user = current_user
+    return current_user
 
 
 async def get_current_user_optional(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
     cookie_token: Optional[str] = Cookie(default=None, alias=ACCESS_COOKIE),
     db: AsyncSession = Depends(get_db),
-):
+) -> CurrentUserDTO | None:
     """Token varsa kullanıcıyı döndürür, yoksa None (misafir erişimi için)."""
     raw_token = (credentials.credentials if credentials else None) or cookie_token
     if not raw_token:
@@ -243,9 +215,9 @@ async def get_current_user_optional(
     if not user_id:
         return None
 
-    user = await _fetch_and_cache_user(db, user_id)
-    if not user or user.status != UserStatus.ACTIVE:
+    current_user = await _fetch_and_cache_user(db, user_id)
+    if not current_user or current_user.status != UserStatus.ACTIVE:
         return None
-    if _decode_token_version(raw_token) != user.token_version:
+    if _decode_token_version(raw_token) != current_user.token_version:
         return None
-    return user
+    return current_user

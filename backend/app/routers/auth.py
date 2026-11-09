@@ -346,12 +346,13 @@ async def me(current_user: User = Depends(get_current_user), db: AsyncSession = 
             select(exists().where(UserInterest.user_id == current_user.id))
         )
         if has_interests:
-            current_user.onboarding_completed = True
             await db.execute(
                 sa_update(User).where(User.id == current_user.id).values(onboarding_completed=True)
             )
             await db.commit()
             await invalidate_user_session_cache(current_user.id)
+            # DTO immutable: onboarding tamamlandıysa güncel değeri response'a yansıt
+            return current_user.model_copy(update={"onboarding_completed": True})
     return current_user
 
 
@@ -450,19 +451,24 @@ async def update_me(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    # Taze ORM nesnesi: DTO'yu session'a merge etmek yerine DB'den çek (CACHE-19).
+    user = await db.get(User, current_user.id)
+    if user is None:
+        raise BadRequestException("Kullanıcı bulunamadı")
+
     going_public = (
         data.is_private is not None
         and current_user.is_private is True
         and data.is_private is False
     )
     if data.is_private is not None:
-        current_user.is_private = data.is_private
+        user.is_private = data.is_private
 
     if data.full_name is not None:
         data.full_name = data.full_name.strip()
         if len(data.full_name) < 2:
             raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrNameShort", "Ad soyad en az 2 karakter olmalı"))
-        current_user.full_name = data.full_name
+        user.full_name = data.full_name
 
     if data.username is not None:
         if not _USERNAME_RE.match(data.username):
@@ -472,38 +478,38 @@ async def update_me(
         )
         if result.scalar_one_or_none():
             raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrUsernameTaken", "Bu kullanıcı adı zaten alınmış"))
-        current_user.username = data.username
+        user.username = data.username
 
     if data.profile_image_url is not None:
-        current_user.profile_image_url = data.profile_image_url
+        user.profile_image_url = data.profile_image_url
 
     if data.profile_image_thumb_url is not None:
-        current_user.profile_image_thumb_url = data.profile_image_thumb_url
+        user.profile_image_thumb_url = data.profile_image_thumb_url
 
     if data.bio is not None:
         bio = data.bio.strip()
         if len(bio) > 60:
             raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrBioLong", "Biyografi en fazla 60 karakter olabilir"))
-        current_user.bio = bio or None
+        user.bio = bio or None
 
     if data.website_url is not None:
         url = data.website_url.strip()
         if url and not url.startswith(("http://", "https://")):
             raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrLinkFormat", "Link http:// veya https:// ile başlamalı"))
-        current_user.website_url = url or None
+        user.website_url = url or None
 
     _social_fields = ("instagram_url", "kick_url", "twitch_url", "facebook_url", "youtube_url", "tiktok_url")
     for _field in _social_fields:
         _val = getattr(data, _field, None)
         if _val is not None:
-            setattr(current_user, _field, _val.strip() or None)
+            setattr(user, _field, _val.strip() or None)
 
     locale_changed = False
     old_locale = current_user.locale
     if data.locale is not None:
         new_locale = data.locale.strip()
         new_updated_at = getattr(data, 'locale_updated_at', None)
-        
+
         # Stale request koruması: Eğer DB'deki zaman damgası gelen zaman damgasından daha yeniyse yoksay.
         should_update = True
         if current_user.locale_updated_at is not None and new_updated_at is not None:
@@ -513,32 +519,32 @@ async def update_me(
                     "[CALL_PROCESS][LOCALE] Stale locale update ignored for user=%d | db_time=%s req_time=%s",
                     current_user.id, current_user.locale_updated_at, new_updated_at
                 )
-        
+
         if should_update:
             if current_user.locale != new_locale:
                 locale_changed = True
-            current_user.locale = new_locale
-            current_user.locale_updated_at = new_updated_at or datetime.now(timezone.utc)
+            user.locale = new_locale
+            user.locale_updated_at = new_updated_at or datetime.now(timezone.utc)
 
     await db.commit()
-    await db.refresh(current_user)
+    await db.refresh(user)
 
     if going_public:
-        asyncio.create_task(_auto_accept_pending_follows(current_user.id))
+        asyncio.create_task(_auto_accept_pending_follows(user.id))
 
     if locale_changed:
         from app.utils.i18n import invalidate_user_i18n_caches
-        await invalidate_user_i18n_caches(current_user.id, old_locale)
+        await invalidate_user_i18n_caches(user.id, old_locale)
     else:
-        await invalidate_user_session_cache(current_user.id)
+        await invalidate_user_session_cache(user.id)
 
     try:
         from app.core.read_cache import invalidate_user_profile_cache
-        await invalidate_user_profile_cache(current_user.username)
+        await invalidate_user_profile_cache(user.username)
     except Exception:
         pass
 
-    return current_user
+    return user
 
 
 @router.get("/me/purchases")
@@ -1102,24 +1108,29 @@ async def update_consent(
     db: AsyncSession = Depends(get_db),
 ):
     """Kullanıcının yurt dışı veri aktarım rızasını günceller (verme veya geri alma)."""
+    # Taze ORM nesnesi (CACHE-19); eksik invalidation SRE-146 kök nedeniydi.
+    user = await db.get(User, current_user.id)
+    if user is None:
+        raise BadRequestException("Kullanıcı bulunamadı")
     now = datetime.now(timezone.utc)
     if data.given:
-        current_user.cross_border_consent_given = True
-        current_user.cross_border_consent_at = now
-        current_user.cross_border_consent_version = "v1"
-        current_user.cross_border_consent_revoked_at = None
+        user.cross_border_consent_given = True
+        user.cross_border_consent_at = now
+        user.cross_border_consent_version = "v1"
+        user.cross_border_consent_revoked_at = None
     else:
-        current_user.cross_border_consent_given = False
-        current_user.cross_border_consent_revoked_at = now
+        user.cross_border_consent_given = False
+        user.cross_border_consent_revoked_at = now
     await db.commit()
-    await db.refresh(current_user)
+    await db.refresh(user)
+    await invalidate_user_session_cache(user.id)
     return ConsentOut(
-        given=current_user.cross_border_consent_given,
-        at=current_user.cross_border_consent_at,
-        version=current_user.cross_border_consent_version,
-        revoked_at=current_user.cross_border_consent_revoked_at,
-        ip=current_user.cross_border_consent_ip,
-        locale=current_user.cross_border_consent_locale,
+        given=user.cross_border_consent_given,
+        at=user.cross_border_consent_at,
+        version=user.cross_border_consent_version,
+        revoked_at=user.cross_border_consent_revoked_at,
+        ip=user.cross_border_consent_ip,
+        locale=user.cross_border_consent_locale,
     )
 
 
@@ -1155,7 +1166,11 @@ async def change_password_confirm(
     stored_code = await redis.get(f"chpwd:{current_user.id}")
     if not stored_code or stored_code != data.code:
         raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrVerifyCodeInvalid", "Doğrulama kodu hatalı veya süresi dolmuş"))
-    current_user.hashed_password = hash_password(data.new_password)
+    # Taze ORM nesnesi (CACHE-19): hashed_password mutasyonu session-managed nesnede yapılır.
+    user = await db.get(User, current_user.id)
+    if user is None:
+        raise BadRequestException("Kullanıcı bulunamadı")
+    user.hashed_password = hash_password(data.new_password)
     await db.execute(
         sa_update(User).where(User.id == current_user.id).values(token_version=User.token_version + 1)
     )

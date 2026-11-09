@@ -1,6 +1,7 @@
 from datetime import datetime
-from typing import Optional
-from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
+from decimal import Decimal
+from typing import Any, Optional
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, computed_field, field_validator, model_validator
 from app.models.enums import UserStatus
 import re
 
@@ -216,3 +217,80 @@ class ResetPassword(BaseModel):
         if len(v) < 8:
             raise ValueError("Şifre en az 8 karakter olmalı")
         return v
+
+
+class CurrentUserDTO(BaseModel):
+    """
+    Kimlik doğrulama session'ı için hafif Value Object (CACHE-19).
+
+    Redis'ten deserialize edilen kullanıcı verisi SQLAlchemy session'ına
+    dahil edilmez; ``db.merge(load=False)`` kaldırıldı.  Bu sayede:
+      • Identity map kirliliği (stale snapshot döndürme) ortadan kalkar.
+      • DetachedInstanceError riski yoktur — ORM nesnesi değildir.
+      • Pydantic v2 datetime/Decimal/Enum dönüşümlerini otomatik yapar;
+        manuel kolon tarama (_get_datetime_col_names vb.) gereksizdir.
+
+    Mutasyon gerektiren endpoint'ler taze ORM nesnesi çeker:
+        user = await db.get(User, current_user.id)
+    """
+
+    model_config = ConfigDict(arbitrary_types_allowed=True, from_attributes=True)
+
+    id: int
+    email: str
+    username: str
+    full_name: str
+    hashed_password: str
+    status: UserStatus
+    email_verified: bool
+    fcm_token: Optional[str] = None
+    voip_token: Optional[str] = None
+    voip_token_updated_at: Optional[datetime] = None
+    apns_sandbox: Optional[bool] = None
+    profile_image_url: Optional[str] = None
+    profile_image_thumb_url: Optional[str] = None
+    notification_prefs: Optional[Any] = None
+    phone: Optional[str] = None
+    phone_verified: bool = False
+    is_admin: bool = False
+    is_shadowbanned: bool = False
+    created_at: datetime
+    max_budget: Optional[Decimal] = None
+    user_type: str = "standard"
+    plan_type: Optional[str] = None
+    premium_since: Optional[datetime] = None
+    teqlik_balance: int = 500
+    bio: Optional[str] = None
+    follower_count: int = 0
+    website_url: Optional[str] = None
+    instagram_url: Optional[str] = None
+    kick_url: Optional[str] = None
+    twitch_url: Optional[str] = None
+    facebook_url: Optional[str] = None
+    youtube_url: Optional[str] = None
+    tiktok_url: Optional[str] = None
+    onboarding_completed: bool = False
+    referral_code: Optional[str] = None
+    referral_code_expires_at: Optional[datetime] = None
+    pending_referred_by: Optional[str] = None
+    locale: str = "tr"
+    locale_updated_at: Optional[datetime] = None
+    is_private: bool = False
+    age_confirmed_at: Optional[datetime] = None
+    cross_border_consent_given: bool = False
+    cross_border_consent_at: Optional[datetime] = None
+    cross_border_consent_version: Optional[str] = None
+    cross_border_consent_revoked_at: Optional[datetime] = None
+    cross_border_consent_ip: Optional[str] = None
+    cross_border_consent_locale: Optional[str] = None
+    token_version: int = 0
+    pro_expires_at: Optional[datetime] = None
+    pro_grace_until: Optional[datetime] = None
+    last_active_at: Optional[datetime] = None
+    store_subscription_id: Optional[str] = None
+    store_subscription_platform: Optional[str] = None
+
+    @computed_field
+    @property
+    def is_verified(self) -> bool:
+        return self.email_verified and self.phone_verified
