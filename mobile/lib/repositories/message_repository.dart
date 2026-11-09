@@ -153,19 +153,34 @@ class MessageRepository {
     return merged;
   }
 
-  /// oku → değiştir → kaydet.
+  // CACHE-08: Konuşma başına sıralı yazma kilidi.
+  // Dart tek thread'li olsa da await noktasında event loop başka async işlemi
+  // çalıştırabilir; iki eşzamanlı _patchCache çağrısı aynı Hive snapshot'ını
+  // okuyup birbirini ezerek sessiz mesaj kaybına neden olur.
+  static final Map<int, Future<void>> _patchLocks = {};
+
+  /// oku → değiştir → kaydet; aynı konuşma için sıralı çalışır (serial queue).
   Future<void> _patchCache(
     int otherUserId,
     List<Map<String, dynamic>> Function(List<Map<String, dynamic>>) fn,
   ) async {
-    final raw = _cache.getWithStaleness(StorageService.cacheThreadKey(otherUserId))?.data;
-    if (raw == null) return;
-    final current = (raw as List).cast<Map<String, dynamic>>();
-    await _cache.saveData(
-      StorageService.cacheThreadKey(otherUserId),
-      fn(List.from(current)),
-      ttl: const Duration(minutes: 30),
-    );
+    final prev = _patchLocks[otherUserId] ?? Future<void>.value();
+    final completer = Completer<void>();
+    _patchLocks[otherUserId] = completer.future;
+
+    try {
+      await prev;
+      final raw = _cache.getWithStaleness(StorageService.cacheThreadKey(otherUserId))?.data;
+      if (raw == null) return;
+      final current = (raw as List).cast<Map<String, dynamic>>();
+      await _cache.saveData(
+        StorageService.cacheThreadKey(otherUserId),
+        fn(List.from(current)),
+        ttl: const Duration(minutes: 30),
+      );
+    } finally {
+      completer.complete();
+    }
   }
 
   Future<Map<String, String>> _buildHeaders() async {
