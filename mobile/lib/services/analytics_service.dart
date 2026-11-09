@@ -165,7 +165,7 @@ class AnalyticsService {
     if (params.isNotEmpty) url += '?${params.join('&')}';
     return _apiService.get<ProInsightsData>(
       url: url,
-      cacheKey: 'pro_insights_${startDate ?? ''}_${endDate ?? ''}',
+      cacheKey: StorageService.userScopedKey('pro_insights_${startDate ?? ''}_${endDate ?? ''}'),
       fromJson: (raw) => ProInsightsData.fromJson(raw as Map<String, dynamic>),
       bypassCache: bypassCache,
       cacheTtl: const Duration(minutes: 10),
@@ -177,7 +177,7 @@ class AnalyticsService {
   Stream<ProMetrics> getProMetrics({bool bypassCache = false}) =>
       _apiService.get<ProMetrics>(
         url: '${_api.config.baseUrl}/analytics/pro/metrics',
-        cacheKey: 'pro_metrics',
+        cacheKey: StorageService.userScopedKey('pro_metrics'),
         fromJson: (raw) => ProMetrics.fromJson(raw as Map<String, dynamic>),
         bypassCache: bypassCache,
         cacheTtl: const Duration(minutes: 10),

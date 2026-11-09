@@ -2,12 +2,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/recording.dart';
 import '../cache_service.dart';
+import '../storage_service.dart';
 
 class RecordingsCacheService {
   final CacheService _cache;
   RecordingsCacheService(this._cache);
 
-  static const _keyMyRecordings = 'recordings:my';
+  // CACHE-02: kullanıcıya özel anahtar; static const → instance getter
+  String get _keyMyRecordings => StorageService.userScopedKey('recordings:my');
   static const _ttlMyRecordings = Duration(minutes: 3);
 
   static const _ttlRecordingUrlFallback     = Duration(minutes: 55);

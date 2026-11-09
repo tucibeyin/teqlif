@@ -29,6 +29,8 @@ class StorageService {
   // which always re-reads from storage on the next authenticated call).
   static String? _cachedToken;
   static String? _cachedRefreshToken;
+  // CACHE-02 opt: JWT her getter çağrısında tekrar parse edilmez; O(1) okuma.
+  static int? _cachedUserId;
 
   // ── Cache key yardımcısı (CACHE-02) ──────────────────────────────────────
   /// Aktif kullanıcının ID'siyle namespace'lenmiş api_cache anahtarı döner.
@@ -73,10 +75,8 @@ class StorageService {
     return 'u_${uid}_dm_thumb_$msgId';
   }
 
-  /// Mevcut oturumdaki kullanıcının ID'sini JWT token üzerinden çözer.
-  static Future<int?> getCurrentUserId() async {
-    final token = await getToken();
-    if (token == null) return null;
+  /// JWT payload'dan userId ayrıştırır — tek parse noktası.
+  static int? _parseUserIdFromToken(String token) {
     try {
       final parts = token.split('.');
       if (parts.length != 3) return null;
@@ -88,21 +88,16 @@ class StorageService {
     }
   }
 
-  /// In-memory token'dan userId çözer — await gerektirmez.
-  /// Token belleğe yüklenmemişse null döner (login sonrası her zaman dolu).
-  static int? get currentUserIdSync {
-    final token = _cachedToken;
-    if (token == null) return null;
-    try {
-      final parts = token.split('.');
-      if (parts.length != 3) return null;
-      final payload = utf8.decode(base64Url.decode(base64Url.normalize(parts[1])));
-      final map = jsonDecode(payload);
-      return int.tryParse(map['sub'].toString());
-    } catch (_) {
-      return null;
-    }
+  /// Mevcut oturumdaki kullanıcının ID'sini döner; gerekirse token'ı diskten yükler.
+  static Future<int?> getCurrentUserId() async {
+    if (_cachedUserId != null) return _cachedUserId;
+    await getToken(); // _cachedUserId'yi doldurur
+    return _cachedUserId;
   }
+
+  /// In-memory cached userId — await gerektirmez; O(1).
+  /// main.dart'taki warm-up çağrısından sonra her zaman doludur.
+  static int? get currentUserIdSync => _cachedUserId;
 
   static const _userEmailKey = 'teqlif_user_email';
   static const _userNameKey = 'teqlif_user_name';
@@ -117,6 +112,7 @@ class StorageService {
 
   static Future<void> saveToken(String token) async {
     _cachedToken = token;
+    _cachedUserId = _parseUserIdFromToken(token);
     await _secureStorage.write(key: _tokenKey, value: token);
   }
 
@@ -125,7 +121,11 @@ class StorageService {
     // Retry up to 3 times for Android Keystore transient null reads.
     for (var i = 0; i < 3; i++) {
       final v = await _secureStorage.read(key: _tokenKey);
-      if (v != null) { _cachedToken = v; return v; }
+      if (v != null) {
+        _cachedToken = v;
+        _cachedUserId = _parseUserIdFromToken(v);
+        return v;
+      }
       if (i < 2) await Future.delayed(const Duration(milliseconds: 50));
     }
     return null;
@@ -248,6 +248,7 @@ class StorageService {
   static Future<void> clear() async {
     _cachedToken = null;
     _cachedRefreshToken = null;
+    _cachedUserId = null;
     await Future.wait([
       _secureStorage.deleteAll(),
       SharedPreferences.getInstance().then((p) => p.clear()),

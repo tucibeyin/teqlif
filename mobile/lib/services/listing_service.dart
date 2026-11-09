@@ -50,7 +50,7 @@ class ListingService {
 
     yield* _apiService.get<List<Map<String, dynamic>>>(
       url: '${_api.config.baseUrl}/feed/personalized?limit=$limit',
-      cacheKey: 'feed_personalized',
+      cacheKey: StorageService.userScopedKey('feed_personalized'),
       cacheTtl: const Duration(minutes: 15),
       bypassCache: bypassCache,
       fromJson: (raw) => (raw as List).cast<Map<String, dynamic>>(),
