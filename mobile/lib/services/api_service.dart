@@ -96,28 +96,30 @@ class ApiService {
       final resp = await _api.getRaw(url, headers, timeout: timeout);
 
       if (resp.statusCode == 304 && cacheKey != null) {
-        // Sunucu içeriğin değişmediğini onayladı — TTL'i tazele, yeniden emit etme
-        final existing = _cache.getWithStaleness(cacheKey);
-        if (existing != null) {
-          await _cache.saveData(
-            cacheKey,
-            existing.data,
-            ttl: cacheTtl,
-            etag: _cache.getEtag(cacheKey),
-          );
-        }
+        // CACHE-13: veri değişmedi — gövdeyi yeniden encode etme; sadece TTL +
+        // sunucudan gelen ETag (varsa) güncelle.  Eski kod saveData yapıyordu:
+        // getWithStaleness → yeni wrapper Map → jsonEncode(entire body) → Hive write.
+        await _cache.touchData(
+          cacheKey,
+          ttl: cacheTtl,
+          newEtag: resp.headers['etag'], // null ise mevcut ETag korunur (RFC 7232 §4.1)
+        );
         return;
       }
 
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body);
         if (cacheKey != null) {
-          await _cache.saveData(
-            cacheKey,
-            data,
-            ttl: cacheTtl,
-            etag: resp.headers['etag'],
-          );
+          // CACHE-14: Cache-Control direktiflerini dikkate al (RFC 9111).
+          // no-store → hiç kaydetme; no-cache → ttl=0 (SWR her zaman revalidate).
+          if (!_noStore(resp.headers['cache-control'])) {
+            await _cache.saveData(
+              cacheKey,
+              data,
+              ttl: _effectiveTtl(resp.headers['cache-control'], cacheTtl),
+              etag: resp.headers['etag'],
+            );
+          }
         }
         yield fromJson(data);
       } else if (resp.statusCode == 401) {
@@ -174,5 +176,21 @@ class ApiService {
     } catch (_) {
       return {};
     }
+  }
+
+  /// RFC 9111 — `Cache-Control: no-store` direktifi var mı?
+  static bool _noStore(String? cc) {
+    if (cc == null) return false;
+    return cc.split(',').any((d) => d.trim().toLowerCase() == 'no-store');
+  }
+
+  /// RFC 9111 — `Cache-Control: no-cache` direktifi varsa `Duration.zero` döner
+  /// (SWR'da her erişim anında stale → arka plan revalidation tetikler).
+  /// Aksi hâlde istenen [requested] TTL uygulanır.
+  static Duration _effectiveTtl(String? cc, Duration requested) {
+    if (cc == null) return requested;
+    final dirs = cc.split(',').map((d) => d.trim().toLowerCase());
+    if (dirs.any((d) => d == 'no-cache')) return Duration.zero;
+    return requested;
   }
 }

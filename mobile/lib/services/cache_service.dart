@@ -230,6 +230,45 @@ class CacheService {
     if (++_writeCount % _kEvictInterval == 0) clearExpired().ignore();
   }
 
+  /// HTTP 304 Not Modified için TTL + ETag tazeleme.
+  ///
+  /// Veri gövdesini (`_d`) yeniden encode etmeden sadece `_t` (timestamp) ve
+  /// `_x` (TTL) günceller; [newEtag] verilirse `_e` de güncellenir, verilmezse
+  /// mevcut ETag korunur.  L1 hit'te Hive okuma yoktur — sadece Map mutasyonu +
+  /// tek Hive write.
+  Future<void> touchData(
+    String key, {
+    Duration ttl = const Duration(minutes: 5),
+    String? newEtag,
+  }) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+
+    // L1: warm entry — Hive okuma ve jsonDecode maliyeti sıfır.
+    final mem = _memCache[key];
+    if (mem != null) {
+      mem['_t'] = now;
+      mem['_x'] = ttl.inMilliseconds;
+      if (newEtag != null) mem['_e'] = newEtag;
+      await _box.put(key, jsonEncode(mem));
+      _lastRead[key] = now;
+      return;
+    }
+
+    // L2: cold entry — Hive'dan oku, mutasyona uğrat, yaz.
+    final raw = _box.get(key);
+    if (raw == null) return;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map<String, dynamic>) return;
+      decoded['_t'] = now;
+      decoded['_x'] = ttl.inMilliseconds;
+      if (newEtag != null) decoded['_e'] = newEtag;
+      await _box.put(key, jsonEncode(decoded));
+      _memCache[key] = decoded;
+      _lastRead[key] = now;
+    } catch (_) {}
+  }
+
   /// Belirli bir [key] silerek ya da [key] verilmezse tüm kutuyu temizler.
   Future<void> clearData([String? key]) async {
     if (key != null) {
