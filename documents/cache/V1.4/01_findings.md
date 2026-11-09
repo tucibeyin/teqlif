@@ -114,9 +114,9 @@ Sistemdeki en büyük mimari zaaf, katmanlar arasındaki önbellek yaşam döng�
 | **CACHE-13** | 🟡 **P2** | **Client** | `api_service.dart` | HTTP 304 Durumunda Tüm Body'nin Yeniden Serialize Edilmesi | Gereksiz disk yazma I/O'su ve ETag kaybı | ✅ `3fbdcc86` (2026-11-09) |
 | **CACHE-14** | 🟡 **P2** | **Client** | `api_service.dart` | Sunucu `Cache-Control` (`no-store`, `no-cache`) Direktiflerinin Yoksayılması | Sunucunun saklama dediği verinin istemcide zorla diske yazılması | ✅ `3fbdcc86` (2026-11-09) |
 | **CACHE-15** | 🟢 **P3** | **Client** | `api_service.dart` | Uçuşan İsteklerin Birleştirilmemesi (In-flight Request Coalescing Yokluğu) | Aynı anda açılan bileşenlerde paralel mükerrer HTTP GET çağrıları | ✅ `2c5214ba` (2026-11-09) |
-| **CACHE-16** | 🟠 **P1** | **Backend** | `read_cache.py` & `routers/` | Dağıtık Cache Parçalanması ve Merkezi Cache Manager Eksikliği | Tutarsız TTL'ler, dağınık Redis erişimi ve mimari kirlilik | ✅ `PLACEHOLDER` (2026-11-09) |
-| **CACHE-17** | 🟠 **P1** | **Backend** | `read_cache.py` | CQRS Read Cache'te Cache Stampede / Thundering Herd Açığı | Cache süresi dolduğunda binlerce isteğin aynı anda DB'yi vurması | ✅ `PLACEHOLDER` (2026-11-09) |
-| **CACHE-18** | 🟠 **P1** | **Backend** | `read_cache.py` | `invalidate_cache` İçinde O(N) `redis.scan_iter` ile Redis Blokajı | Yüksek anahtar hacminde Redis CPU'sunun kilitlenmesi | ✅ `PLACEHOLDER` (2026-11-09) |
+| **CACHE-16** | 🟠 **P1** | **Backend** | `read_cache.py` & `routers/` | Dağıtık Cache Parçalanması ve Merkezi Cache Manager Eksikliği | Tutarsız TTL'ler, dağınık Redis erişimi ve mimari kirlilik | ✅ `d0264833` (2026-11-09) |
+| **CACHE-17** | 🟠 **P1** | **Backend** | `read_cache.py` | CQRS Read Cache'te Cache Stampede / Thundering Herd Açığı | Cache süresi dolduğunda binlerce isteğin aynı anda DB'yi vurması | ✅ `d0264833` (2026-11-09) |
+| **CACHE-18** | 🟠 **P1** | **Backend** | `read_cache.py` | `invalidate_cache` İçinde O(N) `redis.scan_iter` ile Redis Blokajı | Yüksek anahtar hacminde Redis CPU'sunun kilitlenmesi | ✅ `d0264833` (2026-11-09) |
 | **CACHE-19** | 🟠 **P1** | **Backend** | `auth.py` | Redis Session Cache Deserializasyonunda `db.merge(load=False)` Riskleri | DetachedInstanceError ve ilişkili alanlarda asenkron crash | ⏳ Açık |
 | **CACHE-20** | 🟡 **P2** | **Backend** | `etag_middleware.py` | Post-Computation ETag Nedeniyle DB ve CPU Tasarrufu Sağlanamaması | Her istekte DB sorgusu ve ORM çalışması, 0 CPU tasarrufu | ⏳ Açık |
 | **CACHE-21** | 🟡 **P2** | **DB** | `database_clickhouse.py` | Write-Behind Tamponlamada 30 Saniyelik Körlük (Read Lag) | Canlı analitik ve son 30 saniyelik tıklamaların okunamaması | ⏳ Açık |
@@ -528,6 +528,11 @@ Merkezi bir `CacheManager` veya `CachePort` arayüzü bulunmadığından; TTL'le
 #### Çözüm Reçetesi
 Backend'de Clean Architecture standartlarına uygun tekil bir `CacheService` / `CachePort` soyutlaması oluşturulmalı ve tüm servisler bu port üzerinden Redis'e erişmelidir.
 
+#### Durum: ✅ Kapatıldı — `d0264833` (2026-11-09)
+
+#### Uygulanan Çözüm
+`app/core/ports/cache_port.py` → `ICacheService` soyut arayüzü (Hexagonal Architecture). `app/infrastructure/adapters/redis_cache_service.py` → `RedisCacheService` somut implementasyon. `app/core/read_cache.py` thin wrapper'a dönüştürüldü; tüm mevcut router/use-case importları değişmeden çalışmaya devam eder.
+
 ---
 
 ### CACHE-17 · 🟠 P1 (Yüksek) · CQRS Read Cache'te Cache Stampede / Thundering Herd Açığı
@@ -539,34 +544,12 @@ Backend'de Clean Architecture standartlarına uygun tekil bir `CacheService` / `
 `cache_get` fonksiyonu cache miss durumunda `None` döner. Yüksek trafikli bir endpoint'te (örneğin ana sayfa arama veya popüler ilanlar) cache süresi dolduğu an, aynı milisaniyede gelen 500 eşzamanlı istek aynı anda `cache_get(...) == None` alır ve tamamı veritabanına aynı SQL sorgusunu fırlatır (Thundering Herd / Cache Stampede).
 
 #### Çözüm Reçetesi
-Distributed Mutex / Single-Flight deseni uygulanmalıdır. Anahtar süresi dolduğunda sadece tek bir worker DB'ye gitmeli, diğer eşzamanlı istekler bu sonucu beklemelidir:
+Distributed Mutex / Single-Flight deseni uygulanmalıdır.
 
-```python
-# backend/app/core/read_cache.py
-import asyncio
+#### Durum: ✅ Kapatıldı — `d0264833` (2026-11-09)
 
-async def cache_get_or_compute(namespace: str, params: dict, compute_fn, ttl: int = 30):
-    cached = await cache_get(namespace, params)
-    if cached is not None:
-        return cached
-
-    redis = await get_redis()
-    lock_key = f"lock:{namespace}:{_make_params_hash(params)}"
-    # 5 saniyelik atomik kilit edin
-    acquired = await redis.set(lock_key, "1", nx=True, ex=5)
-    
-    if acquired:
-        try:
-            result = await compute_fn()
-            await cache_set(namespace, params, result, ttl=ttl)
-            return result
-        finally:
-            await redis.delete(lock_key)
-    else:
-        # Kilit başka bir worker'da; kısa bekle ve tekrar cache'ten oku
-        await asyncio.sleep(0.05)
-        return await cache_get(namespace, params) or await compute_fn()
-```
+#### Uygulanan Çözüm
+`RedisCacheService.get_or_compute()`: `SET lock_key "1" NX EX 5` ile distributed mutex. Lock alan worker double-check → compute → cache yazar → kilidi serbest bırakır. Lock alamayan worker 50ms bekler → cache okur; lock sahibi çökmüşse fallback `compute_fn()` çalıştırır. Redis tamamen down'sa grace fallback: `compute_fn()`. Yeni API: `cache_get_or_compute(ns, params, compute_fn, ttl)`.
 
 ---
 
@@ -586,8 +569,12 @@ if keys:
 Üretim ortamında milyonlarca arama ve filtreleme varyasyonu Redis'e yazıldığında, `scan_iter` işlemi yüzlerce ağ gidiş-dönüşü (round-trip) yapar ve tek iş parçacıklı Redis sunucusunda I/O tıkanıklığı yaratır.
 
 #### Çözüm Reçetesi
-Pattern tabanlı O(N) arama yerine, **Tag/Namespace Versioning** deseni uygulanmalıdır:
-Her namespace için Redis'te bir versiyon anahtarı tutulur (`ns_ver:{namespace}`). Cache anahtarı üretilirken bu versiyon kullanılır (`cqrs:{namespace}:v{version}:{hash}`). Invalidate etmek için tek bir `redis.incr("ns_ver:" + namespace)` çağrısı yeterlidir; O(1) maliyetle tüm eski anahtarlar yetim kalır ve TTL'leri dolunca otomatik silinir.
+Pattern tabanlı O(N) arama yerine, **Tag/Namespace Versioning** deseni uygulanmalıdır.
+
+#### Durum: ✅ Kapatıldı — `d0264833` (2026-11-09)
+
+#### Uygulanan Çözüm
+Namespace versioning uygulandı. `ns_ver:{namespace}[:{prefix}]` sayacı tutulur. `invalidate()` yalnızca `INCR ns_ver:{namespace}` çağırır (O(1)). `get()` değeri okurken `{"_ver": N, "_d": veri}` zarfında saklı `_ver`'i güncel sayaçla karşılaştırır; uyuşmazsa miss sayar. Eski anahtarlar TTL'leri dolunca otomatik silinir; `scan_iter` tamamen kaldırıldı. `get()` sayaç + veriyi tek pipeline round-trip'te okur.
 
 ---
 
