@@ -29,7 +29,9 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import random
 from typing import Any, Awaitable, Callable
+from uuid import uuid4
 
 from app.core.ports.cache_port import ICacheService
 from app.core.logger import get_logger
@@ -39,6 +41,15 @@ logger = get_logger(__name__)
 
 _PREFIX = "cqrs"
 _LOCK_TTL_S = 5  # dağıtık kilit için maks bekleme süresi (saniye)
+
+# Atomik check-and-delete: yalnızca token sahibi kilidi siler (Redlock standardı).
+_UNLOCK_SCRIPT = """
+if redis.call('get', KEYS[1]) == ARGV[1] then
+    return redis.call('del', KEYS[1])
+else
+    return 0
+end
+"""
 
 
 class RedisCacheService(ICacheService):
@@ -173,7 +184,8 @@ class RedisCacheService(ICacheService):
             redis = await get_redis()
             lock_key = f"lock:{self._make_key(namespace, params, prefix_key)}"
 
-            acquired = await redis.set(lock_key, "1", nx=True, ex=_LOCK_TTL_S)
+            token = uuid4().hex
+            acquired = await redis.set(lock_key, token, nx=True, ex=_LOCK_TTL_S)
             if acquired:
                 try:
                     # Double-check: başka worker cache'i doldurmuş olabilir.
@@ -185,12 +197,16 @@ class RedisCacheService(ICacheService):
                     return result
                 finally:
                     try:
-                        await redis.delete(lock_key)
+                        # Redlock: yalnızca kendi token'ımızı sil — TTL aşımında
+                        # başka worker'ın kilidini silmemek için atomik Lua script.
+                        await redis.eval(_UNLOCK_SCRIPT, 1, lock_key, token)
                     except Exception:
                         pass
             else:
-                # Lock başka worker'da; bekle ve tekrar dene.
-                await asyncio.sleep(0.05)
+                # Lock başka worker'da; jitter ile bekle ve tekrar dene.
+                # Sabit 50ms yerine 30-70ms arası rastgele bekleme: kilit açılınca
+                # tüm worker'ların eş zamanlı Redis'e vurmasını önler.
+                await asyncio.sleep(random.uniform(0.03, 0.07))
                 cached = await self.get(namespace, params, prefix_key)
                 if cached is not None:
                     return cached
