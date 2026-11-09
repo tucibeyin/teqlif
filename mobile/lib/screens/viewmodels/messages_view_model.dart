@@ -207,6 +207,7 @@ class MessagesTabViewModel extends AutoDisposeAsyncNotifier<ConversationsUiState
     }
     updated..removeAt(idx)..insert(0, conv);
     state = AsyncValue.data(currentState.copyWith(conversations: updated));
+    _cache.saveData(StorageService.cacheMessages, updated, ttl: const Duration(hours: 1)).ignore();
   }
 
   Future<bool> deleteConversation(int otherId) async {
@@ -301,6 +302,7 @@ class NotificationsTabViewModel extends AutoDisposeAsyncNotifier<NotificationsUi
         notif['is_read'] = true;
         updated[index] = notif;
         state = AsyncValue.data(state.value!.copyWith(notifications: updated));
+        _cache.saveData(StorageService.cacheNotifications, updated, ttl: const Duration(hours: 1)).ignore();
       }
     }
   }

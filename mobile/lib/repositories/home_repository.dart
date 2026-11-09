@@ -215,6 +215,16 @@ class HomeRepository {
     await saveFeed(prepended);
   }
 
+  /// İlk sayfa fetch'inden sonra mevcut cache'i koruyarak yeni ilanları başa ekler.
+  /// loadMore() gibi dedup yapar (max 60); offline'da eski sayfalar kaybolmaz.
+  Future<void> saveFreshFeed(List<dynamic> freshPage) async {
+    final existing = (await loadCache())?.recentListings ?? [];
+    final freshIds = freshPage.map((e) => (e as Map)['id'] as int?).toSet();
+    final olderOnly = existing.where((e) => !freshIds.contains((e as Map)['id'])).toList();
+    final merged = [...freshPage, ...olderOnly].take(_kMaxCached).toList();
+    await saveFeed(merged);
+  }
+
   Future<void> clearCache() async {
     final box = await _box();
     await _reset(box);

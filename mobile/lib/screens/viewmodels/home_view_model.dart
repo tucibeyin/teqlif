@@ -106,7 +106,7 @@ class HomeViewModel extends AutoDisposeAsyncNotifier<HomeState> {
 
   Future<void> _fetchRecent() async {
     final page = await _repo.fetchRecent(page: 0);
-    await _repo.saveFeed(page.listings);
+    await _repo.saveFreshFeed(page.listings); // yeni ilanları başa ekler, eski sayfaları korur
     state = AsyncValue.data(state.value!.copyWith(
       recentListings: page.listings,
       totalPages:     page.totalPages,
