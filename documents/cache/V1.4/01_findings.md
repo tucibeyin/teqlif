@@ -109,7 +109,7 @@ Sistemdeki en büyük mimari zaaf, katmanlar arasındaki önbellek yaşam döng�
 | **CACHE-08** | 🟠 **P1** | **Client** | `message_repository.dart` | `_patchCache` İçinde Kilitsiz Read-Modify-Write Yarış Durumu | Eşzamanlı gelen WebSocket mesajlarının birbirini ezmesi | ✅ `ab778503` · 2026-11-09 |
 | **CACHE-09** | 🟠 **P1** | **Client** | `home_repository.dart` vs `api_service.dart` | Çift Başlı Cache Mimarisi (`homeCache` vs `api_cache`) & ETag Baypası | Veri duplikasyonu, merkezi SWR ve ETag mekanizmasının çiğnenmesi | ✅ `3d4f4fc4` · 2026-11-09 |
 | **CACHE-10** | 🟡 **P2** | **Client** | `listing_detail_screen.dart` & `swipe_live_screen.dart` | View Katmanından Doğrudan `clearData()` Çağrısı (ADR §8 İhlali) | UI'ın önbellek anahtarlarını ve veri katmanını bilmesi | ✅ `f80b519d` (2026-11-09) |
-| **CACHE-11** | 🟡 **P2** | **Client** | `cache_service.dart` | Yanıltıcı LRU (Aslında FIFO) ve Çalışma Zamanında Sınırsız Büyüme | Aktif kayıtların erken silinmesi, uzun oturumlarda bellek şişmesi | ⏳ Açık |
+| **CACHE-11** | 🟡 **P2** | **Client** | `cache_service.dart` | Yanıltıcı LRU (Aslında FIFO) ve Çalışma Zamanında Sınırsız Büyüme | Aktif kayıtların erken silinmesi, uzun oturumlarda bellek şişmesi | ✅ `311bef48` (2026-11-09) |
 | **CACHE-12** | 🟡 **P2** | **Client** | `cache_service.dart` | Ana UI İş Parçacığında (UI Isolate) Senkron `jsonDecode` Blokajı | Feed ve mesaj listeleri yüklenirken frame düşmesi (UI Jank) | ⏳ Açık |
 | **CACHE-13** | 🟡 **P2** | **Client** | `api_service.dart` | HTTP 304 Durumunda Tüm Body'nin Yeniden Serialize Edilmesi | Gereksiz disk yazma I/O'su ve ETag kaybı | ⏳ Açık |
 | **CACHE-14** | 🟡 **P2** | **Client** | `api_service.dart` | Sunucu `Cache-Control` (`no-store`, `no-cache`) Direktiflerinin Yoksayılması | Sunucunun saklama dediği verinin istemcide zorla diske yazılması | ⏳ Açık |
@@ -420,12 +420,16 @@ UI widget sınıfları doğrudan `ref.read(cacheServiceProvider).clearData('user
 
 * **Katman:** Client (Mobile Flutter)
 * **Etkilenen Dosya:** `mobile/lib/services/cache_service.dart` (Satır 168–189)
+* **Durum:** ✅ Giderildi — commit `311bef48` (2026-11-09)
 
 #### Kök Neden ve Problem Analizi
 `clearExpired()` 200 anahtar sınırını aşınca `_t` (kayıt oluşturulma zamanı) alanına göre sıralama yapıp siler. Bu bir **LRU değil, FIFO** politikasıdır; sık okunan eski kayıtlar silinirken az okunan yeni kayıtlar tutulur. Ayrıca tahliye sadece uygulama açılışında bir kez çalışır; uygulama saatlerce açık kaldığında `saveData` sınır kontrolü yapmadığı için Hive bellekte kontrolsüz büyüyebilir.
 
 #### Çözüm Reçetesi
 Kayıt zarfına son erişim zamanı (`_last_read`) eklenmeli ve her 20 yazma işleminde bir arka planda debounced temizlik tetiklenmelidir.
+
+#### Uygulanan Çözüm
+`static Map<String, int> _lastRead` in-memory LRU tracker eklendi — senkron `getData`/`getWithStaleness` sözleşmesi bozulmadan her başarılı okumada güncellenir. `saveData()` yazma sonrası `_lastRead`'i günceller; `++_writeCount % 20 == 0` koşulunda `clearExpired().ignore()` ile çalışma zamanında arka plan tahliyesi tetiklenir. `clearExpired()` LRU kısmı artık `_lastRead[key] ?? _t` sıralaması yapar. `clearBox`/`clearData`/`clearAll`/`_migrate` tutarlı temizliği sağlar.
 
 ---
 
