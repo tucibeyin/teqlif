@@ -9,6 +9,7 @@ import '../logger_service.dart';
 import '../result.dart';
 import '../config/app_config.dart';
 import '../../services/auth_service.dart' show authServiceProvider, RefreshOutcome;
+import '../../services/storage_service.dart';
 
 class ApiClient {
   final AppConfig config;
@@ -82,6 +83,43 @@ class ApiClient {
       code: 'HTTP_$statusCode',
       statusCode: statusCode,
     );
+  }
+
+  /// SWR arka plan istekleri için ham HTTP GET; 401 alınırsa tryRefresh + 1 kez retry.
+  ///
+  /// [ApiService.get] bu methodu kullanır çünkü 304 ve ETag header'larına doğrudan
+  /// erişim gerektirir. [call]/[callList]'in sarmaladığı body-parse mantığı burada yoktur.
+  Future<http.Response> getRaw(
+    String url,
+    Map<String, String> headers, {
+    bool retried = false,
+    Duration timeout = const Duration(seconds: 10),
+  }) async {
+    final resp = await http
+        .get(Uri.parse(url), headers: headers)
+        .timeout(timeout);
+
+    if (resp.statusCode == 401 && !retried) {
+      final urlStr = resp.request?.url.toString() ?? '';
+      final isAuthEndpoint =
+          urlStr.contains('/api/auth/login') || urlStr.contains('/api/auth/register');
+
+      if (!isAuthEndpoint) {
+        final authService = ref.read(authServiceProvider);
+        final outcome = await authService.tryRefresh();
+        if (outcome == RefreshOutcome.succeeded) {
+          final newToken = await StorageService.getToken();
+          final retryHeaders = Map<String, String>.from(headers);
+          if (newToken != null) retryHeaders['Authorization'] = 'Bearer $newToken';
+          return getRaw(url, retryHeaders, retried: true, timeout: timeout);
+        }
+        if (outcome == RefreshOutcome.revoked) {
+          authService.authFailedStream.add(null);
+        }
+      }
+    }
+
+    return resp;
   }
 
   Future<Map<String, dynamic>> call(

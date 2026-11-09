@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:async';
 import 'package:flutter/foundation.dart' show debugPrint;
-import 'package:http/http.dart' as http;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/network/api_client.dart';
 import '../core/app_exception.dart';
@@ -93,9 +92,8 @@ class ApiService {
         if (storedEtag != null) headers['If-None-Match'] = storedEtag;
       }
 
-      final resp = await http
-          .get(Uri.parse(url), headers: headers)
-          .timeout(timeout);
+      // ApiClient.getRaw: 401 alınırsa tryRefresh+retry yapar; raw response döner.
+      final resp = await _api.getRaw(url, headers, timeout: timeout);
 
       if (resp.statusCode == 304 && cacheKey != null) {
         // Sunucu içeriğin değişmediğini onayladı — TTL'i tazele, yeniden emit etme
