@@ -121,7 +121,7 @@ Sistemdeki en büyük mimari zaaf, katmanlar arasındaki önbellek yaşam döng�
 | **CACHE-20** | 🟡 **P2** | **Backend** | `etag_middleware.py` | Post-Computation ETag Nedeniyle DB ve CPU Tasarrufu Sağlanamaması | Her istekte DB sorgusu ve ORM çalışması, 0 CPU tasarrufu | ⏳ Açık |
 | **CACHE-21** | 🟡 **P2** | **DB** | `database_clickhouse.py` | Write-Behind Tamponlamada 30 Saniyelik Körlük (Read Lag) | Canlı analitik ve son 30 saniyelik tıklamaların okunamaması | ⏳ Açık |
 | **CACHE-22** | 🟡 **P2** | **DB** | `database.py` & PgBouncer | `prepared_statement_cache_size: 0` Nedeniyle SQL Parse Yükü | Her sorgunun DB CPU'sunda tekrar tekrar planlanması | ⏳ Açık |
-| **CACHE-23** | 🟠 **P1** | **Cross** | Client ↔ Backend ↔ DB | Event-Driven Cache Invalidation (WebSocket Push) Yokluğu | DB'de değişen ilanın mobilde 30 dk bayat kalması (Desync) | ✅ `07819c09` (2026-11-09) |
+| **CACHE-23** | 🟠 **P1** | **Cross** | Client ↔ Backend ↔ DB | Event-Driven Cache Invalidation (WebSocket Push) Yokluğu | DB'de değişen ilanın mobilde 30 dk bayat kalması (Desync) | ✅ `07819c09` + `a6767e3b` (2026-11-09) |
 
 ---
 
@@ -684,6 +684,11 @@ Mobil istemci bu eventi aldığında `CacheService.clearData('entity_listing_123
 **`ws_types.py`:** `CACHE_INVALIDATE = "cache_invalidate"` eklendi.
 
 **Mobile (`main_view_model.dart`):** `_wsCacheInvalidateSub` — `cache_invalidate` mesajı gelince `CacheService.clearData('entity_listing_$id')` çağırır.
+
+**Follow-up — `a6767e3b` (2026-11-09):**
+- **`CacheService`:** `listingInvalidated` broadcast stream eklendi; `clearData('entity_listing_*')` çağrısında `int` id emit eder. Yeni `clearEntitiesByType(String type)` static metodu — tüm `entity_{type}_*` anahtarlarını L1+L2'den toplu siler ve stream'i tetikler.
+- **`ListingDetailScreen`:** `_invalidationSub` abone oluyor; ilan açıkken ilgili id invalidate edilince `_refreshListingData()` anında tetiklenir; `dispose`'da iptal edilir.
+- **`MainViewModel.handleLifecycleResumed`:** `CacheService.clearEntitiesByType('listing').ignore()` — resume'da arka planda değişmiş olabilecek tüm ilan cache'ini temizler; açık listing screen varsa stream üzerinden re-fetch tetikler.
 
 Mesaj formatı:
 ```json
