@@ -107,7 +107,7 @@ Sistemdeki en büyük mimari zaaf, katmanlar arasındaki önbellek yaşam döng�
 | **CACHE-06** | 🟠 **P1** | **Client** | `api_service.dart` | Yanlış SWR Mantığı (`if (!cached.isStale) return`) | Arka plan yenilemenin engellenmesi, bayat veri kalıcılığı | ✅ `d1d97277` · 2026-11-09 |
 | **CACHE-07** | 🟠 **P1** | **Client** | `api_service.dart` | Cache Yayını Sonrası 401/403/404 Hatalarının Yutulması | Banlanan veya silinen hesabın/ilanın cache'te asılı kalması | ✅ `d1d97277` · 2026-11-09 |
 | **CACHE-08** | 🟠 **P1** | **Client** | `message_repository.dart` | `_patchCache` İçinde Kilitsiz Read-Modify-Write Yarış Durumu | Eşzamanlı gelen WebSocket mesajlarının birbirini ezmesi | ✅ `ab778503` · 2026-11-09 |
-| **CACHE-09** | 🟠 **P1** | **Client** | `home_repository.dart` vs `api_service.dart` | Çift Başlı Cache Mimarisi (`homeCache` vs `api_cache`) & ETag Baypası | Veri duplikasyonu, merkezi SWR ve ETag mekanizmasının çiğnenmesi | ⏳ Açık |
+| **CACHE-09** | 🟠 **P1** | **Client** | `home_repository.dart` vs `api_service.dart` | Çift Başlı Cache Mimarisi (`homeCache` vs `api_cache`) & ETag Baypası | Veri duplikasyonu, merkezi SWR ve ETag mekanizmasının çiğnenmesi | ✅ `3d4f4fc4` · 2026-11-09 |
 | **CACHE-10** | 🟡 **P2** | **Client** | `listing_detail_screen.dart` & `swipe_live_screen.dart` | View Katmanından Doğrudan `clearData()` Çağrısı (ADR §8 İhlali) | UI'ın önbellek anahtarlarını ve veri katmanını bilmesi | ⏳ Açık |
 | **CACHE-11** | 🟡 **P2** | **Client** | `cache_service.dart` | Yanıltıcı LRU (Aslında FIFO) ve Çalışma Zamanında Sınırsız Büyüme | Aktif kayıtların erken silinmesi, uzun oturumlarda bellek şişmesi | ⏳ Açık |
 | **CACHE-12** | 🟡 **P2** | **Client** | `cache_service.dart` | Ana UI İş Parçacığında (UI Isolate) Senkron `jsonDecode` Blokajı | Feed ve mesaj listeleri yüklenirken frame düşmesi (UI Jank) | ⏳ Açık |
@@ -389,6 +389,13 @@ Future<void> _patchCache(int otherUserId, ...) async {
 
 #### Çözüm Reçetesi
 `HomeRepository` ham `http.get` yerine `ApiService.get` kullanacak şekilde refactor edilmeli ve `homeCache` kutusu merkezi `api_cache` varlık deposu ile birleştirilmelidir.
+
+> **✅ `3d4f4fc4` · 2026-11-09:** Tüm HTTP metotları ApiClient üzerinden yönlendirildi.
+> - `fetchRecent` / `fetchSinceId` / `loadMore` → `_client.getRaw()` (401 refresh + retry; özel `_parsePage` mantığı korundu)
+> - `fetchHesitated` / `fetchFiltered` → `_client.callList()` (tam hata yönetimi + 429/5xx retry)
+> - `deleteHesitated` → `_client.call()`
+> - Manuel token build kaldırıldı; `_buildHeaders()` eklendi; `AppException` ile tip güvenli hata propagasyonu.
+> - `homeCache`: §12.8'de entities zaten `api_cache`'te; ID listesi + versiyon metadata yönetimi yapısı korundu (tamamlayıcı katman).
 
 ---
 
