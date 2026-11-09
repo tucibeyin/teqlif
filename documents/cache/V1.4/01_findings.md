@@ -115,7 +115,7 @@ Sistemdeki en büyük mimari zaaf, katmanlar arasındaki önbellek yaşam döng�
 | **CACHE-14** | 🟡 **P2** | **Client** | `api_service.dart` | Sunucu `Cache-Control` (`no-store`, `no-cache`) Direktiflerinin Yoksayılması | Sunucunun saklama dediği verinin istemcide zorla diske yazılması | ✅ `3fbdcc86` (2026-11-09) |
 | **CACHE-15** | 🟢 **P3** | **Client** | `api_service.dart` | Uçuşan İsteklerin Birleştirilmemesi (In-flight Request Coalescing Yokluğu) | Aynı anda açılan bileşenlerde paralel mükerrer HTTP GET çağrıları | ✅ `2c5214ba` (2026-11-09) |
 | **CACHE-16** | 🟠 **P1** | **Backend** | `read_cache.py` & `routers/` | Dağıtık Cache Parçalanması ve Merkezi Cache Manager Eksikliği | Tutarsız TTL'ler, dağınık Redis erişimi ve mimari kirlilik | ✅ `d0264833` (2026-11-09) |
-| **CACHE-17** | 🟠 **P1** | **Backend** | `read_cache.py` | CQRS Read Cache'te Cache Stampede / Thundering Herd Açığı | Cache süresi dolduğunda binlerce isteğin aynı anda DB'yi vurması | ✅ `d0264833` (2026-11-09) |
+| **CACHE-17** | 🟠 **P1** | **Backend** | `read_cache.py` | CQRS Read Cache'te Cache Stampede / Thundering Herd Açığı | Cache süresi dolduğunda binlerce isteğin aynı anda DB'yi vurması | ✅ `d0264833` + `c1280225` (2026-11-09) |
 | **CACHE-18** | 🟠 **P1** | **Backend** | `read_cache.py` | `invalidate_cache` İçinde O(N) `redis.scan_iter` ile Redis Blokajı | Yüksek anahtar hacminde Redis CPU'sunun kilitlenmesi | ✅ `d0264833` (2026-11-09) |
 | **CACHE-19** | 🟠 **P1** | **Backend** | `auth.py` | Redis Session Cache Deserializasyonunda `db.merge(load=False)` Riskleri | DetachedInstanceError ve ilişkili alanlarda asenkron crash | ⏳ Açık |
 | **CACHE-20** | 🟡 **P2** | **Backend** | `etag_middleware.py` | Post-Computation ETag Nedeniyle DB ve CPU Tasarrufu Sağlanamaması | Her istekte DB sorgusu ve ORM çalışması, 0 CPU tasarrufu | ⏳ Açık |
@@ -546,10 +546,12 @@ Backend'de Clean Architecture standartlarına uygun tekil bir `CacheService` / `
 #### Çözüm Reçetesi
 Distributed Mutex / Single-Flight deseni uygulanmalıdır.
 
-#### Durum: ✅ Kapatıldı — `d0264833` (2026-11-09)
+#### Durum: ✅ Kapatıldı — `d0264833` + `c1280225` (2026-11-09)
 
 #### Uygulanan Çözüm
-`RedisCacheService.get_or_compute()`: `SET lock_key "1" NX EX 5` ile distributed mutex. Lock alan worker double-check → compute → cache yazar → kilidi serbest bırakır. Lock alamayan worker 50ms bekler → cache okur; lock sahibi çökmüşse fallback `compute_fn()` çalıştırır. Redis tamamen down'sa grace fallback: `compute_fn()`. Yeni API: `cache_get_or_compute(ns, params, compute_fn, ttl)`.
+`RedisCacheService.get_or_compute()`: `SET lock_key <uuid4_token> NX EX 5` ile distributed mutex. Lock alan worker double-check → compute → cache yazar → Lua script ile atomik unlock. Lock alamayan worker jitter (30–70ms) bekler → cache okur; lock sahibi çökmüşse fallback `compute_fn()` çalıştırır. Redis tamamen down'sa grace fallback: `compute_fn()`. Yeni API: `cache_get_or_compute(ns, params, compute_fn, ttl)`.
+
+**Follow-up (`c1280225`):** Redlock safe unlock — lock değeri `uuid4().hex` token olarak saklanır; `finally` bloğu Lua script ile atomik check-and-delete yapar (`if get(key)==token then del(key)`). Bu sayede Worker 1'in TTL aşımı sonrası `delete()` çağrısı Worker 2'nin aktif kilidini silemez. Jitter: sabit 50ms yerine `random.uniform(0.03, 0.07)` ile kilit açılınca bekleyen worker'ların eş zamanlı Redis vurması engellendi.
 
 ---
 
