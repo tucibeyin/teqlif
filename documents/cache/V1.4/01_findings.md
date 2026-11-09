@@ -106,7 +106,7 @@ Sistemdeki en büyük mimari zaaf, katmanlar arasındaki önbellek yaşam döng�
 | **CACHE-05** | 🟠 **P1** | **Backend** | `etag_middleware.py` | ETag Doğrulamasında `strip('W/')` Eksikliği (Weak ETag Incompatibility) | Reverse proxy (Nginx/Cloudflare) arkasında 304'ün çalışmaması | ✅ `c79aade5` + `a259322d` · 2026-11-09 |
 | **CACHE-06** | 🟠 **P1** | **Client** | `api_service.dart` | Yanlış SWR Mantığı (`if (!cached.isStale) return`) | Arka plan yenilemenin engellenmesi, bayat veri kalıcılığı | ✅ `d1d97277` · 2026-11-09 |
 | **CACHE-07** | 🟠 **P1** | **Client** | `api_service.dart` | Cache Yayını Sonrası 401/403/404 Hatalarının Yutulması | Banlanan veya silinen hesabın/ilanın cache'te asılı kalması | ✅ `d1d97277` · 2026-11-09 |
-| **CACHE-08** | 🟠 **P1** | **Client** | `message_repository.dart` | `_patchCache` İçinde Kilitsiz Read-Modify-Write Yarış Durumu | Eşzamanlı gelen WebSocket mesajlarının birbirini ezmesi | ⏳ Açık |
+| **CACHE-08** | 🟠 **P1** | **Client** | `message_repository.dart` | `_patchCache` İçinde Kilitsiz Read-Modify-Write Yarış Durumu | Eşzamanlı gelen WebSocket mesajlarının birbirini ezmesi | ✅ `ab778503` · 2026-11-09 |
 | **CACHE-09** | 🟠 **P1** | **Client** | `home_repository.dart` vs `api_service.dart` | Çift Başlı Cache Mimarisi (`homeCache` vs `api_cache`) & ETag Baypası | Veri duplikasyonu, merkezi SWR ve ETag mekanizmasının çiğnenmesi | ⏳ Açık |
 | **CACHE-10** | 🟡 **P2** | **Client** | `listing_detail_screen.dart` & `swipe_live_screen.dart` | View Katmanından Doğrudan `clearData()` Çağrısı (ADR §8 İhlali) | UI'ın önbellek anahtarlarını ve veri katmanını bilmesi | ⏳ Açık |
 | **CACHE-11** | 🟡 **P2** | **Client** | `cache_service.dart` | Yanıltıcı LRU (Aslında FIFO) ve Çalışma Zamanında Sınırsız Büyüme | Aktif kayıtların erken silinmesi, uzun oturumlarda bellek şişmesi | ⏳ Açık |
@@ -374,6 +374,8 @@ Future<void> _patchCache(int otherUserId, ...) async {
   }
 }
 ```
+
+> **✅ `ab778503` · 2026-11-09:** `_patchLocks: Map<int, Future<void>>` ile Completer chaining serial queue eklendi. Aynı konuşma için `_patchCache` çağrıları sıralı; `await prev` önceki RMW tamamlanana kadar bekler.
 
 ---
 
