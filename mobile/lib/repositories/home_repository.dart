@@ -40,9 +40,9 @@ class HomeRepository {
   static const _kKeyTimestamp = 'home_cache_timestamp';
   // §12.8 — bumped to 3: homeCache now stores ID lists, entities in api_cache
   static const _kCacheVersion = 3;
-  static const _kCacheTtlMs   = 15 * 60 * 1000;
+  static const _kCacheTtlMs   = 24 * 60 * 60 * 1000; // 24 saat — offline SWR için stale veri korunur
   static const _kMaxCached    = 60; // 3 sayfa × 20 ilan
-  static const _kEntityTtl    = Duration(hours: 2);
+  static const _kEntityTtl    = Duration(hours: 24);
 
   final ApiClient _client;
   final CacheService _cache;
@@ -150,14 +150,8 @@ class HomeRepository {
         await _reset(box);
         return null;
       }
-      final savedAt = box.get(_kKeyTimestamp) as int?;
-      if (savedAt != null) {
-        final age = DateTime.now().millisecondsSinceEpoch - savedAt;
-        if (age > _kCacheTtlMs) {
-          await _reset(box);
-          return null;
-        }
-      }
+      // TTL dolmuşsa silme — stale veriyi döndür; _fetchInitial() online'da tazeler.
+      // (Sadece versiyon uyumsuzluğunda sıfırla.)
       final feedRaw      = box.get(_kKeyFeed) as String?;
       final hesitatedRaw = box.get(_kKeyHesitated) as String?;
       if (feedRaw == null) return null;
@@ -166,10 +160,10 @@ class HomeRepository {
       final decoded       = jsonDecode(feedRaw) as List<dynamic>;
       final List<dynamic> recent;
       if (decoded.isNotEmpty && decoded.first is int) {
-        // Yeni format: ID listesi → entity store'dan resolve
+        // Yeni format: ID listesi → entity store'dan resolve (stale dahil — offline SWR)
         recent = decoded
             .whereType<int>()
-            .map((id) => _cache.getEntity('listing', id))
+            .map((id) => _cache.getWithStaleness('entity_listing_$id')?.data as Map<String, dynamic>?)
             .whereType<Map<String, dynamic>>()
             .toList();
       } else {

@@ -66,9 +66,14 @@ class NotificationService {
   }
 
   Future<List<dynamic>> getMessageRequests() async {
-    return _api.callList(
-      () async => http.get(Uri.parse('${_api.config.baseUrl}/messages/requests'), headers: await _headers()),
-    );
+    try {
+      return _api.callList(
+        () async => http.get(Uri.parse('${_api.config.baseUrl}/messages/requests'), headers: await _headers()),
+      );
+    } catch (e) {
+      LoggerService.instance.warning('NotificationService', 'Mesaj istekleri alınamadı: $e');
+      return [];
+    }
   }
 
   Future<Map<String, dynamic>> getThreadStatus(int otherUserId) async {
