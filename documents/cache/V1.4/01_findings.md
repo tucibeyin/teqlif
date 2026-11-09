@@ -118,7 +118,7 @@ Sistemdeki en büyük mimari zaaf, katmanlar arasındaki önbellek yaşam döng�
 | **CACHE-17** | 🟠 **P1** | **Backend** | `read_cache.py` | CQRS Read Cache'te Cache Stampede / Thundering Herd Açığı | Cache süresi dolduğunda binlerce isteğin aynı anda DB'yi vurması | ✅ `d0264833` + `c1280225` (2026-11-09) |
 | **CACHE-18** | 🟠 **P1** | **Backend** | `read_cache.py` | `invalidate_cache` İçinde O(N) `redis.scan_iter` ile Redis Blokajı | Yüksek anahtar hacminde Redis CPU'sunun kilitlenmesi | ✅ `d0264833` (2026-11-09) |
 | **CACHE-19** | 🟠 **P1** | **Backend** | `auth.py` | Redis Session Cache Deserializasyonunda `db.merge(load=False)` Riskleri | DetachedInstanceError ve ilişkili alanlarda asenkron crash | ✅ `c0d4fcbe` (2026-11-09) |
-| **CACHE-20** | 🟡 **P2** | **Backend** | `etag_middleware.py` | Post-Computation ETag Nedeniyle DB ve CPU Tasarrufu Sağlanamaması | Her istekte DB sorgusu ve ORM çalışması, 0 CPU tasarrufu | ⏳ Açık |
+| **CACHE-20** | 🟡 **P2** | **Backend** | `etag_middleware.py` | Post-Computation ETag Nedeniyle DB ve CPU Tasarrufu Sağlanamaması | Her istekte DB sorgusu ve ORM çalışması, 0 CPU tasarrufu | ✅ `5724a48c` (2026-11-09) |
 | **CACHE-21** | 🟡 **P2** | **DB** | `database_clickhouse.py` | Write-Behind Tamponlamada 30 Saniyelik Körlük (Read Lag) | Canlı analitik ve son 30 saniyelik tıklamaların okunamaması | ⏳ Açık |
 | **CACHE-22** | 🟡 **P2** | **DB** | `database.py` & PgBouncer | `prepared_statement_cache_size: 0` Nedeniyle SQL Parse Yükü | Her sorgunun DB CPU'sunda tekrar tekrar planlanması | ⏳ Açık |
 | **CACHE-23** | 🟠 **P1** | **Cross** | Client ↔ Backend ↔ DB | Event-Driven Cache Invalidation (WebSocket Push) Yokluğu | DB'de değişen ilanın mobilde 30 dk bayat kalması (Desync) | ✅ `07819c09` + `a6767e3b` (2026-11-09) |
@@ -610,12 +610,27 @@ Kullanıcı kimlik doğrulama oturumu tam bir SQLAlchemy ORM nesnesi olarak merg
 
 * **Katman:** Backend (FastAPI / Architecture)
 * **Etkilenen Dosya:** `backend/app/security/etag_middleware.py`
+* **Durum:** ✅ Giderildi — commit `5724a48c` (2026-11-09)
 
 #### Kök Neden ve Problem Analizi
 `ETagMiddleware`, yanıt gövdesini oluşturulduktan sonra yakalar ve MD5 hash'ini hesaplar. İstemci `If-None-Match` başlığı gönderip 304 alsa dahi; FastAPI tüm DB sorgularını yapmış, ORM modellerini çalıştırmış ve JSON üretmiştir. Bu durum sadece bant genişliğini korur; sunucu CPU ve DB yükünü azaltmaz.
 
 #### Çözüm Reçetesi
 Kritik ve yüksek trafikli GET sorguları (örneğin katalog veya kullanıcı profili) için, DB'ye gitmeden önce bir versiyon veya `updated_at` kontrolü yapılarak erken 304 dönülmelidir.
+
+#### Uygulanan Çözüm — `5724a48c` (2026-11-09)
+
+**Mimari:** ETag store namespace versiyonlamasına (`ns_ver`) bağlı otomatik invalidasyon. Data cache TTL'inden bağımsız, daha uzun TTL (listing: 600s, profil: 1800s). `invalidate_cache()` → `ns_ver` artınca eski ETag store geçersiz sayılır.
+
+**Değişen dosyalar:**
+- `ICacheService` portu: `get_etag()` ve `store_etag()` abstract metodları
+- `RedisCacheService`: pipeline ile tek round-trip `get_etag()`; `etag_store:{ns}:{params_hash}` → `{"_ver": N, "_etag": "hash"}` zarfı
+- `read_cache.py`: `cache_get_etag`, `cache_store_etag` wrappers + `etag_normalize()` (RFC 7232 W/ normalizasyonu, tek kaynak)
+- `ETagMiddleware`: `etag_hash = md5(body).hexdigest()` ayrıştırıldı; `request.state.etag_cache_ns` varsa `fire_and_forget(cache_store_etag(...))` → arka planda ETag Redis'e yazılır
+- `GET /listings/{id}`: pre-route `cache_get_etag()` → eşleşirse 304 döner (DB, ORM, serialization atlanır); cache miss sonrası `request.state` set edilir
+- `GET /users/{username}`: aynı pattern; `prefix_key=username`, `etag_cache_ttl=1800`
+
+**Tasarruf:** Data cache TTL sonrasında (listing 60s, profil 300s) gelen `If-None-Match` isteklerinde DB sorgusu + ORM + JSON serialization tamamen atlanır; maliyet tek Redis round-trip'e iner.
 
 ---
 
