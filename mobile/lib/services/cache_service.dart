@@ -27,10 +27,13 @@ class CacheService {
   static const _kMaxKeys       = 200;
   static const _kEvictInterval = 20;
   static late Box<String> _box;
-  // LRU: son erişim zamanını in-memory tutar; senkron read sözleşmesini bozmaz.
+  // CACHE-11: LRU son erişim zamanı; senkron read sözleşmesini bozmaz.
   static final Map<String, int> _lastRead = {};
   static int _writeCount = 0;
   static bool _isEvicting = false;
+  // CACHE-12: L1 in-memory decoded cache; jsonDecode'u tekrarlanan okumalardan
+  // (entity store, liste render) kaldırır; senkron getData sözleşmesi korunur.
+  static final Map<String, Map<String, dynamic>> _memCache = {};
 
   /// Uygulama başlangıcında (runApp öncesi) çağrılmalıdır.
   static Future<void> init() async {
@@ -88,6 +91,7 @@ class CacheService {
   static Future<void> clearBox() async {
     await _box.clear();
     _lastRead.clear();
+    _memCache.clear();
   }
 
   static Future<void> _migrate() async {
@@ -95,6 +99,7 @@ class CacheService {
     if (stored < _kApiCacheVersion) {
       await _box.clear();
       _lastRead.clear();
+      _memCache.clear();
       await _box.put(_kVersionKey, _kApiCacheVersion.toString());
     }
   }
@@ -105,17 +110,37 @@ class CacheService {
   ///
   /// TTL süresi dolmuşsa veya kayıt yoksa `null` döner.
   dynamic getData(String key) {
+    // L1: in-memory decoded cache; tekrarlanan okumalarda (ör. entity store)
+    // jsonDecode maliyeti sıfır.
+    final mem = _memCache[key];
+    if (mem != null) {
+      final savedAt = (mem['_t'] as num).toInt();
+      final ttlMs = (mem['_x'] as num?)?.toInt() ?? 300000;
+      final age = DateTime.now().millisecondsSinceEpoch - savedAt;
+      if (age > ttlMs) {
+        _memCache.remove(key);
+        return null;
+      }
+      _lastRead[key] = DateTime.now().millisecondsSinceEpoch;
+      return mem['_d'];
+    }
+
+    // L2: Hive box (ilk erişim / cold-start warm-up)
     final raw = _box.get(key);
     if (raw == null) return null;
     try {
       final decoded = jsonDecode(raw);
-      if (decoded is Map &&
+      if (decoded is Map<String, dynamic> &&
           decoded.containsKey('_t') &&
           decoded.containsKey('_d')) {
+        _memCache[key] = decoded;
         final savedAt = (decoded['_t'] as num).toInt();
         final ttlMs = (decoded['_x'] as num?)?.toInt() ?? 300000;
         final age = DateTime.now().millisecondsSinceEpoch - savedAt;
-        if (age > ttlMs) return null;
+        if (age > ttlMs) {
+          _memCache.remove(key);
+          return null;
+        }
         _lastRead[key] = DateTime.now().millisecondsSinceEpoch;
         return decoded['_d'];
       }
@@ -130,13 +155,25 @@ class CacheService {
   /// TTL dolmuş olsa bile veriyi döndürür; [isStale] ile işaretler.
   /// Kayıt hiç yoksa `null` döner.
   ({dynamic data, bool isStale})? getWithStaleness(String key) {
+    // L1
+    final mem = _memCache[key];
+    if (mem != null) {
+      final savedAt = (mem['_t'] as num).toInt();
+      final ttlMs = (mem['_x'] as num?)?.toInt() ?? 300000;
+      final age = DateTime.now().millisecondsSinceEpoch - savedAt;
+      _lastRead[key] = DateTime.now().millisecondsSinceEpoch;
+      return (data: mem['_d'], isStale: age > ttlMs);
+    }
+
+    // L2
     final raw = _box.get(key);
     if (raw == null) return null;
     try {
       final decoded = jsonDecode(raw);
-      if (decoded is Map &&
+      if (decoded is Map<String, dynamic> &&
           decoded.containsKey('_t') &&
           decoded.containsKey('_d')) {
+        _memCache[key] = decoded;
         final savedAt = (decoded['_t'] as num).toInt();
         final ttlMs = (decoded['_x'] as num?)?.toInt() ?? 300000;
         final age = DateTime.now().millisecondsSinceEpoch - savedAt;
@@ -153,11 +190,19 @@ class CacheService {
   ///
   /// Cache kaydı yoksa veya ETag saklanmamışsa `null` döner.
   String? getEtag(String key) {
+    // L1
+    final mem = _memCache[key];
+    if (mem != null) return mem['_e'] as String?;
+
+    // L2
     final raw = _box.get(key);
     if (raw == null) return null;
     try {
       final decoded = jsonDecode(raw);
-      if (decoded is Map) return decoded['_e'] as String?;
+      if (decoded is Map<String, dynamic>) {
+        _memCache[key] = decoded;
+        return decoded['_e'] as String?;
+      }
     } catch (_) {}
     return null;
   }
@@ -179,6 +224,7 @@ class CacheService {
     };
     if (etag != null) wrapper['_e'] = etag;
     await _box.put(key, jsonEncode(wrapper));
+    _memCache[key] = wrapper;
     _lastRead[key] = DateTime.now().millisecondsSinceEpoch;
     // CACHE-11: her _kEvictInterval yazışta arka planda TTL+LRU tahliyesi
     if (++_writeCount % _kEvictInterval == 0) clearExpired().ignore();
@@ -189,9 +235,11 @@ class CacheService {
     if (key != null) {
       await _box.delete(key);
       _lastRead.remove(key);
+      _memCache.remove(key);
     } else {
       await _box.clear();
       _lastRead.clear();
+      _memCache.clear();
     }
   }
 
@@ -214,6 +262,7 @@ class CacheService {
   Future<void> clearAll() async {
     await _box.clear();
     _lastRead.clear();
+    _memCache.clear();
   }
 
   /// Süresi dolmuş tüm kayıtları siler (arka plan bakımı için).
@@ -224,7 +273,7 @@ class CacheService {
     try {
       final now = DateTime.now().millisecondsSinceEpoch;
       final toDelete = <String>[];
-      // Single-pass: TTL + LRU adaylarını tek geçişte topla; Phase 2 re-scan yok.
+      // CACHE-11: single-pass — TTL + LRU adaylarını tek geçişte topla; Phase 2 re-scan yok.
       final lruCandidates = <MapEntry<String, int>>[];
 
       for (final key in _box.keys.cast<String>()) {
@@ -248,9 +297,12 @@ class CacheService {
       }
 
       await _box.deleteAll(toDelete);
-      for (final k in toDelete) { _lastRead.remove(k); }
+      for (final k in toDelete) {
+        _lastRead.remove(k);
+        _memCache.remove(k);
+      }
 
-      // CACHE-11: LRU kırpma — Phase 1'den gelen lruCandidates kullanılır (re-scan yok)
+      // LRU kırpma
       if (_box.length > _kMaxKeys) {
         lruCandidates.sort((a, b) => a.value.compareTo(b.value));
         final keysToDelete = lruCandidates
@@ -258,7 +310,10 @@ class CacheService {
             .map((e) => e.key)
             .toList();
         await _box.deleteAll(keysToDelete);
-        for (final k in keysToDelete) { _lastRead.remove(k); }
+        for (final k in keysToDelete) {
+          _lastRead.remove(k);
+          _memCache.remove(k);
+        }
       }
     } finally {
       _isEvicting = false;
