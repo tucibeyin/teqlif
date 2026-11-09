@@ -39,3 +39,17 @@ class NetworkException extends AppException {
   const NetworkException()
       : super('ERR_NETWORK', code: 'ERR_NETWORK', statusCode: 0);
 }
+
+/// 401 Unauthorized — oturum süresi dolmuş veya token geçersiz.
+/// UI katmanı bu tipi yakalayıp kullanıcıyı login ekranına yönlendirmelidir.
+class UnauthorizedException extends AppException {
+  const UnauthorizedException()
+      : super('Oturum süresi doldu', code: 'UNAUTHORIZED', statusCode: 401);
+}
+
+/// 404 Not Found — kayıt silinmiş veya hiç oluşturulmamış.
+/// Cache temizlendikten sonra fırlatılır.
+class NotFoundException extends AppException {
+  const NotFoundException()
+      : super('Kayıt bulunamadı', code: 'NOT_FOUND', statusCode: 404);
+}

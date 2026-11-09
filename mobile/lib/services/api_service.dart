@@ -74,7 +74,8 @@ class ApiService {
         try {
           yield fromJson(cached.data);
           cacheYielded = true;
-          if (!cached.isStale) return; // taze — ağ çağrısına gerek yok
+          // CACHE-06: erken return kaldırıldı — gerçek SWR için arka plan
+          // revalidation her zaman çalışır (ETag ile 304 → 0 bayt gövde).
         } catch (e) {
           debugPrint('[ApiService] Cache parse hatası ($cacheKey): $e');
         }
@@ -121,8 +122,27 @@ class ApiService {
           );
         }
         yield fromJson(data);
+      } else if (resp.statusCode == 401) {
+        // CACHE-07: 401 — oturum düşmüş; cache+storage temizle ve fırlat.
+        // cacheYielded olsa bile yutulmaz: güvenlik kritik.
+        if (cacheKey != null) await _cache.clearData(cacheKey);
+        await StorageService.clear();
+        throw const UnauthorizedException();
+      } else if (resp.statusCode == 403) {
+        // CACHE-07: 403 — ban veya yetki eksikliği; her zaman fırlat.
+        final body = _safeBody(resp.body);
+        final errMap = body['error'];
+        throw AppException(
+          errMap is Map ? (errMap['message'] as String? ?? 'Erişim reddedildi') : 'Erişim reddedildi',
+          code: errMap is Map ? (errMap['code'] as String? ?? 'FORBIDDEN') : 'FORBIDDEN',
+          statusCode: 403,
+        );
+      } else if (resp.statusCode == 404) {
+        // CACHE-07: 404 — kayıt silinmiş; bayat cache'i temizle ve fırlat.
+        if (cacheKey != null) await _cache.clearData(cacheKey);
+        throw const NotFoundException();
       } else if (!cacheYielded) {
-        // Cache yoksa HTTP hatasını fırlat
+        // Diğer HTTP hataları — cache yoksa fırlat
         final body = _safeBody(resp.body);
         final errMap = body['error'];
         throw AppException(
@@ -135,7 +155,7 @@ class ApiService {
           statusCode: resp.statusCode,
         );
       }
-      // Cache zaten yayıldıysa ve HTTP != 200 → hatayı yut
+      // cacheYielded == true && diğer HTTP hataları (5xx, vb.) → yut (ağ gürültüsü)
     } on SocketException {
       if (!cacheYielded) throw const NetworkException();
       debugPrint('[ApiService] Ağ hatası — cache korunuyor ($cacheKey)');
@@ -143,6 +163,8 @@ class ApiService {
       if (!cacheYielded) throw const NetworkException();
       debugPrint('[ApiService] Timeout — cache korunuyor ($cacheKey)');
     } catch (e) {
+      // AppException alt sınıfları (401/403/404 ve türevleri) her zaman yukarı taşınır
+      if (e is AppException) rethrow;
       if (!cacheYielded) rethrow;
       debugPrint('[ApiService] Ağ hatası — cache korunuyor ($cacheKey): $e');
     }
