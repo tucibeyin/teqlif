@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -34,6 +35,10 @@ class CacheService {
   // CACHE-12: L1 in-memory decoded cache; jsonDecode'u tekrarlanan okumalardan
   // (entity store, liste render) kaldırır; senkron getData sözleşmesi korunur.
   static final Map<String, Map<String, dynamic>> _memCache = {};
+  // CACHE-23: entity_listing_* invalidasyon stream'i — açık ListingDetailScreen'e push trigger.
+  static final StreamController<int> _listingInvalidatedCtrl =
+      StreamController<int>.broadcast();
+  static Stream<int> get listingInvalidated => _listingInvalidatedCtrl.stream;
 
   /// Uygulama başlangıcında (runApp öncesi) çağrılmalıdır.
   static Future<void> init() async {
@@ -275,10 +280,31 @@ class CacheService {
       await _box.delete(key);
       _lastRead.remove(key);
       _memCache.remove(key);
+      // CACHE-23: açık ListingDetailScreen'e anında re-fetch sinyali gönder.
+      if (key.startsWith('entity_listing_')) {
+        final id = int.tryParse(key.substring('entity_listing_'.length));
+        if (id != null) _listingInvalidatedCtrl.add(id);
+      }
     } else {
       await _box.clear();
       _lastRead.clear();
       _memCache.clear();
+    }
+  }
+
+  /// Resume'da tüm [type] entity'lerini temizler; L1+L2 ve invalidasyon stream.
+  static Future<void> clearEntitiesByType(String type) async {
+    final prefix = 'entity_${type}_';
+    final toDelete = _box.keys.cast<String>().where((k) => k.startsWith(prefix)).toList();
+    if (toDelete.isEmpty) return;
+    await _box.deleteAll(toDelete);
+    for (final k in toDelete) {
+      _lastRead.remove(k);
+      _memCache.remove(k);
+      if (type == 'listing') {
+        final id = int.tryParse(k.substring(prefix.length));
+        if (id != null) _listingInvalidatedCtrl.add(id);
+      }
     }
   }
 

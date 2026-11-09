@@ -178,6 +178,8 @@ class MainViewModel extends AutoDisposeAsyncNotifier<MainState> {
     _refreshBadges();
     ref.read(wsServiceProvider).connect();
     PushNotificationService.notificationStream.add({});
+    // CACHE-23: resume'da arka planda değişmiş olabilecek listing cache'ini temizle.
+    CacheService.clearEntitiesByType('listing').ignore();
     _sessionStart = DateTime.now();
   }
   

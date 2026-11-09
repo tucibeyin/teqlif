@@ -46,6 +46,7 @@ import '../ui_library/components/buttons/teq_button.dart';
 import '../ui_library/components/buttons/teq_async_button.dart';
 import '../models/credit_gate_data.dart';
 import '../core/event_bus.dart';
+import '../services/cache_service.dart';
 
 class ListingDetailScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic> listing;
@@ -133,6 +134,9 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
   // Dwell süresi ölçümü
   late final DateTime _enteredAt;
 
+  // CACHE-23: WS invalidasyon aboneliği — açıkken anlık re-fetch tetikler.
+  StreamSubscription<int>? _invalidationSub;
+
   // Galeri + video analytics
   int _maxPhotoReached = 0;
 
@@ -202,6 +206,11 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
       });
     _loadMyId();
     _refreshListingData();
+    // CACHE-23: entity_listing invalidasyon stream — backend push gelince re-fetch.
+    final myId = widget.listing['id'] as int?;
+    _invalidationSub = CacheService.listingInvalidated.listen((invalidatedId) {
+      if (invalidatedId == myId && mounted) _refreshListingData();
+    });
     _loadOffers();
     _loadSimilarListings();
   }
@@ -550,6 +559,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     }
     _offerCtrl.dispose();
     _offersNotifier.dispose();
+    _invalidationSub?.cancel();
     super.dispose();
   }
 
