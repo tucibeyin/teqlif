@@ -104,8 +104,8 @@ Sistemdeki en büyük mimari zaaf, katmanlar arasındaki önbellek yaşam döng�
 | **CACHE-03** | 🔴 **P0** | **Client** | `storage_service.dart` & `offline_queue_service.dart` | Eksik Logout Temizliği & Offline Mesajın Başkası Adına Gitmesi | `searchCache`, `_likeCache` ve offline mesaj sızıntısı | ✅ `025717a2` · 2026-11-09 |
 | **CACHE-04** | 🔴 **P0** | **Client** | `TeqlifCacheManager` & UI Ekranları | Statik `cacheKey: 'user_${id}_avatar'` Nedeniyle Avatar Kilitlenmesi | Profil resmi değişmesine rağmen 48 saat eski resmin görünmesi | ✅ `3951a831` · 2026-11-09 |
 | **CACHE-05** | 🟠 **P1** | **Backend** | `etag_middleware.py` | ETag Doğrulamasında `strip('W/')` Eksikliği (Weak ETag Incompatibility) | Reverse proxy (Nginx/Cloudflare) arkasında 304'ün çalışmaması | ✅ `c79aade5` + `a259322d` · 2026-11-09 |
-| **CACHE-06** | 🟠 **P1** | **Client** | `api_service.dart` | Yanlış SWR Mantığı (`if (!cached.isStale) return`) | Arka plan yenilemenin engellenmesi, bayat veri kalıcılığı | ⏳ Açık |
-| **CACHE-07** | 🟠 **P1** | **Client** | `api_service.dart` | Cache Yayını Sonrası 401/403/404 Hatalarının Yutulması | Banlanan veya silinen hesabın/ilanın cache'te asılı kalması | ⏳ Açık |
+| **CACHE-06** | 🟠 **P1** | **Client** | `api_service.dart` | Yanlış SWR Mantığı (`if (!cached.isStale) return`) | Arka plan yenilemenin engellenmesi, bayat veri kalıcılığı | ✅ `d1d97277` · 2026-11-09 |
+| **CACHE-07** | 🟠 **P1** | **Client** | `api_service.dart` | Cache Yayını Sonrası 401/403/404 Hatalarının Yutulması | Banlanan veya silinen hesabın/ilanın cache'te asılı kalması | ✅ `d1d97277` · 2026-11-09 |
 | **CACHE-08** | 🟠 **P1** | **Client** | `message_repository.dart` | `_patchCache` İçinde Kilitsiz Read-Modify-Write Yarış Durumu | Eşzamanlı gelen WebSocket mesajlarının birbirini ezmesi | ⏳ Açık |
 | **CACHE-09** | 🟠 **P1** | **Client** | `home_repository.dart` vs `api_service.dart` | Çift Başlı Cache Mimarisi (`homeCache` vs `api_cache`) & ETag Baypası | Veri duplikasyonu, merkezi SWR ve ETag mekanizmasının çiğnenmesi | ⏳ Açık |
 | **CACHE-10** | 🟡 **P2** | **Client** | `listing_detail_screen.dart` & `swipe_live_screen.dart` | View Katmanından Doğrudan `clearData()` Çağrısı (ADR §8 İhlali) | UI'ın önbellek anahtarlarını ve veri katmanını bilmesi | ⏳ Açık |
@@ -308,6 +308,8 @@ if client_etag and any(_etag_value(p) == _etag_value(etag) for p in client_etag.
 #### Çözüm Reçetesi
 Erken dönüş (`return`) kaldırılmalı; önbellek anında emit edildikten sonra ağ çağrısı arka planda her zaman sessizce çalışıp ETag ile sunucudan teyit almalıdır.
 
+> **✅ `d1d97277` · 2026-11-09:** `if (!cached.isStale) return` satırı kaldırıldı. ETag altyapısı (CACHE-05) ile gerçek SWR aktif: veri değişmemişse 304 → 0 bayt gövde, TTL tazeleme; değişmişse 200 → sessiz güncelleme.
+
 ---
 
 ### CACHE-07 · 🟠 P1 (Yüksek) · Cache Yayını Sonrası 401/403/404 Hatalarının Sessizce Yutulması
@@ -332,6 +334,8 @@ if (resp.statusCode == 401) {
   throw AppException(...);
 }
 ```
+
+> **✅ `d1d97277` · 2026-11-09:** 401 (cache+storage temizle + UnauthorizedException), 403 (AppException(403) fırlat), 404 (cache anahtarını temizle + NotFoundException) eklendi. `catch (e)` bloğuna `if (e is AppException) rethrow` guard'ı eklenerek AppException alt sınıflarının yutulması engellendi.
 
 ---
 
