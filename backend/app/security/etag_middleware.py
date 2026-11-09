@@ -8,6 +8,21 @@ _SKIP_PATHS = frozenset({"/metrics", "/sitemap.xml", "/ads.txt", "/robots.txt"})
 _SKIP_PREFIXES = ("/.well-known/",)
 
 
+def _etag_value(tag: str | None) -> str:
+    """ETag veya If-None-Match değerinden W/ öneki ve tırnakları soyar.
+
+    RFC 7232 §3.2: koşullu GET'te weak/strong karşılaştırması için hash değeri yeterli.
+    Nginx (gzip_vary) ve Cloudflare proxy katmanı strong ETag'i W/ ile zayıflatır;
+    bu normalize edici olmadan 304 asla tetiklenmez.
+    """
+    if not tag:
+        return ""
+    tag = tag.strip()
+    if tag.startswith("W/"):
+        tag = tag[2:]
+    return tag.strip('"')
+
+
 class ETagMiddleware(BaseHTTPMiddleware):
     """GET 200 JSON yanıtlarına ETag header ekler; If-None-Match eşleşirse 304 döner.
 
@@ -27,7 +42,10 @@ class ETagMiddleware(BaseHTTPMiddleware):
 
         etag = f'"{hashlib.md5(body, usedforsecurity=False).hexdigest()}"'  # noqa: S324
 
-        if request.headers.get("if-none-match") == etag:
+        # CACHE-05: W/ zayıf ETag öneki normalize edilir (RFC 7232 §3.2).
+        # Nginx gzip_vary ve Cloudflare proxy strong ETag'i W/"hash" biçimine
+        # dönüştürür; normalize etmeden 304 hiçbir zaman tetiklenmez.
+        if _etag_value(request.headers.get("if-none-match")) == _etag_value(etag):
             return Response(status_code=304, headers={"etag": etag})
 
         headers = {k: v for k, v in response.headers.items() if k.lower() != "content-length"}
