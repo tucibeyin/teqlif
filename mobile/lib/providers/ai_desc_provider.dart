@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 
 import '../core/network/api_client.dart';
-import '../services/cache_service.dart';
 import '../services/storage_service.dart';
+import '../services/wallet_service.dart';
 
 enum AiDescStatus { idle, loading, done, error }
 
@@ -25,8 +25,7 @@ class AiDescState {
 
 class AiDescNotifier extends StateNotifier<AiDescState> {
   final ApiClient _api;
-  final CacheService _cache;
-  AiDescNotifier(this._api, this._cache) : super(const AiDescState());
+  AiDescNotifier(this._api) : super(const AiDescState());
 
   Future<void> generate({
     required String title,
@@ -62,7 +61,7 @@ class AiDescNotifier extends StateNotifier<AiDescState> {
       final teqlikSpent = (data['teqlik_spent'] as num?)?.toInt() ?? 0;
 
       if (teqlikSpent > 0) {
-        _cache.clearData(StorageService.cacheWalletData);
+        await WalletService.invalidateBalance();
       }
 
       state = AiDescState(
@@ -82,5 +81,5 @@ class AiDescNotifier extends StateNotifier<AiDescState> {
 
 final aiDescProvider =
     StateNotifierProvider.autoDispose<AiDescNotifier, AiDescState>(
-  (ref) => AiDescNotifier(ref.watch(apiClientProvider), ref.watch(cacheServiceProvider)),
+  (ref) => AiDescNotifier(ref.watch(apiClientProvider)),
 );

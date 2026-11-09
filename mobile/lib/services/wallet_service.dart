@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../main.dart' show providerContainer;
+import '../core/event_bus.dart';
 import '../core/network/api_client.dart';
 import '../services/api_service.dart';
 import '../services/cache_service.dart';
@@ -193,6 +194,8 @@ class WalletService {
         fromJson: (raw) => raw as Map<String, dynamic>,
       );
 
-  static Future<void> invalidateBalance() =>
-      providerContainer.read(cacheServiceProvider).clearData(StorageService.cacheWalletData);
+  static Future<void> invalidateBalance({bool fireEvent = true}) async {
+    await providerContainer.read(cacheServiceProvider).clearData(StorageService.cacheWalletData);
+    if (fireEvent) eventBus.fire(const CreditsChangedEvent());
+  }
 }

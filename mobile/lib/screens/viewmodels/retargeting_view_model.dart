@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 import '../../core/network/api_client.dart';
 import '../../services/storage_service.dart';
 import '../../services/analytics_service.dart';
-import '../../services/cache_service.dart';
+import '../../services/wallet_service.dart';
 import '../../models/listing_filter_state.dart';
 
 class RetargetingState {
@@ -71,8 +71,6 @@ class RetargetingState {
 }
 
 class RetargetingViewModel extends AutoDisposeNotifier<RetargetingState> {
-  CacheService get _cache => ref.read(cacheServiceProvider);
-
   Timer? _countdownTimer;
 
   @override
@@ -196,7 +194,7 @@ class RetargetingViewModel extends AutoDisposeNotifier<RetargetingState> {
     );
     
     if (result != null && result['error'] == null) {
-      _cache.clearData(StorageService.cacheWalletData);
+      await WalletService.invalidateBalance();
       final sent = result['sent'] as int? ?? actualCount;
       state = state.copyWith(
         sent: true,
