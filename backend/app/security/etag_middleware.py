@@ -45,7 +45,9 @@ class ETagMiddleware(BaseHTTPMiddleware):
         # CACHE-05: W/ zayıf ETag öneki normalize edilir (RFC 7232 §3.2).
         # Nginx gzip_vary ve Cloudflare proxy strong ETag'i W/"hash" biçimine
         # dönüştürür; normalize etmeden 304 hiçbir zaman tetiklenmez.
-        if _etag_value(request.headers.get("if-none-match")) == _etag_value(etag):
+        # RFC 7232 §3.2: istemci virgülle ayrılmış birden fazla ETag gönderebilir.
+        client_etag = request.headers.get("if-none-match", "")
+        if client_etag and any(_etag_value(p) == _etag_value(etag) for p in client_etag.split(",")):
             return Response(status_code=304, headers={"etag": etag})
 
         headers = {k: v for k, v in response.headers.items() if k.lower() != "content-length"}
