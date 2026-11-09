@@ -111,8 +111,8 @@ Sistemdeki en büyük mimari zaaf, katmanlar arasındaki önbellek yaşam döng�
 | **CACHE-10** | 🟡 **P2** | **Client** | `listing_detail_screen.dart` & `swipe_live_screen.dart` | View Katmanından Doğrudan `clearData()` Çağrısı (ADR §8 İhlali) | UI'ın önbellek anahtarlarını ve veri katmanını bilmesi | ✅ `f80b519d` (2026-11-09) |
 | **CACHE-11** | 🟡 **P2** | **Client** | `cache_service.dart` | Yanıltıcı LRU (Aslında FIFO) ve Çalışma Zamanında Sınırsız Büyüme | Aktif kayıtların erken silinmesi, uzun oturumlarda bellek şişmesi | ✅ `311bef48` (2026-11-09) |
 | **CACHE-12** | 🟡 **P2** | **Client** | `cache_service.dart` | Ana UI İş Parçacığında (UI Isolate) Senkron `jsonDecode` Blokajı | Feed ve mesaj listeleri yüklenirken frame düşmesi (UI Jank) | ✅ `d7d8155b` (2026-11-09) |
-| **CACHE-13** | 🟡 **P2** | **Client** | `api_service.dart` | HTTP 304 Durumunda Tüm Body'nin Yeniden Serialize Edilmesi | Gereksiz disk yazma I/O'su ve ETag kaybı | ✅ `PLACEHOLDER` (2026-11-09) |
-| **CACHE-14** | 🟡 **P2** | **Client** | `api_service.dart` | Sunucu `Cache-Control` (`no-store`, `no-cache`) Direktiflerinin Yoksayılması | Sunucunun saklama dediği verinin istemcide zorla diske yazılması | ✅ `PLACEHOLDER` (2026-11-09) |
+| **CACHE-13** | 🟡 **P2** | **Client** | `api_service.dart` | HTTP 304 Durumunda Tüm Body'nin Yeniden Serialize Edilmesi | Gereksiz disk yazma I/O'su ve ETag kaybı | ✅ `3fbdcc86` (2026-11-09) |
+| **CACHE-14** | 🟡 **P2** | **Client** | `api_service.dart` | Sunucu `Cache-Control` (`no-store`, `no-cache`) Direktiflerinin Yoksayılması | Sunucunun saklama dediği verinin istemcide zorla diske yazılması | ✅ `3fbdcc86` (2026-11-09) |
 | **CACHE-15** | 🟢 **P3** | **Client** | `api_service.dart` | Uçuşan İsteklerin Birleştirilmemesi (In-flight Request Coalescing Yokluğu) | Aynı anda açılan bileşenlerde paralel mükerrer HTTP GET çağrıları | ⏳ Açık |
 | **CACHE-16** | 🟠 **P1** | **Backend** | `read_cache.py` & `routers/` | Dağıtık Cache Parçalanması ve Merkezi Cache Manager Eksikliği | Tutarsız TTL'ler, dağınık Redis erişimi ve mimari kirlilik | ⏳ Açık |
 | **CACHE-17** | 🟠 **P1** | **Backend** | `read_cache.py` | CQRS Read Cache'te Cache Stampede / Thundering Herd Açığı | Cache süresi dolduğunda binlerce isteğin aynı anda DB'yi vurması | ⏳ Açık |
@@ -468,6 +468,13 @@ Sunucu `304 Not Modified` döndüğünde `_cache.saveData` çağrılarak tüm JS
 #### Çözüm Reçetesi
 Veri gövdesini tekrar diske yazmak yerine sadece timestamp (`_t`) ve varsa yeni ETag güncellenmelidir.
 
+#### Durum: ✅ Kapatıldı — `3fbdcc86` (2026-11-09)
+
+#### Uygulanan Çözüm
+`CacheService.touchData(key, {ttl, newEtag})` metodu eklendi. L1 hit'te (`_memCache` dolu): `_t`/`_x`/`_e` Map mutasyonu + tek Hive write — Hive okuma ve jsonDecode maliyeti sıfır. L2 fallback (cold entry): Hive read + minimal decode + mutate + encode + write.
+
+`api_service.dart` 304 path'i `saveData(cacheKey, existing.data, ttl, etag: OLD)` yerine `touchData(cacheKey, ttl: cacheTtl, newEtag: resp.headers['etag'])` çağırır. `resp.headers['etag']` null ise mevcut ETag korunur (RFC 7232 §4.1).
+
 ---
 
 ### CACHE-14 · 🟡 P2 (Orta) · Sunucu `Cache-Control` Direktiflerinin Yoksayılması
@@ -480,6 +487,13 @@ Veri gövdesini tekrar diske yazmak yerine sadece timestamp (`_t`) ve varsa yeni
 
 #### Çözüm Reçetesi
 Yanıt başlığında `no-store` varsa `cache.saveData` adımı atlanmalıdır.
+
+#### Durum: ✅ Kapatıldı — `3fbdcc86` (2026-11-09)
+
+#### Uygulanan Çözüm
+`ApiService` sınıfına iki statik yardımcı eklendi:
+- `_noStore(String? cc)` — `Cache-Control` başlığında `no-store` direktifi varsa `true` döner; 200 path'te `saveData` tamamen atlanır.
+- `_effectiveTtl(String? cc, Duration requested)` — `no-cache` direktifi varsa `Duration.zero` döner; `saveData` veriyi stale olarak kaydeder, SWR her okumada arka plan revalidation tetikler (RFC 9111 §5.2.1.4).
 
 ---
 
