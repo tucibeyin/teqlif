@@ -108,7 +108,7 @@ Sistemdeki en büyük mimari zaaf, katmanlar arasındaki önbellek yaşam döng�
 | **CACHE-07** | 🟠 **P1** | **Client** | `api_service.dart` | Cache Yayını Sonrası 401/403/404 Hatalarının Yutulması | Banlanan veya silinen hesabın/ilanın cache'te asılı kalması | ✅ `d1d97277` · 2026-11-09 |
 | **CACHE-08** | 🟠 **P1** | **Client** | `message_repository.dart` | `_patchCache` İçinde Kilitsiz Read-Modify-Write Yarış Durumu | Eşzamanlı gelen WebSocket mesajlarının birbirini ezmesi | ✅ `ab778503` · 2026-11-09 |
 | **CACHE-09** | 🟠 **P1** | **Client** | `home_repository.dart` vs `api_service.dart` | Çift Başlı Cache Mimarisi (`homeCache` vs `api_cache`) & ETag Baypası | Veri duplikasyonu, merkezi SWR ve ETag mekanizmasının çiğnenmesi | ✅ `3d4f4fc4` · 2026-11-09 |
-| **CACHE-10** | 🟡 **P2** | **Client** | `listing_detail_screen.dart` & `swipe_live_screen.dart` | View Katmanından Doğrudan `clearData()` Çağrısı (ADR §8 İhlali) | UI'ın önbellek anahtarlarını ve veri katmanını bilmesi | ⏳ Açık |
+| **CACHE-10** | 🟡 **P2** | **Client** | `listing_detail_screen.dart` & `swipe_live_screen.dart` | View Katmanından Doğrudan `clearData()` Çağrısı (ADR §8 İhlali) | UI'ın önbellek anahtarlarını ve veri katmanını bilmesi | ✅ `f80b519d` (2026-11-09) |
 | **CACHE-11** | 🟡 **P2** | **Client** | `cache_service.dart` | Yanıltıcı LRU (Aslında FIFO) ve Çalışma Zamanında Sınırsız Büyüme | Aktif kayıtların erken silinmesi, uzun oturumlarda bellek şişmesi | ⏳ Açık |
 | **CACHE-12** | 🟡 **P2** | **Client** | `cache_service.dart` | Ana UI İş Parçacığında (UI Isolate) Senkron `jsonDecode` Blokajı | Feed ve mesaj listeleri yüklenirken frame düşmesi (UI Jank) | ⏳ Açık |
 | **CACHE-13** | 🟡 **P2** | **Client** | `api_service.dart` | HTTP 304 Durumunda Tüm Body'nin Yeniden Serialize Edilmesi | Gereksiz disk yazma I/O'su ve ETag kaybı | ⏳ Açık |
@@ -403,12 +403,16 @@ Future<void> _patchCache(int otherUserId, ...) async {
 
 * **Katman:** Client (Mobile Flutter)
 * **Etkilenen Dosyalar:** `mobile/lib/screens/listing_detail_screen.dart`, `mobile/lib/screens/live/swipe_live_screen.dart`
+* **Durum:** ✅ Giderildi — commit `f80b519d` (2026-11-09)
 
 #### Kök Neden ve Problem Analizi
 UI widget sınıfları doğrudan `ref.read(cacheServiceProvider).clearData('user_wallet_data')` çağırmaktadır. Bu durum Clean Architecture ve ADR §8 (MVVM) prensiplerini ihlal eder; UI katmanı veri katmanının anahtar adlarını ve cache mekanizmalarını bilmemelidir.
 
 #### Çözüm Reçetesi
 Önbellek iptali ilgili ViewModel veya Repository metodunun (örneğin `WalletRepository.invalidateBalance()`) içine kapsüllenmelidir.
+
+#### Uygulanan Çözüm
+`WalletService.invalidateBalance()` statik metodu eklendi (`wallet_service.dart`); `providerContainer.read(cacheServiceProvider)` aynı serviste zaten kullanılan pattern ile tutarlı. Üç çağrı noktasındaki doğrudan `cacheServiceProvider` referansları bu metotla değiştirildi; `cache_service.dart` importları ihlal eden ekranlardan kaldırıldı.
 
 ---
 
