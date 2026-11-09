@@ -111,12 +111,16 @@ class ApiService {
         final data = jsonDecode(resp.body);
         if (cacheKey != null) {
           // CACHE-14: Cache-Control direktiflerini dikkate al (RFC 9111).
-          // no-store → hiç kaydetme; no-cache → ttl=0 (SWR her zaman revalidate).
-          if (!_noStore(resp.headers['cache-control'])) {
+          // no-store → hiç kaydetme; önceden kayıtlı zombie veriyi de sil.
+          // no-cache / max-age=0 → ttl=0 (SWR her zaman revalidate eder).
+          final cc = resp.headers['cache-control'];
+          if (_noStore(cc)) {
+            await _cache.clearData(cacheKey);
+          } else {
             await _cache.saveData(
               cacheKey,
               data,
-              ttl: _effectiveTtl(resp.headers['cache-control'], cacheTtl),
+              ttl: _effectiveTtl(cc, cacheTtl),
               etag: resp.headers['etag'],
             );
           }
@@ -184,13 +188,13 @@ class ApiService {
     return cc.split(',').any((d) => d.trim().toLowerCase() == 'no-store');
   }
 
-  /// RFC 9111 — `Cache-Control: no-cache` direktifi varsa `Duration.zero` döner
-  /// (SWR'da her erişim anında stale → arka plan revalidation tetikler).
+  /// RFC 9111 — `no-cache` veya `max-age=0` direktifi varsa `Duration.zero`
+  /// döner (SWR'da her erişim anında stale → arka plan revalidation tetikler).
   /// Aksi hâlde istenen [requested] TTL uygulanır.
   static Duration _effectiveTtl(String? cc, Duration requested) {
     if (cc == null) return requested;
     final dirs = cc.split(',').map((d) => d.trim().toLowerCase());
-    if (dirs.any((d) => d == 'no-cache')) return Duration.zero;
+    if (dirs.any((d) => d == 'no-cache' || d == 'max-age=0')) return Duration.zero;
     return requested;
   }
 }
