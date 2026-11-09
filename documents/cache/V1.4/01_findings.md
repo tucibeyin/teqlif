@@ -119,8 +119,8 @@ Sistemdeki en büyük mimari zaaf, katmanlar arasındaki önbellek yaşam döng�
 | **CACHE-18** | 🟠 **P1** | **Backend** | `read_cache.py` | `invalidate_cache` İçinde O(N) `redis.scan_iter` ile Redis Blokajı | Yüksek anahtar hacminde Redis CPU'sunun kilitlenmesi | ✅ `d0264833` (2026-11-09) |
 | **CACHE-19** | 🟠 **P1** | **Backend** | `auth.py` | Redis Session Cache Deserializasyonunda `db.merge(load=False)` Riskleri | DetachedInstanceError ve ilişkili alanlarda asenkron crash | ✅ `c0d4fcbe` (2026-11-09) |
 | **CACHE-20** | 🟡 **P2** | **Backend** | `etag_middleware.py` | Post-Computation ETag Nedeniyle DB ve CPU Tasarrufu Sağlanamaması | Her istekte DB sorgusu ve ORM çalışması, 0 CPU tasarrufu | ✅ `5724a48c` (2026-11-09) |
-| **CACHE-21** | 🟡 **P2** | **DB** | `database_clickhouse.py` | Write-Behind Tamponlamada 30 Saniyelik Körlük (Read Lag) | Canlı analitik ve son 30 saniyelik tıklamaların okunamaması | ⏳ Açık |
-| **CACHE-22** | 🟡 **P2** | **DB** | `database.py` & PgBouncer | `prepared_statement_cache_size: 0` Nedeniyle SQL Parse Yükü | Her sorgunun DB CPU'sunda tekrar tekrar planlanması | ⏳ Açık |
+| **CACHE-21** | 🟡 **P2** | **DB** | `database_clickhouse.py` | Write-Behind Tamponlamada 30 Saniyelik Körlük (Read Lag) | Canlı analitik ve son 30 saniyelik tıklamaların okunamaması | ✅ `4b43fc37` · 2026-11-09 |
+| **CACHE-22** | 🟡 **P2** | **DB** | `database.py` & PgBouncer | `prepared_statement_cache_size: 0` Nedeniyle SQL Parse Yükü | Her sorgunun DB CPU'sunda tekrar tekrar planlanması | ✅ `4b43fc37` · 2026-11-09 |
 | **CACHE-23** | 🟠 **P1** | **Cross** | Client ↔ Backend ↔ DB | Event-Driven Cache Invalidation (WebSocket Push) Yokluğu | DB'de değişen ilanın mobilde 30 dk bayat kalması (Desync) | ✅ `07819c09` + `a6767e3b` (2026-11-09) |
 
 ---
@@ -645,6 +645,20 @@ Kullanıcı tıklama ve dwell time olayları Redis `ch_buf:*` listelerine yazıl
 #### Çözüm Reçetesi
 Gerçek zamanlı görünürlük gerektiren kritik metrikler için (örneğin canlı yayın anlık izleyici veya açık artırma teklifleri), sorgu anında Redis buffer'ındaki eleman sayısı `LLEN` ile okunup ClickHouse sonucuna eklenmelidir.
 
+#### Durum: ✅
+
+#### Uygulanan Çözüm — `4b43fc37` (2026-11-09)
+
+**`database_clickhouse.py`:** `get_buffered_user_event_stats(item_ids, item_type, ts_start, ts_end, *, stream_id)` eklendi.
+- `LLEN` gate: buffer boşsa O(1)'de erken çıkış.
+- `LRANGE 0 -1` ile tüm buffer okunur; `item_id`, `item_type`, `timestamp` aralığına göre filtrelenir.
+- Döner: `listing_user_ids`, `stream_user_ids`, `hesitation_user_ids`, `all_user_ids` (union set), `avg_budget`.
+
+**`routers/analytics.py`:** Stream summary endpoint'e CACHE-21 bloğu eklendi.
+- `ts_start`/`ts_end` try bloğunun dışına alındı (hem ClickHouse hem buffer kullanır).
+- ClickHouse sorgusu bittikten sonra `get_buffered_user_event_stats()` çağrılır; `unique_viewers += len(all_user_ids)`, `hesitation_count += len(hesitation_user_ids)`.
+- ClickHouse erişilemez olsa bile buffer sonucu tek kaynak olarak kullanılır.
+
 ---
 
 ### CACHE-22 · 🟡 P2 (Orta) · `prepared_statement_cache_size: 0` Nedeniyle SQL Parse Yükü
@@ -657,6 +671,18 @@ PgBouncer transaction pooling modunda prepared statement çakışmalarını enge
 
 #### Çözüm Reçetesi
 PgBouncer 1.21+ sürümünün sunduğu yerel prepared statement desteği (`max_prepared_statements`) devreye alınmalı veya PostgreSQL sunucusunda sık kullanılan şablonlar için plan önbelleklemesi optimize edilmelidir.
+
+#### Durum: ✅
+
+#### Uygulanan Çözüm — `4b43fc37` (2026-11-09)
+
+**`database.py`:** `use_pgbouncer=True` branch'inde `prepared_statement_cache_size: 0` ve `statement_cache_size: 0` connect_args kaldırıldı. asyncpg varsayılan statement cache (1024) yeniden etkin.
+
+**`deploy/scale/V2.1/node1/resources/pgbouncer/pgbouncer.ini`:** `max_prepared_statements = 200` eklendi; `ignore_startup_parameters` ve `stats_users` satırları canlı config ile senkronize edildi.
+
+**`deploy/scale/V2.1/scripts/teqlif-restart.sh`:** `sync_pgbouncer()` fonksiyonu eklendi — config değişince `/etc/pgbouncer/pgbouncer.ini` günceller ve `systemctl reload pgbouncer` çalıştırır. node1 case'e çağrısı eklendi.
+
+**node1:** PgBouncer config `/etc/pgbouncer/pgbouncer.ini` güncellendi, `systemctl reload pgbouncer` çalıştırıldı.
 
 ---
 
