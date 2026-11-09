@@ -444,6 +444,17 @@ Hive kutusu `Box<String>` olarak kullanıldığından, her `getData()` çağrıs
 #### Çözüm Reçetesi
 Büyük JSON yükleri arka plan isolate'ine (`compute(jsonDecode, ...)`) taşınmalı veya Hive binary TypeAdapter serileştirmesine geçilmelidir.
 
+> **Not:** `compute()` yaklaşımı `getData()` metodunu `async` yapmak zorunda bırakır ve Riverpod `build()` içindeki senkron okuma sözleşmesini bozar. Ayrıca Dart Isolate port kopyalama maliyeti (~1-2 ms) küçük JSON'larda decode süresinden daha yüksektir.
+
+#### Durum: ✅ Kapatıldı — `d7d8155b` (2026-11-09)
+
+#### Uygulanan Çözüm
+`compute()` yerine L1 In-Memory Decoded Cache (`_memCache`) mimarisi tercih edildi.
+
+`static final Map<String, Map<String, dynamic>> _memCache = {}` eklendi. `getData` / `getWithStaleness` / `getEtag` ilk erişimde Hive'dan bir kez `jsonDecode` yapar ve çözülen zarfı `_memCache`'e yazar; sonraki okumalar O(1) hash lookup ile döner — ana UI thread'inde tekrarlanan `jsonDecode` sıfırlanır. `saveData` yazışta `_memCache`'i anında günceller. `clearBox` / `clearData` / `clearAll` / `_migrate` / `clearExpired` her tahliyede `_memCache`'i de senkron temizler. `getData()` SENKRON kalır, Riverpod `build()` sözleşmesi korunur.
+
+**Follow-up (`d7d8155b` follow-up):** `clearExpired()` taramasında L1 hit path eklendi — `_memCache`'de zaten decode edilmiş zarf varsa Hive disk okuma ve `jsonDecode` atlanır; cold entry'ler için L2 Hive fallback devam eder.
+
 ---
 
 ### CACHE-13 · 🟡 P2 (Orta) · HTTP 304 Durumunda Tüm Body'nin Yeniden Serialize Edilmesi

@@ -277,6 +277,22 @@ class CacheService {
       final lruCandidates = <MapEntry<String, int>>[];
 
       for (final key in _box.keys.cast<String>()) {
+        // L1: warm entry — Hive okuma ve jsonDecode maliyeti sıfır.
+        final mem = _memCache[key];
+        if (mem != null) {
+          if (mem.containsKey('_t')) {
+            final age = now - (mem['_t'] as num).toInt();
+            final ttl = (mem['_x'] as num?)?.toInt() ?? 300000;
+            if (age > ttl) {
+              toDelete.add(key);
+            } else {
+              final lruTime = _lastRead[key] ?? (mem['_t'] as num).toInt();
+              lruCandidates.add(MapEntry(key, lruTime));
+            }
+          }
+          continue;
+        }
+        // L2: cold entry — henüz okun(a)mamış, Hive'dan decode et.
         final raw = _box.get(key);
         if (raw == null) continue;
         try {
