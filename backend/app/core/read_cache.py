@@ -1,99 +1,91 @@
 """
-CQRS Read Model Cache — Cache-Aside pattern.
+CQRS Read Model Cache — uyumluluk katmanı.
 
-Write tarafı (PostgreSQL) değişmez; okuma tarafı Redis üzerinden
-servis edilir. Miss durumunda DB'den çekip cache'e yazar.
+Bu modül geriye dönük uyumluluğu korur: mevcut router ve use-case
+importları değişmeden çalışmaya devam eder.  Tüm iş mantığı
+``app.infrastructure.adapters.redis_cache_service.RedisCacheService``
+içinde yaşar (CACHE-16/17/18).
 
-Kullanım:
-    from app.core.read_cache import read_cache, invalidate_cache
+Kullanım (eskisiyle aynı):
+    from app.core.read_cache import cache_get, cache_set, invalidate_cache
 
-    # Endpoint'te:
-    cached = await read_cache("listings:search", params, ttl=30)
+    cached = await cache_get("listing:42", params)
     if cached is not None:
         return cached
-    result = await ListingService(db).get_listings(...)
-    await read_cache.set("listings:search", params, result, ttl=30)
+    result = await service.get(...)
+    await cache_set("listing:42", params, result, ttl=60)
     return result
 
-    # İlan oluşturulduğunda/güncellendiğinde:
-    await invalidate_cache("listings:search")
+    # İlan güncellendiğinde:
+    await invalidate_cache("listing:42")
+
+Stampede-safe erişim (yeni API):
+    from app.core.read_cache import cache_get_or_compute
+
+    return await cache_get_or_compute(
+        "listing:42", params,
+        compute_fn=lambda: service.get(...),
+        ttl=60,
+    )
 """
 from __future__ import annotations
 
-import hashlib
-import json
-from typing import Any
+from typing import Any, Awaitable, Callable
 
-from app.utils.redis_client import get_redis
-from app.core.logger import get_logger
+from app.infrastructure.adapters.redis_cache_service import RedisCacheService
 
-logger = get_logger(__name__)
-
-_PREFIX = "cqrs"
+_cache: RedisCacheService = RedisCacheService()
 
 
-def _make_key(namespace: str, params: dict, prefix_key: str | None = None) -> str:
-    params_hash = hashlib.md5(
-        json.dumps(params, sort_keys=True, default=str).encode()
-    ).hexdigest()[:12]
-    if prefix_key:
-        return f"{_PREFIX}:{namespace}:{prefix_key}:{params_hash}"
-    return f"{_PREFIX}:{namespace}:{params_hash}"
+async def cache_get(
+    namespace: str,
+    params: dict,
+    prefix_key: str | None = None,
+) -> Any | None:
+    """Cache hit → veri, miss → None."""
+    return await _cache.get(namespace, params, prefix_key)
 
 
-async def cache_get(namespace: str, params: dict, prefix_key: str | None = None) -> Any | None:
-    """Cache miss → None, hit → deserialize edilmiş veri."""
-    try:
-        redis = await get_redis()
-        raw = await redis.get(_make_key(namespace, params, prefix_key))
-        if raw:
-            logger.debug("[CQRS] Cache HIT | ns=%s", namespace)
-            return json.loads(raw)
-    except Exception as exc:
-        logger.warning("[CQRS] Cache get hatası | ns=%s | %s", namespace, exc)
-    return None
-
-
-async def cache_set(namespace: str, params: dict, data: Any, ttl: int = 30, prefix_key: str | None = None) -> None:
-    """Veriyi Redis'e yazar."""
-    try:
-        redis = await get_redis()
-        await redis.set(
-            _make_key(namespace, params, prefix_key),
-            json.dumps(data, default=str),
-            ex=ttl,
-        )
-        logger.debug("[CQRS] Cache SET | ns=%s ttl=%s", namespace, ttl)
-    except Exception as exc:
-        logger.warning("[CQRS] Cache set hatası | ns=%s | %s", namespace, exc)
+async def cache_set(
+    namespace: str,
+    params: dict,
+    data: Any,
+    ttl: int = 30,
+    prefix_key: str | None = None,
+) -> None:
+    """Veriyi cache'e yazar."""
+    await _cache.set(namespace, params, data, ttl=ttl, prefix_key=prefix_key)
 
 
 async def invalidate_cache(namespace: str) -> int:
     """
-    Namespace'e ait tüm cache key'lerini siler.
-    İlan oluşturma/güncelleme/silme sonrası çağrılır.
+    Namespace'e ait tüm girişleri O(1) maliyetle geçersiz kılar.
+
+    Eski uygulama ``scan_iter`` ile O(N) Redis taraması yapıyordu.
+    Yeni uygulama yalnızca ``INCR ns_ver:{namespace}`` çağırır;
+    eski anahtarlar TTL'leri dolunca otomatik silinir (CACHE-18).
     """
-    try:
-        redis = await get_redis()
-        pattern = f"{_PREFIX}:{namespace}:*"
-        keys = [k async for k in redis.scan_iter(pattern)]
-        if keys:
-            await redis.delete(*keys)
-            logger.info("[CQRS] Cache INVALIDATE | ns=%s | %d key silindi", namespace, len(keys))
-            return len(keys)
-    except Exception as exc:
-        logger.warning("[CQRS] Cache invalidate hatası | ns=%s | %s", namespace, exc)
-    return 0
+    return await _cache.invalidate(namespace)
 
 
 async def invalidate_user_profile_cache(username: str) -> None:
-    """Tek bir kullanıcının profil cache'ini siler (global stampede önleme)."""
-    try:
-        redis = await get_redis()
-        pattern = f"{_PREFIX}:user_profile:{username}:*"
-        keys = [k async for k in redis.scan_iter(pattern)]
-        if keys:
-            await redis.delete(*keys)
-            logger.info("[CQRS] Cache INVALIDATE | user_profile username=%s | %d key silindi", username, len(keys))
-    except Exception as exc:
-        logger.warning("[CQRS] invalidate_user_profile_cache hatası | username=%s | %s", username, exc)
+    """Tek bir kullanıcının profil cache'ini O(1) maliyetle geçersiz kılar."""
+    await _cache.invalidate("user_profile", prefix_key=username)
+
+
+async def cache_get_or_compute(
+    namespace: str,
+    params: dict,
+    compute_fn: Callable[[], Awaitable[Any]],
+    ttl: int = 30,
+    prefix_key: str | None = None,
+) -> Any:
+    """
+    Stampede-safe cache-aside (CACHE-17).
+
+    Cache hit → veriyi döner.  Miss → distributed lock → compute_fn()
+    çalıştırır → cache'e yazar.
+    """
+    return await _cache.get_or_compute(
+        namespace, params, compute_fn, ttl=ttl, prefix_key=prefix_key
+    )
