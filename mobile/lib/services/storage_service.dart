@@ -3,6 +3,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'cache_service.dart';
+import 'offline_queue_service.dart';
 
 class StorageService {
   static const _tokenKey = 'teqlif_token';
@@ -249,15 +250,17 @@ class StorageService {
     _cachedToken = null;
     _cachedRefreshToken = null;
     _cachedUserId = null;
+    _cachedAvatarUrl = null;        // CACHE-03: stale avatar sıfırla
     await Future.wait([
       _secureStorage.deleteAll(),
       SharedPreferences.getInstance().then((p) => p.clear()),
-      _clearHiveBoxes(),
+      _clearAllLocalBoxes(),
+      OfflineQueueService.clear(),  // CACHE-03: başkası adına gönderimi engelle
     ]);
   }
 
-  static Future<void> _clearHiveBoxes() async {
-    // homeCache şifresiz; doğrudan açılabilir.
+  static Future<void> _clearAllLocalBoxes() async {
+    // homeCache — şifresiz; doğrudan açılabilir
     try {
       if (Hive.isBoxOpen('homeCache')) {
         await Hive.box('homeCache').clear();
@@ -265,11 +268,17 @@ class StorageService {
         await (await Hive.openBox('homeCache')).clear();
       }
     } catch (_) {}
-    // api_cache AES-256 şifreli; CacheService'in açık tuttuğu box üzerinden temizle.
-    // Hive.openBox('api_cache') şifre anahtarı olmadan çağrılırsa HiveError fırlatır
-    // ve catch(_ ){} içinde yutularak logout cache temizliği sessizce başarısız olur.
+    // api_cache — AES-256 şifreli; şifre anahtarı olmadan açılamaz
     try {
       await CacheService.clearBox();
+    } catch (_) {}
+    // searchCache — şifresiz; SearchRepository tarafından lazily açılır
+    try {
+      if (Hive.isBoxOpen('searchCache')) {
+        await Hive.box('searchCache').clear();
+      } else {
+        await (await Hive.openBox('searchCache')).clear();
+      }
     } catch (_) {}
   }
 

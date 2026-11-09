@@ -24,6 +24,8 @@ class ListingService {
 
   static bool? getCachedLike(int id) => _likeCache[id];
 
+  static void clearLikeCache() => _likeCache.clear();
+
   static void setLikeCache(int id, bool liked) {
     _likeCache[id] = liked;
     try {

@@ -88,6 +88,11 @@ class OfflineQueueService {
     }
   }
 
+  /// Logout'ta kuyruktaki tüm mesajları siler — başkası adına gönderim engellenir.
+  static Future<void> clear() async {
+    await _box?.clear();
+  }
+
   // ── Connectivity → auto-drain bağlantısı ──────────────────────────────────
 
   static StreamSubscription<bool>? _connectSub;

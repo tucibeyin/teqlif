@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/logger_service.dart';
 import '../models/user.dart';
+import 'listing_service.dart';
 import 'storage_service.dart';
 import '../core/network/api_client.dart';
 
@@ -225,6 +226,7 @@ class AuthService {
       ),
     );
     await StorageService.clear();
+    ListingService.clearLikeCache(); // CACHE-03: in-memory beğeni cache'i temizle
   }
 
   Future<void> saveDeviceTokens({
@@ -267,6 +269,7 @@ class AuthService {
       // Best-effort: network hatası olsa da local temizlik yapılır
     }
     await StorageService.clear();
+    ListingService.clearLikeCache(); // CACHE-03: in-memory beğeni cache'i temizle
   }
 
   Future<void> seedOnboardingInterests(List<String> categories) async {
