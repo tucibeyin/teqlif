@@ -201,6 +201,25 @@ sync_scripts() {
   return 0
 }
 
+# ── sync_pgbouncer: pgbouncer.ini değiştiyse /etc/pgbouncer/pgbouncer.ini güncelle ─
+sync_pgbouncer() {
+  local node_dir="$1"
+  local conf_src="$node_dir/resources/pgbouncer/pgbouncer.ini"
+  [ -f "$conf_src" ] || return 0
+  local conf_dst="/etc/pgbouncer/pgbouncer.ini"
+  if ! diff -q "$conf_src" "$conf_dst" > /dev/null 2>&1; then
+    cp "$conf_src" "$conf_dst"
+    chown postgres:postgres "$conf_dst"
+    chmod 640 "$conf_dst"
+    log "PgBouncer config güncellendi: $conf_dst"
+    if systemctl is-active pgbouncer > /dev/null 2>&1; then
+      systemctl reload pgbouncer
+      log "pgbouncer reload tamamlandı"
+    fi
+  fi
+  return 0
+}
+
 # ── alembic_and_sync: migration + veri sync (deployment anında, her restart'ta değil) ─
 alembic_and_sync() {
   local env_file="$1"
@@ -230,6 +249,7 @@ case "$NODE" in
     agent_sync
     sync_services "$REPO/deploy/scale/V2.1/node1"
     sync_nginx "$REPO/deploy/scale/V2.1/node1"
+    sync_pgbouncer "$REPO/deploy/scale/V2.1/node1"
     alembic_and_sync /project/teqlif/config/.env.production
     log "teqlif.service yeniden başlatılıyor..."
     systemctl restart teqlif.service

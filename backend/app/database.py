@@ -7,14 +7,13 @@ from sqlalchemy.orm import DeclarativeBase, sessionmaker
 from app.config import settings
 
 if settings.use_pgbouncer:
+    # CACHE-22: PgBouncer 1.21+ `max_prepared_statements` ile prepared statement
+    # desteği sunduğundan asyncpg statement cache'i yeniden etkinleştirildi.
+    # Eski `prepared_statement_cache_size: 0` workaround'u kaldırıldı.
     engine = create_async_engine(
         settings.database_url,
         echo=False,
         poolclass=NullPool,
-        connect_args={
-            "prepared_statement_cache_size": 0,
-            "statement_cache_size": 0,
-        },
     )
 else:
     engine = create_async_engine(

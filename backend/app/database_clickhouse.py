@@ -401,6 +401,87 @@ async def track_user_event(
     )
 
 
+# ── Buffer Read API — ClickHouse'a henüz yazılmamış olaylar için (CACHE-21) ──
+
+async def get_buffered_user_event_stats(
+    item_ids: list[int],
+    item_type: str,
+    ts_start: str,
+    ts_end: str,
+    *,
+    stream_id: Optional[int] = None,
+) -> dict:
+    """
+    Redis ch_buf:user_events buffer'ından belirtilen öğelere ait son 30s istatistiklerini toplar.
+
+    ClickHouse'a henüz aktarılmamış olaylar için Eventual Consistency penceresini kapatır.
+    Row format: [user_id, item_id, item_type, event_type, price_point, duration_seconds, timestamp, subcategory]
+
+    Returns:
+        listing_user_ids: item_ids + item_type eşleşen unique kullanıcı id'leri
+        stream_user_ids:  stream_id eşleşen unique kullanıcı id'leri
+        hesitation_user_ids: bid_hesitation event'li unique kullanıcı id'leri
+        all_user_ids:     listing_user_ids | stream_user_ids (union)
+        avg_budget:       buffer'daki price_point ortalaması veya None
+    """
+    _empty: dict = {
+        "listing_user_ids": set(),
+        "stream_user_ids": set(),
+        "hesitation_user_ids": set(),
+        "all_user_ids": set(),
+        "avg_budget": None,
+    }
+    try:
+        from app.utils.redis_client import get_redis
+        redis = await get_redis()
+        if await redis.llen(_BUF_USER_EVENTS) == 0:
+            return _empty
+
+        raw_items = await redis.lrange(_BUF_USER_EVENTS, 0, -1)
+        item_id_set = set(item_ids)
+        listing_user_ids: set = set()
+        stream_user_ids: set = set()
+        hesitation_user_ids: set = set()
+        price_points: list = []
+
+        for raw in raw_items:
+            try:
+                row = json.loads(raw)
+                r_user_id    = row[0]
+                r_item_id    = int(row[1])
+                r_item_type  = row[2]
+                r_event_type = row[3]
+                r_price_pt   = row[4]
+                r_ts         = row[6]
+
+                if not r_user_id or r_user_id == 0:
+                    continue
+                if r_ts < ts_start or r_ts > ts_end:
+                    continue
+
+                if r_item_type == item_type and r_item_id in item_id_set:
+                    listing_user_ids.add(r_user_id)
+                    if r_event_type == "bid_hesitation":
+                        hesitation_user_ids.add(r_user_id)
+                    if r_price_pt and float(r_price_pt) > 0:
+                        price_points.append(float(r_price_pt))
+                elif r_item_type == "stream" and stream_id and r_item_id == stream_id:
+                    stream_user_ids.add(r_user_id)
+            except Exception:
+                continue
+
+        return {
+            "listing_user_ids": listing_user_ids,
+            "stream_user_ids": stream_user_ids,
+            "hesitation_user_ids": hesitation_user_ids,
+            "all_user_ids": listing_user_ids | stream_user_ids,
+            "avg_budget": sum(price_points) / len(price_points) if price_points else None,
+        }
+    except Exception as exc:
+        logger.warning("[ClickHouse] get_buffered_user_event_stats başarısız: %s", exc)
+        return _empty
+
+
 # ── Batch insert — toplu flush endpoint'leri (değişmez) ──────────────────────
 
 async def batch_insert_swipe_live_events(events: list[dict]) -> None:

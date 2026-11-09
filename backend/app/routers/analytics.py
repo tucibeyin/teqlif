@@ -24,7 +24,7 @@ from app.utils.redis_client import get_redis
 from app.core.exceptions import AppException, InsufficientFundsException, ServiceException, ForbiddenException, NotFoundException
 from app.services import credit_service
 from app.services.credit_service import CreditFeature
-from app.database_clickhouse import get_clickhouse_client
+from app.database_clickhouse import get_clickhouse_client, get_buffered_user_event_stats
 from app.models.market_index import ExchangeRates
 from app.models.ad_campaign import AdCampaign
 from app.services.ml.ner_service import extract_ner
@@ -395,12 +395,13 @@ async def get_seller_report(
     swipe_impressions = 0
     swipe_reach = 0
 
+    # Timestamp'leri try dışında tanımla; hem ClickHouse hem buffer scan kullanır.
+    ts_start = stream.started_at.strftime("%Y-%m-%d %H:%M:%S")
+    ts_end = ended.strftime("%Y-%m-%d %H:%M:%S")
+
     try:
         from app.database_clickhouse import get_clickhouse_client
         ch = await get_clickhouse_client()
-
-        ts_start = stream.started_at.strftime("%Y-%m-%d %H:%M:%S")
-        ts_end = ended.strftime("%Y-%m-%d %H:%M:%S")
 
         if listing_ids:
             ids_str = ", ".join(str(i) for i in listing_ids)
@@ -475,6 +476,23 @@ async def get_seller_report(
 
     except Exception as ch_exc:
         logger.warning("[SellerReport] ClickHouse sorgusu başarısız: %s", ch_exc)
+
+    # CACHE-21: 30s flush penceresindeki buffered olayları ClickHouse sonucuna ekle.
+    try:
+        buf = await get_buffered_user_event_stats(
+            listing_ids if listing_ids else [],
+            "listing",
+            ts_start,
+            ts_end,
+            stream_id=stream_id,
+        )
+        if buf["all_user_ids"]:
+            unique_viewers += len(buf["all_user_ids"])
+        hesitation_count += len(buf["hesitation_user_ids"])
+        if avg_budget is None and buf["avg_budget"] is not None:
+            avg_budget = buf["avg_budget"]
+    except Exception as buf_exc:
+        logger.warning("[SellerReport] Buffer stats başarısız: %s", buf_exc)
 
     # ── 4. Öneri metni ────────────────────────────────────────────────────────
     t = _get_t(get_locale(current_user, request))
