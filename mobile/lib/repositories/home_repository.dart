@@ -78,11 +78,15 @@ class HomeRepository {
   }
 
   Future<List<dynamic>> fetchHesitated() async {
+    // getRaw: closure capture sorunu yok — 401 sonrası retry taze token ile gider.
     try {
       final headers = await _buildHeaders();
-      return await _client.callList(
-        () => http.get(Uri.parse('${_client.config.baseUrl}/feed/hesitated'), headers: headers),
+      final resp = await _client.getRaw(
+        '${_client.config.baseUrl}/feed/hesitated',
+        headers,
       );
+      if (resp.statusCode != 200) return [];
+      return jsonDecode(resp.body) as List<dynamic>;
     } catch (_) {
       return [];
     }
@@ -108,7 +112,12 @@ class HomeRepository {
       params['date_to'] = filter.dateTo!.toIso8601String().substring(0, 10);
     }
     final uri = Uri.parse('${_client.config.baseUrl}/listings').replace(queryParameters: params);
-    return await _client.callList(() => http.get(uri, headers: headers));
+    // getRaw: closure capture sorunu yok — 401 sonrası retry taze token ile gider.
+    final resp = await _client.getRaw(uri.toString(), headers);
+    if (resp.statusCode != 200) {
+      throw AppException('Filtre sonuçları yüklenemedi', code: 'HTTP_${resp.statusCode}', statusCode: resp.statusCode);
+    }
+    return jsonDecode(resp.body) as List<dynamic>;
   }
 
   // §12.5 + §12.8 — Merged listeyi diske yazar (entity store + ID listesi).
