@@ -101,7 +101,7 @@ Sistemdeki en büyük mimari zaaf, katmanlar arasındaki önbellek yaşam döng�
 | :---: | :---: | :---: | :--- | :--- | :--- | :---: |
 | **CACHE-01** | 🔴 **P0** | **Client** | `cache_service.dart` | Şifrelemesiz (Plaintext) Disk Depolaması & Finansal/PII Açığı | Cüzdan, bakiye, DM ve profil verisinin sızması | ✅ `47c4db17` · 2026-11-09 |
 | **CACHE-02** | 🔴 **P0** | **Client** | `storage_service.dart` & `api_service.dart` | Kullanıcı İzolasyonu Yokluğu (User-Scoped Key Eksikliği) | Hesap değişiminde Kullanıcı B'nin Kullanıcı A bakiyesini görmesi | ✅ `ec1247aa` · 2026-11-09 |
-| **CACHE-03** | 🔴 **P0** | **Client** | `storage_service.dart` & `offline_queue_service.dart` | Eksik Logout Temizliği & Offline Mesajın Başkası Adına Gitmesi | `searchCache`, `_likeCache` ve offline mesaj sızıntısı | ⏳ Açık |
+| **CACHE-03** | 🔴 **P0** | **Client** | `storage_service.dart` & `offline_queue_service.dart` | Eksik Logout Temizliği & Offline Mesajın Başkası Adına Gitmesi | `searchCache`, `_likeCache` ve offline mesaj sızıntısı | ✅ `025717a2` · 2026-11-09 |
 | **CACHE-04** | 🔴 **P0** | **Client** | `TeqlifCacheManager` & UI Ekranları | Statik `cacheKey: 'user_${id}_avatar'` Nedeniyle Avatar Kilitlenmesi | Profil resmi değişmesine rağmen 48 saat eski resmin görünmesi | ⏳ Açık |
 | **CACHE-05** | 🟠 **P1** | **Backend** | `etag_middleware.py` | ETag Doğrulamasında `strip('W/')` Eksikliği (Weak ETag Incompatibility) | Reverse proxy (Nginx/Cloudflare) arkasında 304'ün çalışmaması | ⏳ Açık |
 | **CACHE-06** | 🟠 **P1** | **Client** | `api_service.dart` | Yanlış SWR Mantığı (`if (!cached.isStale) return`) | Arka plan yenilemenin engellenmesi, bayat veri kalıcılığı | ⏳ Açık |
