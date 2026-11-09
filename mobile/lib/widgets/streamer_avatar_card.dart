@@ -58,7 +58,7 @@ class StreamerAvatarCard extends ConsumerWidget {
                       child: ClipOval(
                         child: imageUrl != null && imageUrl.isNotEmpty
                             ? CachedNetworkImage(
-                                cacheKey: 'user_${username}_avatar',
+                                cacheKey: TeqlifCacheManager.avatarCacheKey(username, imageUrl),
                                 cacheManager: TeqlifCacheManager(),
                                 memCacheWidth: 400, memCacheHeight: 400, imageUrl: imageUrl,
                                 fit: BoxFit.cover,

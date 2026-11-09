@@ -200,7 +200,7 @@ class _GiftEventRow extends StatelessWidget {
               backgroundImage: event.avatarUrl != null
                   ? CachedNetworkImageProvider(
                       event.avatarUrl!,
-                      cacheKey: 'user_${event.userId}_avatar',
+                      cacheKey: TeqlifCacheManager.avatarCacheKey(event.userId, event.avatarUrl),
                       cacheManager: TeqlifCacheManager(),
                     )
                   : null,

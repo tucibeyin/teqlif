@@ -630,7 +630,7 @@ class _StreamerAvatarCard extends ConsumerWidget {
                         child: imageUrl != null && imageUrl.isNotEmpty
                             ? CachedNetworkImage(
                                 imageUrl: imageUrl,
-                                cacheKey: 'user_${username}_avatar',
+                                cacheKey: TeqlifCacheManager.avatarCacheKey(username, imageUrl),
                                 cacheManager: TeqlifCacheManager(),
                                 memCacheWidth: 124,
                                 fit: BoxFit.cover,

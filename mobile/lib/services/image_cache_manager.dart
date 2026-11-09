@@ -15,4 +15,11 @@ class TeqlifCacheManager extends CacheManager {
           stalePeriod: const Duration(days: 2),
           maxNrOfCacheObjects: 300,
         ));
+
+  /// URL hash'e bağlı avatar cache anahtarı (CACHE-04).
+  /// URL değiştiğinde anahtar değişir → stale avatar sorunu ortadan kalkar.
+  static String avatarCacheKey(dynamic userId, String? url) {
+    if (url == null || url.isEmpty) return 'user_${userId}_avatar_empty';
+    return 'user_${userId}_avatar_${url.hashCode}';
+  }
 }

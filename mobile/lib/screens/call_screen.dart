@@ -312,7 +312,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
               if (avatarUrl != null)
                 CachedNetworkImage(
                   imageUrl: avatarUrl,
-                  cacheKey: 'user_${username}_avatar',
+                  cacheKey: TeqlifCacheManager.avatarCacheKey(username, avatarUrl),
                   cacheManager: TeqlifCacheManager(),
                   memCacheWidth: 400,
                   fit: BoxFit.cover,
@@ -446,7 +446,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                               child: avatarUrl != null && avatarUrl.isNotEmpty
                                   ? CachedNetworkImage(
                                       imageUrl: avatarUrl,
-                                      cacheKey: 'user_${username}_avatar',
+                                      cacheKey: TeqlifCacheManager.avatarCacheKey(username, avatarUrl),
                                       cacheManager: TeqlifCacheManager(),
                                       memCacheWidth: 240,
                                       fit: BoxFit.cover,
@@ -1029,7 +1029,7 @@ class _ParticipantStrip extends ConsumerWidget {
                     child: p.avatar != null && p.avatar!.isNotEmpty
                         ? CachedNetworkImage(
                             imageUrl: ref.read(apiClientProvider).imgUrl(p.avatar!),
-                            cacheKey: 'user_${p.userId}_avatar',
+                            cacheKey: TeqlifCacheManager.avatarCacheKey(p.userId, ref.read(apiClientProvider).imgUrl(p.avatar!)),
                             cacheManager: TeqlifCacheManager(),
                             memCacheWidth: 80,
                             fit: BoxFit.cover,
@@ -1186,7 +1186,7 @@ class _InviteToCallModalState extends ConsumerState<InviteToCallModal> {
                     return ListTile(
                       leading: CircleAvatar(
                         backgroundImage: (avatar != null && avatar.isNotEmpty)
-                            ? CachedNetworkImageProvider(ref.read(apiClientProvider).imgUrl(avatar), cacheKey: 'user_${uid}_avatar', cacheManager: TeqlifCacheManager())
+                            ? CachedNetworkImageProvider(ref.read(apiClientProvider).imgUrl(avatar), cacheKey: TeqlifCacheManager.avatarCacheKey(uid, ref.read(apiClientProvider).imgUrl(avatar)), cacheManager: TeqlifCacheManager())
                             : null,
                         child: (avatar == null || avatar.isEmpty)
                             ? Text(username.isNotEmpty ? username[0].toUpperCase() : '?')

@@ -53,7 +53,7 @@ class SellerAvatarCard extends ConsumerWidget {
                     child: ClipOval(
                       child: avatarUrl != null
                           ? CachedNetworkImage(
-                              cacheKey: 'user_${username}_avatar',
+                              cacheKey: TeqlifCacheManager.avatarCacheKey(username, avatarUrl),
                               cacheManager: TeqlifCacheManager(),
                               memCacheWidth: 400, memCacheHeight: 400, imageUrl: avatarUrl,
                               fit: BoxFit.cover,

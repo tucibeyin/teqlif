@@ -216,7 +216,7 @@ class _OrderRow extends StatelessWidget {
               backgroundImage: order.avatarUrl != null
                   ? CachedNetworkImageProvider(
                       order.avatarUrl!,
-                      cacheKey: 'user_${order.userId}_avatar',
+                      cacheKey: TeqlifCacheManager.avatarCacheKey(order.userId, order.avatarUrl),
                       cacheManager: TeqlifCacheManager(),
                     )
                   : null,

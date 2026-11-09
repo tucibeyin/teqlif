@@ -223,7 +223,7 @@ class FollowRequestsScreen extends ConsumerWidget {
                 CircleAvatar(
                   radius: 24,
                   backgroundColor: AppColors.surfaceVariant(context),
-                  backgroundImage: avatarUrl != null ? CachedNetworkImageProvider(ref.read(apiClientProvider).imgUrl(avatarUrl), cacheKey: 'user_${username}_avatar', cacheManager: TeqlifCacheManager()) : null,
+                  backgroundImage: avatarUrl != null ? CachedNetworkImageProvider(ref.read(apiClientProvider).imgUrl(avatarUrl), cacheKey: TeqlifCacheManager.avatarCacheKey(username, ref.read(apiClientProvider).imgUrl(avatarUrl)), cacheManager: TeqlifCacheManager()) : null,
                   child: avatarUrl == null
                       ? Text(
                           fullName.isNotEmpty ? fullName[0].toUpperCase() : '?',

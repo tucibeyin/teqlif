@@ -429,7 +429,7 @@ class _MessagesTabState extends ConsumerState<_MessagesTab>
                         otherAvatarUrl != null && otherAvatarUrl.isNotEmpty
                         ? CachedNetworkImageProvider(
                             ref.read(apiClientProvider).imgUrl(otherAvatarUrl),
-                            cacheKey: 'user_${otherId}_avatar',
+                            cacheKey: TeqlifCacheManager.avatarCacheKey(otherId, ref.read(apiClientProvider).imgUrl(otherAvatarUrl)),
                             cacheManager: TeqlifCacheManager(),
                           )
                         : null,
@@ -691,7 +691,7 @@ class _RequestsListTab extends ConsumerWidget {
                   otherAvatarUrl != null && otherAvatarUrl.isNotEmpty
                   ? CachedNetworkImageProvider(
                       ref.read(apiClientProvider).imgUrl(otherAvatarUrl),
-                      cacheKey: 'user_${otherId}_avatar',
+                      cacheKey: TeqlifCacheManager.avatarCacheKey(otherId, ref.read(apiClientProvider).imgUrl(otherAvatarUrl)),
                       cacheManager: TeqlifCacheManager(),
                     )
                   : null,

@@ -340,7 +340,7 @@ class _WinnerRow extends StatelessWidget {
             backgroundImage: participant.avatarUrl != null
                 ? CachedNetworkImageProvider(
                     participant.avatarUrl!,
-                    cacheKey: 'user_${participant.userId}_avatar',
+                    cacheKey: TeqlifCacheManager.avatarCacheKey(participant.userId, participant.avatarUrl),
                     cacheManager: TeqlifCacheManager(),
                   )
                 : null,
@@ -386,7 +386,7 @@ class _BidRow extends StatelessWidget {
               backgroundImage: bid.avatarUrl != null
                   ? CachedNetworkImageProvider(
                       bid.avatarUrl!,
-                      cacheKey: 'user_${bid.userId}_avatar',
+                      cacheKey: TeqlifCacheManager.avatarCacheKey(bid.userId, bid.avatarUrl),
                       cacheManager: TeqlifCacheManager(),
                     )
                   : null,

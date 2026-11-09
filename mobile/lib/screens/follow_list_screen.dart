@@ -78,7 +78,7 @@ class FollowListScreen extends ConsumerWidget {
                     radius: 22,
                     backgroundColor: kPrimary.withValues(alpha: 0.12),
                     backgroundImage: rawImg != null
-                        ? CachedNetworkImageProvider(ref.read(apiClientProvider).imgUrl(rawImg), cacheKey: 'user_${u['id']}_avatar', cacheManager: TeqlifCacheManager())
+                        ? CachedNetworkImageProvider(ref.read(apiClientProvider).imgUrl(rawImg), cacheKey: TeqlifCacheManager.avatarCacheKey(u['id'], ref.read(apiClientProvider).imgUrl(rawImg)), cacheManager: TeqlifCacheManager())
                         : null,
                     child: rawImg == null
                         ? Text(

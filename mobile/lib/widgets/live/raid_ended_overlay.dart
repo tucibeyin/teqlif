@@ -254,7 +254,7 @@ class _HostBanner extends ConsumerWidget {
             child: ClipOval(
               child: thumbnailUrl != null
                   ? CachedNetworkImage(
-                      cacheKey: 'user_${username}_avatar', cacheManager: TeqlifCacheManager(),
+                      cacheKey: TeqlifCacheManager.avatarCacheKey(username, ref.read(apiClientProvider).imgUrl(thumbnailUrl!)), cacheManager: TeqlifCacheManager(),
                       memCacheWidth: 400, memCacheHeight: 400, imageUrl: ref.read(apiClientProvider).imgUrl(thumbnailUrl!),
                       fit: BoxFit.cover,
                       errorWidget: (_, _, _) => _fallback(),

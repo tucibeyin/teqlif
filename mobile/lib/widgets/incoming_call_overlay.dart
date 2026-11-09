@@ -485,7 +485,7 @@ class _IncomingCallBar extends ConsumerWidget {
                       backgroundColor: AppColors.surfaceVariant(context),
                       backgroundImage:
                           avatarUrl != null && avatarUrl!.isNotEmpty
-                          ? CachedNetworkImageProvider(ref.read(apiClientProvider).imgUrl(avatarUrl!), cacheKey: 'user_${username}_avatar', cacheManager: TeqlifCacheManager())
+                          ? CachedNetworkImageProvider(ref.read(apiClientProvider).imgUrl(avatarUrl!), cacheKey: TeqlifCacheManager.avatarCacheKey(username, ref.read(apiClientProvider).imgUrl(avatarUrl!)), cacheManager: TeqlifCacheManager())
                           : null,
                       child: avatarUrl == null || avatarUrl!.isEmpty
                           ? Text(
@@ -751,7 +751,7 @@ class _GroupInviteBanner extends ConsumerWidget {
               radius: 22,
               backgroundColor: Colors.grey.shade800,
               backgroundImage: (inviterAvatar != null && inviterAvatar.isNotEmpty)
-                  ? CachedNetworkImageProvider(ref.read(apiClientProvider).imgUrl(inviterAvatar), cacheKey: 'user_${inviterUsername}_avatar', cacheManager: TeqlifCacheManager())
+                  ? CachedNetworkImageProvider(ref.read(apiClientProvider).imgUrl(inviterAvatar), cacheKey: TeqlifCacheManager.avatarCacheKey(inviterUsername, ref.read(apiClientProvider).imgUrl(inviterAvatar)), cacheManager: TeqlifCacheManager())
                   : null,
               child: (inviterAvatar == null || inviterAvatar.isEmpty)
                   ? Text(inviterUsername.isNotEmpty ? inviterUsername[0].toUpperCase() : '?',

@@ -536,7 +536,7 @@ class _StoryGroupItem extends ConsumerWidget {
                     child: ClipOval(
                       child: resolvedUrl != null && resolvedUrl.isNotEmpty
                           ? CachedNetworkImage(
-                              cacheKey: 'user_${group.user.username}_avatar', cacheManager: TeqlifCacheManager(),
+                              cacheKey: TeqlifCacheManager.avatarCacheKey(group.user.username, resolvedUrl), cacheManager: TeqlifCacheManager(),
                               memCacheWidth: 400, memCacheHeight: 400, imageUrl: resolvedUrl,
                               fit: BoxFit.cover,
                               alignment: Alignment.topCenter,

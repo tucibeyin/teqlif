@@ -250,7 +250,7 @@ class _CallTile extends ConsumerWidget {
             backgroundColor: cs.surfaceContainerHighest,
             backgroundImage: item.otherAvatar != null &&
                     item.otherAvatar!.isNotEmpty
-                ? CachedNetworkImageProvider(ref.read(apiClientProvider).imgUrl(item.otherAvatar), cacheKey: 'user_${item.otherUserId}_avatar', cacheManager: TeqlifCacheManager())
+                ? CachedNetworkImageProvider(ref.read(apiClientProvider).imgUrl(item.otherAvatar), cacheKey: TeqlifCacheManager.avatarCacheKey(item.otherUserId, ref.read(apiClientProvider).imgUrl(item.otherAvatar)), cacheManager: TeqlifCacheManager())
                 : null,
             child: item.otherAvatar == null || item.otherAvatar!.isEmpty
                 ? Text(

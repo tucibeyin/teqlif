@@ -359,7 +359,7 @@ class _RatingCardState extends ConsumerState<_RatingCard> {
                     radius: 20,
                     backgroundColor: kPrimary.withValues(alpha: 0.1),
                     backgroundImage: avatarUrl != null
-                        ? CachedNetworkImageProvider(ref.read(apiClientProvider).imgUrl(avatarUrl), cacheKey: 'user_${username}_avatar', cacheManager: TeqlifCacheManager())
+                        ? CachedNetworkImageProvider(ref.read(apiClientProvider).imgUrl(avatarUrl), cacheKey: TeqlifCacheManager.avatarCacheKey(username, ref.read(apiClientProvider).imgUrl(avatarUrl)), cacheManager: TeqlifCacheManager())
                         : null,
                     child: avatarUrl == null
                         ? Text(

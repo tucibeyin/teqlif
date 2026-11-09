@@ -1172,7 +1172,7 @@ class _ChatAvatar extends ConsumerWidget {
 
     return ClipOval(
       child: CachedNetworkImage(
-        cacheKey: 'user_${username}_avatar',
+        cacheKey: TeqlifCacheManager.avatarCacheKey(username, _resolveImageUrl(imageUrl!)),
         cacheManager: TeqlifCacheManager(),
         memCacheWidth: 400, memCacheHeight: 400, imageUrl: _resolveImageUrl(imageUrl!),
         width: _size,

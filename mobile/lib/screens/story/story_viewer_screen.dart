@@ -818,7 +818,7 @@ class _GroupPageState extends ConsumerState<_GroupPage> with TickerProviderState
                     child: resolved != null
                         ? CachedNetworkImage(
                             imageUrl: resolved,
-                            cacheKey: 'user_${user.username}_avatar',
+                            cacheKey: TeqlifCacheManager.avatarCacheKey(user.username, resolved),
                             cacheManager: TeqlifCacheManager(),
                             memCacheWidth: 80,
                             fit: BoxFit.cover,
@@ -1074,7 +1074,7 @@ class _GroupPageState extends ConsumerState<_GroupPage> with TickerProviderState
               child: resolved != null
                   ? CachedNetworkImage(
                       imageUrl: resolved,
-                      cacheKey: 'user_${user.username}_avatar',
+                      cacheKey: TeqlifCacheManager.avatarCacheKey(user.username, resolved),
                       cacheManager: TeqlifCacheManager(),
                       memCacheWidth: 80,
                       fit: BoxFit.cover,

@@ -845,7 +845,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
     Widget avatarWidget = CircleAvatar(
       radius: 44,
       backgroundColor: kPrimary.withValues(alpha: 0.15),
-      backgroundImage: rawImg != null ? CachedNetworkImageProvider(ref.read(apiClientProvider).imgUrl(rawImg), cacheKey: 'user_${widget.username}_avatar', cacheManager: TeqlifCacheManager()) : null,
+      backgroundImage: rawImg != null ? CachedNetworkImageProvider(ref.read(apiClientProvider).imgUrl(rawImg), cacheKey: TeqlifCacheManager.avatarCacheKey(widget.username, ref.read(apiClientProvider).imgUrl(rawImg)), cacheManager: TeqlifCacheManager()) : null,
       child: rawImg == null
           ? Text(
               initial,
@@ -1509,7 +1509,7 @@ class _PublicRatingItemState extends State<_PublicRatingItem> {
                   radius: 20,
                   backgroundColor: kPrimary.withValues(alpha: 0.12),
                   backgroundImage:
-                      raterImg != null ? CachedNetworkImageProvider(providerContainer.read(apiClientProvider).imgUrl(raterImg), cacheKey: 'user_${rater['username']}_avatar', cacheManager: TeqlifCacheManager()) : null,
+                      raterImg != null ? CachedNetworkImageProvider(providerContainer.read(apiClientProvider).imgUrl(raterImg), cacheKey: TeqlifCacheManager.avatarCacheKey(rater['username'], providerContainer.read(apiClientProvider).imgUrl(raterImg)), cacheManager: TeqlifCacheManager()) : null,
                   child: raterImg == null
                       ? Text(
                           raterInitial,

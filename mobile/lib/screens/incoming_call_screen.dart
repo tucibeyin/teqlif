@@ -259,7 +259,7 @@ class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen>
                       child: avatarUrl != null
                           ? CachedNetworkImage(
                               imageUrl: avatarUrl,
-                              cacheKey: 'user_${username}_avatar',
+                              cacheKey: TeqlifCacheManager.avatarCacheKey(username, avatarUrl),
                               cacheManager: TeqlifCacheManager(),
                               memCacheWidth: 240,
                               fit: BoxFit.cover,
