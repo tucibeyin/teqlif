@@ -30,6 +30,7 @@ class CacheService {
   // LRU: son erişim zamanını in-memory tutar; senkron read sözleşmesini bozmaz.
   static final Map<String, int> _lastRead = {};
   static int _writeCount = 0;
+  static bool _isEvicting = false;
 
   /// Uygulama başlangıcında (runApp öncesi) çağrılmalıdır.
   static Future<void> init() async {
@@ -217,46 +218,50 @@ class CacheService {
 
   /// Süresi dolmuş tüm kayıtları siler (arka plan bakımı için).
   static Future<void> clearExpired() async {
-    final now = DateTime.now().millisecondsSinceEpoch;
-    final toDelete = <String>[];
-    for (final key in _box.keys.cast<String>()) {
-      final raw = _box.get(key);
-      if (raw == null) continue;
-      try {
-        final decoded = jsonDecode(raw);
-        if (decoded is Map && decoded.containsKey('_t')) {
-          final age = now - (decoded['_t'] as num).toInt();
-          final ttl = (decoded['_x'] as num?)?.toInt() ?? 300000;
-          if (age > ttl) toDelete.add(key);
-        }
-      } catch (_) {
-        toDelete.add(key);
-      }
-    }
-    await _box.deleteAll(toDelete);
-    for (final k in toDelete) { _lastRead.remove(k); }
+    // Re-entrancy koruması: paralel clearExpired çağrılarında gereksiz çift tarama önlenir.
+    if (_isEvicting) return;
+    _isEvicting = true;
+    try {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final toDelete = <String>[];
+      // Single-pass: TTL + LRU adaylarını tek geçişte topla; Phase 2 re-scan yok.
+      final lruCandidates = <MapEntry<String, int>>[];
 
-    // CACHE-11: LRU kırpma — sırala: son erişim zamanı (in-memory), yoksa oluşturma zamanı
-    if (_box.length > _kMaxKeys) {
-      final entries = <MapEntry<String, int>>[];
       for (final key in _box.keys.cast<String>()) {
         final raw = _box.get(key);
         if (raw == null) continue;
         try {
           final decoded = jsonDecode(raw);
           if (decoded is Map && decoded.containsKey('_t')) {
-            final lruTime = _lastRead[key] ?? (decoded['_t'] as num).toInt();
-            entries.add(MapEntry(key, lruTime));
+            final age = now - (decoded['_t'] as num).toInt();
+            final ttl = (decoded['_x'] as num?)?.toInt() ?? 300000;
+            if (age > ttl) {
+              toDelete.add(key);
+            } else {
+              final lruTime = _lastRead[key] ?? (decoded['_t'] as num).toInt();
+              lruCandidates.add(MapEntry(key, lruTime));
+            }
           }
-        } catch (_) {}
+        } catch (_) {
+          toDelete.add(key);
+        }
       }
-      entries.sort((a, b) => a.value.compareTo(b.value));
-      final keysToDelete = entries
-          .take(_box.length - _kMaxKeys)
-          .map((e) => e.key)
-          .toList();
-      await _box.deleteAll(keysToDelete);
-      for (final k in keysToDelete) { _lastRead.remove(k); }
+
+      await _box.deleteAll(toDelete);
+      for (final k in toDelete) { _lastRead.remove(k); }
+
+      // CACHE-11: LRU kırpma — Phase 1'den gelen lruCandidates kullanılır (re-scan yok)
+      if (_box.length > _kMaxKeys) {
+        lruCandidates.sort((a, b) => a.value.compareTo(b.value));
+        final keysToDelete = lruCandidates
+            .take(_box.length - _kMaxKeys)
+            .map((e) => e.key)
+            .toList();
+        await _box.deleteAll(keysToDelete);
+        for (final k in keysToDelete) { _lastRead.remove(k); }
+      }
+    } finally {
+      _isEvicting = false;
     }
   }
 }
