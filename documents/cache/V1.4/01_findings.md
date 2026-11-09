@@ -103,7 +103,7 @@ Sistemdeki en büyük mimari zaaf, katmanlar arasındaki önbellek yaşam döng�
 | **CACHE-02** | 🔴 **P0** | **Client** | `storage_service.dart` & `api_service.dart` | Kullanıcı İzolasyonu Yokluğu (User-Scoped Key Eksikliği) | Hesap değişiminde Kullanıcı B'nin Kullanıcı A bakiyesini görmesi | ✅ `ec1247aa` · 2026-11-09 |
 | **CACHE-03** | 🔴 **P0** | **Client** | `storage_service.dart` & `offline_queue_service.dart` | Eksik Logout Temizliği & Offline Mesajın Başkası Adına Gitmesi | `searchCache`, `_likeCache` ve offline mesaj sızıntısı | ✅ `025717a2` · 2026-11-09 |
 | **CACHE-04** | 🔴 **P0** | **Client** | `TeqlifCacheManager` & UI Ekranları | Statik `cacheKey: 'user_${id}_avatar'` Nedeniyle Avatar Kilitlenmesi | Profil resmi değişmesine rağmen 48 saat eski resmin görünmesi | ✅ `3951a831` · 2026-11-09 |
-| **CACHE-05** | 🟠 **P1** | **Backend** | `etag_middleware.py` | ETag Doğrulamasında `strip('W/')` Eksikliği (Weak ETag Incompatibility) | Reverse proxy (Nginx/Cloudflare) arkasında 304'ün çalışmaması | ✅ `c79aade5` · 2026-11-09 |
+| **CACHE-05** | 🟠 **P1** | **Backend** | `etag_middleware.py` | ETag Doğrulamasında `strip('W/')` Eksikliği (Weak ETag Incompatibility) | Reverse proxy (Nginx/Cloudflare) arkasında 304'ün çalışmaması | ✅ `c79aade5` + `a259322d` · 2026-11-09 |
 | **CACHE-06** | 🟠 **P1** | **Client** | `api_service.dart` | Yanlış SWR Mantığı (`if (!cached.isStale) return`) | Arka plan yenilemenin engellenmesi, bayat veri kalıcılığı | ⏳ Açık |
 | **CACHE-07** | 🟠 **P1** | **Client** | `api_service.dart` | Cache Yayını Sonrası 401/403/404 Hatalarının Yutulması | Banlanan veya silinen hesabın/ilanın cache'te asılı kalması | ⏳ Açık |
 | **CACHE-08** | 🟠 **P1** | **Client** | `message_repository.dart` | `_patchCache` İçinde Kilitsiz Read-Modify-Write Yarış Durumu | Eşzamanlı gelen WebSocket mesajlarının birbirini ezmesi | ⏳ Açık |
@@ -287,10 +287,12 @@ def _normalize_etag(tag: str | None) -> str:
         tag = tag[2:]
     return tag.strip('"')
 
-client_etag = request.headers.get("if-none-match")
-if _normalize_etag(client_etag) == _normalize_etag(etag):
+client_etag = request.headers.get("if-none-match", "")
+if client_etag and any(_etag_value(p) == _etag_value(etag) for p in client_etag.split(",")):
     return Response(status_code=304, headers={"etag": etag})
 ```
+
+> **Follow-up `a259322d`:** RFC 7232 §3.2 istemcilerin virgülle ayrılmış birden fazla ETag gönderebildiğini belirtir. `any() + split(',')` ile multi-tag senaryosu da desteklendi.
 
 ---
 
