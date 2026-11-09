@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Query as FastApiQuery
+from starlette.responses import Response
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -46,7 +47,7 @@ from app.core.exceptions import (
 )
 from app.services import credit_service
 from app.services.credit_service import CreditFeature
-from app.core.read_cache import cache_get, cache_set
+from app.core.read_cache import cache_get, cache_set, cache_get_etag, etag_normalize
 from app.utils.redis_client import get_redis
 
 logger = logging.getLogger(__name__)
@@ -189,12 +190,24 @@ async def get_listing(
 ):
     _cache_ns = f"listing:{listing_id}"
     _cache_params = {"uid": current_user_id or 0}
+
+    # CACHE-20: Pre-route ETag check — Redis'te saklı ETag eşleşiyorsa DB'ye gitmeden 304.
+    client_etag = request.headers.get("if-none-match", "")
+    if client_etag:
+        stored = await cache_get_etag(_cache_ns, _cache_params)
+        if stored and any(etag_normalize(p) == stored for p in client_etag.split(",")):
+            return Response(status_code=304, headers={"etag": f'"{stored}"'})
+
     cached = await cache_get(_cache_ns, _cache_params)
     if cached is not None:
         return cached
     ip_address = request.client.host if request.client else None
     result = await GetListingQuery(uow).execute(listing_id, current_user_id, ip_address=ip_address)
     await cache_set(_cache_ns, _cache_params, result, ttl=60)
+    # CACHE-20: Middleware'e cache bilgisi — ETag'ı hesaplanan yanıttan Redis'e kaydet.
+    request.state.etag_cache_ns = _cache_ns
+    request.state.etag_cache_params = _cache_params
+    request.state.etag_cache_ttl = 600
     return result
 
 

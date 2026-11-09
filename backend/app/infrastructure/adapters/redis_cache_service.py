@@ -40,7 +40,9 @@ from app.utils.redis_client import get_redis
 logger = get_logger(__name__)
 
 _PREFIX = "cqrs"
-_LOCK_TTL_S = 5  # dağıtık kilit için maks bekleme süresi (saniye)
+_ETAG_PREFIX = "etag_store"
+_LOCK_TTL_S = 5       # dağıtık kilit için maks bekleme süresi (saniye)
+_ETAG_STORE_TTL = 600  # 10 dk — data TTL'inden bağımsız; ns_ver check güvencesi sağlar
 
 # Atomik check-and-delete: yalnızca token sahibi kilidi siler (Redlock standardı).
 _UNLOCK_SCRIPT = """
@@ -71,6 +73,15 @@ class RedisCacheService(ICacheService):
         if prefix_key:
             return f"{_PREFIX}:{namespace}:{prefix_key}:{h}"
         return f"{_PREFIX}:{namespace}:{h}"
+
+    @staticmethod
+    def _etag_key(namespace: str, params: dict, prefix_key: str | None) -> str:
+        h = hashlib.md5(
+            json.dumps(params, sort_keys=True, default=str).encode()
+        ).hexdigest()[:12]
+        if prefix_key:
+            return f"{_ETAG_PREFIX}:{namespace}:{prefix_key}:{h}"
+        return f"{_ETAG_PREFIX}:{namespace}:{h}"
 
     # ── ICacheService implementasyonu ───────────────────────────────────────
 
@@ -159,6 +170,68 @@ class RedisCacheService(ICacheService):
                 "[CQRS] Cache invalidate hatası | ns=%s | %s", namespace, exc
             )
         return 0
+
+    async def get_etag(
+        self,
+        namespace: str,
+        params: dict,
+        prefix_key: str | None = None,
+    ) -> str | None:
+        """
+        Namespace versiyonu ile doğrulanmış ETag hash'ini döner (CACHE-20).
+
+        Pipeline ile tek round-trip: ns_ver + etag_store birlikte okunur.
+        ns_ver değişmişse (invalidasyon sonrası) None döner — otomatik geçersizleştirme.
+        """
+        try:
+            redis = await get_redis()
+            etag_key = self._etag_key(namespace, params, prefix_key)
+            ns_ver_key = self._ns_ver_key(namespace, prefix_key)
+
+            async with redis.pipeline(transaction=False) as pipe:
+                pipe.get(ns_ver_key)
+                pipe.get(etag_key)
+                ver_raw, store_raw = await pipe.execute()
+
+            current_ver = int(ver_raw) if ver_raw else 0
+
+            if store_raw:
+                envelope = json.loads(store_raw)
+                if isinstance(envelope, dict) and envelope.get("_ver") == current_ver:
+                    return envelope.get("_etag")
+        except Exception as exc:
+            logger.debug("[CQRS] ETag get hatası | ns=%s | %s", namespace, exc)
+        return None
+
+    async def store_etag(
+        self,
+        namespace: str,
+        params: dict,
+        etag: str,
+        *,
+        ttl: int = _ETAG_STORE_TTL,
+        prefix_key: str | None = None,
+    ) -> None:
+        """
+        ETag hash'ini namespace versiyonuyla birlikte kaydeder (CACHE-20).
+
+        TTL bilinçli olarak data cache TTL'inden uzundur; ns_ver check
+        invalidasyon güvencesini sağlar.  TTL yalnızca Redis bellek baskısı
+        için kullanılır.
+        """
+        try:
+            redis = await get_redis()
+            ver_raw = await redis.get(self._ns_ver_key(namespace, prefix_key))
+            current_ver = int(ver_raw) if ver_raw else 0
+            envelope = json.dumps({"_ver": current_ver, "_etag": etag})
+            await redis.set(
+                self._etag_key(namespace, params, prefix_key),
+                envelope,
+                ex=ttl,
+            )
+            logger.debug("[CQRS] ETag STORE | ns=%s ttl=%s", namespace, ttl)
+        except Exception as exc:
+            logger.debug("[CQRS] ETag store hatası | ns=%s | %s", namespace, exc)
 
     async def get_or_compute(
         self,

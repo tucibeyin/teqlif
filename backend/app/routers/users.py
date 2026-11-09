@@ -28,7 +28,8 @@ from app.use_cases.users.queries.get_blocked_users import GetBlockedUsersQuery
 from app.use_cases.users.queries.get_user_profile import GetUserProfileQuery
 from app.core.uow import SqlAlchemyUnitOfWork
 from app.services.referral_service import apply_referral
-from app.core.read_cache import cache_get, cache_set, invalidate_cache
+from app.core.read_cache import cache_get, cache_set, invalidate_cache, cache_get_etag, etag_normalize
+from starlette.responses import Response
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
@@ -266,14 +267,28 @@ async def get_suggested_sellers(
 
 @router.get("/{username}")
 async def get_user_profile(
+    request: Request,
     username: str,
     current_user: Optional[User] = Depends(_optional_user),
     uow: SqlAlchemyUnitOfWork = Depends(get_uow),
 ):
     _cache_params = {"username": username, "viewer_id": current_user.id if current_user else 0}
+
+    # CACHE-20: Pre-route ETag check — Redis'te saklı ETag eşleşiyorsa DB'ye gitmeden 304.
+    client_etag = request.headers.get("if-none-match", "")
+    if client_etag:
+        stored = await cache_get_etag("user_profile", _cache_params, prefix_key=username)
+        if stored and any(etag_normalize(p) == stored for p in client_etag.split(",")):
+            return Response(status_code=304, headers={"etag": f'"{stored}"'})
+
     cached = await cache_get("user_profile", _cache_params, prefix_key=username)
     if cached is not None:
         return cached
     result = await GetUserProfileQuery(uow).execute(username, current_user)
     await cache_set("user_profile", _cache_params, result, ttl=300, prefix_key=username)
+    # CACHE-20: Middleware'e cache bilgisi — ETag'ı hesaplanan yanıttan Redis'e kaydet.
+    request.state.etag_cache_ns = "user_profile"
+    request.state.etag_cache_params = _cache_params
+    request.state.etag_cache_prefix = username
+    request.state.etag_cache_ttl = 1800
     return result

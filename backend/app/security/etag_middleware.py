@@ -4,23 +4,11 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
+from app.core.logger import fire_and_forget
+from app.core.read_cache import cache_store_etag, etag_normalize
+
 _SKIP_PATHS = frozenset({"/metrics", "/sitemap.xml", "/ads.txt", "/robots.txt"})
 _SKIP_PREFIXES = ("/.well-known/",)
-
-
-def _etag_value(tag: str | None) -> str:
-    """ETag veya If-None-Match değerinden W/ öneki ve tırnakları soyar.
-
-    RFC 7232 §3.2: koşullu GET'te weak/strong karşılaştırması için hash değeri yeterli.
-    Nginx (gzip_vary) ve Cloudflare proxy katmanı strong ETag'i W/ ile zayıflatır;
-    bu normalize edici olmadan 304 asla tetiklenmez.
-    """
-    if not tag:
-        return ""
-    tag = tag.strip()
-    if tag.startswith("W/"):
-        tag = tag[2:]
-    return tag.strip('"')
 
 
 class ETagMiddleware(BaseHTTPMiddleware):
@@ -40,14 +28,30 @@ class ETagMiddleware(BaseHTTPMiddleware):
         async for chunk in response.body_iterator:
             body += chunk
 
-        etag = f'"{hashlib.md5(body, usedforsecurity=False).hexdigest()}"'  # noqa: S324
+        etag_hash = hashlib.md5(body, usedforsecurity=False).hexdigest()  # noqa: S324
+        etag = f'"{etag_hash}"'
+
+        # CACHE-20: Hesaplanan ETag'ı Redis etag_store'a yaz (pre-route check için).
+        # Yalnızca route'un request.state'ine cache bilgisi yazdığı endpoint'lerde tetiklenir.
+        cache_ns = getattr(request.state, "etag_cache_ns", None)
+        if cache_ns is not None:
+            fire_and_forget(
+                cache_store_etag(
+                    cache_ns,
+                    getattr(request.state, "etag_cache_params", {}),
+                    etag_hash,
+                    ttl=getattr(request.state, "etag_cache_ttl", 600),
+                    prefix_key=getattr(request.state, "etag_cache_prefix", None),
+                ),
+                tag="etag_middleware.store",
+            )
 
         # CACHE-05: W/ zayıf ETag öneki normalize edilir (RFC 7232 §3.2).
         # Nginx gzip_vary ve Cloudflare proxy strong ETag'i W/"hash" biçimine
         # dönüştürür; normalize etmeden 304 hiçbir zaman tetiklenmez.
         # RFC 7232 §3.2: istemci virgülle ayrılmış birden fazla ETag gönderebilir.
         client_etag = request.headers.get("if-none-match", "")
-        if client_etag and any(_etag_value(p) == _etag_value(etag) for p in client_etag.split(",")):
+        if client_etag and any(etag_normalize(p) == etag_normalize(etag) for p in client_etag.split(",")):
             return Response(status_code=304, headers={"etag": etag})
 
         headers = {k: v for k, v in response.headers.items() if k.lower() != "content-length"}

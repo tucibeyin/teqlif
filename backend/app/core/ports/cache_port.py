@@ -64,3 +64,35 @@ class ICacheService(abc.ABC):
         bekleyip cache'ten tekrar okur; son çare olarak ``compute_fn()``
         çağırır.
         """
+
+    @abc.abstractmethod
+    async def get_etag(
+        self,
+        namespace: str,
+        params: dict,
+        prefix_key: str | None = None,
+    ) -> str | None:
+        """
+        Namespace versiyonu ile doğrulanmış ETag hash'ini döner.
+
+        Namespace invalidate edilmişse (ns_ver değişmişse) None döner;
+        böylece eski ETag store'lar otomatik olarak geçersiz sayılır.
+        """
+
+    @abc.abstractmethod
+    async def store_etag(
+        self,
+        namespace: str,
+        params: dict,
+        etag: str,
+        *,
+        ttl: int = 600,
+        prefix_key: str | None = None,
+    ) -> None:
+        """
+        ETag hash'ini namespace versiyonuyla birlikte kaydeder.
+
+        TTL bilinçli olarak data cache TTL'inden uzundur; ns_ver check
+        invalidasyon güvencesini sağlar, TTL yalnızca Redis bellek baskısı
+        için kullanılır.
+        """

@@ -73,6 +73,46 @@ async def invalidate_user_profile_cache(username: str) -> None:
     await _cache.invalidate("user_profile", prefix_key=username)
 
 
+def etag_normalize(tag: str | None) -> str:
+    """ETag veya If-None-Match değerinden W/ öneki ve tırnakları soyar.
+
+    CACHE-20: router ve middleware'de ETag karşılaştırması için tek kaynak.
+    RFC 7232 §3.2: weak/strong fark gözetilmez; raw hash yeterlidir.
+    """
+    if not tag:
+        return ""
+    tag = tag.strip()
+    if tag.startswith("W/"):
+        tag = tag[2:]
+    return tag.strip('"')
+
+
+async def cache_get_etag(
+    namespace: str,
+    params: dict,
+    prefix_key: str | None = None,
+) -> str | None:
+    """
+    Namespace versiyonu ile doğrulanmış ETag hash'ini döner (CACHE-20).
+
+    Namespace invalidate edilmişse None döner; eski ETag store'lar
+    otomatik olarak geçersiz sayılır.
+    """
+    return await _cache.get_etag(namespace, params, prefix_key)
+
+
+async def cache_store_etag(
+    namespace: str,
+    params: dict,
+    etag: str,
+    *,
+    ttl: int = 600,
+    prefix_key: str | None = None,
+) -> None:
+    """ETag hash'ini namespace versiyonuyla birlikte Redis'e kaydeder (CACHE-20)."""
+    await _cache.store_etag(namespace, params, etag, ttl=ttl, prefix_key=prefix_key)
+
+
 async def cache_get_or_compute(
     namespace: str,
     params: dict,
