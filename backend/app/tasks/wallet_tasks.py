@@ -232,6 +232,24 @@ async def process_store_notification_task(
                 notif_type = claims.get("notificationType", "")
 
                 if notif_type == "REFUND":
+                    # REFUND apple_handler.handle() üzerinden geçmez — UUID idempotency burada
+                    notif_uuid = claims.get("notificationUUID")
+                    if notif_uuid:
+                        try:
+                            from app.utils.redis_client import get_redis
+                            _redis = await get_redis()
+                            if not await _redis.set(
+                                f"notif:apple:uuid:{notif_uuid}", "1", nx=True, ex=259200
+                            ):
+                                logger.info(
+                                    "[StoreNotif] REFUND duplicate UUID atlandı | uuid=%s",
+                                    notif_uuid,
+                                )
+                                return
+                        except Exception as exc:
+                            logger.warning(
+                                "[StoreNotif] REFUND Redis idempotency check başarısız | %s", exc
+                            )
                     from app.use_cases.wallet.commands.handle_store_refund_command import (
                         HandleStoreRefundCommand,
                     )

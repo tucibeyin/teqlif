@@ -111,7 +111,8 @@ class IAPService {
           _purchaseController.addError(Exception('IAP_BACKEND_FAILED'));
         }
       } else {
-        if (purchase.pendingCompletePurchase) {
+        if (purchase.pendingCompletePurchase &&
+            purchase.status != PurchaseStatus.pending) {
           await _iap.completePurchase(purchase);
         }
         if (purchase.status == PurchaseStatus.error) {

@@ -64,6 +64,7 @@ import 'purchases_screen.dart';
 import 'sales_screen.dart';
 import '../services/share_service.dart';
 import '../services/wallet_service.dart';
+import '../repositories/wallet_repository.dart';
 import '../models/enums.dart';
 import '../models/user.dart';
 import 'faq_screen.dart';
@@ -4121,8 +4122,8 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
   Future<void> _load() async {
     setState(() => _loading = true);
     final results = await Future.wait([
-      WalletService.getBalance(limit: 50),
-      WalletService.getSummary(),
+      ref.read(walletRepositoryProvider).getBalance(limit: 50),
+      ref.read(walletRepositoryProvider).getSummary(),
     ]);
     if (!mounted) return;
     final balanceData = results[0];
@@ -4159,7 +4160,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
   }
 
   void _syncSubscriptionSilently() {
-    WalletService.syncSubscription().then((sync) {
+    ref.read(walletRepositoryProvider).syncSubscription().then((sync) {
       if (!mounted || sync == null) return;
       if (sync['needs_restore'] == true && !_needsRestore) {
         setState(() => _needsRestore = true);
@@ -4177,7 +4178,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
   }
 
   Future<void> _cancelWithdrawal(int id) async {
-    final ok = await WalletService.cancelWithdrawal(id);
+    final ok = await ref.read(walletRepositoryProvider).cancelWithdrawal(id);
     if (!mounted) return;
     if (ok) {
       await _load();
@@ -4255,7 +4256,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
     if (confirmed != true || !mounted) return;
     setState(() => _isConverting = true);
     try {
-      final result = await WalletService.convertToTeqlik(_availableTeqlik);
+      final result = await ref.read(walletRepositoryProvider).convertToTeqlik(_availableTeqlik);
       if (!mounted) return;
       if (result['ok'] == true) {
         await _load();
@@ -6908,7 +6909,7 @@ class _EarningsRow extends StatelessWidget {
 
 // ─── IBAN Ön Kayıt Bottom Sheet (W10) ────────────────────────────────────────
 
-class _IbanPreRegistrationSheet extends StatefulWidget {
+class _IbanPreRegistrationSheet extends ConsumerStatefulWidget {
   final int availableTeqlik;
   final double tryRate;
   final VoidCallback onSuccess;
@@ -6922,10 +6923,10 @@ class _IbanPreRegistrationSheet extends StatefulWidget {
   });
 
   @override
-  State<_IbanPreRegistrationSheet> createState() => _IbanPreRegistrationSheetState();
+  ConsumerState<_IbanPreRegistrationSheet> createState() => _IbanPreRegistrationSheetState();
 }
 
-class _IbanPreRegistrationSheetState extends State<_IbanPreRegistrationSheet> {
+class _IbanPreRegistrationSheetState extends ConsumerState<_IbanPreRegistrationSheet> {
   static const _chips = [500, 1000];
   int? _selectedChip;
   final _ibanCtrl = TextEditingController();
@@ -6951,7 +6952,7 @@ class _IbanPreRegistrationSheetState extends State<_IbanPreRegistrationSheet> {
     if (iban.length < 15 || holder.isEmpty) return;
 
     setState(() => _loading = true);
-    final result = await WalletService.requestWithdrawal(
+    final result = await ref.read(walletRepositoryProvider).requestWithdrawal(
       teqlikAmount: _effectiveAmount,
       iban: iban,
       accountHolderName: holder,
@@ -7157,7 +7158,7 @@ class _TxnDetailSheetState extends ConsumerState<_TxnDetailSheet> {
       setState(() => _loading = false);
       return;
     }
-    final data = await WalletService.getTransactionDetail(widget.txnId!);
+    final data = await ref.read(walletRepositoryProvider).getTransactionDetail(widget.txnId!);
     if (!mounted) return;
     setState(() {
       _loading = false;

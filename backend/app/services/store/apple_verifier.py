@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 import jwt
 from cryptography.x509 import load_der_x509_certificate
 from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.asymmetric import ec, rsa, padding
 
 from app.config import settings
 from app.services.store.base import PurchaseResult, StoreVerifier
@@ -36,16 +36,24 @@ VALID_PRODUCT_IDS: frozenset[str] = VALID_CONSUMABLE_IDS | VALID_SUBSCRIPTION_ID
 
 
 def _verify_cert_signed_by(cert, issuer_cert) -> None:
-    """issuer_cert'in cert'i imzaladığını kriptografik olarak doğrular (EC)."""
+    """issuer_cert'in cert'i imzaladığını kriptografik olarak doğrular (EC veya RSA)."""
     try:
         issuer_pk = issuer_cert.public_key()
-        if not isinstance(issuer_pk, ec.EllipticCurvePublicKey):
-            raise ValueError("Desteklenmeyen CA anahtar tipi (non-EC)")
-        issuer_pk.verify(
-            cert.signature,
-            cert.tbs_certificate_bytes,
-            ec.ECDSA(cert.signature_hash_algorithm),
-        )
+        if isinstance(issuer_pk, ec.EllipticCurvePublicKey):
+            issuer_pk.verify(
+                cert.signature,
+                cert.tbs_certificate_bytes,
+                ec.ECDSA(cert.signature_hash_algorithm),
+            )
+        elif isinstance(issuer_pk, rsa.RSAPublicKey):
+            issuer_pk.verify(
+                cert.signature,
+                cert.tbs_certificate_bytes,
+                padding.PKCS1v15(),
+                cert.signature_hash_algorithm,
+            )
+        else:
+            raise ValueError("Desteklenmeyen CA anahtar tipi")
     except ValueError:
         raise
     except Exception as exc:
