@@ -775,3 +775,18 @@ flowchart TD
    - Satın alma sonrası mobil Hive önbelleğini temizleyen ve backend'den WebSocket invalidation yayan akışı tamamlayın.
    - UI katmanındaki doğrudan servis erişimlerini ADR §8 uyarınca Repository ve ViewModel katmanlarına refactor edin.
 
+---
+
+## 📋 V1.0 Sonrası Code Review — Residual Fixes (2026-11-10)
+
+12/12 bulgu tamamlandıktan sonra gerçekleştirilen kod incelemesinde 6 ek konu tespit edilmiş ve aynı gün düzeltilmiştir.
+
+| # | Öncelik | Dosya | Sorun | Commit |
+|---|---------|-------|-------|--------|
+| Açık 1 | P1 | `verify_purchase_command.py` | `user_key` velocity check `if device_id:` bloğu içindeydi — `device_id` gönderilmediğinde kullanıcı velocity tamamen atlanıyordu | `9cf79fac` |
+| Açık 2 | P1 | `wallet_tasks.py` | REFUND bildirimleri `apple_handler.handle()` üzerinden geçmediğinden `notificationUUID` idempotensi kontrolü bypass ediliyordu | `9cf79fac` |
+| Açık 3 | P1 | `apple_verifier.py` | `_verify_cert_signed_by()` yalnızca EC anahtarlarını destekliyordu; Apple WDRCA G1-G5 RSA tabanlı CA'lar için `ValueError` fırlatıyordu | `9cf79fac` |
+| Açık 4 | P2 | `profile_screen.dart` | `_WalletScreenState` ve alt widget'lar IAP-10 sonrasında hâlâ `WalletService.*` statik metodlarını kullanıyordu; `walletRepositoryProvider`'a geçirildi; `_IbanPreRegistrationSheet` → `ConsumerStatefulWidget` | `9cf79fac` · `bfa00891` |
+| Açık 5 | P2 | `iap_service.dart` | `else` dalındaki `completePurchase` çağrısı `.pending` (Ask to Buy / 3D Secure) durumunda da tetikleniyordu | `9cf79fac` |
+| Açık 6 | P3 | `verify_purchase_command.py` | `except (BadRequestException, ConflictException): raise` velocity rollback'i atlıyordu; `ConflictException` (IntegrityError duplicate) sonrası velocity sayacı geri alınmıyordu | `9cf79fac` |
+
