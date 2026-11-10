@@ -55,6 +55,7 @@ import 'public_profile_screen.dart';
 import 'create_listing_screen.dart';
 import 'pro_hub_screen.dart';
 import 'viewmodels/pro_hub_view_model.dart';
+import 'viewmodels/pro_subscription_view_model.dart';
 import 'notification_settings_screen.dart';
 import 'blocked_users_screen.dart';
 import 'account_info_screen.dart';
@@ -4062,8 +4063,6 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
   int? _activeWithdrawalId;
 
   late TabController _tabController;
-  final _iap = IAPService();
-  StreamSubscription<PurchaseDetails>? _iapSub;
   bool _iapLoading = false;
   bool _isConverting = false;
 
@@ -4103,10 +4102,6 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
     _isPro = widget.isPro;
     _balance = widget.initialBalance;
     _txns = List.from(widget.initialHistory);
-    _iapSub = _iap.purchaseStream.listen(_onIapPurchase);
-    if (_iap.products.isEmpty) {
-      _iap.loadProducts().then((_) { if (mounted) setState(() {}); });
-    }
     _load();
   }
 
@@ -4114,7 +4109,6 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _tabController.dispose();
-    _iapSub?.cancel();
     super.dispose();
   }
 
@@ -4298,7 +4292,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
   Future<void> _buyPack(ProductDetails product) async {
     setState(() => _iapLoading = true);
     try {
-      await _iap.buy(product);
+      await ref.read(proSubscriptionViewModelProvider.notifier).buy(product);
     } catch (_) {
       if (mounted) setState(() => _iapLoading = false);
     }
@@ -4500,6 +4494,14 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final hasEarnings = _pendingTeqlik > 0 || _availableTeqlik > 0;
 
+    ref.listen<PurchaseDetails?>(
+      proSubscriptionViewModelProvider.select((s) => s.lastPurchase),
+      (prev, next) {
+        if (next == null || next == prev) return;
+        _onIapPurchase(next);
+      },
+    );
+
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
@@ -4661,7 +4663,6 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
                 // ── Sekme 1: PRO ─────────────────────────────────────
                 _ProTab(
                   isPro: _isPro,
-                  iap: _iap,
                   proExpiresAt: _proExpiresAt,
                   activePlanType: _activePlanType,
                   isDark: isDark,
@@ -4673,9 +4674,6 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
 
                 // ── Sekme 2: teqlik Al ───────────────────────────────
                 _TeqlikPacksTab(
-                  iap: _iap,
-                  iapLoading: _iapLoading,
-                  onBuy: _buyPack,
                   isDark: isDark,
                 ),
 
@@ -5160,15 +5158,9 @@ class _UseCase {
 }
 
 class _TeqlikPacksTab extends StatelessWidget {
-  final IAPService iap;
-  final bool iapLoading;
-  final Future<void> Function(ProductDetails) onBuy;
   final bool isDark;
 
   const _TeqlikPacksTab({
-    required this.iap,
-    required this.iapLoading,
-    required this.onBuy,
     required this.isDark,
   });
 
@@ -5455,18 +5447,15 @@ class _TeqlikPacksTab extends StatelessWidget {
 
 // ─── teqlik Paketleri Sheet ───────────────────────────────────────────────────
 
-class _TeqlikPacksSheet extends StatefulWidget {
+class _TeqlikPacksSheet extends ConsumerStatefulWidget {
   const _TeqlikPacksSheet();
 
   @override
-  State<_TeqlikPacksSheet> createState() => _TeqlikPacksSheetState();
+  ConsumerState<_TeqlikPacksSheet> createState() => _TeqlikPacksSheetState();
 }
 
-class _TeqlikPacksSheetState extends State<_TeqlikPacksSheet> {
-  final _iap = IAPService();
+class _TeqlikPacksSheetState extends ConsumerState<_TeqlikPacksSheet> {
   String _selectedPackId = 'teqlik_pack_500';
-  bool _loading = false;
-  StreamSubscription<PurchaseDetails>? _sub;
 
   // (productId, amount, highlighted, badgeLabel)
   static const _packOptions = [
@@ -5476,26 +5465,8 @@ class _TeqlikPacksSheetState extends State<_TeqlikPacksSheet> {
     ('teqlik_pack_1000', 1000, false, 'En İyi'),
   ];
 
-  @override
-  void initState() {
-    super.initState();
-    _sub = _iap.purchaseStream.listen(_onPurchase);
-    if (_iap.products.isEmpty) {
-      _iap.loadProducts().then((_) {
-        if (mounted) setState(() {});
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    _sub?.cancel();
-    super.dispose();
-  }
-
   void _onPurchase(PurchaseDetails purchase) {
     if (!mounted) return;
-    setState(() => _loading = false);
     if (purchase.status == PurchaseStatus.purchased ||
         purchase.status == PurchaseStatus.restored) {
       // Sadece consumable için kapat — subscription ProSubscriptionSheet tarafından kapatılır
@@ -5505,30 +5476,36 @@ class _TeqlikPacksSheetState extends State<_TeqlikPacksSheet> {
     }
   }
 
-  Future<void> _buy() async {
-    final product = _iap.products.firstWhere(
+  Future<void> _buy(List<ProductDetails> products) async {
+    final product = products.firstWhere(
       (p) => p.id == _selectedPackId,
       orElse: () => throw StateError('Ürün bulunamadı'),
     );
-    setState(() => _loading = true);
     try {
-      await _iap.buy(product);
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
-    }
+      await ref.read(proSubscriptionViewModelProvider.notifier).buy(product);
+    } catch (_) {}
   }
 
   Future<void> _restore() async {
-    setState(() => _loading = true);
-    await _iap.restorePurchases();
-    if (mounted) setState(() => _loading = false);
+    await ref.read(proSubscriptionViewModelProvider.notifier).restorePurchases();
   }
 
-  String _priceFor(String productId) =>
-      _iap.products.where((p) => p.id == productId).firstOrNull?.price ?? '—';
+  String _priceFor(String productId, List<ProductDetails> products) =>
+      products.where((p) => p.id == productId).firstOrNull?.price ?? '—';
 
   @override
   Widget build(BuildContext context) {
+    final vm = ref.watch(proSubscriptionViewModelProvider);
+
+    ref.listen<PurchaseDetails?>(
+      proSubscriptionViewModelProvider.select((s) => s.lastPurchase),
+      (prev, next) {
+        if (next == null || next == prev) return;
+        _onPurchase(next);
+      },
+    );
+
+    final loading = vm.isPurchasing;
     final selected = _packOptions.firstWhere((p) => p.$1 == _selectedPackId);
 
     return Container(
@@ -5589,7 +5566,7 @@ class _TeqlikPacksSheetState extends State<_TeqlikPacksSheet> {
                 amount: pack.$2,
                 highlighted: pack.$3,
                 badgeLabel: pack.$4,
-                price: _priceFor(pack.$1),
+                price: _priceFor(pack.$1, vm.products),
                 selected: _selectedPackId == pack.$1,
                 onTap: () => setState(() => _selectedPackId = pack.$1),
               ))),
@@ -5607,14 +5584,14 @@ class _TeqlikPacksSheetState extends State<_TeqlikPacksSheet> {
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: _loading ? null : _buy,
+              onPressed: loading ? null : () => _buy(vm.products),
               style: FilledButton.styleFrom(
                 backgroundColor: const Color(0xFF0284C7),
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14)),
               ),
-              child: _loading
+              child: loading
                   ? const SizedBox(
                       width: 20,
                       height: 20,
@@ -5643,7 +5620,7 @@ class _TeqlikPacksSheetState extends State<_TeqlikPacksSheet> {
 
           // Satın alımları geri yükle (Apple Guideline 3.1.1 zorunlu)
           TextButton(
-            onPressed: _loading ? null : _restore,
+            onPressed: loading ? null : _restore,
             child: const Text(
               'Satın alımları geri yükle',
               style: TextStyle(color: Colors.white38, fontSize: 12),
@@ -5835,7 +5812,6 @@ class _TeqlikPackOption extends StatelessWidget {
 
 class _ProTab extends ConsumerWidget {
   final bool isPro;
-  final IAPService iap;
   final String? proExpiresAt;
   final String? activePlanType;
   final bool isDark;
@@ -5846,7 +5822,6 @@ class _ProTab extends ConsumerWidget {
 
   const _ProTab({
     required this.isPro,
-    required this.iap,
     required this.proExpiresAt,
     this.activePlanType,
     required this.isDark,
@@ -5947,7 +5922,7 @@ class _ProTab extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(14),
                 onTap: () async {
                   HapticFeedback.lightImpact();
-                  await iap.restorePurchases();
+                  await ref.read(proSubscriptionViewModelProvider.notifier).restorePurchases();
                 },
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -6184,7 +6159,7 @@ class _ProTab extends ConsumerWidget {
                 ..._upgradePlans
                     .where((p) => p.$4 > currentTierIndex)
                     .map((p) {
-                      final product = iap.products
+                      final product = ref.watch(proSubscriptionViewModelProvider).products
                           .where((pr) => pr.id == p.$1)
                           .firstOrNull;
                       final price = product?.price ?? '—';

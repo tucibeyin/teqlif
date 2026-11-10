@@ -1,9 +1,9 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../services/iap_service.dart';
+import '../screens/viewmodels/pro_subscription_view_model.dart';
 import '../services/localization_service.dart';
 
 /// Plan seçim kartı veri modeli
@@ -40,7 +40,7 @@ const _kPlanTier = {
   'teqlif_pro_12m': 3,
 };
 
-class ProSubscriptionSheet extends StatefulWidget {
+class ProSubscriptionSheet extends ConsumerStatefulWidget {
   final TranslationPack loc;
   final VoidCallback? onPurchaseSuccess;
   /// Mevcut IAP plan product ID (ör. 'teqlif_pro_6m'). Null = PRO değil, tüm planlar gösterilir.
@@ -57,14 +57,11 @@ class ProSubscriptionSheet extends StatefulWidget {
   });
 
   @override
-  State<ProSubscriptionSheet> createState() => _ProSubscriptionSheetState();
+  ConsumerState<ProSubscriptionSheet> createState() => _ProSubscriptionSheetState();
 }
 
-class _ProSubscriptionSheetState extends State<ProSubscriptionSheet> {
-  final _iap = IAPService();
+class _ProSubscriptionSheetState extends ConsumerState<ProSubscriptionSheet> {
   late String _selectedPlanId;
-  bool _loading = false;
-  StreamSubscription<PurchaseDetails>? _sub;
 
   @override
   void initState() {
@@ -81,27 +78,6 @@ class _ProSubscriptionSheetState extends State<ProSubscriptionSheet> {
     } else {
       _selectedPlanId = visibleIds.firstOrNull ?? 'teqlif_pro_1m';
     }
-    _sub = _iap.purchaseStream.listen(
-      _onPurchase,
-      onError: (_) {
-        if (!mounted) return;
-        setState(() => _loading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(widget.loc.t('iapVerifyFailed'))),
-        );
-      },
-    );
-    if (_iap.products.isEmpty) {
-      _iap.loadProducts().then((_) {
-        if (mounted) setState(() {});
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    _sub?.cancel();
-    super.dispose();
   }
 
   void _onPurchase(PurchaseDetails purchase) {
@@ -113,7 +89,6 @@ class _ProSubscriptionSheetState extends State<ProSubscriptionSheet> {
       );
       return;
     }
-    setState(() => _loading = false);
     if (purchase.status == PurchaseStatus.purchased ||
         purchase.status == PurchaseStatus.restored) {
       Navigator.pop(context);
@@ -121,37 +96,52 @@ class _ProSubscriptionSheetState extends State<ProSubscriptionSheet> {
     }
   }
 
-  Future<void> _subscribe() async {
-    if (_iap.products.isEmpty) {
+  Future<void> _subscribe(List<ProductDetails> products) async {
+    if (products.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(widget.loc.t('iapProductsNotLoaded'))),
       );
       return;
     }
-    final product = _iap.products.firstWhere(
+    final product = products.firstWhere(
       (p) => p.id == _selectedPlanId,
       orElse: () => throw StateError('Ürün bulunamadı'),
     );
-    setState(() => _loading = true);
     try {
-      await _iap.buy(product);
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
-    }
+      await ref.read(proSubscriptionViewModelProvider.notifier).buy(product);
+    } catch (_) {}
   }
 
   Future<void> _restore() async {
-    setState(() => _loading = true);
-    await _iap.restorePurchases();
-    if (mounted) setState(() => _loading = false);
+    await ref.read(proSubscriptionViewModelProvider.notifier).restorePurchases();
   }
 
-  String _priceFor(String productId) {
-    return _iap.products.where((p) => p.id == productId).firstOrNull?.price ?? '—';
-  }
+  String _priceFor(String productId, List<ProductDetails> products) =>
+      products.where((p) => p.id == productId).firstOrNull?.price ?? '—';
 
   @override
   Widget build(BuildContext context) {
+    final vm = ref.watch(proSubscriptionViewModelProvider);
+
+    ref.listen<PurchaseDetails?>(
+      proSubscriptionViewModelProvider.select((s) => s.lastPurchase),
+      (prev, next) {
+        if (next == null || next == prev) return;
+        _onPurchase(next);
+      },
+    );
+
+    ref.listen<String?>(
+      proSubscriptionViewModelProvider.select((s) => s.error),
+      (_, error) {
+        if (error == null || !mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(widget.loc.t('iapVerifyFailed'))),
+        );
+      },
+    );
+
+    final loading = vm.isPurchasing;
     final loc = widget.loc;
     final currentTier = _kPlanTier[widget.currentPlanId] ?? -1;
     final isUpgradeMode = widget.currentPlanId != null;
@@ -237,7 +227,7 @@ class _ProSubscriptionSheetState extends State<ProSubscriptionSheet> {
             // Plan seçim kartları (tier filtreli)
             ...visiblePlans.map((plan) => _PlanCard(
                   plan: plan,
-                  price: _priceFor(plan.productId),
+                  price: _priceFor(plan.productId, vm.products),
                   selected: _selectedPlanId == plan.productId,
                   onTap: () => setState(() => _selectedPlanId = plan.productId),
                   loc: loc,
@@ -256,13 +246,13 @@ class _ProSubscriptionSheetState extends State<ProSubscriptionSheet> {
             SizedBox(
               width: double.infinity,
               child: FilledButton(
-                onPressed: _loading ? null : _subscribe,
+                onPressed: loading ? null : () => _subscribe(vm.products),
                 style: FilledButton.styleFrom(
                   backgroundColor: const Color(0xFFD97706),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
-                child: _loading
+                child: loading
                     ? const SizedBox(
                         width: 20, height: 20,
                         child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
@@ -284,7 +274,7 @@ class _ProSubscriptionSheetState extends State<ProSubscriptionSheet> {
             // Satın alımları geri yükle (Apple Guideline 3.1.1 zorunlu — sadece yeni üye akışında)
             if (!isUpgradeMode)
               TextButton(
-                onPressed: _loading ? null : _restore,
+                onPressed: loading ? null : _restore,
                 child: Text(
                   loc.t('proRestorePurchases'),
                   style: const TextStyle(color: Colors.white38, fontSize: 12),
