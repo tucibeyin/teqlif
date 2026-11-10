@@ -39,11 +39,10 @@ class HandleStoreRefundCommand:
         # ── 2. Orijinal TeqlikTransaction bul ─────────────────────────────────
         tx_row = await self._session.execute(
             text(
-                "SELECT id, user_id, amount, product_type "
+                "SELECT id, user_id, amount, product_type, transaction_type "
                 "FROM teqlik_transactions "
                 "WHERE store_platform = :plat "
                 "AND store_transaction_id = :tid "
-                "AND transaction_type = 'iap_purchase' "
                 "LIMIT 1"
             ),
             {"plat": platform, "tid": transaction_id},
@@ -56,7 +55,7 @@ class HandleStoreRefundCommand:
             )
             return
 
-        _tx_id, user_id, original_teqlik, product_type = tx
+        _tx_id, user_id, original_teqlik, product_type, _tx_type = tx
 
         # V1.0: Apple/Google consumable iadelerinde tam paket miktarı iade edilir.
         # Abonelik iadelerinde de original_teqlik kullanılır.
@@ -89,6 +88,18 @@ class HandleStoreRefundCommand:
             logger.warning(
                 "[Refund] Negatif bakiye | user_id=%s balance=%s", user_id, balance_after
             )
+
+        # ── 4a. Abonelik iadesi → PRO hakları geri al ─────────────────────────
+        if product_type == "subscription":
+            await self._session.execute(
+                text(
+                    "UPDATE users SET user_type = 'standard', plan_type = NULL, "
+                    "pro_expires_at = NULL, pro_grace_until = NULL "
+                    "WHERE id = :uid AND user_type = 'pro'"
+                ),
+                {"uid": user_id},
+            )
+            logger.info("[Refund] Abonelik iadesi — PRO hakları geri alındı | user=%s", user_id)
 
         # ── 5. Orantılı gift kazanç iptali ────────────────────────────────────
         gift_teqlik_cancelled = await self._cancel_proportional_gifts(

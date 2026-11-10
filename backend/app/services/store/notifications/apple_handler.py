@@ -27,6 +27,18 @@ class AppleNotificationHandler(StoreNotificationHandler):
     async def handle(self, signed_payload: str) -> None:
         claims = verify_signed_payload_jws(signed_payload)
 
+        # Idempotency: notificationUUID bazlı duplicate rejection (3 gün TTL)
+        notif_uuid = claims.get("notificationUUID")
+        if notif_uuid:
+            try:
+                from app.utils.redis_client import get_redis
+                _redis = await get_redis()
+                if not await _redis.set(f"notif:apple:uuid:{notif_uuid}", "1", nx=True, ex=259200):
+                    logger.info("[AppleNotif] Duplicate UUID atlandı | uuid=%s", notif_uuid)
+                    return
+            except Exception as exc:
+                logger.warning("[AppleNotif] Redis idempotency check başarısız | %s", exc)
+
         notification_type = claims.get("notificationType", "")
         subtype = claims.get("subtype", "")
 

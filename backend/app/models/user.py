@@ -73,3 +73,4 @@ class User(Base):
     last_active_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     store_subscription_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
     store_subscription_platform: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    pending_refund: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, server_default="false")

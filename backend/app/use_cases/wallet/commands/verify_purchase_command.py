@@ -4,6 +4,8 @@ from datetime import datetime, timezone
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from sqlalchemy.exc import IntegrityError
+
 from app.core.exceptions import BadRequestException, ConflictException
 from app.core.logger import get_logger
 from app.services.store.base import PurchaseResult
@@ -63,11 +65,10 @@ return 1
 """
 
 
-async def _check_velocity(redis, device_id: str, try_amount: float) -> None:
-    """Cihaz başına günlük ₺5.000 velocity limiti — Fail-Closed, atomik Lua."""
+async def _check_velocity(redis, key: str, try_amount: float) -> None:
+    """Atomik Lua velocity limiti — Fail-Closed."""
     if redis is None:
         raise BadRequestException(code="IAP_VELOCITY_UNAVAILABLE")
-    key = f"rate:iap:{device_id}"
     result = await redis.eval(
         _VELOCITY_LUA, 1, key,
         str(try_amount),
@@ -75,7 +76,7 @@ async def _check_velocity(redis, device_id: str, try_amount: float) -> None:
         str(_IAP_VELOCITY_TTL_SEC),
     )
     if result == -1:
-        logger.warning("[VerifyPurchase] Velocity limit aşıldı | device=%s", device_id)
+        logger.warning("[VerifyPurchase] Velocity limit aşıldı | key=%s", key)
         raise BadRequestException(code="IAP_VELOCITY_LIMIT_EXCEEDED")
 
 
@@ -118,6 +119,9 @@ class VerifyPurchaseCommand:
         # Velocity limiti (Fail-Closed — Redis yoksa reddet)
         # try_amount <= 0 gelirse product_id bazlı fallback fiyat tablosu kullanılır
         # — direkt API çağrısıyla velocity bypass'ı önlenir
+        redis_client = None
+        vel_keys_checked: list[str] = []
+        effective_try_amount = 0.0
         if device_id:
             effective_try_amount = (
                 try_amount if try_amount > 0
@@ -126,62 +130,79 @@ class VerifyPurchaseCommand:
             if effective_try_amount > 0:
                 try:
                     from app.utils.redis_client import get_redis
-                    redis = await get_redis()
-                    await _check_velocity(redis, device_id, effective_try_amount)
+                    redis_client = await get_redis()
+                    dev_key = f"rate:iap:{device_id}"
+                    await _check_velocity(redis_client, dev_key, effective_try_amount)
+                    vel_keys_checked.append(dev_key)
+                    user_key = f"rate:iap:user:{user_id}"
+                    await _check_velocity(redis_client, user_key, effective_try_amount)
+                    vel_keys_checked.append(user_key)
                 except (BadRequestException, ConflictException):
                     raise
                 except Exception as exc:
                     logger.error("[VerifyPurchase] Redis velocity check başarısız | %s", exc)
                     raise BadRequestException(code="IAP_VELOCITY_UNAVAILABLE")
 
-        if result.product_id in VALID_CONSUMABLE_IDS:
-            return await self._handle_consumable(user_id, platform, result)
-        else:
-            if result.expires_at is None:
-                logger.error(
-                    "[VerifyPurchase] Abonelik için expiresDate eksik | product=%s tx=%s",
-                    result.product_id, result.transaction_id,
+        try:
+            if result.product_id in VALID_CONSUMABLE_IDS:
+                return await self._handle_consumable(user_id, platform, result)
+            else:
+                if result.expires_at is None:
+                    logger.error(
+                        "[VerifyPurchase] Abonelik için expiresDate eksik | product=%s tx=%s",
+                        result.product_id, result.transaction_id,
+                    )
+                    raise BadRequestException(code="IAP_MISSING_EXPIRY")
+                stored_try_amount = (
+                    try_amount if try_amount > 0
+                    else _PRODUCT_TRY_PRICES.get(result.product_id, 0.0)
                 )
-                raise BadRequestException(code="IAP_MISSING_EXPIRY")
-            stored_try_amount = (
-                try_amount if try_amount > 0
-                else _PRODUCT_TRY_PRICES.get(result.product_id, 0.0)
-            )
-            return await self._handle_subscription(user_id, platform, result, stored_try_amount)
+                return await self._handle_subscription(user_id, platform, result, stored_try_amount)
+        except (BadRequestException, ConflictException):
+            raise
+        except Exception:
+            if redis_client and vel_keys_checked and effective_try_amount > 0:
+                for vk in vel_keys_checked:
+                    try:
+                        await redis_client.incrbyfloat(vk, -effective_try_amount)
+                    except Exception:
+                        pass
+            raise
 
     async def _handle_consumable(
         self, user_id: int, platform: str, result: PurchaseResult
     ) -> dict:
         teqlik_amount = _CONSUMABLE_AMOUNTS[result.product_id]
 
-        await self._session.execute(
-            text("UPDATE users SET teqlik_balance = teqlik_balance + :amt WHERE id = :uid"),
+        bal_row = await self._session.execute(
+            text(
+                "UPDATE users SET teqlik_balance = teqlik_balance + :amt "
+                "WHERE id = :uid RETURNING teqlik_balance"
+            ),
             {"amt": teqlik_amount, "uid": user_id},
         )
+        balance_after = bal_row.fetchone()[0]
 
-        tx_row = await self._session.execute(
-            text(
-                "INSERT INTO teqlik_transactions "
-                "(user_id, amount, transaction_type, store_platform, "
-                " store_transaction_id, raw_payload, product_type) "
-                "VALUES (:uid, :amt, 'iap_purchase', :platform, :tx_id, :raw, 'consumable') "
-                "RETURNING id"
-            ),
-            {
-                "uid": user_id,
-                "amt": teqlik_amount,
-                "platform": platform,
-                "tx_id": result.transaction_id,
-                "raw": result.raw_payload,
-            },
-        )
+        try:
+            tx_row = await self._session.execute(
+                text(
+                    "INSERT INTO teqlik_transactions "
+                    "(user_id, amount, transaction_type, store_platform, "
+                    " store_transaction_id, raw_payload, product_type) "
+                    "VALUES (:uid, :amt, 'iap_purchase', :platform, :tx_id, :raw, 'consumable') "
+                    "RETURNING id"
+                ),
+                {
+                    "uid": user_id,
+                    "amt": teqlik_amount,
+                    "platform": platform,
+                    "tx_id": result.transaction_id,
+                    "raw": result.raw_payload,
+                },
+            )
+        except IntegrityError:
+            raise ConflictException(code="IAP_ALREADY_PROCESSED")
         tx_id_db = tx_row.fetchone()[0]
-
-        balance_row = await self._session.execute(
-            text("SELECT teqlik_balance FROM users WHERE id = :uid"),
-            {"uid": user_id},
-        )
-        balance_after = balance_row.fetchone()[0]
 
         await self._session.execute(
             text(
@@ -210,7 +231,7 @@ class VerifyPurchaseCommand:
         plan_type = _PLAN_TYPE.get(result.product_id, "monthly")
         now = datetime.now(timezone.utc)
 
-        await self._session.execute(
+        sub_upd_row = await self._session.execute(
             text(
                 "UPDATE users SET "
                 "user_type = 'pro', "
@@ -219,7 +240,7 @@ class VerifyPurchaseCommand:
                 "pro_expires_at = :exp, "
                 "store_subscription_id = :sub_id, "
                 "store_subscription_platform = :platform "
-                "WHERE id = :uid"
+                "WHERE id = :uid RETURNING teqlik_balance"
             ),
             {
                 "plan": plan_type,
@@ -230,32 +251,30 @@ class VerifyPurchaseCommand:
                 "uid": user_id,
             },
         )
+        sub_balance_after = sub_upd_row.fetchone()[0]
 
         stored_try = try_amount if try_amount > 0 else None
-        sub_tx_row = await self._session.execute(
-            text(
-                "INSERT INTO teqlik_transactions "
-                "(user_id, amount, transaction_type, store_platform, "
-                " store_transaction_id, raw_payload, product_type, try_amount) "
-                "VALUES (:uid, 0, :tx_type, :platform, :tx_id, :raw, 'subscription', :try_amt) "
-                "RETURNING id"
-            ),
-            {
-                "uid": user_id,
-                "tx_type": f"pro_subscription_{plan_type}",
-                "platform": platform,
-                "tx_id": result.transaction_id,
-                "raw": result.raw_payload,
-                "try_amt": stored_try,
-            },
-        )
+        try:
+            sub_tx_row = await self._session.execute(
+                text(
+                    "INSERT INTO teqlik_transactions "
+                    "(user_id, amount, transaction_type, store_platform, "
+                    " store_transaction_id, raw_payload, product_type, try_amount) "
+                    "VALUES (:uid, 0, :tx_type, :platform, :tx_id, :raw, 'subscription', :try_amt) "
+                    "RETURNING id"
+                ),
+                {
+                    "uid": user_id,
+                    "tx_type": f"pro_subscription_{plan_type}",
+                    "platform": platform,
+                    "tx_id": result.transaction_id,
+                    "raw": result.raw_payload,
+                    "try_amt": stored_try,
+                },
+            )
+        except IntegrityError:
+            raise ConflictException(code="IAP_ALREADY_PROCESSED")
         sub_tx_id = sub_tx_row.fetchone()[0]
-
-        sub_balance_row = await self._session.execute(
-            text("SELECT teqlik_balance FROM users WHERE id = :uid"),
-            {"uid": user_id},
-        )
-        sub_balance_after = sub_balance_row.fetchone()[0]
 
         await self._session.execute(
             text(

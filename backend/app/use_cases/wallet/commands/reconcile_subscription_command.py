@@ -95,7 +95,7 @@ class ReconcileSubscriptionCommand:
         expires_changed = (
             apple_status.expires_at is not None
             and pro_expires_at is not None
-            and abs((apple_status.expires_at - pro_expires_at.replace(tzinfo=timezone.utc)).total_seconds()) > 60
+            and abs((apple_status.expires_at - pro_expires_at.astimezone(timezone.utc)).total_seconds()) > 60
         ) or (apple_status.expires_at is not None and pro_expires_at is None)
 
         plan_changed = apple_plan != plan_type

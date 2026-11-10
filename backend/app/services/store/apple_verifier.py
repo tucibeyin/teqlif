@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 import jwt
 from cryptography.x509 import load_der_x509_certificate
 from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import ec
 
 from app.config import settings
 from app.services.store.base import PurchaseResult, StoreVerifier
@@ -34,6 +35,25 @@ VALID_SUBSCRIPTION_IDS: frozenset[str] = frozenset({
 VALID_PRODUCT_IDS: frozenset[str] = VALID_CONSUMABLE_IDS | VALID_SUBSCRIPTION_IDS
 
 
+def _verify_cert_signed_by(cert, issuer_cert) -> None:
+    """issuer_cert'in cert'i imzaladığını kriptografik olarak doğrular (EC)."""
+    try:
+        issuer_pk = issuer_cert.public_key()
+        if not isinstance(issuer_pk, ec.EllipticCurvePublicKey):
+            raise ValueError("Desteklenmeyen CA anahtar tipi (non-EC)")
+        issuer_pk.verify(
+            cert.signature,
+            cert.tbs_certificate_bytes,
+            ec.ECDSA(cert.signature_hash_algorithm),
+        )
+    except ValueError:
+        raise
+    except Exception as exc:
+        raise ValueError(
+            f"Sertifika imzası geçersiz: {cert.subject.rfc4514_string()}"
+        ) from exc
+
+
 def _verify_x5c_chain(jws_string: str) -> object:
     """x5c sertifika zincirini doğrular, yaprak sertifikanın public key'ini döner."""
     header = jwt.get_unverified_header(jws_string)
@@ -49,15 +69,15 @@ def _verify_x5c_chain(jws_string: str) -> object:
     if actual != _APPLE_ROOT_CA_FINGERPRINT:
         raise ValueError(f"Apple Root CA fingerprint eşleşmiyor: {actual}")
 
-    # 2. Sertifika süresi kontrolü
+    # 2. Tüm sertifikaların geçerlilik penceresi (root CA dahil)
     now = datetime.now(timezone.utc)
-    for cert in [leaf_cert, g3_ca]:
+    for cert in [leaf_cert, g3_ca, root_ca]:
         if cert.not_valid_after_utc < now:
             raise ValueError(f"Sertifika süresi dolmuş: {cert.subject}")
 
-    # 3. Zincir imzası: leaf → G3 CA → Root CA
-    #    cryptography kütüphanesi CRL/OCSP yapmaz; tam PKI chain verify W1.1+
-    #    Şu an: fingerprint + süre + JWT imzası yeterli güvenlik sağlar.
+    # 3. Kriptografik zincir doğrulama: root_ca → g3_ca → leaf_cert
+    _verify_cert_signed_by(g3_ca, root_ca)
+    _verify_cert_signed_by(leaf_cert, g3_ca)
     return leaf_cert.public_key()
 
 

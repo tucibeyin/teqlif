@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../main.dart' show providerContainer;
 import '../core/network/api_client.dart';
 import 'storage_service.dart';
+import 'wallet_service.dart';
 import 'package:http/http.dart' as http;
 
 const _kDeviceIdKey = 'teqlif_iap_device_id';
@@ -97,19 +98,25 @@ class IAPService {
 
   Future<void> _onPurchaseUpdates(List<PurchaseDetails> purchases) async {
     for (final purchase in purchases) {
-      if (purchase.pendingCompletePurchase) {
-        _iap.completePurchase(purchase);
-      }
       if (purchase.status == PurchaseStatus.purchased ||
           purchase.status == PurchaseStatus.restored) {
         final ok = await _verifyWithBackend(purchase);
         if (ok) {
+          if (purchase.pendingCompletePurchase) {
+            await _iap.completePurchase(purchase);
+          }
+          WalletService.invalidateBalance();
           _purchaseController.add(purchase);
         } else {
           _purchaseController.addError(Exception('IAP_BACKEND_FAILED'));
         }
-      } else if (purchase.status == PurchaseStatus.error) {
-        debugPrint('[IAP] purchase error: ${purchase.error}');
+      } else {
+        if (purchase.pendingCompletePurchase) {
+          await _iap.completePurchase(purchase);
+        }
+        if (purchase.status == PurchaseStatus.error) {
+          debugPrint('[IAP] purchase error: ${purchase.error}');
+        }
         _purchaseController.add(purchase);
       }
     }
