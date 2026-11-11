@@ -2,8 +2,6 @@
 Description=teqlif Gossip Agent (node101 — offsite-backup)
 After=network-online.target restic-rest-server.service
 Wants=network-online.target
-PartOf=restic-rest-server.service
-BindsTo=restic-rest-server.service
 
 [Service]
 Type=simple

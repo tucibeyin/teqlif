@@ -34,6 +34,7 @@ main() {
     setup_wg_keygen
     setup_wg_config   "${NODE_DIR}"
     setup_sysctl_node101
+    setup_sshd_hardening_node101
     ufw_node101
     setup_crowdsec
     install_restic
@@ -42,6 +43,7 @@ main() {
     install_teqlif_agent   "${NODE_DIR}"
     install_node_exporter_node101
     setup_wg_sudoers
+    install_teqlif_restart_node101
 
     if [ -n "${SECRETS_FILE:-}" ]; then
         apply_secrets "${SECRETS_FILE}" \
@@ -214,6 +216,22 @@ PY
     log_ok "CrowdSec aktif (SSH: kümülatif ban)"
 }
 
+# ── SSH sertleştirme (node101) ────────────────────────────────────────────────
+# cloud-init'in 50-cloud-init.conf dosyasını 99 önceliğiyle ezer.
+setup_sshd_hardening_node101() {
+    log_step "SSH sertleştirme (node101)"
+    mkdir -p /etc/ssh/sshd_config.d
+    cat > /etc/ssh/sshd_config.d/99-teqlif-hardening.conf <<'EOF'
+PasswordAuthentication no
+PubkeyAuthentication yes
+EOF
+    chmod 600 /etc/ssh/sshd_config.d/99-teqlif-hardening.conf
+    # Sözdizimi denetimi
+    sshd -t 2>&1 || { log_err "sshd config geçersiz — hardening dosyası kaldırılıyor"; rm /etc/ssh/sshd_config.d/99-teqlif-hardening.conf; return 1; }
+    systemctl reload ssh || systemctl reload sshd || true
+    log_ok "SSH sertleştirme aktif (PasswordAuthentication no)"
+}
+
 # ── UFW ───────────────────────────────────────────────────────────────────────
 ufw_node101() {
     log_step "UFW (node101 — dışa kapalı)"
@@ -307,6 +325,9 @@ install_teqlif_agent() {
             --exclude '__pycache__' --exclude '*.pyc' \
             --exclude 'configs/' --exclude 'setup/' \
             "${agent_src}/" /opt/teqlif-agent/
+        # schedule.yaml ve cluster.yaml agent dizinine kopyala (agent.py bunları okur)
+        cp "${REPO_DIR}/deploy/scale/V2.1/schedule.yaml" /opt/teqlif-agent/schedule.yaml
+        cp "${REPO_DIR}/deploy/scale/V2.1/cluster.yaml"  /opt/teqlif-agent/cluster.yaml
         python3 -m venv /opt/teqlif-agent/venv
         /opt/teqlif-agent/venv/bin/pip install --quiet --upgrade pip
         /opt/teqlif-agent/venv/bin/pip install --quiet \
@@ -321,14 +342,17 @@ install_teqlif_agent() {
         install -m 640 -o teqlif-agent -g teqlif-agent "${cfg_src}" /etc/teqlif-agent/config.yaml
     fi
     # Env dosyası (redis_url boş — gossip-only; Telegram secrets.env'den doldurulur)
+    # İDEMPOTENT: mevcut dolmuş token'ları silmez; yalnız boş/eksikse yazar.
     mkdir -p /etc/teqlif-agent
-    cat > /etc/teqlif-agent/env <<'EOF'
+    if [ ! -f /etc/teqlif-agent/env ] || ! grep -q 'TELEGRAM_BOT_TOKEN=' /etc/teqlif-agent/env 2>/dev/null; then
+        cat > /etc/teqlif-agent/env <<'EOF'
 REDIS_URL=
 TELEGRAM_BOT_TOKEN=
 TELEGRAM_CHAT_ID=
 EOF
-    chmod 600 /etc/teqlif-agent/env
-    chown root:teqlif-agent /etc/teqlif-agent/env
+        chmod 600 /etc/teqlif-agent/env
+        chown root:teqlif-agent /etc/teqlif-agent/env
+    fi
     # Systemd
     cp "${node_dir}/systemd/teqlif-agent.service" /etc/systemd/system/
     systemctl daemon-reload
@@ -357,6 +381,21 @@ EOF
     systemctl daemon-reload
     systemctl enable --now node-exporter
     log_ok "node_exporter aktif (10.10.0.101:9100)"
+}
+
+# ── teqlif-restart (gerçek script) ───────────────────────────────────────────
+# Tüm node'larda yetkili script scripts/teqlif-restart.sh'tır.
+# setup/teqlif-restart eski kopyadır — bootstrap bunu kurmaz.
+install_teqlif_restart_node101() {
+    log_step "teqlif-restart (scripts/teqlif-restart.sh)"
+    local src="${REPO_DIR}/deploy/scale/V2.1/scripts/teqlif-restart.sh"
+    local dst="/usr/local/sbin/teqlif-restart"
+    if [ -f "${src}" ]; then
+        install -m 755 "${src}" "${dst}"
+        log_ok "teqlif-restart kuruldu (${dst})"
+    else
+        log_warn "scripts/teqlif-restart.sh bulunamadı — atlanıyor"
+    fi
 }
 
 main "$@"

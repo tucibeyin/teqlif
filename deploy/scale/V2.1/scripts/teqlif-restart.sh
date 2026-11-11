@@ -101,6 +101,16 @@ agent_sync() {
     log "schedule.yaml güncellendi → /opt/teqlif-agent/schedule.yaml"
   fi
 
+  # Node-specific config: configs/$NODE.yaml → /etc/teqlif-agent/config.yaml
+  local config_src="$agent_src/configs/$NODE.yaml"
+  local config_dst="/etc/teqlif-agent/config.yaml"
+  if [ -f "$config_src" ] && ! diff -q "$config_src" "$config_dst" >/dev/null 2>&1; then
+    cp "$config_src" "$config_dst"
+    chown teqlif-agent:teqlif-agent "$config_dst" 2>/dev/null || true
+    changed=true
+    log "teqlif-agent config güncellendi → $config_dst"
+  fi
+
   if $changed; then
     log "teqlif-agent kodu güncellendi — /opt/teqlif-agent sync ediliyor..."
     rsync -a --exclude '__pycache__' --exclude '*.pyc' \
@@ -335,6 +345,13 @@ case "$NODE" in
   nodeMonitor)
     agent_sync
     log "nodeMonitor — izleme node'u, uygulama servisi yok. git pull tamamlandı."
+    ;;
+
+  node101)
+    agent_sync
+    sync_services "$REPO/deploy/scale/V2.1/node101"
+    sync_scripts  "$REPO/deploy/scale/V2.1/node101"
+    log "node101 — offsite-backup node, restic-rest-server ve teqlif-agent güncellendi."
     ;;
 
   *)

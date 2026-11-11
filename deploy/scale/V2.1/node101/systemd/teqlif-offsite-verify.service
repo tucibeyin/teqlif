@@ -1,7 +1,7 @@
 [Unit]
 Description=teqlif Offsite Verify — haftalık restic bütünlük kontrolü
 After=teqlif-offsite-prune.service
-OnFailure=teqlif-notify-failed@%n.service
+OnFailure=teqlif-backup-failed@%n.service
 
 [Service]
 Type=oneshot

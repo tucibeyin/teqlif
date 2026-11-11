@@ -1,7 +1,7 @@
 [Unit]
 Description=teqlif Offsite Prune — haftalık restic forget+prune
 After=restic-rest-server.service
-OnFailure=teqlif-notify-failed@%n.service
+OnFailure=teqlif-backup-failed@%n.service
 
 [Service]
 Type=oneshot
