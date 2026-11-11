@@ -218,7 +218,7 @@ PY
 }
 
 # ── SSH sertleştirme (node101) ────────────────────────────────────────────────
-# cloud-init'in 50-cloud-init.conf dosyasını 99 önceliğiyle ezer.
+# 01- öneki cloud-init'in 50-cloud-init.conf'undan önce yüklenir; first-match kazanır.
 setup_sshd_hardening_node101() {
     log_step "SSH sertleştirme (node101)"
     mkdir -p /etc/ssh/sshd_config.d

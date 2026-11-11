@@ -4,6 +4,7 @@ Description=teqlif Offsite Backup Failure Notification — %i
 [Service]
 Type=oneshot
 User=tucibeyin
+SupplementaryGroups=systemd-journal
 EnvironmentFile=/etc/teqlif-agent/env
 ExecStart=/usr/local/bin/notify_backup_failed.sh %i
 StandardOutput=journal

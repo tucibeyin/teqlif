@@ -250,7 +250,7 @@ User=teqlif-backup
 Group=teqlif-backup
 Environment=TMPDIR=/mnt/data/tmp
 ExecStart=/usr/bin/restic-rest-server \
-    --path /mnt/data/restic-repo \
+    --path /mnt/data \
     --listen 10.10.0.101:8000 \
     --htpasswd-file /etc/teqlif-offsite/htpasswd \
     --append-only \
@@ -362,6 +362,7 @@ PersistentKeepalive = 25
 * **Doğrulama:** `ssh node2 "ping -c2 10.10.0.101"` ve `ssh nodeMonitor "curl -sf http://10.10.0.101:9100/metrics | head -1"` ✔; `ssh node1 "nc -zw2 10.10.0.101 8000"` başarısız (erişim yok) ✔.
 
 ##### ✅ Çözüm Damgası
+- **Mac peer (10.10.0.7) politikası:** `wg0.conf.template`'deki Mac peer kasıtlıdır — admin SSH erişimi için tutulur (UFW 8000/9100/19100'ü zaten engeller, yalnız 22/tcp açık). Politika istisna olarak kayıt altında.
 - `2026-11-11` · commit `351c35fb` + `c5cb95a2` — `wg_mesh_apply.sh`'e node101 eklendi (`apply_wg_node101()`, partial mesh) ✓; `secrets.env.template`'e `node101_pubkey`+`nodemonitor_pubkey` eklendi ✓; `ufw_node101()` kaynak kısıtlaması: port 8000 yalnız `10.10.0.2`, port 9100 yalnız `10.10.0.99`, gossip 19100 her iki peer ✓; `IPV6=no` ✓; SSH `01-teqlif-hardening.conf` first-match düzeltmesi — `sshd -T`: `passwordauthentication no` ✓. **Doğrulama:** `node2 → node101:8000`: OK ✓; `nodeMonitor → node101:9100/metrics`: `# HELP go_gc_duration_seconds…` ✓; `node1 → node101:8000`: ULAŞAMADI (blast-radius koruması) ✓.
 
 ---
@@ -504,8 +505,8 @@ systemctl enable \
 * `pg_basebackup`, `clickhouse-backup`, `loki-backup`, `uptime-kuma-backup`, `nodemonitor-config-backup`, `mail-backup`, `pg-wal-cleanup` (`7` yedekleme/bakım timer'ı + yeni `offsite-wal`; ek olarak `teqlif-redis-failover.timer`) listede eksik; `node101` bootstrap scripti hiç yoktur.
 
 ##### 2. Hedef Mimari & Çözüm Reçetesi (Ne İçin / Nasıl?)
-* `deploy/scale/V2.1/node101/bootstrap_node101.sh` (idempotent Debian 13 kurulum) oluştur; `bootstrap_node2.sh:210-214`'e tüm timer'ları + `restic` paketini ekle.
-* **Doğrulama:** `bash -n deploy/scale/V2.1/node101/bootstrap_node101.sh deploy/scale/V2.1/scripts/bootstrap_node2.sh` sözdizimi hatasız geçer.
+* `deploy/scale/V2.1/scripts/bootstrap_node101.sh` (idempotent Debian 13 kurulum) oluştur; `bootstrap_node2.sh:210-214`'e tüm timer'ları + `restic` paketini ekle.
+* **Doğrulama:** `bash -n deploy/scale/V2.1/scripts/bootstrap_node101.sh deploy/scale/V2.1/scripts/bootstrap_node2.sh` sözdizimi hatasız geçer.
 
 ##### ⬜ Çözüm Damgası
 - *(Henüz uygulanmadı — [Adım 3](#adim-3) bekliyor)*
@@ -1054,7 +1055,7 @@ await redis.set("ch:last_sync_at", now.isoformat())  # Aradakiler kalıcı kaybo
 ~~2. **Adım 2 (`OFFSITE-05`):** `node101` WireGuard (`10.10.0.101/24` — yalnız `node2` ve `nodeMonitor` peer'ları) ve UFW (`IPV6=no`, port `8000` yalnız `10.10.0.2`, port `9100` yalnız `10.10.0.99`, SSH Ed25519 key-only) kurallarını `deploy/scale/V2.1/node101/` altında tanımla; [`wg_mesh_apply.sh`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/scripts/wg_mesh_apply.sh), `secrets.env.template` ve `teqlif-restart.sh` içine `node101` kaydını ekle → _Neden:_ Web/edge node'larının yedek sunucusuna doğrudan erişimini (blast-radius) kesmek ve IPv4-only sunucuyu güvenli tünele almak. → ([Detay](#offsite-05))~~ ✅ `351c35fb`
 
 <a id="adim-3"></a>
-3. **Adım 3 (`OFFSITE-12`):** `deploy/scale/V2.1/node101/bootstrap_node101.sh` (Debian 13 idempotent kurulum) dosyasını oluştur; [`_common.sh`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/scripts/_common.sh) + [`bootstrap_node2.sh:210-214`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/scripts/bootstrap_node2.sh#L210-L214) içine `restic`, `rclone` ve atlanan 7+1 backup timer `enable` listesini ekle → _Neden:_ Sunucu yeniden kurulumlarında otomasyonun kırılmasını ve 7 timer'ın kapalı kalmasını engellemek. → ([Detay](#offsite-12))
+3. **Adım 3 (`OFFSITE-12`):** `deploy/scale/V2.1/scripts/bootstrap_node101.sh` (Debian 13 idempotent kurulum) dosyasını oluştur; [`_common.sh`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/scripts/_common.sh) + [`bootstrap_node2.sh:210-214`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/scripts/bootstrap_node2.sh#L210-L214) içine `restic`, `rclone` ve atlanan 7+1 backup timer `enable` listesini ekle → _Neden:_ Sunucu yeniden kurulumlarında otomasyonun kırılmasını ve 7 timer'ın kapalı kalmasını engellemek. → ([Detay](#offsite-12))
 
 ---
 
@@ -1076,7 +1077,7 @@ await redis.set("ch:last_sync_at", now.isoformat())  # Aradakiler kalıcı kaybo
 8. **Adım 8 (`BIZ-01` — Bölüm B):** [`streams.py:300-365`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/routers/streams.py#L300-L365) + [`stream_recording_tasks.py`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/tasks/stream_recording_tasks.py) içine 14 günlük pencerede PRO'ya yükselten kullanıcılar için `node2` arşivinden (`30g` saklama, [Karar K3](#kilitli-kararlar)) `node1` MinIO'ya on-demand geri çekme (rehydrate) + 24h presign akışını ekle → _Neden:_ Standart yayıncılara vaat edilen 14g PRO upsell özelliğinin `404 NoSuchKey`/`RECORDING_EXPIRED` ile kırılmasını önlemek ve `T+14` hakedişle 16g güvenli tampon sağlamak. → ([Detay](#biz-01), [Birlikte: Adım 18](#adim-18))
 
 <a id="adim-9"></a>
-9. **Adım 9 (`OFFSITE-02`):** `node101` üzerinde `restic-rest-server 0.13.0` (`--append-only --listen 10.10.0.101:8000 --htpasswd-file ... --path /mnt/data/restic-repo`) servisini kur; `node101` yerel `teqlif-offsite-prune.{service,timer}` (`Pazar 08:00 UTC`, `GOMEMLIMIT=1536MiB`, `GOGC=20`, `MemoryMax=2G`) oluştur → _Neden:_ `node2` ele geçirilse bile `node101`'deki yedeklerin silinememesini (WORM) ve `2.9 GiB RAM` korunmasını garanti etmek. → ([Detay](#offsite-02))
+9. **Adım 9 (`OFFSITE-02`):** `node101` üzerinde `restic-rest-server 0.13.0` (`--append-only --listen 10.10.0.101:8000 --htpasswd-file ... --path /mnt/data`) servisini kur (`--private-repos` ile her HTTP user kendi `/mnt/data/<user>/` alt dizinini görür); `node101` yerel `teqlif-offsite-prune.{service,timer}` (`Pazar 08:00 UTC`, `GOMEMLIMIT=1536MiB`, `GOGC=20`, `MemoryMax=2G`) oluştur → _Neden:_ `node2` ele geçirilse bile `node101`'deki yedeklerin silinememesini (WORM) ve `2.9 GiB RAM` korunmasını garanti etmek. → ([Detay](#offsite-02))
 
 <a id="adim-10"></a>
 10. **Adım 10 (`OFFSITE-03`):** `node2` üzerinde `/etc/teqlif/restic.pass` (`chmod 600`, Git dışı) oluşturup şifreli `restic init` (`AES-256-CTR + Poly1305`) çalıştır; `RESTIC_PASSWORD` ve HTTP auth sırlarını **3 bağımsız noktada Key Escrow** kasasına kaydet ve şifreli test doğrulaması yap → _Neden:_ `node101` diskinde PII/DM/finans verisinin şifreli kalması ve `node2` yansa bile kilitsiz kurtarma sağlanması. → ([Detay](#offsite-03))

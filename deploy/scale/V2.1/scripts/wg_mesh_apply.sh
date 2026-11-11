@@ -33,6 +33,7 @@ declare -A NODE_IPS=(
     [node5]="45.146.252.165"
     [node6]="5.249.165.10"
     [node101]="195.206.234.142"
+    [nodeMonitor]="10.10.0.99"
 )
 declare -A NODE_WG_IPS=(
     [node1]="10.10.0.1"
@@ -42,9 +43,8 @@ declare -A NODE_WG_IPS=(
     [node5]="10.10.0.5"
     [node6]="10.10.0.6"
     [node101]="10.10.0.101"
+    [nodeMonitor]="10.10.0.99"
 )
-# node101 yalnız node2 ve nodeMonitor ile peer'lanır (tam mesh'e dahil değil)
-NODE101_PEERS=(node2 nodeMonitor)
 
 # Pubkey'leri yükle
 declare -A PUBKEYS
@@ -69,7 +69,7 @@ apply_wg_to_node() {
     local target_node="${1}"
     local target_ip="${NODE_IPS[${target_node}]}"
     local target_wg="${NODE_WG_IPS[${target_node}]}"
-    local ssh_key="${SSH_KEY:-~/.ssh/${target_node}}"
+    local ssh_key="${SSH_KEY:-${HOME}/.ssh/${target_node}}"
 
     log_step "wg_mesh → ${target_node} (${target_ip})"
 
@@ -94,6 +94,7 @@ apply_wg_to_node() {
 apply_wg_node101() {
     [ -n "${PUBKEYS[node101]:-}" ] || { log_info "node101_pubkey eksik — node101 WG adımı atlanıyor"; return; }
     local node101_pubkey="${PUBKEYS[node101]}"
+    # node101 SSH key'i ~/.ssh/node105 adıyla saklanır (SSH config Host node101 → IdentityFile node105)
     local ssh_key="${SSH_KEY:-${HOME}/.ssh/node105}"
 
     log_step "wg_mesh → node101 (offsite, partial peer)"
@@ -105,7 +106,8 @@ apply_wg_node101() {
     local nm_pubkey
     nm_pubkey="$(get_secret "nodemonitor_pubkey" 2>/dev/null || true)"
     [ -n "${nm_pubkey}" ] && cmd+="sed -i 's|<nodemonitor_pubkey>|${nm_pubkey}|g' /etc/wireguard/wg0.conf; "
-    cmd+="systemctl restart wg-quick@wg0 2>/dev/null || wg-quick down wg0; wg-quick up wg0; "
+    # restart başarılı olsa bile up denememek için parantezle grupla
+    cmd+="{ systemctl restart wg-quick@wg0 2>/dev/null || { wg-quick down wg0 2>/dev/null || true; wg-quick up wg0; }; }; "
     cmd+="wg show wg0 | grep -c peer || true"
 
     ssh -i "${ssh_key}" -o StrictHostKeyChecking=no \
@@ -114,7 +116,7 @@ apply_wg_node101() {
     # node2 ve nodeMonitor'a node101 peer ekle
     for peer in node2 nodeMonitor; do
         local peer_ip="${NODE_IPS[${peer}]:-}"
-        local peer_key="${SSH_KEY:-~/.ssh/${peer}}"
+        local peer_key="${SSH_KEY:-${HOME}/.ssh/${peer}}"
         [ -z "${peer_ip}" ] && continue
         log_info "node101 peer → ${peer}"
         ssh -i "${peer_key}" -o StrictHostKeyChecking=no \
@@ -138,7 +140,7 @@ test_wg_mesh() {
     for node in node1 node2 node3 node4 node5 node6; do
         local ip="${NODE_IPS[${node}]}"
         local wg="${NODE_WG_IPS[${node}]}"
-        local ssh_key="${SSH_KEY:-~/.ssh/${node}}"
+        local ssh_key="${SSH_KEY:-${HOME}/.ssh/${node}}"
         # node1'den diğerlerine ping testi
         if [ "${node}" = "node1" ]; then
             for peer in node2 node3 node4 node5 node6; do
