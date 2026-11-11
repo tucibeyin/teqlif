@@ -33,6 +33,7 @@ main() {
     setup_node_conf   "${NODE_DIR}"
     setup_wg_keygen
     setup_wg_config   "${NODE_DIR}"
+    setup_sysctl_node101
     ufw_node101
     setup_crowdsec
     install_restic
@@ -130,14 +131,37 @@ mount_data_disk() {
             mkfs.ext4 -F /dev/vdb
         fi
         mkdir -p /mnt/data
-        mount /dev/vdb /mnt/data
+        mount -o noatime /dev/vdb /mnt/data
         grep -q '/mnt/data' /etc/fstab \
             || echo '/dev/vdb  /mnt/data  ext4  defaults,noatime  0  2' >> /etc/fstab
-        log_ok "/mnt/data bağlandı"
+        log_ok "/mnt/data bağlandı (noatime)"
     else
         log_err "/dev/vdb bulunamadı — disk eklendiğinden emin ol"
         exit 1
     fi
+}
+
+# ── Sysctl + IO (node101 — HDD backup workload) ──────────────────────────────
+setup_sysctl_node101() {
+    log_step "sysctl + IO scheduler (node101)"
+    cat > /etc/sysctl.d/99-teqlif-node101.conf <<'EOF'
+vm.swappiness = 10
+vm.dirty_ratio = 20
+vm.dirty_background_ratio = 5
+vm.dirty_writeback_centisecs = 1500
+fs.file-max = 262144
+EOF
+    sysctl -p /etc/sysctl.d/99-teqlif-node101.conf
+    # vd* sanal diskler için mq-deadline
+    cat > /etc/udev/rules.d/60-hdd-scheduler.rules <<'EOF'
+ACTION=="add|change", KERNEL=="vd[a-z]", ATTR{queue/scheduler}="mq-deadline"
+EOF
+    for dev in /sys/block/vd*; do
+        [ -f "${dev}/queue/scheduler" ] && echo mq-deadline > "${dev}/queue/scheduler" 2>/dev/null || true
+    done
+    # fstrim HDD'de gereksiz
+    systemctl disable fstrim.timer 2>/dev/null || true
+    log_ok "sysctl + mq-deadline scheduler aktif"
 }
 
 # ── CrowdSec (node101 — sadece SSH, nginx/http collection yok) ───────────────
