@@ -21,6 +21,7 @@ main() {
     install_base_packages_node101
     setup_user "${SSH_PUBKEY:-}"
     setup_teqlif_directories
+    clone_repo_node101 "${REPO_DIR}"
     setup_ntp
     setup_autoupdates
     setup_limits
@@ -49,15 +50,47 @@ main() {
     fi
 
     print_summary "${NODE_ID}" "${WG_IP}" \
+        "Repo her zaman /var/www/teqlif.com'da — git pull otomatik yapıldı" \
         "node2'de: wg_add_node101.sh çalıştır" \
         "nodeMonitor'da: wg_add_node101.sh çalıştır" \
         "wg-quick up wg0 && systemctl enable wg-quick@wg0" \
-        "restic init (ilk kez): RESTIC_REPOSITORY + RESTIC_PASSWORD ile" \
-        "htpasswd dosyasını oluştur: htpasswd -B /etc/teqlif-offsite/htpasswd tucibeyin" \
-        "systemctl enable --now restic-rest-server teqlif-agent" \
-        "systemctl enable --now teqlif-offsite-prune.timer teqlif-offsite-verify.timer" \
-        "node2'de offsite_sync.sh test: systemctl start teqlif-offsite-sync" \
-        "nodeMonitor'da prometheus.yml güncelle ve sudo teqlif-restart"
+        "restic init: sudo -u teqlif-backup restic init (RESTIC_REPOSITORY + RESTIC_PASSWORD)" \
+        "htpasswd oluştur: htpasswd -B /etc/teqlif-offsite/htpasswd tucibeyin" \
+        "apply_secrets ile restic.env + wg0.conf doldur" \
+        "systemctl start restic-rest-server teqlif-agent" \
+        "node2'de offsite_sync.sh ilk test: systemctl start teqlif-offsite-sync" \
+        "nodeMonitor'da sudo teqlif-restart (prometheus + agent config güncellendi)"
+}
+
+# ── Repo klonlama (node101) ───────────────────────────────────────────────────
+# node101 servis scriptlerini ve agent config'ini repo'dan okur.
+# Repo public olduğu için token gereksiz; opsiyonel olarak GITHUB_TOKEN verilebilir.
+# Deploy key alternatifi: SSH_KEY_PATH=/home/tucibeyin/.ssh/github_key
+clone_repo_node101() {
+    local repo_dir="${1}"
+    log_step "Git repo (node101)"
+    if [ -d "${repo_dir}/.git" ]; then
+        log_info "Repo mevcut: ${repo_dir} — git pull"
+        sudo -u tucibeyin git -C "${repo_dir}" pull --ff-only 2>/dev/null || true
+        return 0
+    fi
+    mkdir -p "${repo_dir}"
+    chown tucibeyin:tucibeyin "${repo_dir}"
+    local deploy_key="${SSH_KEY_PATH:-/home/tucibeyin/.ssh/github_key}"
+    if [ -n "${GITHUB_TOKEN:-}" ]; then
+        sudo -u tucibeyin git clone \
+            "https://${GITHUB_TOKEN}@github.com/tucibeyin/teqlif.git" "${repo_dir}"
+    elif [ -f "${deploy_key}" ]; then
+        sudo -u tucibeyin \
+            GIT_SSH_COMMAND="ssh -i ${deploy_key} -o StrictHostKeyChecking=accept-new" \
+            git clone git@github.com:tucibeyin/teqlif.git "${repo_dir}"
+    else
+        # Public repo — token/key gerektirmez
+        sudo -u tucibeyin git clone \
+            https://github.com/tucibeyin/teqlif.git "${repo_dir}"
+    fi
+    chown -R tucibeyin:tucibeyin "${repo_dir}"
+    log_ok "Repo klonlandı: ${repo_dir}"
 }
 
 # ── node101 özel paketler ─────────────────────────────────────────────────────
