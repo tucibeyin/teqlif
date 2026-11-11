@@ -34,7 +34,7 @@ main() {
     setup_wg_keygen
     setup_wg_config   "${NODE_DIR}"
     ufw_node101
-    install_fail2ban
+    setup_crowdsec
     install_restic
     setup_offsite_dirs
     setup_offsite_services "${NODE_DIR}"
@@ -101,7 +101,7 @@ install_base_packages_node101() {
     apt-get upgrade -y -qq
     apt-get install -y -qq \
         curl wget git btop \
-        ufw fail2ban \
+        ufw \
         wireguard wireguard-tools \
         chrony \
         htop iotop nethogs \
@@ -140,6 +140,38 @@ mount_data_disk() {
     fi
 }
 
+# ── CrowdSec (node101 — sadece SSH, nginx/http collection yok) ───────────────
+setup_crowdsec() {
+    log_step "CrowdSec (node101 — SSH only)"
+    if ! command -v cscli &>/dev/null; then
+        install -d /etc/apt/keyrings
+        curl -fsSL https://packagecloud.io/crowdsec/crowdsec/gpgkey \
+            | gpg --dearmor -o /etc/apt/keyrings/crowdsec.gpg 2>/dev/null || true
+        echo "deb [signed-by=/etc/apt/keyrings/crowdsec.gpg] \
+https://packagecloud.io/crowdsec/crowdsec/debian/ \
+$(. /etc/os-release; echo "$VERSION_CODENAME") main" \
+            > /etc/apt/sources.list.d/crowdsec.list
+        apt-get update -qq
+        apt-get install -y -qq crowdsec crowdsec-firewall-bouncer
+    else
+        log_info "CrowdSec zaten kurulu"
+    fi
+    cscli hub update 2>/dev/null || true
+    cscli collections install crowdsecurity/linux crowdsecurity/sshd --force 2>/dev/null || true
+    # Kümülatif ban
+    python3 - <<'PY'
+import re, pathlib
+p = pathlib.Path('/etc/crowdsec/profiles.yaml')
+c = p.read_text()
+c = c.replace('#duration_expr:', 'duration_expr:')
+c = re.sub(r'   duration: 4h\n', '', c)
+p.write_text(c)
+PY
+    systemctl enable --now crowdsec crowdsec-firewall-bouncer
+    systemctl restart crowdsec
+    log_ok "CrowdSec aktif (SSH: kümülatif ban)"
+}
+
 # ── UFW ───────────────────────────────────────────────────────────────────────
 ufw_node101() {
     log_step "UFW (node101 — dışa kapalı)"
@@ -153,23 +185,6 @@ ufw_node101() {
     ufw_enable
 }
 
-# ── fail2ban ──────────────────────────────────────────────────────────────────
-install_fail2ban() {
-    log_step "fail2ban"
-    apt-get install -y -qq fail2ban
-    cat > /etc/fail2ban/jail.d/teqlif.conf <<'EOF'
-[sshd]
-enabled  = true
-port     = ssh
-filter   = sshd
-logpath  = /var/log/auth.log
-maxretry = 5
-bantime  = 3600
-findtime = 600
-EOF
-    systemctl enable --now fail2ban
-    log_ok "fail2ban aktif (SSH: 5 deneme / 10 dk → 1 saat ban)"
-}
 
 # ── restic + restic-rest-server ───────────────────────────────────────────────
 install_restic() {
