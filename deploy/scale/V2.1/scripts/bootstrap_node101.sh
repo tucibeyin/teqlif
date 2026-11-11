@@ -222,14 +222,20 @@ PY
 setup_sshd_hardening_node101() {
     log_step "SSH sertleştirme (node101)"
     mkdir -p /etc/ssh/sshd_config.d
-    cat > /etc/ssh/sshd_config.d/99-teqlif-hardening.conf <<'EOF'
+    # 01-* öneki ile cloud-init'in 50-cloud-init.conf'undan önce yüklenir;
+    # OpenSSH first-match semantiği: 01- kazanır, 50- görmezden gelinir.
+    local harden_conf=/etc/ssh/sshd_config.d/01-teqlif-hardening.conf
+    # Eski 99- dosyasını temizle (önceki bootstrap versiyonu)
+    rm -f /etc/ssh/sshd_config.d/99-teqlif-hardening.conf
+    cat > "${harden_conf}" <<'EOF'
 PasswordAuthentication no
-PubkeyAuthentication yes
+KbdInteractiveAuthentication no
 EOF
-    chmod 600 /etc/ssh/sshd_config.d/99-teqlif-hardening.conf
+    chmod 600 "${harden_conf}"
     # Sözdizimi denetimi
-    sshd -t 2>&1 || { log_err "sshd config geçersiz — hardening dosyası kaldırılıyor"; rm /etc/ssh/sshd_config.d/99-teqlif-hardening.conf; return 1; }
+    sshd -t 2>&1 || { log_err "sshd config geçersiz — hardening dosyası kaldırılıyor"; rm "${harden_conf}"; return 1; }
     systemctl reload ssh || systemctl reload sshd || true
+    sshd -T 2>/dev/null | grep -i passwordauthentication
     log_ok "SSH sertleştirme aktif (PasswordAuthentication no)"
 }
 

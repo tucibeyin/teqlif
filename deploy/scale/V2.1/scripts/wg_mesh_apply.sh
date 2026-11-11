@@ -94,7 +94,7 @@ apply_wg_to_node() {
 apply_wg_node101() {
     [ -n "${PUBKEYS[node101]:-}" ] || { log_info "node101_pubkey eksik — node101 WG adımı atlanıyor"; return; }
     local node101_pubkey="${PUBKEYS[node101]}"
-    local ssh_key="${SSH_KEY:-~/.ssh/node105}"
+    local ssh_key="${SSH_KEY:-${HOME}/.ssh/node105}"
 
     log_step "wg_mesh → node101 (offsite, partial peer)"
 

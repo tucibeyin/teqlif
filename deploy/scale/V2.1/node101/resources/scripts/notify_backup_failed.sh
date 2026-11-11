@@ -9,21 +9,32 @@ export NOTIFY_NODE
 NOTIFY_NODE=$(hostname -s)
 export NOTIFY_TS
 NOTIFY_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+# tucibeyin systemd-journal grubunda değil; --user gerekmez ama --system gerekebilir.
+# SYSTEMD_LOG_LEVEL=0 ile root gerektirmeden machine-id erişimi sağlanır.
+# Son 5 satırı al; erişim yoksa açıklayıcı fallback döndür.
 export NOTIFY_LOG
-NOTIFY_LOG=$(journalctl -u "${NOTIFY_UNIT}" -n 5 --no-pager --output=short-iso 2>/dev/null || echo "(log alınamadı)")
+NOTIFY_LOG=$(
+    journalctl --system -u "${NOTIFY_UNIT}" -n 5 --no-pager --output=short-iso 2>/dev/null \
+    | grep -v "^-- " \
+    || true
+)
+if [ -z "${NOTIFY_LOG}" ]; then
+    NOTIFY_LOG="(log alınamadı — tucibeyin systemd-journal grubunda değil)"
+fi
 
 python3 - <<'PYEOF'
-import urllib.request, json, sys, os
+import urllib.request, json, sys, os, html
 
-token = os.environ.get('TELEGRAM_BOT_TOKEN', '')
+token   = os.environ.get('TELEGRAM_BOT_TOKEN', '')
 chat_id = os.environ.get('TELEGRAM_CHAT_ID', '')
 if not token or not chat_id:
     sys.exit(0)
 
-unit = os.environ['NOTIFY_UNIT']
-node = os.environ['NOTIFY_NODE']
-ts   = os.environ['NOTIFY_TS']
-log  = os.environ['NOTIFY_LOG']
+unit = html.escape(os.environ['NOTIFY_UNIT'])
+node = html.escape(os.environ['NOTIFY_NODE'])
+ts   = html.escape(os.environ['NOTIFY_TS'])
+log  = html.escape(os.environ['NOTIFY_LOG'])
 
 text = (
     f'\U0001f6a8 <b>{node}</b> — Offsite backup başarısız\n'

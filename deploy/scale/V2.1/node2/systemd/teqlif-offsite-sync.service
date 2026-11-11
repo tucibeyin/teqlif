@@ -1,7 +1,7 @@
 [Unit]
 Description=teqlif Offsite Sync — daily-full restic → node101
 After=teqlif-pg-dump.service teqlif-minio-backup.service
-OnFailure=teqlif-notify-failed@%n.service
+OnFailure=teqlif-backup-failed@%n.service
 
 [Service]
 Type=oneshot
