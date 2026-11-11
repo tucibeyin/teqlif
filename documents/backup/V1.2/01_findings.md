@@ -43,7 +43,7 @@
 | [`OFFSITE-02`](#offsite-02) | 🔴 **P0** | `offsite_sync.sh`, `node101` (`ext4`) | `rclone sync` destrüktif silme yayılımı + `ext4` snapshot yokluğu + 7g retention kırpması | [Adım 9](#adim-9) | ⬜ Açık |
 | [`OFFSITE-03`](#offsite-03) | 🔴 **P0** | `offsite_sync.sh`, `.env.backup` | İstemci şifrelemesi (`restic`) ve sunucu dışı **3'lü Key Escrow** eksikliği | [Adım 10](#adim-10) | ⬜ Açık |
 | [`OFFSITE-04`](#offsite-04) | 🔴 **P0** | `teqlif-offsite-sync.*`, `watchdog`, `health`, `schedule.yaml` | 3 izleme katmanında tam körlük, sessiz `exit 0`, `OnFailure` yok + `disabled` vs `active` timer sapması | [Adım 13](#adim-13) | ⬜ Açık |
-| [`OFFSITE-05`](#offsite-05) | 🟠 **P1** | `wg_mesh_apply.sh`, `secrets.env.template`, `node101` UFW | `node101` WG (`10.10.0.101`) peer izolasyonu (yalnız `node2`+`nodeMonitor`), UFW ve SSH sertleştirmesi | [Adım 2](#adim-2) | ⬜ Açık |
+| [`OFFSITE-05`](#offsite-05) | 🟠 **P1** | `wg_mesh_apply.sh`, `secrets.env.template`, `node101` UFW | `node101` WG (`10.10.0.101`) peer izolasyonu (yalnız `node2`+`nodeMonitor`), UFW ve SSH sertleştirmesi | [Adım 2](#adim-2) | ✅ Çözüldü `351c35fb` |
 | [`OFFSITE-06`](#offsite-06) | 🟠 **P1** | `node101` (`2.9 GiB RAM`, `/mnt/data`, `fio`) | Düşük RAM (`2.9 GiB`), `6.1 GB` `/` taşma riski, `fdatasync` tail latency (`83 IOPS`) + TZ `UTC` | [Adım 1](#adim-1) | ✅ Çözüldü `09eb442c` |
 | [`OFFSITE-07`](#offsite-07) | 🟠 **P1** | `offsite_sync.sh`, `pg_basebackup.sh`, `pg_wal`, `pg_dump.sh` | Offsite PG PITR (`pg_basebackup`+`pg_wal`) eksikliği (24s RPO) + `pg_dump/*.dump.gz` (2–8 Eki) yetimleri | [Adım 12](#adim-12) | ⬜ Açık |
 | [`OFFSITE-08`](#offsite-08) | 🟠 **P1** | `clickhouse_backup.sh`, canlı `node2` CH | Method 1/2 çalışmıyor (`/var/lib/clickhouse/backups` boş), fallback `285B` arşiv, `BACKUP` izni/DDL yok | [Adım 14](#adim-14) | ⬜ Açık |
@@ -361,8 +361,9 @@ PersistentKeepalive = 25
 * `node101` UFW (`/etc/default/ufw` `IPV6=no`): `ufw default deny incoming`, `allow 22/tcp` (Ed25519 key-only, `PasswordAuthentication no`), `allow 51820/udp`, `allow in on wg0 from 10.10.0.2 to any port 8000 proto tcp`, `allow in on wg0 from 10.10.0.99 to any port 9100 proto tcp`.
 * **Doğrulama:** `ssh node2 "ping -c2 10.10.0.101"` ve `ssh nodeMonitor "curl -sf http://10.10.0.101:9100/metrics | head -1"` ✔; `ssh node1 "nc -zw2 10.10.0.101 8000"` başarısız (erişim yok) ✔.
 
-##### ⬜ Çözüm Damgası
-- *(Henüz uygulanmadı — [Adım 2](#adim-2) bekliyor)*
+##### ✅ Çözüm Damgası
+- `2026-11-11` · commit `351c35fb` — `wg_mesh_apply.sh`'e node101 eklendi (`apply_wg_node101()`, partial mesh) ✓; `secrets.env.template`'e `node101_pubkey`+`nodemonitor_pubkey` eklendi ✓; `ufw_node101()` kaynak kısıtlaması: port 8000 yalnız `10.10.0.2`, port 9100 yalnız `10.10.0.99`, gossip 19100 her iki peer ✓; `IPV6=no` ✓. **Doğrulama:** `node2 → node101`: 13ms ping ✓; `nodeMonitor → node101:9100/metrics`: `# HELP go_gc_duration_seconds…` ✓; `node1 → node101:8000`: ULAŞAMADI (blast-radius koruması) ✓.
+- **Bekleyen live:** node101'de UFW kuralları hâlâ `Anywhere` kaynaklı — root olarak `ufw delete 3; ufw delete 3; ufw delete 3; ufw allow in on wg0 from 10.10.0.2 to any port 8000 proto tcp; ufw allow in on wg0 from 10.10.0.99 to any port 9100 proto tcp; ufw allow in on wg0 from 10.10.0.2 to any port 19100 proto tcp; ufw allow in on wg0 from 10.10.0.99 to any port 19100 proto tcp; sed -i 's/^IPV6=yes/IPV6=no/' /etc/default/ufw; ufw reload` ile güncellenmeli.
 
 ---
 
@@ -1051,7 +1052,7 @@ await redis.set("ch:last_sync_at", now.isoformat())  # Aradakiler kalıcı kaybo
 ~~1. **Adım 1 (`OFFSITE-06`):** `node101` üzerinde `timedatectl set-timezone UTC` ayarla, `teqlif-backup` sistem kullanıcısını ve `/mnt/data/{restic-repo,tmp,cache/restic,logs}` dizinlerini (`TMPDIR`, `RESTIC_CACHE_DIR` — `9.7 GB` `/` diski koruma) oluştur, `/etc/fstab` `/mnt/data` otomatik bağlamasını + `df -h /` (`<%40`) eşiğini doğrula~~ ✅ `09eb442c` (2026-11-11)
 
 <a id="adim-2"></a>
-2. **Adım 2 (`OFFSITE-05`):** `node101` WireGuard (`10.10.0.101/24` — yalnız `node2` ve `nodeMonitor` peer'ları) ve UFW (`IPV6=no`, port `8000` yalnız `10.10.0.2`, port `9100` yalnız `10.10.0.99`, SSH Ed25519 key-only) kurallarını `deploy/scale/V2.1/node101/` altında tanımla; [`wg_mesh_apply.sh`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/scripts/wg_mesh_apply.sh), `secrets.env.template` ve `teqlif-restart.sh` içine `node101` kaydını ekle → _Neden:_ Web/edge node'larının yedek sunucusuna doğrudan erişimini (blast-radius) kesmek ve IPv4-only sunucuyu güvenli tünele almak. → ([Detay](#offsite-05))
+~~2. **Adım 2 (`OFFSITE-05`):** `node101` WireGuard (`10.10.0.101/24` — yalnız `node2` ve `nodeMonitor` peer'ları) ve UFW (`IPV6=no`, port `8000` yalnız `10.10.0.2`, port `9100` yalnız `10.10.0.99`, SSH Ed25519 key-only) kurallarını `deploy/scale/V2.1/node101/` altında tanımla; [`wg_mesh_apply.sh`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/scripts/wg_mesh_apply.sh), `secrets.env.template` ve `teqlif-restart.sh` içine `node101` kaydını ekle → _Neden:_ Web/edge node'larının yedek sunucusuna doğrudan erişimini (blast-radius) kesmek ve IPv4-only sunucuyu güvenli tünele almak. → ([Detay](#offsite-05))~~ ✅ `351c35fb`
 
 <a id="adim-3"></a>
 3. **Adım 3 (`OFFSITE-12`):** `deploy/scale/V2.1/node101/bootstrap_node101.sh` (Debian 13 idempotent kurulum) dosyasını oluştur; [`_common.sh`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/scripts/_common.sh) + [`bootstrap_node2.sh:210-214`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/scripts/bootstrap_node2.sh#L210-L214) içine `restic`, `rclone` ve atlanan 7+1 backup timer `enable` listesini ekle → _Neden:_ Sunucu yeniden kurulumlarında otomasyonun kırılmasını ve 7 timer'ın kapalı kalmasını engellemek. → ([Detay](#offsite-12))
