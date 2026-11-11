@@ -32,10 +32,17 @@ export TMPDIR=/project/teqlif/backups/.restic-tmp
 mkdir -p "${RESTIC_CACHE_DIR}" "${TMPDIR}"
 
 # ── daily-full snapshot ───────────────────────────────────────────────────────
-# pg_dump + minio dizinlerini tek snapshot'ta birleştir
+# Tüm kritik uygulama verisi: pg_dump + minio + stalwart + redis +
+# pg_basebackup + clickhouse + uptime_kuma + nodeMonitor teqlif-config
 restic backup \
     /project/teqlif/backups/pg_dump \
     /project/teqlif/backups/minio \
+    /project/teqlif/backups/stalwart \
+    /project/teqlif/backups/redis \
+    /project/teqlif/backups/pg_basebackup \
+    /project/teqlif/backups/clickhouse \
+    /project/teqlif/backups/uptime_kuma \
+    /project/teqlif/backups/nodemonitor_config/teqlif-config \
     --tag daily-full \
     --pack-size 32 \
     --compression max \
