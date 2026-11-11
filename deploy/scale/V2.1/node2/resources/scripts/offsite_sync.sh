@@ -25,7 +25,7 @@ if [[ -z "${RESTIC_REST_USER:-}" ]] || [[ -z "${RESTIC_REST_PASSWORD:-}" ]] || [
     exit 0
 fi
 
-export RESTIC_REPOSITORY="rest:http://${RESTIC_REST_USER}:${RESTIC_REST_PASSWORD}@10.10.0.101:8000/teqlif"
+export RESTIC_REPOSITORY="rest:http://${RESTIC_REST_USER}:${RESTIC_REST_PASSWORD}@10.10.0.101:8000/${RESTIC_REST_USER}/"
 export RESTIC_PASSWORD
 export RESTIC_CACHE_DIR=/project/teqlif/backups/.restic-cache
 export TMPDIR=/project/teqlif/backups/.restic-tmp
