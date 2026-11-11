@@ -48,6 +48,11 @@ scrape_configs:
       - targets: ['10.10.0.99:9100']
         labels: { node: nodeMonitor, role: monitor }
 
+  - job_name: 'node101'
+    static_configs:
+      - targets: ['10.10.0.101:9100']
+        labels: { node: node101, role: offsite-backup }
+
   # ── SRE-116: Uygulama katmanı metrikleri ──────────────────────────────
 
   - job_name: 'postgres'

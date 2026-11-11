@@ -1,0 +1,29 @@
+[Unit]
+Description=teqlif Offsite Prune — haftalık restic forget+prune
+After=restic-rest-server.service
+OnFailure=teqlif-notify-failed@%n.service
+
+[Service]
+Type=oneshot
+User=teqlif-backup
+Group=teqlif-backup
+Environment=GOGC=20
+Environment=GOMEMLIMIT=1536MiB
+Environment=TMPDIR=/mnt/data/tmp
+Environment=RESTIC_CACHE_DIR=/mnt/data/cache/restic
+EnvironmentFile=/etc/teqlif-offsite/restic.env
+IOSchedulingClass=idle
+Nice=19
+MemoryMax=2G
+ExecStart=/usr/bin/restic forget \
+    --tag daily-full \
+    --keep-daily   7 \
+    --keep-weekly  4 \
+    --keep-monthly 6 \
+    --prune
+ExecStart=/usr/bin/restic forget \
+    --tag pg_wal \
+    --keep-within 7d \
+    --prune
+StandardOutput=journal
+StandardError=journal

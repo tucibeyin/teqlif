@@ -1,0 +1,18 @@
+[Unit]
+Description=teqlif Offsite Verify — haftalık restic bütünlük kontrolü
+After=teqlif-offsite-prune.service
+OnFailure=teqlif-notify-failed@%n.service
+
+[Service]
+Type=oneshot
+User=teqlif-backup
+Group=teqlif-backup
+Environment=TMPDIR=/mnt/data/tmp
+Environment=RESTIC_CACHE_DIR=/mnt/data/cache/restic
+EnvironmentFile=/etc/teqlif-offsite/restic.env
+IOSchedulingClass=idle
+Nice=19
+MemoryMax=512M
+ExecStart=/usr/bin/restic check --read-data-subset=5%
+StandardOutput=journal
+StandardError=journal

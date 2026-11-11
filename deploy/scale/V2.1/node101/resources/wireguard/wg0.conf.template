@@ -1,0 +1,24 @@
+[Interface]
+Address    = 10.10.0.101/24
+ListenPort = 51820
+MTU        = 1420
+PrivateKey = <privatekey>
+
+# node2 (Backup — restic kaynak)
+[Peer]
+PublicKey = <node2_pubkey>
+AllowedIPs = 10.10.0.2/32
+Endpoint = 135.125.223.43:51820
+PersistentKeepalive = 25
+
+# nodeMonitor (Lider — gossip + prometheus)
+[Peer]
+PublicKey = <nodemonitor_pubkey>
+AllowedIPs = 10.10.0.99/32
+Endpoint = <nodemonitor_public_ip>:51820
+PersistentKeepalive = 25
+
+# Mac (tucibeyin — admin)
+[Peer]
+PublicKey = wEWDahzdObSI6p8DNthHSdBn6tlJDo+j96lBCeUi1To=
+AllowedIPs = 10.10.0.7/32

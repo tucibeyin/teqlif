@@ -221,6 +221,10 @@ CORE_REDIS_PASS=<core_redis_pass>
 REPL_PASSWORD=<teqlif_repl_password>
 TELEGRAM_BOT_TOKEN=<telegram_bot_token>
 TELEGRAM_CHAT_ID=<telegram_chat_id>
+# node101 offsite restic (Faz 2 sonrası doldur)
+RESTIC_REST_USER=<restic_rest_user>
+RESTIC_REST_PASSWORD=<restic_rest_password>
+RESTIC_PASSWORD=<restic_aes_password>
 ENVEOF
     chmod 600 /project/teqlif/config/.env.backup
     log_ok "Backup servisleri enable edildi"

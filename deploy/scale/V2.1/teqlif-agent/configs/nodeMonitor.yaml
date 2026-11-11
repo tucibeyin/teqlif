@@ -17,9 +17,10 @@ gossip_timeout: 5
 monitor_services: ["gossip-agent"]
 
 peers:
-  - {id: node2,  priority: 2, wg_ip: "10.10.0.2"}
-  - {id: node1,  priority: 3, wg_ip: "10.10.0.1"}
-  - {id: node5,  priority: 4, wg_ip: "10.10.0.5"}
-  - {id: node6,  priority: 5, wg_ip: "10.10.0.6"}
-  - {id: node3,  priority: 6, wg_ip: "10.10.0.3"}
-  - {id: node4,  priority: 7, wg_ip: "10.10.0.4"}
+  - {id: node2,   priority: 2,  wg_ip: "10.10.0.2"}
+  - {id: node1,   priority: 3,  wg_ip: "10.10.0.1"}
+  - {id: node5,   priority: 4,  wg_ip: "10.10.0.5"}
+  - {id: node6,   priority: 5,  wg_ip: "10.10.0.6"}
+  - {id: node3,   priority: 6,  wg_ip: "10.10.0.3"}
+  - {id: node4,   priority: 7,  wg_ip: "10.10.0.4"}
+  - {id: node101, priority: 10, wg_ip: "10.10.0.101"}

@@ -1,0 +1,10 @@
+[Unit]
+Description=teqlif Offsite WAL Sync — saatlik *:45 UTC
+
+[Timer]
+OnCalendar=*-*-* *:45:00
+AccuracySec=2m
+Persistent=true
+
+[Install]
+WantedBy=timers.target

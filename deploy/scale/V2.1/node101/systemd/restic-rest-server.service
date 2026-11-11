@@ -1,0 +1,25 @@
+[Unit]
+Description=Restic REST Server — teqlif offsite repo
+Documentation=https://github.com/restic/rest-server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=teqlif-backup
+Group=teqlif-backup
+Environment=TMPDIR=/mnt/data/tmp
+ExecStart=/usr/bin/restic-rest-server \
+    --path /mnt/data/restic-repo \
+    --listen 10.10.0.101:8000 \
+    --htpasswd-file /etc/teqlif-offsite/htpasswd \
+    --append-only \
+    --private-repos
+Restart=always
+RestartSec=5
+MemoryMax=512M
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

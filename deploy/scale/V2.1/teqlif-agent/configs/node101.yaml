@@ -1,0 +1,18 @@
+node_id:      node101
+priority:     10
+wg_ip:        10.10.0.101
+gossip_port:  19100
+gossip_token: "22f4eae6d1299c58f83f706f312fa3cc2d9df4660bd28f6e18c7d15fde084ff6"
+
+db_path:   /var/lib/teqlif-agent/state.db
+log_level: INFO
+
+redis_url:      ""   # gossip-only — node101'de Redis yok; job_ok Redis'e yazılmaz
+cycle_interval: 60
+gossip_timeout: 5
+
+monitor_services: ["restic-rest-server"]
+
+peers:
+  - {id: nodeMonitor, priority: 1, wg_ip: "10.10.0.99"}
+  - {id: node2,       priority: 2, wg_ip: "10.10.0.2"}
