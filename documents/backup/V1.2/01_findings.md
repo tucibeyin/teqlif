@@ -44,7 +44,7 @@
 | [`OFFSITE-03`](#offsite-03) | 🔴 **P0** | `offsite_sync.sh`, `.env.backup` | İstemci şifrelemesi (`restic`) ve sunucu dışı **3'lü Key Escrow** eksikliği | [Adım 10](#adim-10) | ⬜ Açık |
 | [`OFFSITE-04`](#offsite-04) | 🔴 **P0** | `teqlif-offsite-sync.*`, `watchdog`, `health`, `schedule.yaml` | 3 izleme katmanında tam körlük, sessiz `exit 0`, `OnFailure` yok + `disabled` vs `active` timer sapması | [Adım 13](#adim-13) | ⬜ Açık |
 | [`OFFSITE-05`](#offsite-05) | 🟠 **P1** | `wg_mesh_apply.sh`, `secrets.env.template`, `node101` UFW | `node101` WG (`10.10.0.101`) peer izolasyonu (yalnız `node2`+`nodeMonitor`), UFW ve SSH sertleştirmesi | [Adım 2](#adim-2) | ⬜ Açık |
-| [`OFFSITE-06`](#offsite-06) | 🟠 **P1** | `node101` (`2.9 GiB RAM`, `/mnt/data`, `fio`) | Düşük RAM (`2.9 GiB`), `6.1 GB` `/` taşma riski, `fdatasync` tail latency (`83 IOPS`) + TZ `UTC` | [Adım 1](#adim-1) | ⬜ Açık |
+| [`OFFSITE-06`](#offsite-06) | 🟠 **P1** | `node101` (`2.9 GiB RAM`, `/mnt/data`, `fio`) | Düşük RAM (`2.9 GiB`), `6.1 GB` `/` taşma riski, `fdatasync` tail latency (`83 IOPS`) + TZ `UTC` | [Adım 1](#adim-1) | ✅ Çözüldü `09eb442c` |
 | [`OFFSITE-07`](#offsite-07) | 🟠 **P1** | `offsite_sync.sh`, `pg_basebackup.sh`, `pg_wal`, `pg_dump.sh` | Offsite PG PITR (`pg_basebackup`+`pg_wal`) eksikliği (24s RPO) + `pg_dump/*.dump.gz` (2–8 Eki) yetimleri | [Adım 12](#adim-12) | ⬜ Açık |
 | [`OFFSITE-08`](#offsite-08) | 🟠 **P1** | `clickhouse_backup.sh`, canlı `node2` CH | Method 1/2 çalışmıyor (`/var/lib/clickhouse/backups` boş), fallback `285B` arşiv, `BACKUP` izni/DDL yok | [Adım 14](#adim-14) | ⬜ Açık |
 | [`OFFSITE-09`](#offsite-09) | 🟠 **P1** | `nodemonitor_config_backup.sh`, canlı `node2` | **`979 MB` TSDB/WAL sızıntısı** (`prometheus/data` 823M + `loki` 156M) — `--delete-excluded` yok | [Adım 15](#adim-15) | ⬜ Açık |
@@ -379,8 +379,9 @@ PersistentKeepalive = 25
 2. `/etc/fstab` `/mnt/data` otomatik bağlaması ve `df -h /` (`<%40`) eşikleri `node101` kurulum doğrulamasına bağlanır ([`specs.md`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node101/specs.md#L70-L98) `fio-3.39` verisi kilitlidir).
 * **Doğrulama:** `ssh node101 "timedatectl show -p Timezone --value && ls -ld /mnt/data/{restic-repo,tmp,cache/restic,logs}"` çıktısı `UTC` + tüm dizinler `teqlif-backup` olmalı.
 
-##### ⬜ Çözüm Damgası
-- *(Henüz uygulanmadı — [Adım 1](#adim-1) bekliyor)*
+##### ✅ Çözüm Damgası
+- `2026-11-11` · commit `09eb442c` — Timezone UTC ✓; `teqlif-backup` uid=999 ✓; `/mnt/data/tmp` + `/mnt/data/cache/restic` (700, teqlif-backup) ✓; `/mnt/data/` mount point `root:root` düzeltildi ✓; `/mnt/data/teqlif/` restic repo yeri (`--private-repos` ile HTTP user=teqlif) ✓; `fstab noatime` ✓; `/` disk %36 < %40 ✓; `/var/log/teqlif-offsite/` log dizini ✓; `bootstrap_node101.sh` yanlış `restic-repo` mkdir kaldırıldı; `restic.env.template` yorum düzeltildi.
+- **Not:** Belgedeki `/mnt/data/{restic-repo,logs}` yolları gerçek implementasyona güncellendi: restic repo `/mnt/data/teqlif/` (--private-repos); log `/var/log/teqlif-offsite/`.
 
 ---
 
@@ -1046,7 +1047,7 @@ await redis.set("ch:last_sync_at", now.isoformat())  # Aradakiler kalıcı kaybo
 ### 🟣 Faz 0: `node101` Hazırlık, Donanım İzolasyonu ve Ağ Topolojisi (Ön Koşul — 3 Adım)
 
 <a id="adim-1"></a>
-1. **Adım 1 (`OFFSITE-06`):** `node101` üzerinde `timedatectl set-timezone UTC` ayarla, `teqlif-backup` sistem kullanıcısını ve `/mnt/data/{restic-repo,tmp,cache/restic,logs}` dizinlerini (`TMPDIR`, `RESTIC_CACHE_DIR` — `9.7 GB` `/` diski koruma) oluştur, `/etc/fstab` `/mnt/data` otomatik bağlamasını + `df -h /` (`<%40`) eşiğini doğrula ([`specs.md`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node101/specs.md) `fio-3.39` verisi referans alınarak) → _Neden:_ `6.1 GB` boş `/` diskin dolmasını ve yaz saati (`Europe/London`) kaymasını önlemek. → ([Detay](#offsite-06), [Blueprint](#blueprint))
+~~1. **Adım 1 (`OFFSITE-06`):** `node101` üzerinde `timedatectl set-timezone UTC` ayarla, `teqlif-backup` sistem kullanıcısını ve `/mnt/data/{restic-repo,tmp,cache/restic,logs}` dizinlerini (`TMPDIR`, `RESTIC_CACHE_DIR` — `9.7 GB` `/` diski koruma) oluştur, `/etc/fstab` `/mnt/data` otomatik bağlamasını + `df -h /` (`<%40`) eşiğini doğrula~~ ✅ `09eb442c` (2026-11-11)
 
 <a id="adim-2"></a>
 2. **Adım 2 (`OFFSITE-05`):** `node101` WireGuard (`10.10.0.101/24` — yalnız `node2` ve `nodeMonitor` peer'ları) ve UFW (`IPV6=no`, port `8000` yalnız `10.10.0.2`, port `9100` yalnız `10.10.0.99`, SSH Ed25519 key-only) kurallarını `deploy/scale/V2.1/node101/` altında tanımla; [`wg_mesh_apply.sh`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/scripts/wg_mesh_apply.sh), `secrets.env.template` ve `teqlif-restart.sh` içine `node101` kaydını ekle → _Neden:_ Web/edge node'larının yedek sunucusuna doğrudan erişimini (blast-radius) kesmek ve IPv4-only sunucuyu güvenli tünele almak. → ([Detay](#offsite-05))
