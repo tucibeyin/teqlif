@@ -221,9 +221,10 @@ ufw_node101() {
     ufw default allow outgoing
     ufw allow 22/tcp
     ufw allow 51820/udp
-    # Restic REST server sadece WireGuard ağından erişilebilir
+    # Restic REST server + node_exporter + gossip sadece WireGuard ağından
     ufw allow in on wg0 to 10.10.0.101 port 8000 proto tcp
     ufw allow in on wg0 to 10.10.0.101 port 9100 proto tcp
+    ufw allow in on wg0 to 10.10.0.101 port 19100 proto tcp comment 'teqlif-agent gossip'
     ufw_enable
 }
 
@@ -297,26 +298,31 @@ install_teqlif_agent() {
     mkdir -p /var/lib/teqlif-agent /var/log/teqlif-agent /opt/teqlif-agent
     chown teqlif-agent:teqlif-agent /var/lib/teqlif-agent /var/log/teqlif-agent
     # Agent kodu repo içinden
-    if [ -d "${REPO_DIR}/agent" ]; then
-        rsync -a --delete "${REPO_DIR}/agent/" /opt/teqlif-agent/
+    local agent_src="${REPO_DIR}/deploy/scale/V2.1/teqlif-agent"
+    if [ -d "${agent_src}" ]; then
+        rsync -a --delete \
+            --exclude '__pycache__' --exclude '*.pyc' \
+            --exclude 'configs/' --exclude 'setup/' \
+            "${agent_src}/" /opt/teqlif-agent/
         python3 -m venv /opt/teqlif-agent/venv
-        /opt/teqlif-agent/venv/bin/pip install --upgrade pip -q
-        /opt/teqlif-agent/venv/bin/pip install -r /opt/teqlif-agent/requirements.txt -q
+        /opt/teqlif-agent/venv/bin/pip install --quiet --upgrade pip
+        /opt/teqlif-agent/venv/bin/pip install --quiet \
+            aiohttp aiosqlite pyyaml asyncpg aioredis "redis>=4.2.0"
         chown -R teqlif-agent:teqlif-agent /opt/teqlif-agent
     else
-        log_warn "Agent dizini bulunamadı: ${REPO_DIR}/agent — manuel kur"
+        log_warn "Agent dizini bulunamadı: ${agent_src} — manuel kur"
     fi
-    # Agent config
-    local cfg_src="${REPO_DIR}/deploy/scale/V2.1/teqlif-agent/configs/node101.yaml"
+    # Agent config → /etc/teqlif-agent/config.yaml (load_config() varsayılan yolu)
+    local cfg_src="${agent_src}/configs/node101.yaml"
     if [ -f "${cfg_src}" ]; then
-        cp "${cfg_src}" /opt/teqlif-agent/agent.yaml
-        chown teqlif-agent:teqlif-agent /opt/teqlif-agent/agent.yaml
-        chmod 640 /opt/teqlif-agent/agent.yaml
+        install -m 640 -o teqlif-agent -g teqlif-agent "${cfg_src}" /etc/teqlif-agent/config.yaml
     fi
-    # Env dosyası (redis_url boş — gossip-only)
+    # Env dosyası (redis_url boş — gossip-only; Telegram secrets.env'den doldurulur)
     mkdir -p /etc/teqlif-agent
     cat > /etc/teqlif-agent/env <<'EOF'
 REDIS_URL=
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_CHAT_ID=
 EOF
     chmod 600 /etc/teqlif-agent/env
     chown root:teqlif-agent /etc/teqlif-agent/env
