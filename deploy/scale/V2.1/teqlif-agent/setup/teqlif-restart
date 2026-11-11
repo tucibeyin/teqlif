@@ -261,6 +261,12 @@ case "$NODE" in
     journalctl -u teqlif-ai-proxy.service -n 20 --no-pager
     ;;
 
+  node101)
+    agent_sync
+    sync_services "$REPO/deploy/scale/V2.1/node101"
+    log "node101 — offsite-backup node, restic-rest-server ve teqlif-agent güncellendi."
+    ;;
+
   *)
     err "Bilinmeyen hostname: $NODE"
     ;;
