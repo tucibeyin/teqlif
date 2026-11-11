@@ -108,13 +108,35 @@ nodemonitor_pubkey=                  ← canlıdan öğrenilecek (açık!)
 ```
 default deny incoming
 default allow outgoing
-allow 22/tcp                           ← SSH (Ed25519 key-only)
-allow 51820/udp                        ← WireGuard
-allow in on wg0 from 10.10.0.2   port 8000 proto tcp   ← restic (node2 only)
-allow in on wg0 from 10.10.0.99  port 9100 proto tcp   ← node_exporter (nodeMonitor only)
+allow 22/tcp                           ← SSH (key-only; fail2ban koruması altında)
+allow 51820/udp                        ← WireGuard (yetkisiz paketler crypto katmanında sessizce düşer)
+allow in on wg0 from 10.10.0.2   port 8000  proto tcp  ← restic (node2 only)
+allow in on wg0 from 10.10.0.99  port 9100  proto tcp  ← node_exporter (nodeMonitor only)
 allow in on wg0 from 10.10.0.2   port 19100 proto tcp  ← gossip (node2)
 allow in on wg0 from 10.10.0.99  port 19100 proto tcp  ← gossip (nodeMonitor)
 ```
+
+**SSH sertleştirme (`/etc/ssh/sshd_config`):**
+```ini
+PasswordAuthentication no
+PubkeyAuthentication yes
+AllowUsers tucibeyin
+PermitRootLogin no
+MaxAuthTries 3
+LoginGraceTime 20
+```
+
+**fail2ban (`/etc/fail2ban/jail.d/sshd.conf`):**
+```ini
+[sshd]
+enabled  = true
+port     = ssh
+maxretry = 5
+bantime  = 1h
+findtime = 10m
+```
+
+> **Güvenlik notu:** `restic-rest-server` hem UFW (`from 10.10.0.2`) hem de `--listen 10.10.0.101:8000` (WireGuard IP bind) çift güvenceyle public internet'ten tamamen izole edilmiştir.
 
 ---
 
@@ -325,7 +347,7 @@ deploy/scale/V2.1/node101/
 │   └── teqlif-offsite-verify.timer             ← Pazar 09:00 UTC (prune sonrası)
 └── bootstrap_node101.sh                        ← idempotent Debian 13 kurulum
     # Adımlar:
-    # 1. apt update + restic restic-rest-server prometheus-node-exporter wireguard ufw
+    # 1. apt update + restic restic-rest-server prometheus-node-exporter wireguard ufw fail2ban
     # 2. timedatectl set-timezone UTC
     # 3. useradd -r -s /sbin/nologin teqlif-backup
     # 4. mkdir -p /mnt/data/{restic-repo,tmp,cache/restic,logs}
@@ -334,10 +356,13 @@ deploy/scale/V2.1/node101/
     # 6. WireGuard: wg0.conf template doldur + wg-quick@wg0 enable
     # 7. /etc/teqlif-offsite/ dizini + htpasswd oluştur
     # 8. systemd unit dosyalarını deploy/scale/V2.1/node101/systemd/'dan kopyala
-    # 9. UFW kuralları
-    # 10. teqlif-agent kur + node101.yaml deploy
-    # 11. Tüm servisleri enable + start
-    # 12. echo node101 WG pubkey → secrets.env.template talimatı
+    # 9. SSH sertleştirme: sshd_config (PasswordAuthentication no, AllowUsers tucibeyin,
+    #    PermitRootLogin no, MaxAuthTries 3, LoginGraceTime 20) + systemctl restart sshd
+    # 10. fail2ban: /etc/fail2ban/jail.d/sshd.conf (maxretry 5, bantime 1h) + enable
+    # 11. UFW kuralları
+    # 12. teqlif-agent kur + node101.yaml deploy
+    # 13. Tüm servisleri enable + start
+    # 14. echo node101 WG pubkey → secrets.env.template talimatı
 ```
 
 ---
@@ -447,6 +472,11 @@ Adım 13 — Timer'ları enable + start (node2)
 ## 7. Doğrulama Kontrol Listesi
 
 ```
+SSH & Güvenlik
+  [ ] ssh node101 "sudo sshd -T | grep -E 'passwordauth|permitroot|allowusers'" → hardened ✔
+  [ ] ssh node101 "systemctl is-active fail2ban"  → active ✔
+  [ ] ssh node101 "sudo ufw status verbose"       → 22/tcp, 51820/udp dışı tüm public portlar kapalı ✔
+
 WireGuard
   [ ] ssh node2 "ping -c2 10.10.0.101"           → 0% loss
   [ ] ssh nodeMonitor "ping -c2 10.10.0.101"     → 0% loss
