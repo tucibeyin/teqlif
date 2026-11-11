@@ -10,7 +10,7 @@ User=teqlif-backup
 Group=teqlif-backup
 Environment=TMPDIR=/mnt/data/tmp
 ExecStart=/usr/bin/restic-rest-server \
-    --path /mnt/data/restic-repo \
+    --path /mnt/data \
     --listen 10.10.0.101:8000 \
     --htpasswd-file /etc/teqlif-offsite/htpasswd \
     --append-only \
