@@ -38,6 +38,39 @@ groups:
           summary: "{{ $labels.node }} disk doluyor"
           description: "{{ $labels.node }} {{ $labels.mountpoint }} disk kullanımı %{{ $value | printf \"%.1f\" }}"
 
+  # ── node101 offsite backup izleme ─────────────────────────────────────
+  - name: node101_offsite
+    interval: 60s
+    rules:
+      # node101 SSD küçük (10 GB) — genel DiskSpaceLow %85'ten daha erken uyar
+      - alert: Node101RootDiskWarning
+        expr: (1 - (node_filesystem_avail_bytes{node="node101", mountpoint="/"} / node_filesystem_size_bytes{node="node101", mountpoint="/"})) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "node101 SSD doluyor (%{{ $value | printf \"%.1f\" }})"
+          description: "node101 root disk (10 GB SSD) %{{ $value | printf \"%.1f\" }} dolu. Journal/log büyümesini kontrol et."
+
+      - alert: Node101RootDiskCritical
+        expr: (1 - (node_filesystem_avail_bytes{node="node101", mountpoint="/"} / node_filesystem_size_bytes{node="node101", mountpoint="/"})) * 100 > 90
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "node101 SSD kritik (%{{ $value | printf \"%.1f\" }})"
+          description: "node101 root disk %{{ $value | printf \"%.1f\" }} dolu — acil müdahale gerekiyor."
+
+      # restic-rest-server down olursa backup alınamaz
+      - alert: Node101ResticServerDown
+        expr: up{node="node101"} == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "node101 erişilemiyor — offsite backup durdu"
+          description: "node101 (restic REST server) 5 dakikadır scrape edilemiyor. Backup alınamıyor."
+
   # ── SRE-116: Uygulama katmanı alert kuralları ──────────────────────────
   - name: app_health
     interval: 30s
