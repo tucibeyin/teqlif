@@ -235,15 +235,20 @@ EOF
 
 # ── UFW ───────────────────────────────────────────────────────────────────────
 ufw_node101() {
-    log_step "UFW (node101 — dışa kapalı)"
+    log_step "UFW (node101 — dışa kapalı, IPv6 kapalı)"
+    # IPv6 devre dışı (node101 IPv4-only)
+    sed -i 's/^IPV6=yes/IPV6=no/' /etc/default/ufw
     ufw default deny incoming
     ufw default allow outgoing
     ufw allow 22/tcp
     ufw allow 51820/udp
-    # Restic REST server + node_exporter + gossip sadece WireGuard ağından
-    ufw allow in on wg0 to 10.10.0.101 port 8000 proto tcp
-    ufw allow in on wg0 to 10.10.0.101 port 9100 proto tcp
-    ufw allow in on wg0 to 10.10.0.101 port 19100 proto tcp comment 'teqlif-agent gossip'
+    # Restic REST server: yalnız node2 (10.10.0.2)
+    ufw allow in on wg0 from 10.10.0.2 to any port 8000 proto tcp
+    # node_exporter: yalnız nodeMonitor (10.10.0.99)
+    ufw allow in on wg0 from 10.10.0.99 to any port 9100 proto tcp
+    # teqlif-agent gossip: node2 + nodeMonitor
+    ufw allow in on wg0 from 10.10.0.2  to any port 19100 proto tcp comment 'teqlif-agent gossip node2'
+    ufw allow in on wg0 from 10.10.0.99 to any port 19100 proto tcp comment 'teqlif-agent gossip nodeMonitor'
     ufw_enable
 }
 

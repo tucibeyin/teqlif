@@ -32,6 +32,7 @@ declare -A NODE_IPS=(
     [node4]="135.125.175.223"
     [node5]="45.146.252.165"
     [node6]="5.249.165.10"
+    [node101]="195.206.234.142"
 )
 declare -A NODE_WG_IPS=(
     [node1]="10.10.0.1"
@@ -40,7 +41,10 @@ declare -A NODE_WG_IPS=(
     [node4]="10.10.0.4"
     [node5]="10.10.0.5"
     [node6]="10.10.0.6"
+    [node101]="10.10.0.101"
 )
+# node101 yalnız node2 ve nodeMonitor ile peer'lanır (tam mesh'e dahil değil)
+NODE101_PEERS=(node2 nodeMonitor)
 
 # Pubkey'leri yükle
 declare -A PUBKEYS
@@ -51,11 +55,14 @@ for node in node1 node2 node3 node4 node5 node6; do
         exit 1
     fi
 done
+# node101 pubkey opsiyonel (bootstrap tamamlanmışsa)
+PUBKEYS[node101]="$(get_secret "node101_pubkey" 2>/dev/null || true)"
 
 log_step "WireGuard mesh pubkey'leri doğrulandı"
 for node in node1 node2 node3 node4 node5 node6; do
     log_info "${node}: ${PUBKEYS[${node}]}"
 done
+[ -n "${PUBKEYS[node101]:-}" ] && log_info "node101: ${PUBKEYS[node101]}" || log_info "node101: (henüz yok — atlanacak)"
 
 # wg0.conf'u doldur ve WG başlat
 apply_wg_to_node() {
@@ -83,6 +90,46 @@ apply_wg_to_node() {
     log_ok "${target_node} WG mesh hazır"
 }
 
+# node101 → node2+nodeMonitor peer ekleme (tam mesh'e dahil değil)
+apply_wg_node101() {
+    [ -n "${PUBKEYS[node101]:-}" ] || { log_info "node101_pubkey eksik — node101 WG adımı atlanıyor"; return; }
+    local node101_pubkey="${PUBKEYS[node101]}"
+    local ssh_key="${SSH_KEY:-~/.ssh/node105}"
+
+    log_step "wg_mesh → node101 (offsite, partial peer)"
+
+    # node101'in wg0.conf'unda node2 ve nodeMonitor pubkey'lerini doldur
+    local cmd=""
+    cmd+="sed -i 's|<node2_pubkey>|${PUBKEYS[node2]}|g' /etc/wireguard/wg0.conf; "
+    # nodeMonitor pubkey
+    local nm_pubkey
+    nm_pubkey="$(get_secret "nodemonitor_pubkey" 2>/dev/null || true)"
+    [ -n "${nm_pubkey}" ] && cmd+="sed -i 's|<nodemonitor_pubkey>|${nm_pubkey}|g' /etc/wireguard/wg0.conf; "
+    cmd+="systemctl restart wg-quick@wg0 2>/dev/null || wg-quick down wg0; wg-quick up wg0; "
+    cmd+="wg show wg0 | grep -c peer || true"
+
+    ssh -i "${ssh_key}" -o StrictHostKeyChecking=no \
+        "tucibeyin@195.206.234.142" "sudo bash -c '${cmd}'"
+
+    # node2 ve nodeMonitor'a node101 peer ekle
+    for peer in node2 nodeMonitor; do
+        local peer_ip="${NODE_IPS[${peer}]:-}"
+        local peer_key="${SSH_KEY:-~/.ssh/${peer}}"
+        [ -z "${peer_ip}" ] && continue
+        log_info "node101 peer → ${peer}"
+        ssh -i "${peer_key}" -o StrictHostKeyChecking=no \
+            "tucibeyin@${peer_ip}" "sudo bash -c \"
+                grep -q '${node101_pubkey}' /etc/wireguard/wg0.conf 2>/dev/null && { echo 'zaten var'; exit 0; }
+                printf '\n# node101 (Offsite Backup)\n[Peer]\nPublicKey = ${node101_pubkey}\nAllowedIPs = 10.10.0.101/32\nEndpoint = 195.206.234.142:51820\nPersistentKeepalive = 25\n' >> /etc/wireguard/wg0.conf
+                wg set wg0 peer '${node101_pubkey}' allowed-ips '10.10.0.101/32' endpoint '195.206.234.142:51820' persistent-keepalive 25 2>/dev/null || true
+                echo 'peer eklendi'
+            \""
+        log_ok "${peer} → node101 peer eklendi"
+    done
+
+    log_ok "node101 WG partial mesh hazır"
+}
+
 # Bağlantı testi
 test_wg_mesh() {
     log_step "Mesh bağlantı testi"
@@ -108,15 +155,26 @@ test_wg_mesh() {
             break
         fi
     done
+    # node101 bağlantı testi
+    if [ -n "${PUBKEYS[node101]:-}" ]; then
+        if ssh -o ConnectTimeout=5 node2 "ping -c1 -W2 10.10.0.101" &>/dev/null; then
+            log_ok "  node2 → node101 (10.10.0.101): OK"
+            ((ok++))
+        else
+            log_err "  node2 → node101 (10.10.0.101): BAŞARISIZ"
+            ((fail++))
+        fi
+    fi
     echo ""
     log_info "Test sonucu: ${ok} başarılı, ${fail} başarısız"
 }
 
 # Ana akış
-log_step "WireGuard mesh uygulanıyor (6 node)"
+log_step "WireGuard mesh uygulanıyor (6 node + node101)"
 for node in node1 node2 node3 node4 node5 node6; do
     apply_wg_to_node "${node}"
 done
+apply_wg_node101
 
 echo ""
 read -r -p "Bağlantı testi yapalım mı? (node1'den tüm peer'lara ping) [y/N] " confirm
