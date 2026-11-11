@@ -44,6 +44,7 @@ main() {
     install_node_exporter_node101
     setup_wg_sudoers
     install_teqlif_restart_node101
+    setup_sudoers_node101
 
     if [ -n "${SECRETS_FILE:-}" ]; then
         apply_secrets "${SECRETS_FILE}" \
@@ -396,6 +397,18 @@ install_teqlif_restart_node101() {
     else
         log_warn "scripts/teqlif-restart.sh bulunamadı — atlanıyor"
     fi
+}
+
+setup_sudoers_node101() {
+    log_step "sudoers — tucibeyin passwordless teqlif-restart"
+    local sudoers_file="/etc/sudoers.d/90-teqlif-node101"
+    cat > "${sudoers_file}" <<'EOF'
+# teqlif V2.1 — node101 operasyonel komutları
+tucibeyin ALL=(root) NOPASSWD: /usr/local/sbin/teqlif-restart
+EOF
+    chmod 440 "${sudoers_file}"
+    visudo -cf "${sudoers_file}" && log_ok "sudoers eklendi (${sudoers_file})" \
+        || { log_warn "sudoers syntax hatası — siliniyor"; rm -f "${sudoers_file}"; }
 }
 
 main "$@"
