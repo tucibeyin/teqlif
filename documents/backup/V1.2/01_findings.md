@@ -43,7 +43,7 @@
 | [`OFFSITE-02`](#offsite-02) | 🔴 **P0** | `offsite_sync.sh`, `node101` (`ext4`) | `rclone sync` destrüktif silme yayılımı + `ext4` snapshot yokluğu + 7g retention kırpması | [Adım 9](#adim-9) | ⬜ Açık |
 | [`OFFSITE-03`](#offsite-03) | 🔴 **P0** | `offsite_sync.sh`, `.env.backup` | İstemci şifrelemesi (`restic`) ve sunucu dışı **3'lü Key Escrow** eksikliği | [Adım 10](#adim-10) | ⬜ Açık |
 | [`OFFSITE-04`](#offsite-04) | 🔴 **P0** | `teqlif-offsite-sync.*`, `watchdog`, `health`, `schedule.yaml` | 3 izleme katmanında tam körlük, sessiz `exit 0`, `OnFailure` yok + `disabled` vs `active` timer sapması | [Adım 13](#adim-13) | ⬜ Açık |
-| [`OFFSITE-05`](#offsite-05) | 🟠 **P1** | `wg_mesh_apply.sh`, `secrets.env.template`, `node101` UFW | `node101` WG (`10.10.0.101`) peer izolasyonu (yalnız `node2`+`nodeMonitor`), UFW ve SSH sertleştirmesi | [Adım 2](#adim-2) | 🔄 Kısmen (`351c35fb` — UFW live bekliyor) |
+| [`OFFSITE-05`](#offsite-05) | 🟠 **P1** | `wg_mesh_apply.sh`, `secrets.env.template`, `node101` UFW | `node101` WG (`10.10.0.101`) peer izolasyonu (yalnız `node2`+`nodeMonitor`), UFW ve SSH sertleştirmesi | [Adım 2](#adim-2) | ✅ Çözüldü `c5cb95a2` |
 | [`OFFSITE-06`](#offsite-06) | 🟠 **P1** | `node101` (`2.9 GiB RAM`, `/mnt/data`, `fio`) | Düşük RAM (`2.9 GiB`), `6.1 GB` `/` taşma riski, `fdatasync` tail latency (`83 IOPS`) + TZ `UTC` | [Adım 1](#adim-1) | ✅ Çözüldü `09eb442c` |
 | [`OFFSITE-07`](#offsite-07) | 🟠 **P1** | `offsite_sync.sh`, `pg_basebackup.sh`, `pg_wal`, `pg_dump.sh` | Offsite PG PITR (`pg_basebackup`+`pg_wal`) eksikliği (24s RPO) + `pg_dump/*.dump.gz` (2–8 Eki) yetimleri | [Adım 12](#adim-12) | ⬜ Açık |
 | [`OFFSITE-08`](#offsite-08) | 🟠 **P1** | `clickhouse_backup.sh`, canlı `node2` CH | Method 1/2 çalışmıyor (`/var/lib/clickhouse/backups` boş), fallback `285B` arşiv, `BACKUP` izni/DDL yok | [Adım 14](#adim-14) | ⬜ Açık |
@@ -362,8 +362,7 @@ PersistentKeepalive = 25
 * **Doğrulama:** `ssh node2 "ping -c2 10.10.0.101"` ve `ssh nodeMonitor "curl -sf http://10.10.0.101:9100/metrics | head -1"` ✔; `ssh node1 "nc -zw2 10.10.0.101 8000"` başarısız (erişim yok) ✔.
 
 ##### ✅ Çözüm Damgası
-- `2026-11-11` · commit `351c35fb` — `wg_mesh_apply.sh`'e node101 eklendi (`apply_wg_node101()`, partial mesh) ✓; `secrets.env.template`'e `node101_pubkey`+`nodemonitor_pubkey` eklendi ✓; `ufw_node101()` kaynak kısıtlaması: port 8000 yalnız `10.10.0.2`, port 9100 yalnız `10.10.0.99`, gossip 19100 her iki peer ✓; `IPV6=no` ✓. **Doğrulama:** `node2 → node101`: 13ms ping ✓; `nodeMonitor → node101:9100/metrics`: `# HELP go_gc_duration_seconds…` ✓; `node1 → node101:8000`: ULAŞAMADI (blast-radius koruması) ✓.
-- **Bekleyen live:** node101'de UFW kuralları hâlâ `Anywhere` kaynaklı — root olarak `ufw delete 3; ufw delete 3; ufw delete 3; ufw allow in on wg0 from 10.10.0.2 to any port 8000 proto tcp; ufw allow in on wg0 from 10.10.0.99 to any port 9100 proto tcp; ufw allow in on wg0 from 10.10.0.2 to any port 19100 proto tcp; ufw allow in on wg0 from 10.10.0.99 to any port 19100 proto tcp; sed -i 's/^IPV6=yes/IPV6=no/' /etc/default/ufw; ufw reload` ile güncellenmeli.
+- `2026-11-11` · commit `351c35fb` + `c5cb95a2` — `wg_mesh_apply.sh`'e node101 eklendi (`apply_wg_node101()`, partial mesh) ✓; `secrets.env.template`'e `node101_pubkey`+`nodemonitor_pubkey` eklendi ✓; `ufw_node101()` kaynak kısıtlaması: port 8000 yalnız `10.10.0.2`, port 9100 yalnız `10.10.0.99`, gossip 19100 her iki peer ✓; `IPV6=no` ✓; SSH `01-teqlif-hardening.conf` first-match düzeltmesi — `sshd -T`: `passwordauthentication no` ✓. **Doğrulama:** `node2 → node101:8000`: OK ✓; `nodeMonitor → node101:9100/metrics`: `# HELP go_gc_duration_seconds…` ✓; `node1 → node101:8000`: ULAŞAMADI (blast-radius koruması) ✓.
 
 ---
 
