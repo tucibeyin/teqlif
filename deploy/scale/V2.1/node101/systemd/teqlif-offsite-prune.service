@@ -14,7 +14,7 @@ Environment=RESTIC_CACHE_DIR=/mnt/data/cache/restic
 EnvironmentFile=/etc/teqlif-offsite/restic.env
 IOSchedulingClass=idle
 Nice=19
-MemoryMax=2G
+MemoryMax=1536M
 ExecStart=/usr/bin/restic forget \
     --tag daily-full \
     --keep-daily   7 \

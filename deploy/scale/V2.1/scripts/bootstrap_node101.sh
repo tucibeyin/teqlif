@@ -160,8 +160,26 @@ EOF
         [ -f "${dev}/queue/scheduler" ] && echo mq-deadline > "${dev}/queue/scheduler" 2>/dev/null || true
     done
     # fstrim HDD'de gereksiz
-    systemctl disable fstrim.timer 2>/dev/null || true
-    log_ok "sysctl + mq-deadline scheduler aktif"
+    systemctl mask fstrim.timer 2>/dev/null || true
+    # journald limit — 818MB default SSD israfını önle
+    mkdir -p /etc/systemd/journald.conf.d
+    cat > /etc/systemd/journald.conf.d/teqlif-node101.conf <<'EOF'
+[Journal]
+SystemMaxUse=200M
+SystemMaxFiles=10
+RuntimeMaxUse=50M
+Compress=yes
+EOF
+    systemctl restart systemd-journald
+    # apt-daily-upgrade: 06:00+60m → offsite_sync 06:30 ile çakışır, 10:00'a al
+    mkdir -p /etc/systemd/system/apt-daily-upgrade.timer.d
+    cat > /etc/systemd/system/apt-daily-upgrade.timer.d/teqlif-timing.conf <<'EOF'
+[Timer]
+OnCalendar=
+OnCalendar=*-*-* 10:00
+RandomizedDelaySec=15m
+EOF
+    log_ok "sysctl + mq-deadline scheduler + journald limit + apt timing aktif"
 }
 
 # ── CrowdSec (node101 — sadece SSH, nginx/http collection yok) ───────────────

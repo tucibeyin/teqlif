@@ -17,7 +17,7 @@ ExecStart=/usr/bin/restic-rest-server \
     --private-repos
 Restart=always
 RestartSec=5
-MemoryMax=512M
+MemoryMax=256M
 StandardOutput=journal
 StandardError=journal
 
