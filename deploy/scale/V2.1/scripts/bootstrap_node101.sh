@@ -245,16 +245,19 @@ setup_offsite_dirs() {
         useradd --system --no-create-home --shell /sbin/nologin teqlif-backup
         log_ok "teqlif-backup kullanıcısı oluşturuldu"
     fi
-    # Repo ve yardımcı dizinler HDD üzerinde
+    # /mnt/data mount point'i root'a ait olmalı; alt dizinler servis kullanıcılarına
+    chown root:root /mnt/data
+    chmod 755 /mnt/data
+    # Yardımcı dizinler HDD üzerinde
+    # NOT: restic repo dizini (ör. /mnt/data/teqlif/) restic-rest-server --private-repos
+    # bayrağıyla HTTP auth kullanıcı adına göre otomatik oluşturulur (restic init sırasında).
     mkdir -p \
-        /mnt/data/restic-repo \
         /mnt/data/tmp \
         /mnt/data/cache/restic
     chown -R teqlif-backup:teqlif-backup \
-        /mnt/data/restic-repo \
         /mnt/data/tmp \
         /mnt/data/cache/restic
-    chmod 700 /mnt/data/restic-repo /mnt/data/tmp /mnt/data/cache/restic
+    chmod 700 /mnt/data/tmp /mnt/data/cache/restic
     # Config dizini
     mkdir -p /etc/teqlif-offsite
     chmod 750 /etc/teqlif-offsite
