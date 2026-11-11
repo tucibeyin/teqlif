@@ -33,7 +33,7 @@ declare -A NODE_IPS=(
     [node5]="45.146.252.165"
     [node6]="5.249.165.10"
     [node101]="195.206.234.142"
-    [nodeMonitor]="10.10.0.99"
+    [nodeMonitor]="10.10.0.99"  # WG IP — apply_wg_node101() sırasında admin WG tüneli açık olmalı
 )
 declare -A NODE_WG_IPS=(
     [node1]="10.10.0.1"
