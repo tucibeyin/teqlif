@@ -71,7 +71,7 @@
 | ID | Seviye | Bileşen / Node | Tespit Edilen Eksik / Bozuk İşleyiş / Birikme | Bağlı Adım | Durum |
 | :---: | :---: | :--- | :--- | :---: | :---: |
 | [`AUDIT-01`](#audit-01) | 🔴 **P0** | `node2` DR (`runbook.sh`, `pg_basebackup.sh`, `pg_dump.sh`) | **Yerel DR/PITR kırık:** `pg_lsclusters` boş, **`postgresql-17-pgvector` yok**, `.env.dr`/`cf-origin.*` yok, `pg_wal.tar.gz` atlanıyor + `immediate` PITR'ı kesiyor | [Adım 5](#adim-5) | ✅ Çözüldü `f48e8eaf` |
-| [`AUDIT-02`](#audit-02) | 🟠 **P1** | `watchdog.py`, `db.py`, `worker.py`, `reporter.py`, `recorder.py` | Donmuş SQLite (`1 Kas`), `IS NULL` körlüğü, 10+ statik/early-return cron `_agent_ok` yok, `5/11` rapor | [Adım 19](#adim-19) | ⬜ Açık |
+| [`AUDIT-02`](#audit-02) | 🟠 **P1** | `watchdog.py`, `db.py`, `worker.py`, `reporter.py`, `recorder.py` | Donmuş SQLite (`1 Kas`), `IS NULL` körlüğü, 10+ statik/early-return cron `_agent_ok` yok, `5/11` rapor | [Adım 19](#adim-19) | ✅ `24743e5d` |
 | [`AUDIT-03`](#audit-03) | 🟠 **P1** | `nodemonitor_config_backup.sh`, `loki_backup.sh`, cluster sırları | Grafana (`521 MB` + `shared/config`) ve `loki/compactor/` yedeksiz; `node1..6` TLS/WG/`.env` yedeksiz | [Adım 16](#adim-16) | ✅ `7ab35bde` |
 | [`AUDIT-04`](#audit-04) | 🟠 **P1** | `minio_backup.sh`, `uptime_kuma_backup.sh` | `node2` `30g` video temizlik eksiği + `confirm_recordings` race + Kuma `20B` boş `.sql.gz`/inline şifre | [Adım 18](#adim-18) | ✅ `8029c16c` |
 | [`AUDIT-05`](#audit-05) | 🟠 **P1** | `node2`/`node5` ClickHouse, `encoder.py`, `node5:/var/recordings` | TTL'siz CH `system.*_log` (**`node2 2.38 GiB`**, **`node5 5.4 GiB`**) + `3.2G` cache + **`194M` video artığı** | [Adım 23](#adim-23) | ⬜ Açık |
@@ -826,8 +826,19 @@ EOF
 3. `recorder.py` canlı edge heartbeat'ini periyodik `mark_ok` ile ayrıştırır; `reporter.py` `_BACKUP_JOBS` listesini tüm yerel + offsite yedekleri (`offsite_sync`, `offsite_wal_sync`, `loki`, `uptime_kuma`, `nodemonitor_config`, `pg_basebackup` dahil) kapsayacak şekilde genişletir.
 * **Doğrulama:** `sqlite3 /var/lib/teqlif-agent/state.db "SELECT job_name, last_ok_at FROM job_health"` tüm `schedule.yaml` + sürekli işleri güncel gösterir.
 
-##### ⬜ Çözüm Damgası
-- *(Henüz uygulanmadı — [Adım 19](#adim-19) bekliyor)*
+##### ✅ Çözüm Damgası
+- `2026-11-12` · commit `24743e5d` — **AUDIT-02 kapatıldı** ✓:
+  - `watchdog.py` `_CONTINUOUS_REGISTRY`: `train_item2vec_task`, `train_swipe_live_als_task` (10080m) + `refresh_i18n_cache_task` (10m), `flush_clickhouse_buffers_task` (2m), `direct_sale_overdue_check_task` (2m), `stream_concat_task` (5m), `expire_recordings_task` (60m), `archive_recordings_task` (30m), `notify_new_recordings_task` (720m) eklendi ✓
+  - `watchdog.run()`: `seed_expected_jobs()` çağrısı — hiç çalışmamış iş NULL tespiti aktif ✓
+  - `db.py`: `get_stale_jobs()` `IS NOT NULL` körlüğü kaldırıldı; `last_ok_at IS NULL AND updated_at` aşımı da yakalar; `seed_expected_jobs()` eklendi ✓
+  - `worker.py`: `sync_swipelive_interests`, `backfill_listing_quality_scores`, `invalidate_swipe_live_configs` (boş early-return dahil); `train_listing_quality_model` (n<50 early-return); `refresh_i18n_cache`, `flush_clickhouse_buffers`, `direct_sale_overdue_check` → `_agent_ok` eklendi ✓
+  - `stream_recording_tasks.py`: `_agent_ok` helper + `expire`, `archive`, `notify_new_recordings` → çağrı ✓
+  - `stream_concat_task.py`: `_agent_ok` helper + çağrı ✓
+  - `recorder.py`: `run()` sonuna aktif edge heartbeat `mark_ok(expected_every_m=10)`; encoding mark_ok 10080→10 ✓
+  - `reporter.py` `_BACKUP_JOBS`: 5→12 girdi (`loki`, `uptime_kuma`, `nodemonitor_config`, `cluster_secrets`, `pg_basebackup`, `offsite_sync`, `offsite_wal_sync`) ✓
+  - `schedule.yaml`: `loki_backup` (06:00), `uptime_kuma_backup` (06:05), `nodemonitor_config_backup` (06:10) → `watchdog_m:1500` ✓
+  - `loki_backup.sh` + `nodemonitor_config_backup.sh`: `source .env.backup` + `redis-cli HSET job_ok` ✓
+  - Tüm 8 node'a push + `teqlif-restart` → servisler aktif ✓
 
 ---
 
