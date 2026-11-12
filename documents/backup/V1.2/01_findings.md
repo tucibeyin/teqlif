@@ -42,7 +42,7 @@
 | [`OFFSITE-01`](#offsite-01) | 🔴 **P0** | `cluster.yaml`, `node101/specs.md` | MinIO 2g ILM sonrası tek-kopya riski + `node101` tek volume (`vdb`, RAID yok), IPv4-only ve `/` (`6.1 GB` boş) | [Adım 11](#adim-11) | ✅ `0e61ca9a` |
 | [`OFFSITE-02`](#offsite-02) | 🔴 **P0** | `offsite_sync.sh`, `node101` (`ext4`) | `rclone sync` destrüktif silme yayılımı + `ext4` snapshot yokluğu + 7g retention kırpması | [Adım 9](#adim-9) | ✅ `f773a084` |
 | [`OFFSITE-03`](#offsite-03) | 🔴 **P0** | `offsite_sync.sh`, `.env.backup` | İstemci şifrelemesi (`restic`) ve sunucu dışı **3'lü Key Escrow** eksikliği | [Adım 10](#adim-10) | ✅ `1bf776a7` |
-| [`OFFSITE-04`](#offsite-04) | 🔴 **P0** | `teqlif-offsite-sync.*`, `watchdog`, `health`, `schedule.yaml` | 3 izleme katmanında tam körlük, sessiz `exit 0`, `OnFailure` yok + `disabled` vs `active` timer sapması | [Adım 13](#adim-13) | ⬜ Açık |
+| [`OFFSITE-04`](#offsite-04) | 🔴 **P0** | `teqlif-offsite-sync.*`, `watchdog`, `health`, `schedule.yaml` | 3 izleme katmanında tam körlük, sessiz `exit 0`, `OnFailure` yok + `disabled` vs `active` timer sapması | [Adım 13](#adim-13) | ✅ `2214bff7` |
 | [`OFFSITE-05`](#offsite-05) | 🟠 **P1** | `wg_mesh_apply.sh`, `secrets.env.template`, `node101` UFW | `node101` WG (`10.10.0.101`) peer izolasyonu (yalnız `node2`+`nodeMonitor`), UFW ve SSH sertleştirmesi | [Adım 2](#adim-2) | ✅ Çözüldü `c5cb95a2` |
 | [`OFFSITE-06`](#offsite-06) | 🟠 **P1** | `node101` (`2.9 GiB RAM`, `/mnt/data`, `fio`) | Düşük RAM (`2.9 GiB`), `6.1 GB` `/` taşma riski, `fdatasync` tail latency (`83 IOPS`) + TZ `UTC` | [Adım 1](#adim-1) | ✅ Çözüldü `09eb442c` |
 | [`OFFSITE-07`](#offsite-07) | 🟠 **P1** | `offsite_sync.sh`, `pg_basebackup.sh`, `pg_wal`, `pg_dump.sh` | Offsite PG PITR (`pg_basebackup`+`pg_wal`) eksikliği (24s RPO) + `pg_dump/*.dump.gz` (2–8 Eki) yetimleri | [Adım 12](#adim-12) | ✅ `114c0ee4` |
@@ -326,8 +326,8 @@ fi
 3. [`schedule.yaml`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/schedule.yaml) `backup:` altına `offsite_sync` (`watchdog_m: 1500`) + `offsite_wal_sync` (`watchdog_m: 90`); [`health.py`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/teqlif-agent/modules/health.py#L44-L54) içine `offsite_sync` (`25*60`) ve `offsite_wal_sync` (`90`) ekle.
 * **Doğrulama:** `systemctl is-enabled teqlif-offsite-sync.timer teqlif-offsite-wal.timer` ikisi de `enabled` döner; sahte hata ile `systemctl start teqlif-offsite-sync.service` `OnFailure` Telegram uyarısı tetikler.
 
-##### ⬜ Çözüm Damgası
-- *(Henüz uygulanmadı — [Adım 13](#adim-13) bekliyor)*
+##### ✅ Çözüm Damgası
+- `2026-11-12` · commit `2214bff7` — **P0 OFFSITE-04 kapatıldı** ✓: `offsite_sync.sh` / `offsite_wal_sync.sh` sessiz `exit 0` → `exit 2` (OFFSITE_MODE=disabled olmadıkça) ✓; `.last_offsite_sync_ok` + `.last_offsite_wal_ok` sentinel dosyaları başarılı çalışmada dokunuluyor ✓; `teqlif-offsite-sync.service` `Nice=10→19`, `EnvironmentFile=` eklendi ✓; `schedule.yaml`: `offsite_sync` (watchdog_m:1500) + `offsite_wal_sync` (watchdog_m:90) ✓; `health.py` `_BACKUP_MAX_MIN` + `sentinel_dirs` offsite girişleri ✓. Canlı doğrulama: sentinel dosyaları `Nov 12 14:01/14:02` ✓; her iki timer `enabled` ✓; `teqlif-agent` yeniden başlatıldı.
 
 ---
 
@@ -1203,7 +1203,7 @@ await redis.set("ch:last_sync_at", now.isoformat())  # Aradakiler kalıcı kaybo
 ~~12. **Adım 12 (`OFFSITE-07`):** [`offsite_sync.sh`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/offsite_sync.sh) içeriğini `rclone sync` → **`restic backup --pack-size 32 --tag daily-full`** olarak yeniden yaz, kapsamına `pg_basebackup` + `pg_wal` (`--exclude '*.partial' --exclude '*.tmp' --exclude '.last_*'`) ekle, saatini **`06:30 UTC`** yap ve [`pg_dump.sh:26`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/pg_dump.sh#L26) `.dump*` filtresiyle canlı `2–8 Eki` `.dump.gz` yetimlerini temizle → _Neden:_ Offsite PG PITR kapsamını açmak ve `node101` `fdatasync` darboğazını `--pack-size 32` ile aşmak. → ([Detay](#offsite-07))~~ ✅ `114c0ee4`
 
 <a id="adim-13"></a>
-13. **Adım 13 (`OFFSITE-04`):** `offsite_sync.sh` boş config'te **`exit 2` + Telegram**, `teqlif-offsite-sync.service` içine `OnFailure=teqlif-backup-failed@%n.service` + `IOSchedulingClass=idle` + `Nice=19` ekle; yeni saatlik **`offsite_wal_sync.sh` + `teqlif-offsite-wal.{service,timer}` (`*:45:00 UTC`, `--tag pg_wal`)** oluştur; her iki timer'ı `systemctl enable --now` yap ve sentinel + `schedule.yaml` + [`health.py`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/teqlif-agent/modules/health.py#L44-L54) entegrasyonunu tamamla → _Neden:_ 3 katmanlı izleme körlüğünü gidermek ve çifte felakette PG RPO'sunu `24 saat → ≤ 1 saate` indirmek. → ([Detay](#offsite-04))
+~~13. **Adım 13 (`OFFSITE-04`):** `offsite_sync.sh` boş config'te **`exit 2` + Telegram**, `teqlif-offsite-sync.service` içine `OnFailure=teqlif-backup-failed@%n.service` + `IOSchedulingClass=idle` + `Nice=19` ekle; yeni saatlik **`offsite_wal_sync.sh` + `teqlif-offsite-wal.{service,timer}` (`*:45:00 UTC`, `--tag pg_wal`)** oluştur; her iki timer'ı `systemctl enable --now` yap ve sentinel + `schedule.yaml` + [`health.py`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/teqlif-agent/modules/health.py#L44-L54) entegrasyonunu tamamla → _Neden:_ 3 katmanlı izleme körlüğünü gidermek ve çifte felakette PG RPO'sunu `24 saat → ≤ 1 saate` indirmek. → ([Detay](#offsite-04))~~ ✅ `2214bff7`
 
 ---
 
