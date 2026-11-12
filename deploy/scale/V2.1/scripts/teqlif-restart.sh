@@ -192,6 +192,35 @@ sync_services() {
   return 0
 }
 
+# ── sync_timer_overrides: systemd-overrides/ drop-in conf'larını /etc/systemd/system/ altına al ─
+# node_dir/systemd-overrides/<unit>.d/<conf> → /etc/systemd/system/<unit>.d/<conf>
+sync_timer_overrides() {
+  local node_dir="$1"
+  local overrides_dir="$node_dir/systemd-overrides"
+  [ -d "$overrides_dir" ] || return 0
+  local reloaded=""
+  for unit_d in "$overrides_dir"/*.d; do
+    [ -d "$unit_d" ] || continue
+    local unit_name
+    unit_name=$(basename "$unit_d")
+    local dst_dir="/etc/systemd/system/${unit_name}"
+    mkdir -p "$dst_dir"
+    for conf in "$unit_d"/*.conf; do
+      [ -f "$conf" ] || continue
+      local fname dst
+      fname=$(basename "$conf")
+      dst="${dst_dir}/${fname}"
+      if ! diff -q "$conf" "$dst" > /dev/null 2>&1; then
+        cp "$conf" "$dst"
+        log "Timer override güncellendi: ${unit_name}/${fname}"
+        reloaded="yes"
+      fi
+    done
+  done
+  [ -n "$reloaded" ] && systemctl daemon-reload && log "daemon-reload (timer overrides) tamamlandı"
+  return 0
+}
+
 # ── sync_scripts: resources/scripts/ altındaki shell scriptleri /usr/local/bin/'e sync et ─
 sync_scripts() {
   local node_dir="$1"
@@ -258,6 +287,7 @@ case "$NODE" in
     pip_sync
     agent_sync
     sync_services "$REPO/deploy/scale/V2.1/node1"
+    sync_timer_overrides "$REPO/deploy/scale/V2.1/node1"
     sync_nginx "$REPO/deploy/scale/V2.1/node1"
     sync_pgbouncer "$REPO/deploy/scale/V2.1/node1"
     alembic_and_sync /project/teqlif/config/.env.production
@@ -274,6 +304,7 @@ case "$NODE" in
   node2)
     agent_sync
     sync_services "$REPO/deploy/scale/V2.1/node2"
+    sync_timer_overrides "$REPO/deploy/scale/V2.1/node2"
     sync_scripts "$REPO/deploy/scale/V2.1/node2"
     log "node2 — backup node, uygulama servisi yok. git pull tamamlandı."
     ;;
@@ -281,6 +312,7 @@ case "$NODE" in
   node3|node4)
     agent_sync
     sync_services "$REPO/deploy/scale/V2.1/$NODE"
+    sync_timer_overrides "$REPO/deploy/scale/V2.1/$NODE"
     # VIP timer — ilk defa yükleniyorsa etkinleştir
     if ! systemctl is-enabled teqlif-redis-vip.timer >/dev/null 2>&1; then
         systemctl enable --now teqlif-redis-vip.timer
@@ -304,6 +336,7 @@ case "$NODE" in
     pip_sync
     agent_sync
     sync_services "$REPO/deploy/scale/V2.1/node5"
+    sync_timer_overrides "$REPO/deploy/scale/V2.1/node5"
     sync_nginx "$REPO/deploy/scale/V2.1/node5"
     if ! systemctl is-enabled teqlif-redis-vip.timer >/dev/null 2>&1; then
         systemctl enable --now teqlif-redis-vip.timer
@@ -329,6 +362,7 @@ case "$NODE" in
   node6)
     agent_sync
     sync_services "$REPO/deploy/scale/V2.1/node6"
+    sync_timer_overrides "$REPO/deploy/scale/V2.1/node6"
     if ! systemctl is-enabled teqlif-redis-vip.timer >/dev/null 2>&1; then
         systemctl enable --now teqlif-redis-vip.timer
         log "teqlif-redis-vip.timer etkinleştirildi"
@@ -344,6 +378,7 @@ case "$NODE" in
 
   nodeMonitor)
     agent_sync
+    sync_timer_overrides "$REPO/deploy/scale/V2.1/nodeMonitor"
     log "nodeMonitor — izleme node'u, uygulama servisi yok. git pull tamamlandı."
     ;;
 
