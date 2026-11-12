@@ -39,6 +39,8 @@ main() {
     setup_wg_sudoers
     setup_redis_vip_sudoers_node2
     setup_sysctl       "${NODE_DIR}"
+    setup_apt_timing
+    setup_mdcheck_timing
     setup_hdd_io_scheduler
     ufw_node2
     install_pg_server

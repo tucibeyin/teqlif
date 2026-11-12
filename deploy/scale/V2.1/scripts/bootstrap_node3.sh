@@ -36,6 +36,7 @@ main() {
     setup_wg_sudoers
     setup_redis_vip_sudoers_client
     setup_sysctl       "${NODE_DIR}"
+    setup_apt_timing
     ufw_streaming
     install_haproxy
     setup_haproxy_redis_proxy "${NODE_DIR}"

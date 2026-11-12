@@ -35,6 +35,7 @@ main() {
     setup_wg_sudoers
     setup_redis_vip_sudoers_client
     setup_sysctl       "${NODE_DIR}"
+    setup_apt_timing
     ufw_node6
     setup_venv "${REPO_DIR}"
     setup_env_template \

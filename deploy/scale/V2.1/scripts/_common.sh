@@ -353,6 +353,44 @@ setup_haproxy_redis_proxy() {
     log_ok "HAProxy enable edildi (apply_secrets sonrası başlatılacak)"
 }
 
+# ── apt-daily-upgrade timer zamanlaması (MAINT-04) ───────────────────────────
+# Varsayılan 06:00+60m penceresi offsite backup bloğuyla (06:30-07:30) çakışır.
+# 07:45 UTC'ye çekince backup + ML eğitim bitiminden sonra çalışır.
+setup_apt_timing() {
+    log_step "apt-daily-upgrade timer zamanlaması (07:45 UTC)"
+    mkdir -p /etc/systemd/system/apt-daily-upgrade.timer.d
+    cat > /etc/systemd/system/apt-daily-upgrade.timer.d/teqlif-timing.conf <<'EOF'
+[Timer]
+OnCalendar=
+OnCalendar=*-*-* 07:45:00
+RandomizedDelaySec=15m
+EOF
+    systemctl daemon-reload
+    systemctl restart apt-daily-upgrade.timer 2>/dev/null || true
+    log_ok "apt-daily-upgrade → 07:45 UTC (±15 dakika)"
+}
+
+# ── mdcheck_continue timer zamanlaması — yalnız node2 (MAINT-04) ─────────────
+# OnCalendar=daily + RandomizedDelaySec=12h → 00:00–12:00 arası ateşleniyor.
+# Ayın 1. haftasında 06:46 UTC'de backup bloğuna bindi (gözlemlendi).
+# 07:35 UTC'ye çekilince offsite_sync (~07:00 UTC biter) sonrasına düşer.
+setup_mdcheck_timing() {
+    if ! systemctl list-unit-files mdcheck_continue.timer &>/dev/null; then
+        log_warn "mdcheck_continue.timer mevcut değil, atlanıyor"
+        return
+    fi
+    log_step "mdcheck_continue timer zamanlaması (07:35 UTC)"
+    mkdir -p /etc/systemd/system/mdcheck_continue.timer.d
+    cat > /etc/systemd/system/mdcheck_continue.timer.d/teqlif-timing.conf <<'EOF'
+[Timer]
+OnCalendar=
+OnCalendar=*-*-* 07:35:00
+RandomizedDelaySec=15m
+EOF
+    systemctl daemon-reload
+    log_ok "mdcheck_continue → 07:35 UTC (±15 dakika)"
+}
+
 # ── Sysctl uygulama ───────────────────────────────────────────────────────────
 setup_sysctl() {
     local node_dir="${1}"

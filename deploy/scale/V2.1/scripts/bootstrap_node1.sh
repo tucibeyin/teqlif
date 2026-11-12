@@ -40,6 +40,7 @@ main() {
     setup_wg_config    "${NODE_DIR}"
     setup_wg_sudoers
     setup_sysctl       "${NODE_DIR}"
+    setup_apt_timing
     setup_nvme_io_scheduler
     ufw_node1
     install_postgresql

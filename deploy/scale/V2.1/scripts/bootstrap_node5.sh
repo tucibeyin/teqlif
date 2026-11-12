@@ -39,6 +39,7 @@ main() {
     setup_wg_sudoers
     setup_redis_vip_sudoers_client
     setup_sysctl       "${NODE_DIR}"
+    setup_apt_timing
     ufw_node5
     install_postgresql_staging
     install_redis_staging
