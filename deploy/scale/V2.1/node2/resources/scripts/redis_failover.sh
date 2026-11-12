@@ -59,15 +59,6 @@ sudo /sbin/iptables -t nat -A OUTPUT \
     -j DNAT --to-destination 127.0.0.1:6379 2>/dev/null || true
 logger -t redis-failover "VIP 10.10.0.1/32 → lo alias ve iptables DNAT eklendi"
 
-# node2'nin kendi WireGuard'ında 10.10.0.1 trafiğini artık node1'e gönderme
-_NODE1_PK=$(sudo wg show wg0 dump 2>/dev/null \
-    | awk 'NR>1 && $4=="10.10.0.1/32" {print $1; exit}') || true
-if [ -n "$_NODE1_PK" ]; then
-    sudo wg set wg0 peer "$_NODE1_PK" allowed-ips "0.0.0.1/32"
-    sudo wg-quick save wg0
-    logger -t redis-failover "node2 WireGuard: node1 peer → 0.0.0.1/32 (trafik engellendi)"
-fi
-
 # ── Telegram bildirimi ────────────────────────────────────────────────────────
 export _NODE
 _NODE=$(hostname -s)
