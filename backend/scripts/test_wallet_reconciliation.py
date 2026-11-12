@@ -4,13 +4,17 @@
 
 SQLAlchemy / DB bağlantısı gerektirmez — AsyncSession ve Redis mock'lanır.
 """
-import asyncio
 import sys
 import os
 import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+# app.database import sırasında engine oluşturur — test için gerçek URL gerekmiyor
+os.environ.setdefault("DATABASE_URL", "postgresql+asyncpg://test:test@localhost/test")
+os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
+os.environ.setdefault("SECRET_KEY", "test-secret-key-for-unit-tests")
 
 from app.tasks.wallet_tasks import daily_financial_reconciliation_task
 
