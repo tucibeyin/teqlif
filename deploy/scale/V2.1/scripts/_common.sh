@@ -443,7 +443,7 @@ EOF
 setup_venv() {
     local repo_dir="${1}"
     log_step "Python venv"
-    if [ ! -d "${repo_dir}/.venv" ]; then
+    if [ ! -x "${repo_dir}/.venv/bin/uvicorn" ]; then
         python3 -m venv "${repo_dir}/.venv"
         "${repo_dir}/.venv/bin/pip" install --upgrade pip -q
         "${repo_dir}/.venv/bin/pip" install -r "${repo_dir}/backend/requirements.txt" -q
