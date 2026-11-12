@@ -44,18 +44,26 @@ if command -v clickhouse-backup &>/dev/null && \
     :
 
 # Yöntem 2: SQL BACKUP — Disk('backups', ...) → /project/teqlif/backups/clickhouse/
-# Gereksinim: GRANT BACKUP ON *.* TO teqlif (bootstrap_node2.sh post adım)
+# Gereksinim: GRANT BACKUP ON *.* TO teqlif + GRANT WRITE ON DISK TO teqlif
+# Hata logu exec redirect sayesinde LOGFILE'a gider (2>/dev/null yok)
 elif clickhouse-client \
         --host 127.0.0.1 --port 9000 --user "${CH_USER}" "${CH_PASS_ARG[@]}" \
-        --query "BACKUP DATABASE \`${CH_DB}\` TO Disk('backups', '${BACKUP_NAME}.zip')" \
-        2>/dev/null; then
+        --query "BACKUP DATABASE \`${CH_DB}\` TO Disk('backups', '${BACKUP_NAME}.zip')"; then
     BACKUP_METHOD="sql"
 
 # Yöntem 3: Native format export + schema.sql DDL (son çare — Yöntem 1/2 mevcut değil)
 else
     BACKUP_METHOD="fallback"
-    mkdir -p "${DEST}"
     echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) clickhouse_backup: WARN — Yöntem 1/2 başarısız, fallback başlatıldı"
+
+    # CH bağlantı kontrolü — kapalıysa boş arşiv üretilmez, fail early
+    if ! clickhouse-client --host 127.0.0.1 --port 9000 --user "${CH_USER}" "${CH_PASS_ARG[@]}" \
+            --query "SELECT 1" > /dev/null 2>&1; then
+        echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) clickhouse_backup: FAIL — ClickHouse erişilemiyor (fallback iptal)"
+        logger -p user.err "teqlif clickhouse_backup: ClickHouse erişilemiyor"
+        exit 1
+    fi
+    mkdir -p "${DEST}"
 
     # DDL schema dump — tüm tablolar + view'lar (MV iç tabloları hariç)
     while IFS= read -r tname; do
@@ -76,6 +84,14 @@ else
     done < <(clickhouse-client --host 127.0.0.1 --port 9000 --user "${CH_USER}" "${CH_PASS_ARG[@]}" \
         --query "SELECT name FROM system.tables WHERE database='${CH_DB}' AND engine NOT IN ('MaterializedView','View') AND name NOT LIKE '.inner%' ORDER BY name" \
         2>/dev/null || true)
+
+    # Schema içerik doğrulama — CH erişilebilir ama DB/tablolar yoksa boş schema.sql
+    if ! grep -q "^CREATE " "${DEST}/schema.sql" 2>/dev/null; then
+        echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) clickhouse_backup: FAIL — fallback schema.sql boş veya CREATE ifadesi yok"
+        logger -p user.err "teqlif clickhouse_backup: fallback schema.sql geçersiz"
+        rm -rf "${DEST}"
+        exit 1
+    fi
 
     tar -czf "${DEST}.tar.gz" -C "${BACKUP_DIR}" "$(basename "${DEST}")"
     rm -rf "${DEST}"

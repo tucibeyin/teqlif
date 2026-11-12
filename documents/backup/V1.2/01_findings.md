@@ -414,7 +414,7 @@ PersistentKeepalive = 25
 <a id="offsite-08"></a>
 #### `OFFSITE-08` · 🟠 P1 (Yüksek) · ClickHouse Yedek Dizin Uyuşmazlığı, Eksik `BACKUP` Yetkisi & DDL Eksikliği
 
-**Bağlı Adım:** [Adım 14](#adim-14) · **Ortak Dosya:** `clickhouse_backup.sh`, `/etc/clickhouse-server/config.d/backups.xml` ([`AUDIT-03`](#audit-03))
+**Bağlı Adım:** [Adım 14](#adim-14) · **Ortak Dosya:** `clickhouse_backup.sh`, `/etc/clickhouse-server/config.d/teqlif.xml` ([`AUDIT-03`](#audit-03))
 
 ##### 1. Zaafın Kök Nedeni ve Mekanizması (Ne / Nerede / Neden?)
 * **Etkilenen Dosya:** [`clickhouse_backup.sh:13-56`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/clickhouse_backup.sh#L13-L56)
@@ -422,7 +422,7 @@ PersistentKeepalive = 25
 2. `clickhouse_backup.log` dosyasına log yönlendirmesi yapılmamış; ayrıca `node2` ClickHouse üzerinde terk edilmiş `teqlif_staging_analytics` (`25` satır) dururken `node5` staging ClickHouse (`~26.5k` satır) yerel kalıyor.
 
 ##### 2. Hedef Mimari & Çözüm Reçetesi (Ne İçin / Nasıl?)
-1. `node2` ClickHouse'a `GRANT BACKUP ON *.* TO teqlif;` + `/etc/clickhouse-server/config.d/backups.xml` (`allowed_path /project/teqlif/backups/clickhouse`) tanımla; Method 2 çıktılarını doğrudan `/project/teqlif/backups/clickhouse/` içine al (dizin uyuşmazlığını kaldır).
+1. `node2` ClickHouse'a `GRANT BACKUP ON *.* TO teqlif;` + `/etc/clickhouse-server/config.d/teqlif.xml` (`allowed_path /project/teqlif/backups/clickhouse`) tanımla; Method 2 çıktılarını doğrudan `/project/teqlif/backups/clickhouse/` içine al (dizin uyuşmazlığını kaldır).
 2. Method 3 fallback bloğunda her tablo + View için `SHOW CREATE TABLE` SQL dosyasını (`${DEST}/schema.sql`) mutlaka yedekle ve çıktıyı `/project/teqlif/logs/clickhouse_backup.log`'a yönlendir.
 3. `teqlif_prod_analytics` boşluğunun gerçek trafik yokluğundan mı yoksa worker/buffer uyuşmazlığından mı kaynaklandığını doğrula ve `node2`'deki terk edilmiş `teqlif_staging_analytics`'i temizle.
 * **Doğrulama:** `sudo bash clickhouse_backup.sh` çıktısı `OK (sql)` (fallback değil!) döner ve yedek içinde `schema` + tablolar doğrulanır.
