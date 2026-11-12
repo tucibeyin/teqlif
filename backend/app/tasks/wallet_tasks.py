@@ -100,10 +100,22 @@ async def release_pending_earnings_task(ctx: dict) -> None:
 
 
 async def daily_financial_reconciliation_task(ctx: dict) -> None:
-    """Günlük finansal denetim — 3 kontrol:
-    1. Negatif available/pending bakiye
-    2. Withdrawal tutarsızlığı (son 30 gün): withdrawal_requests ↔ wallet_ledger
-    3. Genel defter dengesi (tüm zaman): SUM(available+pending) ↔ SUM(delta_teqlik)
+    """Günlük finansal denetim — 3 bağımsız muhasebe kovası:
+
+    Kova 1 — pending tutarlılığı:
+        SUM(user_wallet_earnings.pending) ↔ SUM(gift_events.earned_teqlik WHERE payout_status='pending')
+
+    Kova 2 — withdrawal net (tüm zaman, pencere kayması yok):
+        SUM(withdrawal_requests.teqlik_amount WHERE status NOT IN ('cancelled','rejected'))
+        ↔ ABS(SUM(wallet_ledger.delta_teqlik WHERE tx_type IN
+            ('withdrawal_request','withdrawal_cancelled','withdrawal_rejected')))
+
+    Kova 3 — available tutarlılığı:
+        SUM(user_wallet_earnings.available)
+        ↔ SUM(earnings_released+withdrawal_request+withdrawal_cancelled+withdrawal_rejected deltas)
+            − (SUM(convert_to_teqlik user delta) + SUM(bonus_mint system delta))
+        [convert_net = convert_user_delta + bonus_mint_delta = teqlik_amount çekildi]
+
     Anomali varsa Telegram + Sentry error + _agent_fail; temizse _agent_ok.
     """
     anomalies = 0
@@ -129,62 +141,100 @@ async def daily_financial_reconciliation_task(ctx: dict) -> None:
                 logger.warning("[Reconciliation] %s", msg)
                 alert_lines.append(msg)
 
-            # 2. Withdrawal tutarsızlığı (son 30 gün):
-            # wr_total  = aktif çekimler (pending+approved+completed)
-            # ledger_net = withdrawal_request - (cancelled + rejected) = gerçek net çıkış
-            wr_row = await session.execute(
+            # Kova 1 — pending ↔ gift_events (henüz serbest bırakılmamış kazançlar)
+            pending_sum_row = await session.execute(
+                text("SELECT COALESCE(SUM(pending), 0) FROM user_wallet_earnings")
+            )
+            pending_sum = int(pending_sum_row.fetchone()[0] or 0)
+
+            gift_pending_row = await session.execute(
                 text(
-                    "SELECT COALESCE(SUM(teqlik_amount), 0) "
-                    "FROM withdrawal_requests "
-                    "WHERE status IN ('pending', 'approved', 'completed') "
-                    "  AND created_at >= NOW() - INTERVAL '30 days'"
+                    "SELECT COALESCE(SUM(earned_teqlik), 0) "
+                    "FROM gift_events WHERE payout_status = 'pending'"
                 )
             )
-            wr_val = int(wr_row.fetchone()[0] or 0)
+            gift_pending = int(gift_pending_row.fetchone()[0] or 0)
 
-            ledger_net_row = await session.execute(
-                text(
-                    "SELECT "
-                    "  COALESCE((SELECT SUM(ABS(delta_teqlik)) FROM wallet_ledger "
-                    "            WHERE tx_type = 'withdrawal_request' "
-                    "            AND created_at >= NOW() - INTERVAL '30 days'), 0) "
-                    "- COALESCE((SELECT SUM(delta_teqlik) FROM wallet_ledger "
-                    "            WHERE tx_type IN ('withdrawal_cancelled', 'withdrawal_rejected') "
-                    "            AND created_at >= NOW() - INTERVAL '30 days'), 0)"
-                )
-            )
-            ledger_val = int(ledger_net_row.fetchone()[0] or 0)
-
-            if abs(wr_val - ledger_val) > 0:
+            if abs(pending_sum - gift_pending) > 0:
                 anomalies += 1
                 msg = (
-                    f"Withdrawal tutarsızlığı (30g): "
-                    f"wr_total={wr_val} ledger_net={ledger_val} diff={abs(wr_val - ledger_val)}"
+                    f"Kova1 pending tutarsızlığı: "
+                    f"wallet_pending={pending_sum} gift_pending={gift_pending} "
+                    f"diff={abs(pending_sum - gift_pending)}"
                 )
                 logger.warning("[Reconciliation] %s", msg)
                 alert_lines.append(msg)
 
-            # 3. Genel defter dengesi (tüm zaman):
-            # SUM(available + pending) ↔ SUM(delta_teqlik) — uzun vadeli kayma tespiti
-            wallet_total_row = await session.execute(
+            # Kova 2 — withdrawal net (tüm zaman — pencere kayması yok)
+            # Net outstanding = pending + approved + completed taleplerin toplamı
+            wr_net_row = await session.execute(
                 text(
-                    "SELECT COALESCE(SUM(available + pending), 0) "
-                    "FROM user_wallet_earnings"
+                    "SELECT COALESCE(SUM(teqlik_amount), 0) "
+                    "FROM withdrawal_requests "
+                    "WHERE status NOT IN ('cancelled', 'rejected')"
                 )
             )
-            wallet_total = int(wallet_total_row.fetchone()[0] or 0)
+            wr_net = int(wr_net_row.fetchone()[0] or 0)
 
-            ledger_all_row = await session.execute(
-                text("SELECT COALESCE(SUM(delta_teqlik), 0) FROM wallet_ledger")
+            # Ledger net: withdrawal_request (-), cancelled/rejected (+)
+            # ABS toplamı = net outstanding teqlik
+            ledger_withdrawal_row = await session.execute(
+                text(
+                    "SELECT ABS(COALESCE(SUM(delta_teqlik), 0)) "
+                    "FROM wallet_ledger "
+                    "WHERE tx_type IN ('withdrawal_request', 'withdrawal_cancelled', 'withdrawal_rejected')"
+                )
             )
-            ledger_all = int(ledger_all_row.fetchone()[0] or 0)
+            ledger_withdrawal = int(ledger_withdrawal_row.fetchone()[0] or 0)
 
-            if abs(wallet_total - ledger_all) > 0:
+            if abs(wr_net - ledger_withdrawal) > 0:
                 anomalies += 1
                 msg = (
-                    f"Genel defter dengesi tutarsız: "
-                    f"wallet_total={wallet_total} ledger_net={ledger_all} "
-                    f"diff={abs(wallet_total - ledger_all)}"
+                    f"Kova2 withdrawal tutarsızlığı (tüm zaman): "
+                    f"wr_net={wr_net} ledger_net={ledger_withdrawal} "
+                    f"diff={abs(wr_net - ledger_withdrawal)}"
+                )
+                logger.warning("[Reconciliation] %s", msg)
+                alert_lines.append(msg)
+
+            # Kova 3 — available tutarlılığı
+            # available = earnings_released net + withdrawal net
+            #            − convert_net (convert_user + bonus_system = teqlik_amount çekildi)
+            avail_sum_row = await session.execute(
+                text("SELECT COALESCE(SUM(available), 0) FROM user_wallet_earnings")
+            )
+            avail_sum = int(avail_sum_row.fetchone()[0] or 0)
+
+            earnings_withdrawal_net_row = await session.execute(
+                text(
+                    "SELECT COALESCE(SUM(delta_teqlik), 0) FROM wallet_ledger "
+                    "WHERE tx_type IN ('earnings_released', 'withdrawal_request', "
+                    "                  'withdrawal_cancelled', 'withdrawal_rejected')"
+                )
+            )
+            earnings_withdrawal_net = int(earnings_withdrawal_net_row.fetchone()[0] or 0)
+
+            # convert_net = SUM(convert_to_teqlik user) + SUM(bonus_mint system)
+            # = (teqlik_amount + bonus) + (-bonus) = teqlik_amount = available'dan çekildi
+            convert_net_row = await session.execute(
+                text(
+                    "SELECT "
+                    "  COALESCE((SELECT SUM(delta_teqlik) FROM wallet_ledger "
+                    "            WHERE tx_type = 'convert_to_teqlik' AND user_id != 0), 0) "
+                    "+ COALESCE((SELECT SUM(delta_teqlik) FROM wallet_ledger "
+                    "            WHERE tx_type = 'bonus_mint'), 0)"
+                )
+            )
+            convert_net = int(convert_net_row.fetchone()[0] or 0)
+
+            avail_ledger = earnings_withdrawal_net - convert_net
+
+            if abs(avail_sum - avail_ledger) > 0:
+                anomalies += 1
+                msg = (
+                    f"Kova3 available tutarsızlığı: "
+                    f"wallet_available={avail_sum} ledger_net={avail_ledger} "
+                    f"diff={abs(avail_sum - avail_ledger)}"
                 )
                 logger.warning("[Reconciliation] %s", msg)
                 alert_lines.append(msg)
@@ -208,6 +258,7 @@ async def daily_financial_reconciliation_task(ctx: dict) -> None:
     except Exception as exc:
         logger.error("[WalletTask] daily_financial_reconciliation başarısız | %s", exc, exc_info=True)
         capture_exception(exc)
+        await _agent_fail(ctx, "daily_financial_reconciliation_task", str(exc))
         raise
 
 
@@ -329,12 +380,13 @@ async def process_store_notification_task(
 
 
 async def _agent_ok(ctx: dict, job_name: str) -> None:
-    """teqlif-agent watchdog'a 'job çalıştı' sinyali gönderir."""
+    """teqlif-agent watchdog'a 'job çalıştı' sinyali gönderir; önceki fail kaydını temizler."""
     try:
         await ctx["redis"].hset(
             "teqlif:agent:job_ok", job_name,
             datetime.now(timezone.utc).isoformat(),
         )
+        await ctx["redis"].hdel("teqlif:agent:job_fail", job_name)
     except Exception:
         pass
 

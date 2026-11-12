@@ -43,6 +43,7 @@ main() {
     setup_nvme_io_scheduler
     ufw_node1
     install_postgresql
+    setup_postgresql_conf "${NODE_DIR}"
     install_pgbouncer
     install_redis
     setup_redis_instances "${NODE_DIR}"
@@ -70,8 +71,7 @@ main() {
         "secrets.env Bölüm 3: pubkey → $(cat /etc/wireguard/pubkey)" \
         "wg_mesh_apply.sh çalıştır (tüm pubkey'ler dolduktan sonra)" \
         "wg-quick up wg0 && systemctl enable wg-quick@wg0" \
-        "postgresql.conf: shared_buffers=8GB, work_mem=64MB, huge_pages=on" \
-        "pg_hba.conf: teqlif satırı + node2 replicator satırı ekle" \
+        "pg_hba.conf: teqlif satırı + node2 replicator satırı ekle (conf.d/teqlif.conf otomatik kopyalandı)" \
         "createdb teqlif && createuser teqlif (plan §2.1)" \
         "alembic upgrade head" \
         "certbot certonly --nginx -d uploads.teqlif.com (LE cert)" \
@@ -116,6 +116,25 @@ install_postgresql() {
         "postgresql-client-${PG_VERSION}" \
         "postgresql-${PG_VERSION}-pgvector"
     log_ok "PostgreSQL ${PG_VERSION} + pgvector kuruldu"
+}
+
+setup_postgresql_conf() {
+    local node_dir="${1}"
+    log_step "PostgreSQL conf.d (K4 parametreleri)"
+    local conf_src="${node_dir}/resources/postgresql/conf.d/teqlif.conf"
+    local conf_dst="/etc/postgresql/${PG_VERSION}/main/conf.d/teqlif.conf"
+    local conf_dir="/etc/postgresql/${PG_VERSION}/main/conf.d"
+    mkdir -p "${conf_dir}"
+    chown root:postgres "${conf_dir}"
+    chmod 750 "${conf_dir}"
+    cp "${conf_src}" "${conf_dst}"
+    chown root:postgres "${conf_dst}"
+    chmod 640 "${conf_dst}"
+    # postgresql.conf'da include_dir etkinse conf.d otomatik yüklenir; değilse ekle
+    local pg_conf="/etc/postgresql/${PG_VERSION}/main/postgresql.conf"
+    grep -qF "include_dir = 'conf.d'" "${pg_conf}" \
+        || echo "include_dir = 'conf.d'" >> "${pg_conf}"
+    log_ok "conf.d/teqlif.conf kopyalandı (pg_reload_conf() ile aktif olur)"
 }
 
 install_pgbouncer() {
