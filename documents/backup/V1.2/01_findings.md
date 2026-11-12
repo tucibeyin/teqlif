@@ -84,7 +84,7 @@
 | ID | Seviye | Bileşen / İş Akışı | Tespit Edilen İş Mantığı / Uyum / Ölçek Riski | Bağlı Adım | Durum |
 | :---: | :---: | :--- | :--- | :---: | :---: |
 | [`BIZ-01`](#biz-01) | 🔴 **P0** | `messages.py` vs `dm_archive`, `streams.py` vs `stream_recording` | **DM Arşivi public bucket okuyup `[]` döner** + **Standart 14g PRO upsell `404 NoSuchKey` kırık** | [Adım 7](#adim-7), [Adım 8](#adim-8) | ⬜ Açık |
-| [`BIZ-02`](#biz-02) | 🔴 **P0** | `wallet_tasks.py:101-166`, `node1` PG, `redis_failover.sh` | **Alarmsız mutabakat** + **Sınırsız `max_slot_wal_keep_size = -1`** (prod disk crash!) + `wg` peer tuzağı | [Adım 6](#adim-6), [Adım 4](#adim-4) | ⬜ Açık |
+| [`BIZ-02`](#biz-02) | 🔴 **P0** | `wallet_tasks.py:101-166`, `node1` PG, `redis_failover.sh` | **Alarmsız mutabakat** + **Sınırsız `max_slot_wal_keep_size = -1`** (prod disk crash!) + `wg` peer tuzağı | [Adım 6](#adim-6), [Adım 4](#adim-4) | ✅ Çözüldü `caf6938b` |
 | [`BIZ-03`](#biz-03) | 🟠 **P1** | `auth.py:1638`, `analytics_tasks`, `listing_tasks`, `notification_service` | KVKK `delete_account` (bakiye kilidi/DM yok) + `--remove` yok + **`07:00 TR` push fırtınası** | [Adım 24](#adim-24), [Adım 18](#adim-18) | ⬜ Açık |
 | [`BIZ-04`](#biz-04) | 🟠 **P1** | `mail_backup.sh`, `nodeMonitor` SPOF, Prometheus kapsamı | **`09:15 TR` Mail Stop** (`config.toml`/`.env.mail` yok) + **`nodeMonitor` SPOF** + CH/MinIO/Mail kör | [Adım 17](#adim-17), [Adım 20](#adim-20) | ⬜ Açık |
 | [`BIZ-05`](#biz-05) | 🟠 **P1** | `worker.py:4153-4264`, `listing_tasks.py:84-160` | `sync_pg_to_clickhouse` `LIMIT` sessiz veri silme + sınırsız/retry'sız ilan temizleme (`>50K`) | [Adım 25](#adim-25) | ⬜ Açık |
@@ -1011,8 +1011,22 @@ await _agent_ok(ctx, "daily_financial_reconciliation_task")  # Telegram / Sentry
    (Global `statement_timeout = 0` bırakılır; ağır bakım/API sorguları `SET LOCAL statement_timeout = '15s'` alır.)
 * **Doğrulama:** `sudo -u postgres psql -At -c "SELECT name, setting FROM pg_settings WHERE name IN ('wal_compression','archive_timeout','max_slot_wal_keep_size','lock_timeout','idle_in_transaction_session_timeout')"` tüm değerleri doğrular; mutabakat testinde `anomalies > 0` Telegram mesajı üretir.
 
-##### ⬜ Çözüm Damgası
-- *(Henüz uygulanmadı — [Adım 6](#adim-6) bekliyor)*
+##### ✅ Çözüm Damgası
+- `2026-11-12` · commit `caf6938b` — BIZ-02 Adım 6 tam çözüm:
+  - **`wallet_tasks.py` — `daily_financial_reconciliation_task`:**
+    - `anomalies > 0` → `send_telegram_alert` + `capture_message(level="error")` + `_agent_fail` (önceki: yalnız `logger.warning`, her durumda `_agent_ok`) ✓
+    - Yeni kontrol 3: `SUM(available+pending)` ↔ `SUM(delta_teqlik)` genel defter dengesi (tüm zaman, uzun vadeli kayma tespiti) ✓
+    - `_agent_ok` artık yalnız sıfır anomalide çağrılıyor ✓
+    - `_agent_fail(ctx, job_name, reason)` eklendi → `teqlif:agent:job_fail` Redis hash'i ✓
+  - **`deploy/scale/V2.1/node1/resources/postgresql/conf.d/teqlif.conf` — K4 parametreleri:**
+    - `wal_compression = lz4` → WAL boyutu ~%40 küçülür ✓
+    - `archive_timeout = 3600` → slot birikimini sınırlar ✓
+    - `max_slot_wal_keep_size = '50GB'` → node2_receivewal kesilince 426GB NVMe korunur (önceki: `-1` = sınırsız!) ✓
+    - `lock_timeout = '5s'` → kilit birikimini önler ✓
+    - `idle_in_transaction_session_timeout = '5min'` → zombi transaction önlenir ✓
+  - Canlı node1 `pg_reload_conf()` → doğrulandı: `max_slot_wal_keep_size=51200MB`, `lock_timeout=5000ms`, `idle_in_transaction_session_timeout=300000ms`, `archive_timeout=3600s`, `wal_compression=lz4` ✓
+  - node1 `teqlif.service` + `teqlif-worker.service` → `active` ✓
+  - node101 dahil tüm 8 node `caf6938b`'de ✓
 
 ---
 
@@ -1117,7 +1131,7 @@ await redis.set("ch:last_sync_at", now.isoformat())  # Aradakiler kalıcı kaybo
 ~~5. **Adım 5 (`AUDIT-01`):** `node2` üzeinde `postgresql-17-pgvector` paketini kur + `main` cluster hazırlığı, `/project/teqlif/config/.env.dr` ve `/etc/ssl/teqlif/cf-origin.{crt,key}` dosyalarını yerleştir; [`pg_basebackup.sh`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/pg_basebackup.sh#L19-L35) atomik `.tmp`→`mv` yap, [`pg_dump.sh`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/pg_dump.sh) içine `--globals-only` ekle ve [`runbook.sh:134-155`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/runbook.sh#L134-L155) içinde `pg_wal.tar.gz` açılımı + `recovery_target = 'immediate'` → `'latest'` düzeltmesini yap → _Neden:_ `node1` çöktüğünde `node2` DR failover ve 1 dk PITR kurtarmasının gerçekten çalışmasını sağlamak. → ([Detay](#audit-01))~~ ✅ `f48e8eaf` (2026-11-12)
 
 <a id="adim-6"></a>
-6. **Adım 6 (`BIZ-02`):** Canlı `node1` `postgresql.conf` içine [Karar K4](#kilitli-kararlar) gereği **`max_slot_wal_keep_size = '50GB'`**, `wal_compression = lz4`, `archive_timeout = 3600`, `lock_timeout = '5s'`, `idle_in_transaction_session_timeout = '5min'` ekle; [`wallet_tasks.py:101-166`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/tasks/wallet_tasks.py#L101-L166) `daily_financial_reconciliation_task`'ı `anomalies > 0` durumunda acil Telegram + Sentry alarmı verecek ve tam defter toplamını denetleyecek şekilde güncelle → _Neden:_ `node2_receivewal` kesildiğinde prod NVMe'nin %100 dolup PG'yi çökertmesini ve finansal defter sapmalarının sessiz kalmasını önlemek. → ([Detay](#biz-02), [Karar K4](#kilitli-kararlar))
+~~6. **Adım 6 (`BIZ-02`):** Canlı `node1` `postgresql.conf` içine [Karar K4](#kilitli-kararlar) gereği **`max_slot_wal_keep_size = '50GB'`**, `wal_compression = lz4`, `archive_timeout = 3600`, `lock_timeout = '5s'`, `idle_in_transaction_session_timeout = '5min'` ekle; [`wallet_tasks.py:101-166`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/tasks/wallet_tasks.py#L101-L166) `daily_financial_reconciliation_task`'ı `anomalies > 0` durumunda acil Telegram + Sentry alarmı verecek ve tam defter toplamını denetleyecek şekilde güncelle → _Neden:_ `node2_receivewal` kesildiğinde prod NVMe'nin %100 dolup PG'yi çökertmesini ve finansal defter sapmalarının sessiz kalmasını önlemek. → ([Detay](#biz-02), [Karar K4](#kilitli-kararlar))~~ ✅ `caf6938b` (2026-11-12)
 
 <a id="adim-7"></a>
 7. **Adım 7 (`BIZ-01` — Bölüm A):** [`storage_service.py`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/services/storage_service.py#L137-L160) içine `list_object_keys_dm` metodunu ekle, [`messages.py:292-299`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/routers/messages.py#L292-L299) `get_archived_messages` endpoint'ini public `teqlif` yerine private **`teqlif-dm`** okur hale getir ve [`schedule.yaml`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/schedule.yaml) içinde `archive_old_dm_task` saatini Pazar `03:00` → **`03:20 UTC`** (`03:00 pg_dump` sonrasına, [Karar K2](#kilitli-kararlar)) taşı → _Neden:_ 1 yıl+ tüm DM geçmişinin boş `[]` dönmesini çözmek ve `pg_dump` öncesi tek-kopya penceresini sıfırlamak. → ([Detay](#biz-01))
