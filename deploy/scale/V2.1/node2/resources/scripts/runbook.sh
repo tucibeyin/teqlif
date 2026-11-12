@@ -157,7 +157,8 @@ if [ "${RESTORE_MODE}" = "PITR" ]; then
     install -d -o postgres -g postgres -m 755 "${WAL_STAGE}"
     cp "${WAL_DIR}"/* "${WAL_STAGE}/" 2>/dev/null || true
     chown -R postgres:postgres "${WAL_STAGE}"
-    chmod -R 640 "${WAL_STAGE}"
+    chmod 750 "${WAL_STAGE}"
+    find "${WAL_STAGE}" -type f -exec chmod 640 {} +
     WAL_STAGE_COUNT=$(ls -1 "${WAL_STAGE}" 2>/dev/null | wc -l)
     log_ok "WAL staging: ${WAL_STAGE} (${WAL_STAGE_COUNT} segment)"
     [ "${WAL_STAGE_COUNT}" -eq 0 ] && { log_err "WAL_DIR boş — staging başarısız"; exit 1; }
