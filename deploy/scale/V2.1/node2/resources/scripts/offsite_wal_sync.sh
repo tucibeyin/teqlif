@@ -34,7 +34,8 @@ restic backup \
     --pack-size 32 \
     --compression max \
     --exclude '*.partial' \
-    --exclude '*.tmp'
+    --exclude '*.tmp' \
+    --exclude '.last_*'
 
 redis-cli -h 10.10.0.1 -p 6379 -a "${CORE_REDIS_PASS:-}" --no-auth-warning \
     HSET teqlif:agent:job_ok offsite_wal_sync "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >/dev/null 2>&1 || true

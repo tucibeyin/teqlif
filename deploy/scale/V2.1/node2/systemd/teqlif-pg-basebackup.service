@@ -12,3 +12,5 @@ ExecStart=/var/www/teqlif.com/deploy/scale/V2.1/node2/resources/scripts/pg_baseb
 StandardOutput=journal
 StandardError=journal
 TimeoutStartSec=1800
+Nice=19
+IOSchedulingClass=idle
