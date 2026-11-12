@@ -47,7 +47,7 @@
 | [`OFFSITE-06`](#offsite-06) | 🟠 **P1** | `node101` (`2.9 GiB RAM`, `/mnt/data`, `fio`) | Düşük RAM (`2.9 GiB`), `6.1 GB` `/` taşma riski, `fdatasync` tail latency (`83 IOPS`) + TZ `UTC` | [Adım 1](#adim-1) | ✅ Çözüldü `09eb442c` |
 | [`OFFSITE-07`](#offsite-07) | 🟠 **P1** | `offsite_sync.sh`, `pg_basebackup.sh`, `pg_wal`, `pg_dump.sh` | Offsite PG PITR (`pg_basebackup`+`pg_wal`) eksikliği (24s RPO) + `pg_dump/*.dump.gz` (2–8 Eki) yetimleri | [Adım 12](#adim-12) | ✅ `114c0ee4` |
 | [`OFFSITE-08`](#offsite-08) | 🟠 **P1** | `clickhouse_backup.sh`, canlı `node2` CH | Method 1/2 çalışmıyor (`/var/lib/clickhouse/backups` boş), fallback `285B` arşiv, `BACKUP` izni/DDL yok | [Adım 14](#adim-14) | ✅ `350df516` |
-| [`OFFSITE-09`](#offsite-09) | 🟠 **P1** | `nodemonitor_config_backup.sh`, canlı `node2` | **`979 MB` TSDB/WAL sızıntısı** (`prometheus/data` 823M + `loki` 156M) — `--delete-excluded` yok | [Adım 15](#adim-15) | ⬜ Açık |
+| [`OFFSITE-09`](#offsite-09) | 🟠 **P1** | `nodemonitor_config_backup.sh`, canlı `node2` | **`979 MB` TSDB/WAL sızıntısı** (`prometheus/data` 823M + `loki` 156M) — `--delete-excluded` yok | [Adım 15](#adim-15) | ✅ `3afe4310` |
 | [`OFFSITE-10`](#offsite-10) | 🟡 **P2** | `node2/systemd/*.service`, `offsite_sync` | Tüm backup servislerinde `IOSchedulingClass=idle`/`Nice=19` eşitleme ve `.tmp`/`.partial` filtre | [Adım 26](#adim-26) | ⬜ Açık |
 | [`OFFSITE-11`](#offsite-11) | 🟡 **P2** | `runbook.sh`, `node101/resources/` | `node101 → yeni node1/node2` çifte felaket DR runbook'u + periyodik decrypt/PITR tatbikatı | [Adım 36](#adim-36) | ⬜ Açık |
 | [`OFFSITE-12`](#offsite-12) | 🟡 **P2** | `_common.sh`, `bootstrap_node2.sh`, `bootstrap_node101.sh` | Tekrarlanabilir `bootstrap_node101.sh` yok; `node2` bootstrap'ta `rclone`/7 timer `enable` eksik | [Adım 3](#adim-3) | ✅ Çözüldü `1ce09741` |
@@ -465,8 +465,11 @@ rsync_from_nodemonitor "/opt/monitor/teqlif/" "${BACKUP_DIR}/monitor-config" \
 * `rsync_from_nodemonitor` içine `--delete-excluded` ve exclude listesine `--exclude 'loki/wal/' --exclude 'loki/tsdb-shipper-active/' --exclude 'loki/tsdb-shipper-cache/'` ekle; canlı `node2` kalıntı klasörlerini sil.
 * **Doğrulama:** `du -sh /project/teqlif/backups/nodemonitor_config/{teqlif-config,monitor-config}` **< 5 MB** çıkar.
 
-##### ⬜ Çözüm Damgası
-- *(Henüz uygulanmadı — [Adım 15](#adim-15) bekliyor)*
+##### ✅ Çözüm Damgası
+- `2026-11-12` · commit `3afe4310` — **OFFSITE-09 kapatıldı** ✓:
+  - `rsync_from_nodemonitor` fonksiyonuna `--delete-excluded` eklendi ✓
+  - Eksik loki runtime excludes eklendi: `loki/wal/`, `loki/tsdb-shipper-active/`, `loki/tsdb-shipper-cache/` ✓
+  - Canlı node2 temizliği: `979 MB → 36 KB` (teqlif-config 12KB + alertmanager 20KB + boş dizinler) ✓
 
 ---
 
@@ -1227,7 +1230,7 @@ await redis.set("ch:last_sync_at", now.isoformat())  # Aradakiler kalıcı kaybo
 ~~14. **Adım 14 (`OFFSITE-08`):** `node2` ClickHouse üzerinde `teqlif` kullanıcısına `GRANT BACKUP ON *.*` ver, `/etc/clickhouse-server/config.d/backups.xml` hedefini `/project/teqlif/backups/clickhouse` yap, [`clickhouse_backup.sh`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/clickhouse_backup.sh) fallback'ine `SHOW CREATE` DDL + log dosyası ekle ve canlı `node2` üzerindeki terk edilmiş `teqlif_staging_analytics` (`25` satır) verisini temizle → _Neden:_ Gerçek atomik ClickHouse yedeğini (DDL + MV + veri) aktifleştirmek. → ([Detay](#offsite-08))~~ ✅ `350df516`
 
 <a id="adim-15"></a>
-15. **Adım 15 (`OFFSITE-09`):** [`nodemonitor_config_backup.sh:27-41`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/nodemonitor_config_backup.sh#L27-L41) içine `--delete-excluded` ile `--exclude 'loki/wal/'` / `'loki/tsdb-shipper-*'` ekle ve canlı `node2` üzerindeki `979 MB` TSDB/WAL sızıntısını temizle → _Neden:_ Her offsite yedeğinin gereksiz ~1 GB şişmesini durdurmak (`979 MB → < 5 MB`). → ([Detay](#offsite-09))
+~~15. **Adım 15 (`OFFSITE-09`):** [`nodemonitor_config_backup.sh:27-41`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/nodemonitor_config_backup.sh#L27-L41) içine `--delete-excluded` ile `--exclude 'loki/wal/'` / `'loki/tsdb-shipper-*'` ekle ve canlı `node2` üzerindeki `979 MB` TSDB/WAL sızıntısını temizle → _Neden:_ Her offsite yedeğinin gereksiz ~1 GB şişmesini durdurmak (`979 MB → < 5 MB`). → ([Detay](#offsite-09))~~ ✅ `3afe4310`
 
 <a id="adim-16"></a>
 16. **Adım 16 (`AUDIT-03`):** [`nodemonitor_config_backup.sh`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/nodemonitor_config_backup.sh) kapsamına `/opt/monitor/shared/grafana/` (`521 MB`) + `/project/shared/config/` ekle, [`loki_backup.sh`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/loki_backup.sh) içine `compactor/`/index ekle ve `node1..6` TLS/WG/`.env` sırlarını `cluster_secrets/` üzerinden şifreli offsite zincirine kat → _Neden:_ Felaket sonrası Grafana panellerinin, Loki indeksinin ve cluster sırlarının kaybedilmesini önlemek. → ([Detay](#audit-03))
