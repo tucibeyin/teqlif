@@ -86,7 +86,7 @@
 | [`BIZ-01`](#biz-01) | 🔴 **P0** | `messages.py` vs `dm_archive`, `streams.py` vs `stream_recording` | **DM Arşivi public bucket okuyup `[]` döner** + **Standart 14g PRO upsell `404 NoSuchKey` kırık** | [Adım 7](#adim-7) ✅, [Adım 8](#adim-8) ✅ | ✅ Çözüldü (`622507fc`) |
 | [`BIZ-02`](#biz-02) | 🔴 **P0** | `wallet_tasks.py:102-262`, `node1` PG, `redis_failover.sh` | **Alarmsız mutabakat** + **Sınırsız `max_slot_wal_keep_size = -1`** (prod disk crash!) + `wg` peer tuzağı | [Adım 6](#adim-6), [Adım 4](#adim-4) | ✅ Çözüldü `8234ee8d` |
 | [`BIZ-03`](#biz-03) | 🟠 **P1** | `auth.py:1638`, `analytics_tasks`, `listing_tasks`, `notification_service` | KVKK `delete_account` (bakiye kilidi/DM yok) + `--remove` yok + **`07:00 TR` push fırtınası** | [Adım 24](#adim-24), [Adım 18](#adim-18) | ⬜ Açık |
-| [`BIZ-04`](#biz-04) | 🟠 **P1** | `mail_backup.sh`, `nodeMonitor` SPOF, Prometheus kapsamı | **`09:15 TR` Mail Stop** (`config.toml`/`.env.mail` yok) + **`nodeMonitor` SPOF** + CH/MinIO/Mail kör | [Adım 17](#adim-17), [Adım 20](#adim-20) | ⬜ Açık |
+| [`BIZ-04`](#biz-04) | 🟠 **P1** | `mail_backup.sh`, `nodeMonitor` SPOF, Prometheus kapsamı | **`09:15 TR` Mail Stop** (`config.toml`/`.env.mail` yok) + **`nodeMonitor` SPOF** + CH/MinIO/Mail kör | [Adım 17](#adim-17), [Adım 20](#adim-20) | ✅ Kısmen `8f668955` (Adım 17), [Adım 20](#adim-20) açık |
 | [`BIZ-05`](#biz-05) | 🟠 **P1** | `worker.py:4153-4264`, `listing_tasks.py:84-160` | `sync_pg_to_clickhouse` `LIMIT` sessiz veri silme + sınırsız/retry'sız ilan temizleme (`>50K`) | [Adım 25](#adim-25) | ⬜ Açık |
 
 ---
@@ -1171,7 +1171,14 @@ await _agent_ok(ctx, "daily_financial_reconciliation_task")  # Telegram / Sentry
 * **Doğrulama:** `curl -s http://10.10.0.99:9090/api/v1/targets` içinde `node101`, `clickhouse`, `minio`, `rest-server` `health="up"` görünür; `node2` dead-man check'i dry-run geçer.
 
 ##### ⬜ Çözüm Damgası
-- *(Henüz uygulanmadı — [Adım 17](#adim-17), [Adım 20](#adim-20) bekliyor)*
+- `2026-11-12` · commit `8f668955` — **BIZ-04 Adım 17 (mail_backup) kapatıldı** ✓:
+  - Timer: `06:15 UTC` → `03:50 UTC` (09:15 TR sabah mesai kesintisi biter) ✓
+  - `config.toml` + `.env.mail` + `acme/` arşive eklendi ✓
+  - `2>/dev/null` kaldırıldı — tar hataları artık log'a düşer ✓
+  - `.tmp` staging + `tar -tzf` bütünlük doğrulaması eklendi ✓
+  - `schedule.yaml`: `mail_backup hour:6 → hour:3, minute:50` ✓
+  - node2 test: **OK (5.4M)**, `NextElapseUSecRealtime=2026-11-13 03:50:00 UTC` ✓
+- *(Adım 20: nodeMonitor SPOF + Prometheus hedefleri bekliyor)*
 
 ---
 
@@ -1266,7 +1273,7 @@ await redis.set("ch:last_sync_at", now.isoformat())  # Aradakiler kalıcı kaybo
 ~~16. **Adım 16 (`AUDIT-03`):** [`nodemonitor_config_backup.sh`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/nodemonitor_config_backup.sh) kapsamına `/opt/monitor/shared/grafana/` (`521 MB`) + `/project/shared/config/` ekle, [`loki_backup.sh`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/loki_backup.sh) içine `compactor/`/index ekle ve `node1..6` TLS/WG/`.env` sırlarını `cluster_secrets/` üzerinden şifreli offsite zincirine kat → _Neden:_ Felaket sonrası Grafana panellerinin, Loki indeksinin ve cluster sırlarının kaybedilmesini önlemek. → ([Detay](#audit-03))~~ ✅ `7ab35bde`
 
 <a id="adim-17"></a>
-17. **Adım 17 (`BIZ-04` — Bölüm A):** [`mail_backup.sh`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/mail_backup.sh#L21-L39) zamanını `06:15 UTC` (`09:15 TR`) → **`03:50 UTC` (`06:50 TR`, [Karar K1](#kilitli-kararlar))** al; arşive `/project/mail/config/{config.toml,.env.mail,acme}` ekle, `2>/dev/null` kaldır ve `.tmp` + `tar -tzf` bütünlük doğrulaması ekle → _Neden:_ Sabah mesai açılışında OTP/e-posta düşüşünü bitirmek ve mail sunucusunun tüm kimliğini yedeklemek. → ([Detay](#biz-04))
+~~17. **Adım 17 (`BIZ-04` — Bölüm A):** [`mail_backup.sh`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/mail_backup.sh#L21-L39) zamanını `06:15 UTC` (`09:15 TR`) → **`03:50 UTC` (`06:50 TR`, [Karar K1](#kilitli-kararlar))** al; arşive `/project/mail/config/{config.toml,.env.mail,acme}` ekle, `2>/dev/null` kaldır ve `.tmp` + `tar -tzf` bütünlük doğrulaması ekle → _Neden:_ Sabah mesai açılışında OTP/e-posta düşüşünü bitirmek ve mail sunucusunun tüm kimliğini yedeklemek. → ([Detay](#biz-04))~~ ✅ `8f668955`
 
 <a id="adim-18"></a>
 18. **Adım 18 (`AUDIT-04`):** [`minio_backup.sh`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/minio_backup.sh) içine `recordings/` `30g` temizlik + `recordings/` dışı tüm prefix'lerde KVKK `--remove` + `confirm_recordings()` `created_at <= sync_started_at` zaman kilidi ekle ([Karar K3](#kilitli-kararlar)); [`uptime_kuma_backup.sh`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/uptime_kuma_backup.sh) atomik `.tmp` + `gzip -t` + `--single-transaction` + inline şifresiz `.my.cnf` yap ve `13 Eki` `20B` boş `.sql.gz`'yi sil → _Neden:_ Silinen kullanıcı medyalarının KVKK'ya aykırı biçimde `node2`'de süresiz kalmasını ve Kuma bozuk yedek/şifre sızıntısını önlemek. → ([Detay](#audit-04), [Birlikte: Adım 8](#adim-8), [Adım 24](#adim-24))
