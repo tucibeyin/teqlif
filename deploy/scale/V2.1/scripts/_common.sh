@@ -485,6 +485,37 @@ setup_swap() {
     log_ok "Swap aktif: ${size_gb}G"
 }
 
+# ── node_exporter (tüm node'lar için ortak — DRY) ────────────────────────────
+install_node_exporter() {
+    local listen_addr="${1:?listen_addr gerekli (örn. 10.10.0.2)}"
+    local VER="1.8.2"
+    log_step "node_exporter (${listen_addr}:9100)"
+    if /usr/local/bin/node_exporter --version 2>&1 | grep -q "${VER}"; then
+        log_ok "node_exporter ${VER} zaten kurulu"
+        systemctl daemon-reload
+        return
+    fi
+    # Çalışıyorsa önce durdur (mv üzerinde Text file busy önlemi)
+    systemctl stop node-exporter 2>/dev/null || true
+    curl -fsSL "https://github.com/prometheus/node_exporter/releases/download/v${VER}/node_exporter-${VER}.linux-amd64.tar.gz" \
+        | tar xz -C /tmp/
+    mv "/tmp/node_exporter-${VER}.linux-amd64/node_exporter" /usr/local/bin/
+    cat > /etc/systemd/system/node-exporter.service <<EOF
+[Unit]
+Description=Prometheus Node Exporter
+[Service]
+Type=simple
+User=tucibeyin
+ExecStart=/usr/local/bin/node_exporter --web.listen-address=${listen_addr}:9100
+Restart=always
+[Install]
+WantedBy=multi-user.target
+EOF
+    systemctl daemon-reload
+    systemctl enable --now node-exporter
+    log_ok "node_exporter aktif (${listen_addr}:9100)"
+}
+
 # ── UFW reset + enable ────────────────────────────────────────────────────────
 ufw_enable() {
     log_step "UFW aktive"

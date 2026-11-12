@@ -41,7 +41,7 @@ main() {
     setup_offsite_dirs
     setup_offsite_services "${NODE_DIR}"
     install_teqlif_agent   "${NODE_DIR}"
-    install_node_exporter_node101
+    install_node_exporter "10.10.0.101"
     setup_wg_sudoers
     install_teqlif_restart_node101
     setup_sudoers_node101
@@ -317,7 +317,8 @@ setup_offsite_services() {
     systemctl daemon-reload
     # restic-rest-server: enable ama başlatma apply_secrets sonraya bırakılır
     systemctl enable restic-rest-server
-    systemctl enable teqlif-offsite-prune.timer teqlif-offsite-verify.timer
+    # prune + verify: RESTIC_PASSWORD henüz set edilmemiş — Adım 10 (Key Escrow) sonrası aktif edilir
+    # systemctl enable teqlif-offsite-prune.timer teqlif-offsite-verify.timer
     log_ok "Offsite servisler enable edildi (htpasswd + restic.env sonrası başlat)"
 }
 
@@ -370,29 +371,6 @@ EOF
     systemctl daemon-reload
     systemctl enable teqlif-agent
     log_ok "teqlif-agent enable edildi (gossip-only, Redis yok)"
-}
-
-# ── node_exporter ─────────────────────────────────────────────────────────────
-install_node_exporter_node101() {
-    log_step "node_exporter"
-    local VER="1.8.2"
-    curl -fsSL "https://github.com/prometheus/node_exporter/releases/download/v${VER}/node_exporter-${VER}.linux-amd64.tar.gz" \
-        | tar xz -C /tmp/
-    mv "/tmp/node_exporter-${VER}.linux-amd64/node_exporter" /usr/local/bin/
-    cat > /etc/systemd/system/node-exporter.service <<EOF
-[Unit]
-Description=Prometheus Node Exporter
-[Service]
-Type=simple
-User=tucibeyin
-ExecStart=/usr/local/bin/node_exporter --web.listen-address=10.10.0.101:9100
-Restart=always
-[Install]
-WantedBy=multi-user.target
-EOF
-    systemctl daemon-reload
-    systemctl enable --now node-exporter
-    log_ok "node_exporter aktif (10.10.0.101:9100)"
 }
 
 # ── teqlif-restart (gerçek script) ───────────────────────────────────────────

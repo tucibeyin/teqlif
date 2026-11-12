@@ -48,7 +48,7 @@ main() {
     setup_backup_services "${NODE_DIR}"
     install_promtail
     setup_promtail "${NODE_DIR}" "${NODE_ID}"
-    install_node_exporter
+    install_node_exporter "10.10.0.2"
     setup_redis_replica  "${NODE_DIR}"
     setup_redis_failover "${NODE_DIR}"
     setup_dr_app "${NODE_DIR}"
@@ -61,7 +61,7 @@ main() {
     print_summary "${NODE_ID}" "${WG_IP}" \
         "wg_mesh_apply.sh çalıştır" \
         "wg-quick up wg0 && systemctl enable wg-quick@wg0" \
-        "node1'de replication user ve slot oluştur (plan §3.2)" \
+        "node1'de replication user ve slot oluştur (ADR §PG-HA)" \
         "systemctl start teqlif-pg-receivewal" \
         "systemctl start clickhouse-server" \
         "Redis failover aktif: systemctl status teqlif-redis-failover.timer" \
@@ -73,7 +73,7 @@ setup_backup_directories() {
     log_step "Backup dizinleri"
     mkdir -p /project/teqlif/backups/{pg_dump,pg_wal,pg_basebackup,redis,minio,clickhouse,loki,stalwart,uptime_kuma,nodemonitor_config}
     chown -R tucibeyin:tucibeyin /project/teqlif/backups
-    chmod -R 700 /project/teqlif/backups
+    find /project/teqlif/backups -type d -exec chmod 700 {} +
     log_ok "Backup dizinleri: /project/teqlif/backups/"
 }
 
@@ -115,11 +115,8 @@ install_pg_server() {
 
 install_backup_tools() {
     log_step "restic + rclone (backup motorları)"
-    apt-get install -y -qq restic
-    # rclone — Adım 12'de restic ile değiştirilecek; offsite_sync.sh için şimdilik gerekli
-    if ! command -v rclone &>/dev/null; then
-        curl -fsSL https://rclone.org/install.sh | bash
-    fi
+    # rclone Adım 12'de restic ile değiştirilecek; apt paketi imzalı ve unzip bağımlılığı yok
+    apt-get install -y -qq restic rclone
     log_ok "restic $(restic version | awk '{print $2}') + rclone $(rclone --version 2>/dev/null | head -1 | awk '{print $2}') kuruldu"
 }
 
@@ -232,8 +229,10 @@ setup_backup_services() {
         teqlif-mail-backup.timer \
         teqlif-offsite-sync.timer \
         teqlif-offsite-wal.timer
-    # Backup için minimal env (minio credentials)
-    cat > /project/teqlif/config/.env.backup <<'ENVEOF'
+    # Backup env — sadece yoksa oluştur; mevcut sırları ezmez
+    local env_file=/project/teqlif/config/.env.backup
+    if [ ! -f "${env_file}" ]; then
+        cat > "${env_file}" <<'ENVEOF'
 MINIO_ROOT_USER=<minio_root_user>
 MINIO_ROOT_PASSWORD=<minio_root_password>
 TEQLIF_DB_PASSWORD=<teqlif_db_password>
@@ -241,35 +240,26 @@ CORE_REDIS_PASS=<core_redis_pass>
 REPL_PASSWORD=<teqlif_repl_password>
 TELEGRAM_BOT_TOKEN=<telegram_bot_token>
 TELEGRAM_CHAT_ID=<telegram_chat_id>
-# node101 offsite restic (Faz 2 sonrası doldur)
+CLICKHOUSE_PASSWORD=<clickhouse_password>
+CLICKHOUSE_DEFAULT_PASSWORD=<clickhouse_default_password>
+UPTIME_KUMA_DB_PASS=<uptime_kuma_db_pass>
+# node101 offsite restic (Adım 10 sonrası doldur)
 RESTIC_REST_USER=<restic_rest_user>
 RESTIC_REST_PASSWORD=<restic_rest_password>
 RESTIC_PASSWORD=<restic_aes_password>
 ENVEOF
-    chmod 600 /project/teqlif/config/.env.backup
+        chmod 600 "${env_file}"
+    else
+        # Re-run: yalnız eksik anahtarları ekle, mevcutları koruma
+        _add_env_key() { grep -q "^${1}=" "${env_file}" || echo "${1}=${2}" >> "${env_file}"; }
+        _add_env_key CLICKHOUSE_PASSWORD "<clickhouse_password>"
+        _add_env_key CLICKHOUSE_DEFAULT_PASSWORD "<clickhouse_default_password>"
+        _add_env_key UPTIME_KUMA_DB_PASS "<uptime_kuma_db_pass>"
+        _add_env_key RESTIC_REST_USER "<restic_rest_user>"
+        _add_env_key RESTIC_REST_PASSWORD "<restic_rest_password>"
+        _add_env_key RESTIC_PASSWORD "<restic_aes_password>"
+    fi
     log_ok "Backup servisleri enable edildi"
-}
-
-install_node_exporter() {
-    log_step "node_exporter"
-    local VER="1.8.2"
-    curl -fsSL "https://github.com/prometheus/node_exporter/releases/download/v${VER}/node_exporter-${VER}.linux-amd64.tar.gz" \
-        | tar xz -C /tmp/
-    mv "/tmp/node_exporter-${VER}.linux-amd64/node_exporter" /usr/local/bin/
-    cat > /etc/systemd/system/node-exporter.service <<EOF
-[Unit]
-Description=Prometheus Node Exporter
-[Service]
-Type=simple
-User=tucibeyin
-ExecStart=/usr/local/bin/node_exporter --web.listen-address=10.10.0.2:9100
-Restart=always
-[Install]
-WantedBy=multi-user.target
-EOF
-    systemctl daemon-reload
-    systemctl enable --now node-exporter
-    log_ok "node_exporter aktif (10.10.0.2:9100)"
 }
 
 main "$@"
