@@ -74,7 +74,7 @@
 | [`AUDIT-02`](#audit-02) | 🟠 **P1** | `watchdog.py`, `db.py`, `worker.py`, `reporter.py`, `recorder.py` | Donmuş SQLite (`1 Kas`), `IS NULL` körlüğü, 10+ statik/early-return cron `_agent_ok` yok, `5/11` rapor | [Adım 19](#adim-19) | ✅ `24743e5d` |
 | [`AUDIT-03`](#audit-03) | 🟠 **P1** | `nodemonitor_config_backup.sh`, `loki_backup.sh`, cluster sırları | Grafana (`521 MB` + `shared/config`) ve `loki/compactor/` yedeksiz; `node1..6` TLS/WG/`.env` yedeksiz | [Adım 16](#adim-16) | ✅ `7ab35bde` |
 | [`AUDIT-04`](#audit-04) | 🟠 **P1** | `minio_backup.sh`, `uptime_kuma_backup.sh` | `node2` `30g` video temizlik eksiği + `confirm_recordings` race + Kuma `20B` boş `.sql.gz`/inline şifre | [Adım 18](#adim-18) | ✅ `8029c16c` |
-| [`AUDIT-05`](#audit-05) | 🟠 **P1** | `node2`/`node5` ClickHouse, `encoder.py`, `node5:/var/recordings` | TTL'siz CH `system.*_log` (**`node2 2.38 GiB`**, **`node5 5.4 GiB`**) + `3.2G` cache + **`194M` video artığı** | [Adım 23](#adim-23) | ⬜ Açık |
+| [`AUDIT-05`](#audit-05) | 🟠 **P1** | `node2`/`node5` ClickHouse, `encoder.py`, `node5:/var/recordings` | TTL'siz CH `system.*_log` (**`node2 2.38 GiB`**, **`node5 5.4 GiB`**) + `3.2G` cache + **`194M` video artığı** | [Adım 23](#adim-23) | ✅ `0845f6d8` |
 | [`AUDIT-06`](#audit-06) | 🟡 **P2** | `_common.sh`, `teqlif-agent`, `journald` | Kırık `**/*.log` glob (`16M` Redis log), **`565 MB` `agent.log`**, kotasız **`journald` (`1.2G`/`1.6G`)** | [Adım 31](#adim-31) | ⬜ Açık |
 | [`AUDIT-07`](#audit-07) | 🟡 **P2** | `teqlif-agent` (`db.py`, `gossip.py`, `janitor.py`) | `cleanup_log` `UNIQUE` eksik + RAM-only `_last_sync` çoğaltma + `janitor.py:149` stale yorum | [Adım 32](#adim-32) | ⬜ Açık |
 | [`AUDIT-08`](#audit-08) | 🟡 **P2** | `backend/app/worker.py` (`cleanup_*`) | `media_messages` `.scalars().all()` OOM/`60d→30d`/commit sırası + `11` tablo batch'siz `DELETE` | [Adım 33](#adim-33) | ⬜ Açık |
@@ -948,8 +948,14 @@ mc mirror --overwrite --quiet "node1minio/${bucket}" "${dest}"  # 30g silme yok 
 2. `encoder.py`: `.mkv` silerken eşlik eden `.log` dosyasını da kaldır (DB veya Loki'ye aktardıktan sonra) ve `failed`/`0-byte` `> 48h` yetim dosyalar için güvenli cleanup ekle; `node5:/var/recordings` yetimlerini temizle.
 * **Doğrulama:** `node5` disk kullanımı `%56 → <%40` düzeyine iner; `SELECT sum(bytes) FROM system.parts WHERE database='system'` `< 200 MiB` olur.
 
-##### ⬜ Çözüm Damgası
-- *(Henüz uygulanmadı — [Adım 23](#adim-23) bekliyor)*
+##### ✅ Çözüm Damgası
+- `2026-11-12` · commit `0845f6d8` — **AUDIT-05 kapatıldı** ✓:
+  - `system_logs_ttl.xml` (node2 + node5): tüm `system.*_log` tablolarına `7 DAY DELETE` TTL ✓
+  - node2: TRUNCATE + `_0` suffix eski tablolar DROP → **2.6 GiB → 1.52 MiB** ✓
+  - node5: TRUNCATE + `_0` suffix eski tablolar DROP → **3.5 GiB → 8.13 MiB** ✓
+  - `node5:/var/recordings` yetimler (15 dosya, 12 Eki–11 Kas) → **194M → 16K** ✓
+  - `encoder.py`: `_encode_one` raw + `.log` sil; `_transfer_one` encoded + `.log` sil; `_cleanup_orphans()` günde 1 kez 48h+ eski 0-byte/`.log` yetim temizleme ✓
+  - Tüm 8 node `teqlif-restart` → `0845f6d8` ✓
 
 ---
 
@@ -1325,7 +1331,7 @@ await redis.set("ch:last_sync_at", now.isoformat())  # Aradakiler kalıcı kaybo
 ~~22. **Adım 22 (`MAINT-02`):** [`cluster.yaml:36-47`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/cluster.yaml#L36-L47) içinde `transfer_window_start_utc: 3`, `transfer_window_end_utc: 5` (`04:00–05:00` normal / `03:00–05:00` disk uyarısı), `retention_days: 30` ayarla; [`worker.py:4845`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/worker.py#L4845) `notify_new_recordings_task` saatini **`05:45 UTC`** yap → _Neden:_ `node3`/`node4` video transferi ile `05:30` `minio_backup` ve `05:00/06:00` push çarpışmasını ortadan kaldırmak. → ([Detay](#maint-02), [Birlikte: Adım 8](#adim-8))~~ ✅ `dcda70b6`
 
 <a id="adim-23"></a>
-23. **Adım 23 (`AUDIT-05`):** `node2` ve `node5` ClickHouse `system.*_log` tabloları için 7 günlük `TTL DELETE` (`system_logs_ttl.xml`) + tek seferlik `TRUNCATE` uygula, [`encoder.py`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/teqlif-agent/modules/encoder.py#L162-L274) `.log`/0-byte/`failed > 48h` yetim temizliği ekle ve canlı `node5` `194 MB /var/recordings` + `3.2 GB /root/.cache` artığını sil → _Neden:_ `%56` doluluğa ulaşan `node5` diskiyle `node2`/`edge` disklerinin log ve ham video artıklarıyla dolmasını engellemek. → ([Detay](#audit-05))
+~~23. **Adım 23 (`AUDIT-05`):** `node2` ve `node5` ClickHouse `system.*_log` tabloları için 7 günlük `TTL DELETE` (`system_logs_ttl.xml`) + tek seferlik `TRUNCATE` uygula, [`encoder.py`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/teqlif-agent/modules/encoder.py#L162-L274) `.log`/0-byte/`failed > 48h` yetim temizliği ekle ve canlı `node5` `194 MB /var/recordings` + `3.2 GB /root/.cache` artığını sil → _Neden:_ `%56` doluluğa ulaşan `node5` diskiyle `node2`/`edge` disklerinin log ve ham video artıklarıyla dolmasını engellemek. → ([Detay](#audit-05))~~ ✅ `0845f6d8`
 
 <a id="adim-24"></a>
 24. **Adım 24 (`BIZ-03`):** [`auth.py:1638-1719`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/routers/auth.py#L1638-L1719) `delete_account` içine `UserWalletEarnings` / `WithdrawalRequest` `409 Conflict` koruması ([Karar K5](#kilitli-kararlar)) + ilan/DM temizliği ekle; `schedule.yaml`'daki airdrop/ilan/retarget promosyonel push'larını `08:00–08:30 UTC` (`11:00–11:30 TR`) penceresine alıp `quiet_hours` kontrolü uygula ([Karar K6](#kilitli-kararlar)); [`analytics_tasks.py:171-321`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/tasks/analytics_tasks.py#L171-L321) CH hatasında `raise` et + `wallet_ledger` bağla → _Neden:_ KVKK uyumu, açık bakiye korunması ve `07:00 TR` push fırtınasının önlenmesi. → ([Detay](#biz-03), [Birlikte: Adım 18](#adim-18))
