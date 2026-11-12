@@ -93,11 +93,11 @@ scrape_configs:
         labels: { node: node2, component: clickhouse }
 
   - job_name: 'minio'
-    # MinIO cluster metrikleri — bearer token: /opt/teqlif-agent/minio_metrics_token
-    # Token oluşturma: mc admin prometheus generate <alias> cluster
+    # MinIO cluster metrikleri — bearer token: /project/teqlif/config/minio_metrics_token
+    # Token oluşturma: mc admin prometheus generate <alias> cluster (node2'de çalıştır)
     metrics_path: /minio/v2/metrics/cluster
     authorization:
-      credentials_file: /opt/teqlif-agent/minio_metrics_token
+      credentials_file: /project/teqlif/config/minio_metrics_token
     static_configs:
       - targets: ['10.10.0.1:9000']
         labels: { node: node1, component: minio }
