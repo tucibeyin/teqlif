@@ -84,7 +84,7 @@
 | ID | Seviye | Bileşen / İş Akışı | Tespit Edilen İş Mantığı / Uyum / Ölçek Riski | Bağlı Adım | Durum |
 | :---: | :---: | :--- | :--- | :---: | :---: |
 | [`BIZ-01`](#biz-01) | 🔴 **P0** | `messages.py` vs `dm_archive`, `streams.py` vs `stream_recording` | **DM Arşivi public bucket okuyup `[]` döner** + **Standart 14g PRO upsell `404 NoSuchKey` kırık** | [Adım 7](#adim-7), [Adım 8](#adim-8) | ⬜ Açık |
-| [`BIZ-02`](#biz-02) | 🔴 **P0** | `wallet_tasks.py:102-262`, `node1` PG, `redis_failover.sh` | **Alarmsız mutabakat** + **Sınırsız `max_slot_wal_keep_size = -1`** (prod disk crash!) + `wg` peer tuzağı | [Adım 6](#adim-6), [Adım 4](#adim-4) | ✅ Çözüldü `caf6938b` + `806cc9c0` |
+| [`BIZ-02`](#biz-02) | 🔴 **P0** | `wallet_tasks.py:102-262`, `node1` PG, `redis_failover.sh` | **Alarmsız mutabakat** + **Sınırsız `max_slot_wal_keep_size = -1`** (prod disk crash!) + `wg` peer tuzağı | [Adım 6](#adim-6), [Adım 4](#adim-4) | ✅ Çözüldü `8234ee8d` |
 | [`BIZ-03`](#biz-03) | 🟠 **P1** | `auth.py:1638`, `analytics_tasks`, `listing_tasks`, `notification_service` | KVKK `delete_account` (bakiye kilidi/DM yok) + `--remove` yok + **`07:00 TR` push fırtınası** | [Adım 24](#adim-24), [Adım 18](#adim-18) | ⬜ Açık |
 | [`BIZ-04`](#biz-04) | 🟠 **P1** | `mail_backup.sh`, `nodeMonitor` SPOF, Prometheus kapsamı | **`09:15 TR` Mail Stop** (`config.toml`/`.env.mail` yok) + **`nodeMonitor` SPOF** + CH/MinIO/Mail kör | [Adım 17](#adim-17), [Adım 20](#adim-20) | ⬜ Açık |
 | [`BIZ-05`](#biz-05) | 🟠 **P1** | `worker.py:4153-4264`, `listing_tasks.py:84-160` | `sync_pg_to_clickhouse` `LIMIT` sessiz veri silme + sınırsız/retry'sız ilan temizleme (`>50K`) | [Adım 25](#adim-25) | ⬜ Açık |
@@ -1040,6 +1040,13 @@ await _agent_ok(ctx, "daily_financial_reconciliation_task")  # Telegram / Sentry
     - `install_postgresql()` ardından `conf.d/teqlif.conf` → `/etc/postgresql/17/main/conf.d/teqlif.conf` kopyalanır ✓
     - `postgresql.conf`'a `include_dir = 'conf.d'` satırı eklenir (idempotent) ✓
     - K4 parametreleri artık fresh bootstrap'ta da aktif olur ✓
+- `2026-11-12` · commit `13f18a60` + `8234ee8d` — BIZ-02 Adım 6 P2/P3 tam kapanış:
+  - **`wallet_tasks.py` — P2/P3:**
+    - Kova 2: `ABS(SUM)` → `-SUM` (işaret doğruluğu, iptal/red net senaryosu) ✓
+    - `release_pending_earnings_task`, `reset_monthly_withdrawal_quota_task`, `check_expired_pro_users_task` except → `_agent_fail` eklendi ✓
+  - **`bootstrap_node1.sh` — P3:** `grep -qF` → `grep -qxF` (tam satır eşleşmesi; `#include_dir` yorum tuzağı önlendi) ✓
+  - **`watchdog.py` + `db.py` — P2:** `job_fail` hash okunuyor; `mark_fail(last_fail_at=...)` parametresi eklendi; `get_failed_jobs()` eklendi; `_alert_stale`/`_alert_fail` ayrı cooldown key ile ayrıldı ✓
+  - **`test_wallet_reconciliation.py` — P3:** 7 senaryo (temiz, kova1/2/3, negatif bakiye, çoklu anomali, exception→_agent_fail) → 7/7 OK ✓
 
 ---
 
