@@ -70,7 +70,7 @@
 
 | ID | Seviye | Bileşen / Node | Tespit Edilen Eksik / Bozuk İşleyiş / Birikme | Bağlı Adım | Durum |
 | :---: | :---: | :--- | :--- | :---: | :---: |
-| [`AUDIT-01`](#audit-01) | 🔴 **P0** | `node2` DR (`runbook.sh`, `pg_basebackup.sh`, `pg_dump.sh`) | **Yerel DR/PITR kırık:** `pg_lsclusters` boş, **`postgresql-17-pgvector` yok**, `.env.dr`/`cf-origin.*` yok, `pg_wal.tar.gz` atlanıyor + `immediate` PITR'ı kesiyor | [Adım 5](#adim-5) | ✅ Çözüldü `ce6eb3e3` |
+| [`AUDIT-01`](#audit-01) | 🔴 **P0** | `node2` DR (`runbook.sh`, `pg_basebackup.sh`, `pg_dump.sh`) | **Yerel DR/PITR kırık:** `pg_lsclusters` boş, **`postgresql-17-pgvector` yok**, `.env.dr`/`cf-origin.*` yok, `pg_wal.tar.gz` atlanıyor + `immediate` PITR'ı kesiyor | [Adım 5](#adim-5) | ✅ Çözüldü `f48e8eaf` |
 | [`AUDIT-02`](#audit-02) | 🟠 **P1** | `watchdog.py`, `db.py`, `worker.py`, `reporter.py`, `recorder.py` | Donmuş SQLite (`1 Kas`), `IS NULL` körlüğü, 10+ statik/early-return cron `_agent_ok` yok, `5/11` rapor | [Adım 19](#adim-19) | ⬜ Açık |
 | [`AUDIT-03`](#audit-03) | 🟠 **P1** | `nodemonitor_config_backup.sh`, `loki_backup.sh`, cluster sırları | Grafana (`521 MB` + `shared/config`) ve `loki/compactor/` yedeksiz; `node1..6` TLS/WG/`.env` yedeksiz | [Adım 16](#adim-16) | ⬜ Açık |
 | [`AUDIT-04`](#audit-04) | 🟠 **P1** | `minio_backup.sh`, `uptime_kuma_backup.sh` | `node2` `30g` video temizlik eksiği + `confirm_recordings` race + Kuma `20B` boş `.sql.gz`/inline şifre | [Adım 18](#adim-18) | ⬜ Açık |
@@ -780,6 +780,12 @@ EOF
   - node101 dahil tüm 8 node `ce6eb3e3`'de ✓
   - **Doğrulama:** `bash -n runbook.sh` temiz ✓; WAL_STAGE oluşturma/kopyalama/temizleme mantığı postgres erişim garantisi sağlıyor ✓
 
+- `2026-11-12` · commit `f48e8eaf` — Reviewer P0: WAL_STAGE dizin traverse biti korundu:
+  - **Kök neden:** `chmod -R 640 "${WAL_STAGE}"` dizinin kendisini de `640` (drw-r-----) yapıyordu → `+x` traverse biti siliniyor → postgres uid=110 staging içindeki dosyaları okuyamıyor → `restore_command` Permission denied.
+  - `runbook.sh:160`: `chmod -R 640` → `chmod 750 "${WAL_STAGE}" && find "${WAL_STAGE}" -type f -exec chmod 640 {} +` ✓
+  - node101 dahil tüm 8 node `f48e8eaf`'de ✓
+  - **Doğrulama:** `bash -n runbook.sh` SYNTAX_OK ✓; staging dizin 750 (traverse OK), dosyalar 640 (postgres okur, dünya görmez) ✓
+
 ---
 
 <a id="audit-02"></a>
@@ -1108,7 +1114,7 @@ await redis.set("ch:last_sync_at", now.isoformat())  # Aradakiler kalıcı kaybo
 ~~4. **Adım 4 (`MAINT-03`):** Canlı `node2` üzerinde yetkisiz `redis-failover.timer`/`service` + düz metin şifreli `/usr/local/bin/redis-failover-check.sh` kalıntılarını kaldır, `node1` Redis sağlığı doğrulandıktan sonra `/var/lib/teqlif-redis-failover/promoted` bayrağını sil ve [`redis_failover.sh:62-69`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/redis_failover.sh#L62-L69) içindeki `node1` WG peer'ını `0.0.0.1/32` yapan bloğu kaldır → _Neden:_ 18 Ekim'den beri kör olan otomatik Redis failover'ı tekrar aktif etmek ve promote anında `pg_receivewal`/`MinIO` trafiğinin kopmasını önlemek. → ([Detay](#maint-03), [İlişkili: BIZ-02](#biz-02))~~ ✅ `c0154e66` (2026-11-12)
 
 <a id="adim-5"></a>
-~~5. **Adım 5 (`AUDIT-01`):** `node2` üzeinde `postgresql-17-pgvector` paketini kur + `main` cluster hazırlığı, `/project/teqlif/config/.env.dr` ve `/etc/ssl/teqlif/cf-origin.{crt,key}` dosyalarını yerleştir; [`pg_basebackup.sh`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/pg_basebackup.sh#L19-L35) atomik `.tmp`→`mv` yap, [`pg_dump.sh`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/pg_dump.sh) içine `--globals-only` ekle ve [`runbook.sh:134-155`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/runbook.sh#L134-L155) içinde `pg_wal.tar.gz` açılımı + `recovery_target = 'immediate'` → `'latest'` düzeltmesini yap → _Neden:_ `node1` çöktüğünde `node2` DR failover ve 1 dk PITR kurtarmasının gerçekten çalışmasını sağlamak. → ([Detay](#audit-01))~~ ✅ `ce6eb3e3` (2026-11-12)
+~~5. **Adım 5 (`AUDIT-01`):** `node2` üzeinde `postgresql-17-pgvector` paketini kur + `main` cluster hazırlığı, `/project/teqlif/config/.env.dr` ve `/etc/ssl/teqlif/cf-origin.{crt,key}` dosyalarını yerleştir; [`pg_basebackup.sh`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/pg_basebackup.sh#L19-L35) atomik `.tmp`→`mv` yap, [`pg_dump.sh`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/pg_dump.sh) içine `--globals-only` ekle ve [`runbook.sh:134-155`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/runbook.sh#L134-L155) içinde `pg_wal.tar.gz` açılımı + `recovery_target = 'immediate'` → `'latest'` düzeltmesini yap → _Neden:_ `node1` çöktüğünde `node2` DR failover ve 1 dk PITR kurtarmasının gerçekten çalışmasını sağlamak. → ([Detay](#audit-01))~~ ✅ `f48e8eaf` (2026-11-12)
 
 <a id="adim-6"></a>
 6. **Adım 6 (`BIZ-02`):** Canlı `node1` `postgresql.conf` içine [Karar K4](#kilitli-kararlar) gereği **`max_slot_wal_keep_size = '50GB'`**, `wal_compression = lz4`, `archive_timeout = 3600`, `lock_timeout = '5s'`, `idle_in_transaction_session_timeout = '5min'` ekle; [`wallet_tasks.py:101-166`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/tasks/wallet_tasks.py#L101-L166) `daily_financial_reconciliation_task`'ı `anomalies > 0` durumunda acil Telegram + Sentry alarmı verecek ve tam defter toplamını denetleyecek şekilde güncelle → _Neden:_ `node2_receivewal` kesildiğinde prod NVMe'nin %100 dolup PG'yi çökertmesini ve finansal defter sapmalarının sessiz kalmasını önlemek. → ([Detay](#biz-02), [Karar K4](#kilitli-kararlar))
