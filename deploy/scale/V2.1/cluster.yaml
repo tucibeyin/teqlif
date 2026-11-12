@@ -29,22 +29,21 @@ recording:
       pg_dsn_env:       PG_DSN_STAGING
       redis_url_env:    STAGING_REDIS_URL
 
-  # Transfer penceresi (UTC)
-  # 04:00 başlangıç: pg_basebackup (Pazar 02:00, ~40M/s ile ~02:45'te biter)
-  # ile video transfer'ın ağ darboğazı oluşturmaması için ötelenmiştir.
-  # disk_warn: 04:00–07:00 | normal: 05:00–07:00 | emergency: pencere yok
-  transfer_window_start_utc: 4
-  transfer_window_end_utc:   7
+  # Transfer penceresi (UTC) — MAINT-02 fix (K3)
+  # normal: 04:00–05:00 UTC | disk_warn: 03:00–05:00 UTC | emergency: pencere yok
+  # minio_backup 05:30 başlamadan önce biter; notify 05:45'te güvenle çalışır
+  transfer_window_start_utc: 3
+  transfer_window_end_utc:   5
 
   # Disk guard eşikleri (GB)
-  disk_warn_gb:      15   # → transfer 02:00'e çekilir (erken tetik)
+  disk_warn_gb:      15   # → effective_start = start_utc (03:00) erken tetik
   disk_emergency_gb: 10   # → transfer anında başlar (pencere yok)
 
   # Kullanıcı erişim süresi
   user_access_hours: 24
 
-  # Backup'tan sonra silinme süresi
-  retention_days: 15
+  # Backup'tan sonra silinme süresi — K3: 30g (PRO upsell T+14 + 16g pay)
+  retention_days: 30
 
   # MinIO bucket lifecycle (gün) — 24h kullanıcı + 1 gün backup toleransı
   # Prod node1 MinIO ILM bu değere göre ayarlanmıştır (setup_minio_ilm.sh)

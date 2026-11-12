@@ -4852,7 +4852,7 @@ class WorkerSettings:
         cron(expire_recordings_task,        minute={0, 30}),
         cron(archive_recordings_task,       minute={15}),
         # Transfer penceresi biter (05:00 UTC = 08:00 TR) → bildirim gönder — 2 run/gün
-        cron(notify_new_recordings_task, hour={5, 6}, minute={0}),
+        cron(notify_new_recordings_task, hour=5, minute=45),
         # Her gün 04:30 UTC — replay olmayan stream'lerin chat satırlarını temizle
         cron(cleanup_old_stream_chat_messages_task, hour=4, minute=30),
         # Her 30 dakikada — finalize sırasında başarısız olan chat dump'larını yeniden dene
