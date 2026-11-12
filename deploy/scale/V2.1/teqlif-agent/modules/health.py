@@ -50,6 +50,7 @@ _BACKUP_MAX_MIN = {
     "nodemonitor_config_backup":  25 * 60,
     "mail_backup":                25 * 60,
     "clickhouse_backup":          25 * 60,
+    "cluster_secrets_backup":     25 * 60,
     "pg_basebackup":               7 * 24 * 60,  # haftalık
     "offsite_sync":               25 * 60,       # günlük daily-full → node101
     "offsite_wal_sync":           90,            # saatlik WAL → node101
@@ -224,6 +225,7 @@ class HealthMonitor:
                 "nodemonitor_config_backup": "nodeMonitor config yedeği",
                 "mail_backup":               "Mail (Stalwart) yedeği",
                 "clickhouse_backup":         "ClickHouse yedeği",
+                "cluster_secrets_backup":   "Cluster sırlar yedeği",
                 "pg_basebackup":             "PostgreSQL base backup",
                 "offsite_sync":              "Offsite Sync (daily)",
                 "offsite_wal_sync":          "Offsite WAL Sync (saatlik)",
@@ -419,6 +421,7 @@ async def _backup_ages() -> dict:
         "uptime_kuma_backup":        "/project/teqlif/backups/uptime_kuma/.last_backup_ok",
         "nodemonitor_config_backup": "/project/teqlif/backups/nodemonitor_config/.last_backup_ok",
         "mail_backup":               "/project/teqlif/backups/stalwart/.last_mail_backup_ok",
+        "cluster_secrets_backup":    "/project/teqlif/backups/cluster_secrets/.last_backup_ok",
         "offsite_sync":              "/project/teqlif/backups/.last_offsite_sync_ok",
         "offsite_wal_sync":          "/project/teqlif/backups/.last_offsite_wal_ok",
     }

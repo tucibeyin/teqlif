@@ -585,6 +585,14 @@ apply_secrets() {
         log_ok "TLS izinleri normalize edildi (/etc/ssl/teqlif *.key → root:tucibeyin 640)"
     fi
 
+    # WireGuard: root:tucibeyin 640 — wg-quick root okur, tucibeyin backup alabilir
+    if [ -d /etc/wireguard ]; then
+        for _wgf in /etc/wireguard/privatekey /etc/wireguard/wg0.conf; do
+            [ -f "${_wgf}" ] && chown root:tucibeyin "${_wgf}" && chmod 640 "${_wgf}" 2>/dev/null || true
+        done
+        log_ok "WireGuard izinleri normalize edildi (privatekey + wg0.conf → root:tucibeyin 640)"
+    fi
+
     if command -v shred &>/dev/null; then
         shred -u "${secrets_file}"
         log_ok "Secrets dosyası güvenli silindi: ${secrets_file}"
