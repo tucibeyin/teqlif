@@ -874,6 +874,11 @@ EOF
   - `cluster_secrets_backup.sh`: WireGuard rsync dizin-sync → explicit dosya path'i (`privatekey`, `wg0.conf`, `pubkey` ayrı ayrı) — `710` dizinde `readdir()` gerekmez, sadece `execute` yeterli ✓
   - node2 `.env.metrics-agent` `root:root 600` → `tucibeyin:tucibeyin` live fix ✓
   - **Final test: ok=8 fail=0** (268K — TLS+WG+env tüm 8 node) ✓
+- `2026-11-12` · **nodeMonitor + node101 WireGuard izin live fix** ✓:
+  - nodeMonitor: `/etc/wireguard` → `root:tucibeyin 710`, dosyalar → `640` (manuel `ssh -t` + şifre)
+  - node101: `/etc/wireguard` → `root:tucibeyin 710`, dosyalar → `640` (sudo NOPASSWD)
+  - Re-test: **ok=8 fail=0** (296K — 268K→296K artış nodeMonitor+node101 WG dosyalarının eklenmesiyle) ✓
+  - `_common.sh apply_secrets()` WireGuard normalize bloğu tüm node'lar için bootstrap'ta otomatik uygular ✓
 
 ---
 
