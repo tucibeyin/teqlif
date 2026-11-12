@@ -240,7 +240,7 @@ CORE_REDIS_PASS=<core_redis_pass>
 REPL_PASSWORD=<teqlif_repl_password>
 TELEGRAM_BOT_TOKEN=<telegram_bot_token>
 TELEGRAM_CHAT_ID=<telegram_chat_id>
-CLICKHOUSE_PASSWORD=<clickhouse_password>
+CLICKHOUSE_PASSWORD=<teqlif_ch_password>
 CLICKHOUSE_DEFAULT_PASSWORD=<clickhouse_default_password>
 UPTIME_KUMA_DB_PASS=<uptime_kuma_db_pass>
 # node101 offsite restic (Adım 10 sonrası doldur)
@@ -252,7 +252,7 @@ ENVEOF
     else
         # Re-run: yalnız eksik anahtarları ekle, mevcutları koruma
         _add_env_key() { grep -q "^${1}=" "${env_file}" || echo "${1}=${2}" >> "${env_file}"; }
-        _add_env_key CLICKHOUSE_PASSWORD "<clickhouse_password>"
+        _add_env_key CLICKHOUSE_PASSWORD "<teqlif_ch_password>"
         _add_env_key CLICKHOUSE_DEFAULT_PASSWORD "<clickhouse_default_password>"
         _add_env_key UPTIME_KUMA_DB_PASS "<uptime_kuma_db_pass>"
         _add_env_key RESTIC_REST_USER "<restic_rest_user>"
