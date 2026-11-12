@@ -1047,6 +1047,10 @@ await _agent_ok(ctx, "daily_financial_reconciliation_task")  # Telegram / Sentry
   - **`bootstrap_node1.sh` — P3:** `grep -qF` → `grep -qxF` (tam satır eşleşmesi; `#include_dir` yorum tuzağı önlendi) ✓
   - **`watchdog.py` + `db.py` — P2:** `job_fail` hash okunuyor; `mark_fail(last_fail_at=...)` parametresi eklendi; `get_failed_jobs()` eklendi; `_alert_stale`/`_alert_fail` ayrı cooldown key ile ayrıldı ✓
   - **`test_wallet_reconciliation.py` — P3:** 7 senaryo (temiz, kova1/2/3, negatif bakiye, çoklu anomali, exception→_agent_fail) → 7/7 OK ✓
+- `2026-11-12` · commit `0b002e18` — BIZ-02 final: mark_fail idempotent + fail_reason + 8/8 agent dağıtımı:
+  - **`db.py`:** `fail_reason TEXT` kolonu; `mark_fail()` idempotent — aynı timestamp'te `fail_count` artmaz; `reason` parametresi eklendi ✓
+  - **`watchdog.py`:** payload reason ayrıştırılıp `mark_fail(reason=...)` ile yazılıyor; `_alert_fail` Telegram mesajına `fail_reason` eklendi ✓
+  - **8/8 node:** `/opt/teqlif-agent/` sync + `teqlif-agent` restart — watchdog hash `4e3a4ef5` tüm node'larda eşit ✓
 
 ---
 
