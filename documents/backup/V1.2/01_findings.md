@@ -46,7 +46,7 @@
 | [`OFFSITE-05`](#offsite-05) | 🟠 **P1** | `wg_mesh_apply.sh`, `secrets.env.template`, `node101` UFW | `node101` WG (`10.10.0.101`) peer izolasyonu (yalnız `node2`+`nodeMonitor`), UFW ve SSH sertleştirmesi | [Adım 2](#adim-2) | ✅ Çözüldü `c5cb95a2` |
 | [`OFFSITE-06`](#offsite-06) | 🟠 **P1** | `node101` (`2.9 GiB RAM`, `/mnt/data`, `fio`) | Düşük RAM (`2.9 GiB`), `6.1 GB` `/` taşma riski, `fdatasync` tail latency (`83 IOPS`) + TZ `UTC` | [Adım 1](#adim-1) | ✅ Çözüldü `09eb442c` |
 | [`OFFSITE-07`](#offsite-07) | 🟠 **P1** | `offsite_sync.sh`, `pg_basebackup.sh`, `pg_wal`, `pg_dump.sh` | Offsite PG PITR (`pg_basebackup`+`pg_wal`) eksikliği (24s RPO) + `pg_dump/*.dump.gz` (2–8 Eki) yetimleri | [Adım 12](#adim-12) | ✅ `114c0ee4` |
-| [`OFFSITE-08`](#offsite-08) | 🟠 **P1** | `clickhouse_backup.sh`, canlı `node2` CH | Method 1/2 çalışmıyor (`/var/lib/clickhouse/backups` boş), fallback `285B` arşiv, `BACKUP` izni/DDL yok | [Adım 14](#adim-14) | ⬜ Açık |
+| [`OFFSITE-08`](#offsite-08) | 🟠 **P1** | `clickhouse_backup.sh`, canlı `node2` CH | Method 1/2 çalışmıyor (`/var/lib/clickhouse/backups` boş), fallback `285B` arşiv, `BACKUP` izni/DDL yok | [Adım 14](#adim-14) | ✅ `350df516` |
 | [`OFFSITE-09`](#offsite-09) | 🟠 **P1** | `nodemonitor_config_backup.sh`, canlı `node2` | **`979 MB` TSDB/WAL sızıntısı** (`prometheus/data` 823M + `loki` 156M) — `--delete-excluded` yok | [Adım 15](#adim-15) | ⬜ Açık |
 | [`OFFSITE-10`](#offsite-10) | 🟡 **P2** | `node2/systemd/*.service`, `offsite_sync` | Tüm backup servislerinde `IOSchedulingClass=idle`/`Nice=19` eşitleme ve `.tmp`/`.partial` filtre | [Adım 26](#adim-26) | ⬜ Açık |
 | [`OFFSITE-11`](#offsite-11) | 🟡 **P2** | `runbook.sh`, `node101/resources/` | `node101 → yeni node1/node2` çifte felaket DR runbook'u + periyodik decrypt/PITR tatbikatı | [Adım 36](#adim-36) | ⬜ Açık |
@@ -427,8 +427,16 @@ PersistentKeepalive = 25
 3. `teqlif_prod_analytics` boşluğunun gerçek trafik yokluğundan mı yoksa worker/buffer uyuşmazlığından mı kaynaklandığını doğrula ve `node2`'deki terk edilmiş `teqlif_staging_analytics`'i temizle.
 * **Doğrulama:** `sudo bash clickhouse_backup.sh` çıktısı `OK (sql)` (fallback değil!) döner ve yedek içinde `schema` + tablolar doğrulanır.
 
-##### ⬜ Çözüm Damgası
-- *(Henüz uygulanmadı — [Adım 14](#adim-14) bekliyor)*
+##### ✅ Çözüm Damgası
+- `2026-11-12` · commit `350df516` — **OFFSITE-08 kapatıldı** ✓:
+  - `teqlif.xml` backup disk: `/var/lib/clickhouse/backups/` → `/project/teqlif/backups/clickhouse/` ✓
+  - `/project/teqlif/backups/clickhouse/` → `chown clickhouse:tucibeyin + chmod 2775` (ClickHouse yazar, tucibeyin siler, restic okur) ✓
+  - `GRANT BACKUP ON *.* TO teqlif` + `GRANT WRITE ON DISK TO teqlif` ✓ (ClickHouse 26.x iki grant gerekli)
+  - `clickhouse_backup.sh`: log redirection, `CH_DISK_DIR` kaldırıldı, Yöntem 3 fallback'e `schema.sql` DDL eklendi ✓
+  - `bootstrap_node2.sh`: clickhouse backup dir chown+chmod 2775 + grant adımları print_summary'e eklendi ✓
+  - `teqlif_staging_analytics` (orphan, 25 satır) DROP ile temizlendi ✓
+  - Canlı doğrulama: `OK (sql)` → `.zip 4.7K` (DDL+şema, gerçek atomik backup) ✓
+  - Not: `teqlif_prod_analytics` 0 satır — 30 günde INSERT yok; `sync_pg_to_clickhouse_task` işliyor fakat veri yazmıyor (ayrı bug, bu adımın kapsamı dışı).
 
 ---
 
@@ -1211,7 +1219,7 @@ await redis.set("ch:last_sync_at", now.isoformat())  # Aradakiler kalıcı kaybo
 ### 🟠 Faz 2: Yedek Kapsamı, Telemetri/Watchdog, SPOF/Prometheus, KVKK/Push, ClickHouse/Ölçek (P1 Yüksek — 12 Adım)
 
 <a id="adim-14"></a>
-14. **Adım 14 (`OFFSITE-08`):** `node2` ClickHouse üzerinde `teqlif` kullanıcısına `GRANT BACKUP ON *.*` ver, `/etc/clickhouse-server/config.d/backups.xml` hedefini `/project/teqlif/backups/clickhouse` yap, [`clickhouse_backup.sh`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/clickhouse_backup.sh) fallback'ine `SHOW CREATE` DDL + log dosyası ekle ve canlı `node2` üzerindeki terk edilmiş `teqlif_staging_analytics` (`25` satır) verisini temizle → _Neden:_ Gerçek atomik ClickHouse yedeğini (DDL + MV + veri) aktifleştirmek. → ([Detay](#offsite-08))
+~~14. **Adım 14 (`OFFSITE-08`):** `node2` ClickHouse üzerinde `teqlif` kullanıcısına `GRANT BACKUP ON *.*` ver, `/etc/clickhouse-server/config.d/backups.xml` hedefini `/project/teqlif/backups/clickhouse` yap, [`clickhouse_backup.sh`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/clickhouse_backup.sh) fallback'ine `SHOW CREATE` DDL + log dosyası ekle ve canlı `node2` üzerindeki terk edilmiş `teqlif_staging_analytics` (`25` satır) verisini temizle → _Neden:_ Gerçek atomik ClickHouse yedeğini (DDL + MV + veri) aktifleştirmek. → ([Detay](#offsite-08))~~ ✅ `350df516`
 
 <a id="adim-15"></a>
 15. **Adım 15 (`OFFSITE-09`):** [`nodemonitor_config_backup.sh:27-41`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/nodemonitor_config_backup.sh#L27-L41) içine `--delete-excluded` ile `--exclude 'loki/wal/'` / `'loki/tsdb-shipper-*'` ekle ve canlı `node2` üzerindeki `979 MB` TSDB/WAL sızıntısını temizle → _Neden:_ Her offsite yedeğinin gereksiz ~1 GB şişmesini durdurmak (`979 MB → < 5 MB`). → ([Detay](#offsite-09))
