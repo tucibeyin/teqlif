@@ -856,7 +856,12 @@ EOF
   - `teqlif-cluster-secrets-backup.{service,timer}`: 06:20 UTC ✓
   - `offsite_sync.sh`: `shared-config`, `grafana`, `cluster_secrets` restic'e eklendi ✓
   - `secrets.env.template` BÖLÜM 4: `node2_cluster_backup_pubkey` eklendi ✓
-  - **Manuel adım gerekli**: `id_ed25519_cluster_backup.pub` → tüm node'ların `authorized_keys`'ine `from="10.10.0.2" <pubkey>` ekle
+  - **Manuel adım gerekli**: `id_ed25519_cluster_backup.pub` → tüm node'ların `authorized_keys`'ine `from="10.10.0.2" <pubkey>` ekle ✓ (tamamlandı)
+- `2026-11-12` · commit `beda06f6` — **AUDIT-03 permission fix** ✓:
+  - `cluster_secrets_backup.sh` test: **ok=8 fail=0** (144K toplam) ✓
+  - Kök neden: node1/5 `cf-origin.key` → `root:root 600` (tucibeyin okuyamazken); node5 bazı `.env` → `root:root 600`; node6 `/project/teqlif/config/` → `root:root 700`
+  - Live fix: `cf-origin.key` → `root:tucibeyin 640`; root-owned `.env` → `tucibeyin`; node6 config dir → `tucibeyin`
+  - `_common.sh apply_secrets()`: TLS normalize bloğu eklendi (`*.key` → `root:tucibeyin 640`) — bootstrap tekrarında sorun çıkmaz
 
 ---
 
