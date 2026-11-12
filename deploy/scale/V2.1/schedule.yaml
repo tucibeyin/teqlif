@@ -371,4 +371,4 @@ batch:
 # Değişiklik sonrası sudo teqlif-restart gereklidir.
 ttl:
   foryou_feed_seconds: 86400        # 24 saat — 2× günlük cron, maks boşluk ~12 saat
-  recording_retention_days: 15      # node2 kayıt saklama süresi
+  recording_retention_days: 30      # node2 kayıt saklama süresi (K3: PRO upsell T+14 + 16g pay)

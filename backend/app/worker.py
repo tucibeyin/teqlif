@@ -4851,7 +4851,7 @@ class WorkerSettings:
         # Her 30 dakikada — stream kayıt yaşam döngüsü
         cron(expire_recordings_task,        minute={0, 30}),
         cron(archive_recordings_task,       minute={15}),
-        # Transfer penceresi biter (05:00 UTC = 08:00 TR) → bildirim gönder — 2 run/gün
+        # minio_backup (05:30) biter, 05:45'te bildirim gönder — günde 1 kez
         cron(notify_new_recordings_task, hour=5, minute=45),
         # Her gün 04:30 UTC — replay olmayan stream'lerin chat satırlarını temizle
         cron(cleanup_old_stream_chat_messages_task, hour=4, minute=30),
