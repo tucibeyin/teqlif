@@ -72,7 +72,7 @@
 | :---: | :---: | :--- | :--- | :---: | :---: |
 | [`AUDIT-01`](#audit-01) | 🔴 **P0** | `node2` DR (`runbook.sh`, `pg_basebackup.sh`, `pg_dump.sh`) | **Yerel DR/PITR kırık:** `pg_lsclusters` boş, **`postgresql-17-pgvector` yok**, `.env.dr`/`cf-origin.*` yok, `pg_wal.tar.gz` atlanıyor + `immediate` PITR'ı kesiyor | [Adım 5](#adim-5) | ✅ Çözüldü `f48e8eaf` |
 | [`AUDIT-02`](#audit-02) | 🟠 **P1** | `watchdog.py`, `db.py`, `worker.py`, `reporter.py`, `recorder.py` | Donmuş SQLite (`1 Kas`), `IS NULL` körlüğü, 10+ statik/early-return cron `_agent_ok` yok, `5/11` rapor | [Adım 19](#adim-19) | ⬜ Açık |
-| [`AUDIT-03`](#audit-03) | 🟠 **P1** | `nodemonitor_config_backup.sh`, `loki_backup.sh`, cluster sırları | Grafana (`521 MB` + `shared/config`) ve `loki/compactor/` yedeksiz; `node1..6` TLS/WG/`.env` yedeksiz | [Adım 16](#adim-16) | ⬜ Açık |
+| [`AUDIT-03`](#audit-03) | 🟠 **P1** | `nodemonitor_config_backup.sh`, `loki_backup.sh`, cluster sırları | Grafana (`521 MB` + `shared/config`) ve `loki/compactor/` yedeksiz; `node1..6` TLS/WG/`.env` yedeksiz | [Adım 16](#adim-16) | ✅ `7ab35bde` |
 | [`AUDIT-04`](#audit-04) | 🟠 **P1** | `minio_backup.sh`, `uptime_kuma_backup.sh` | `node2` `30g` video temizlik eksiği + `confirm_recordings` race + Kuma `20B` boş `.sql.gz`/inline şifre | [Adım 18](#adim-18) | ⬜ Açık |
 | [`AUDIT-05`](#audit-05) | 🟠 **P1** | `node2`/`node5` ClickHouse, `encoder.py`, `node5:/var/recordings` | TTL'siz CH `system.*_log` (**`node2 2.38 GiB`**, **`node5 5.4 GiB`**) + `3.2G` cache + **`194M` video artığı** | [Adım 23](#adim-23) | ⬜ Açık |
 | [`AUDIT-06`](#audit-06) | 🟡 **P2** | `_common.sh`, `teqlif-agent`, `journald` | Kırık `**/*.log` glob (`16M` Redis log), **`565 MB` `agent.log`**, kotasız **`journald` (`1.2G`/`1.6G`)** | [Adım 31](#adim-31) | ⬜ Açık |
@@ -847,8 +847,16 @@ EOF
 3. Şifreli config manifest scriptiyle `node1..6` WG/TLS/`.env` dosyalarını `node2/backups/cluster_secrets/` (yalnız `restic` ile şifreli `node101`'e gider, `chmod 700`) altına al.
 * **Doğrulama:** `ls -la /project/teqlif/backups/nodemonitor_config/grafana/grafana.db` + `sqlite3 ... "PRAGMA integrity_check;"` `ok`.
 
-##### ⬜ Çözüm Damgası
-- *(Henüz uygulanmadı — [Adım 16](#adim-16) bekliyor)*
+##### ✅ Çözüm Damgası
+- `2026-11-12` · commit `7ab35bde` — **AUDIT-03 kapatıldı** ✓:
+  - `nodemonitor_config_backup.sh`: `/project/shared/config/` (grafana.ini + uptime-kuma.env) rsync eklendi ✓
+  - `nodemonitor_config_backup.sh`: `grafana/data/` rsync (plugins/ + logs/ hariç) → `grafana.db` 3.6MB ✓
+  - `loki_backup.sh`: `compactor/` (216KB) + `rules/` (4KB) meta dizinleri eklendi ✓
+  - `cluster_secrets_backup.sh` (yeni): node1..6+nodeMonitor+node101 `/etc/ssl/teqlif/` + `.env*` → node2 `/backups/cluster_secrets/{node}/` (chmod 700) ✓
+  - `teqlif-cluster-secrets-backup.{service,timer}`: 06:20 UTC ✓
+  - `offsite_sync.sh`: `shared-config`, `grafana`, `cluster_secrets` restic'e eklendi ✓
+  - `secrets.env.template` BÖLÜM 4: `node2_cluster_backup_pubkey` eklendi ✓
+  - **Manuel adım gerekli**: `id_ed25519_cluster_backup.pub` → tüm node'ların `authorized_keys`'ine `from="10.10.0.2" <pubkey>` ekle
 
 ---
 
@@ -1233,7 +1241,7 @@ await redis.set("ch:last_sync_at", now.isoformat())  # Aradakiler kalıcı kaybo
 ~~15. **Adım 15 (`OFFSITE-09`):** [`nodemonitor_config_backup.sh:27-41`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/nodemonitor_config_backup.sh#L27-L41) içine `--delete-excluded` ile `--exclude 'loki/wal/'` / `'loki/tsdb-shipper-*'` ekle ve canlı `node2` üzerindeki `979 MB` TSDB/WAL sızıntısını temizle → _Neden:_ Her offsite yedeğinin gereksiz ~1 GB şişmesini durdurmak (`979 MB → < 5 MB`). → ([Detay](#offsite-09))~~ ✅ `3afe4310`
 
 <a id="adim-16"></a>
-16. **Adım 16 (`AUDIT-03`):** [`nodemonitor_config_backup.sh`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/nodemonitor_config_backup.sh) kapsamına `/opt/monitor/shared/grafana/` (`521 MB`) + `/project/shared/config/` ekle, [`loki_backup.sh`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/loki_backup.sh) içine `compactor/`/index ekle ve `node1..6` TLS/WG/`.env` sırlarını `cluster_secrets/` üzerinden şifreli offsite zincirine kat → _Neden:_ Felaket sonrası Grafana panellerinin, Loki indeksinin ve cluster sırlarının kaybedilmesini önlemek. → ([Detay](#audit-03))
+~~16. **Adım 16 (`AUDIT-03`):** [`nodemonitor_config_backup.sh`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/nodemonitor_config_backup.sh) kapsamına `/opt/monitor/shared/grafana/` (`521 MB`) + `/project/shared/config/` ekle, [`loki_backup.sh`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/loki_backup.sh) içine `compactor/`/index ekle ve `node1..6` TLS/WG/`.env` sırlarını `cluster_secrets/` üzerinden şifreli offsite zincirine kat → _Neden:_ Felaket sonrası Grafana panellerinin, Loki indeksinin ve cluster sırlarının kaybedilmesini önlemek. → ([Detay](#audit-03))~~ ✅ `7ab35bde`
 
 <a id="adim-17"></a>
 17. **Adım 17 (`BIZ-04` — Bölüm A):** [`mail_backup.sh`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/mail_backup.sh#L21-L39) zamanını `06:15 UTC` (`09:15 TR`) → **`03:50 UTC` (`06:50 TR`, [Karar K1](#kilitli-kararlar))** al; arşive `/project/mail/config/{config.toml,.env.mail,acme}` ekle, `2>/dev/null` kaldır ve `.tmp` + `tar -tzf` bütünlük doğrulaması ekle → _Neden:_ Sabah mesai açılışında OTP/e-posta düşüşünü bitirmek ve mail sunucusunun tüm kimliğini yedeklemek. → ([Detay](#biz-04))
