@@ -1653,6 +1653,23 @@ async def delete_account(
     old_avatar = current_user.profile_image_url
     old_thumb  = current_user.profile_image_thumb_url
 
+    # Bakiye ve çekim kilidi (K5)
+    from app.models.user_wallet_earnings import UserWalletEarnings
+    from app.models.withdrawal_request import WithdrawalRequest
+
+    earnings = await db.get(UserWalletEarnings, uid)
+    if earnings and (earnings.pending > 0 or earnings.available > 0):
+        raise ConflictException(code="ACTIVE_BALANCE_OR_WITHDRAWAL_PENDING")
+
+    has_open_wr = await db.scalar(
+        select(exists().where(
+            WithdrawalRequest.user_id == uid,
+            WithdrawalRequest.status.in_(["pending", "approved"]),
+        ))
+    )
+    if has_open_wr:
+        raise ConflictException(code="ACTIVE_BALANCE_OR_WITHDRAWAL_PENDING")
+
     current_user.email                   = f"purged_{uid}@deleted.invalid"
     current_user.username                = f"deleted_{uid}"
     current_user.full_name               = "Deleted Account"

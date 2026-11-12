@@ -28,6 +28,12 @@ from app.services.firebase_service import send_push
 
 logger = get_logger(__name__)
 
+_PROMOTIONAL_NOTIF_TYPES = frozenset({
+    "churn_airdrop_buyer",
+    "churn_airdrop_seller",
+    "hesitation_retarget",
+})
+
 
 def _in_quiet_window(from_str: str, to_str: str) -> bool:
     """Şu anki İstanbul saatinin sessiz saat aralığında olup olmadığını kontrol eder."""
@@ -63,7 +69,7 @@ async def push_notification(
     user_locale = "tr"
 
     # Single DB query covers both pref check and locale resolution
-    if pref_key or "i18n" in notif:
+    if pref_key or "i18n" in notif or notif_type in _PROMOTIONAL_NOTIF_TYPES:
         async with AsyncSessionLocal() as db:
             user = await db.get(User, user_id)
             if user:
@@ -79,6 +85,15 @@ async def push_notification(
                         if threshold > 0 and amount < threshold:
                             return
                     # Sessiz saatler: FCM push'u bastır, DB'ye yaz
+                    if merged.get("quiet_hours_enabled", False):
+                        if _in_quiet_window(
+                            str(merged.get("quiet_from", "22:00")),
+                            str(merged.get("quiet_to", "08:00")),
+                        ):
+                            suppress_push = True
+                elif notif_type in _PROMOTIONAL_NOTIF_TYPES:
+                    prefs = user.notification_prefs or {}
+                    merged = {**DEFAULT_NOTIF_PREFS, **prefs}
                     if merged.get("quiet_hours_enabled", False):
                         if _in_quiet_window(
                             str(merged.get("quiet_from", "22:00")),

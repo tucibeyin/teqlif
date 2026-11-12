@@ -170,7 +170,7 @@ async def _fetch_risky_user_ids() -> tuple[set[int], set[int]]:
 
     except Exception as exc:
         logger.error("[ChurnAirdrop] ClickHouse erişilemedi: %s", exc, exc_info=True)
-        return set(), set()
+        raise
 
 
 async def _filter_already_received(user_ids: set[int]) -> set[int]:
@@ -187,9 +187,9 @@ async def _filter_already_received(user_ids: set[int]) -> set[int]:
         result = await db.execute(
             text("""
                 SELECT DISTINCT user_id
-                FROM teqlik_transactions
+                FROM wallet_ledger
                 WHERE user_id = ANY(:uids)
-                  AND transaction_type = :ttype
+                  AND tx_type = :ttype
                   AND created_at >= NOW() - INTERVAL '30 days'
             """),
             {
@@ -237,12 +237,13 @@ async def _apply_airdrops(user_ids: set[int]) -> list[dict]:
                 {"amount": _AIRDROP_AMOUNT, "uids": chunk},
             )
 
-            # Transaction logu
+            # Muhasebe logu (wallet_ledger)
             await db.execute(
                 text("""
-                    INSERT INTO teqlik_transactions (user_id, amount, transaction_type, created_at)
-                    SELECT u, :amount, :ttype, NOW()
-                    FROM unnest(CAST(:uids AS int[])) AS u
+                    INSERT INTO wallet_ledger (user_id, delta_teqlik, balance_after, tx_type, created_at)
+                    SELECT u.id, :amount, u.teqlik_balance, :ttype, NOW()
+                    FROM users u
+                    WHERE u.id = ANY(:uids) AND u.status = 'active'
                 """),
                 {"amount": _AIRDROP_AMOUNT, "ttype": _AIRDROP_TYPE, "uids": chunk},
             )

@@ -130,14 +130,9 @@ batch:
     minute: 55
     watchdog_m: 720           # 2× günlük, max boşluk ~12 saat
 
-  # ── 04:00 — Trend ilanlar + churn ───────────────────────────────────────────
+  # ── 04:00 — Trend ilanlar ───────────────────────────────────────────────────
 
   - name: compute_trending_listings_task
-    hour: 4
-    minute: 0
-    watchdog_m: 1440
-
-  - name: process_churn_and_airdrop
     hour: 4
     minute: 0
     watchdog_m: 1440
@@ -147,16 +142,6 @@ batch:
   - name: optimize_notification_timing_task
     hour: 4
     minute: 10
-    watchdog_m: 1440
-
-  - name: deactivate_expired_listings_task
-    hour: 4
-    minute: 15
-    watchdog_m: 1440
-
-  - name: delete_expired_inactive_listings_task
-    hour: 4
-    minute: 20
     watchdog_m: 1440
 
   - name: cleanup_old_impressions_task
@@ -186,9 +171,26 @@ batch:
     minute: 0
     watchdog_m: 1440
 
-  - name: hesitation_retarget_task
-    hour: 5
+  # ── 08:00-08:30 — Promosyonel push penceresi (K6: 07:00 TR fırtınası önlendi) ─
+
+  - name: process_churn_and_airdrop
+    hour: 8
     minute: 0
+    watchdog_m: 1440
+
+  - name: deactivate_expired_listings_task
+    hour: 8
+    minute: 10
+    watchdog_m: 1440
+
+  - name: delete_expired_inactive_listings_task
+    hour: 8
+    minute: 20
+    watchdog_m: 1440
+
+  - name: hesitation_retarget_task
+    hour: 8
+    minute: 30
     watchdog_m: 1440
 
   # ── 05:10 ───────────────────────────────────────────────────────────────────
