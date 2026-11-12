@@ -134,29 +134,47 @@ async def delete_object(url_or_key: str) -> None:
     await asyncio.gather(*[_try_delete(c, nid) for c, nid in storage_nodes])
 
 
-async def list_object_keys(prefix: str) -> list[str]:
-    """Public bucket'taki belirtilen prefix altındaki tüm nesne key'lerini döner.
-    Tüm storage node'larını tarar ve birleşik listeyi döner.
+async def _list_object_keys_impl(
+    bucket: str, prefix: str, tag: str, strict: bool = False
+) -> list[str]:
+    """Belirtilen bucket'taki prefix altındaki nesne key'lerini tüm node'lardan toplar.
+
+    strict=True: hiçbir node başarılı değilse son hatayı yeniden fırlatır (DM okuma garantisi).
+    strict=False: hatalı node'lar atlanır, boş liste döner (public, best-effort).
     """
     storage_nodes = await _get_all_storage_clients()
     if not storage_nodes:
-        logger.error("[STORAGE] list_object_keys: storage node bulunamadı | prefix=%s", prefix)
+        msg = f"[{tag}] list_object_keys: storage node bulunamadı | prefix={prefix}"
+        logger.error(msg)
+        if strict:
+            raise RuntimeError(msg)
         return []
 
     all_keys: set[str] = set()
+    succeeded = 0
+    last_exc: Exception | None = None
     for client, node_label in storage_nodes:
         try:
             def _list(_c=client) -> list[str]:
                 return [
                     obj.object_name
-                    for obj in _c.list_objects(settings.minio_bucket, prefix=prefix, recursive=True)
+                    for obj in _c.list_objects(bucket, prefix=prefix, recursive=True)
                 ]
             keys = await asyncio.to_thread(_list)
             all_keys.update(keys)
+            succeeded += 1
         except Exception as exc:
-            logger.error("[STORAGE] list_object_keys hata: prefix=%s node=%s | %s", prefix, node_label, exc)
+            logger.error("[%s] list_object_keys hata: prefix=%s node=%s | %s", tag, prefix, node_label, exc)
+            last_exc = exc
 
+    if strict and succeeded == 0 and last_exc is not None:
+        raise last_exc
     return list(all_keys)
+
+
+async def list_object_keys(prefix: str) -> list[str]:
+    """Public bucket'taki belirtilen prefix altındaki tüm nesne key'lerini döner."""
+    return await _list_object_keys_impl(settings.minio_bucket, prefix, "STORAGE")
 
 
 async def get_object_bytes(key: str) -> bytes | None:
@@ -279,27 +297,10 @@ async def download_dm_to_file(key: str, local_path: str) -> None:
 
 async def list_object_keys_dm(prefix: str) -> list[str]:
     """Private DM bucket'taki belirtilen prefix altındaki tüm nesne key'lerini döner.
-    Tüm storage node'larını tarar ve birleşik listeyi döner.
+
+    Hiçbir node başarıyla yanıt vermezse son hatayı fırlatır → endpoint 502 döner.
     """
-    storage_nodes = await _get_all_storage_clients()
-    if not storage_nodes:
-        logger.error("[STORAGE_DM] list_object_keys_dm: storage node bulunamadı | prefix=%s", prefix)
-        raise RuntimeError(f"No storage node available for DM prefix: {prefix}")
-
-    all_keys: set[str] = set()
-    for client, node_label in storage_nodes:
-        try:
-            def _list(_c=client) -> list[str]:
-                return [
-                    obj.object_name
-                    for obj in _c.list_objects(settings.minio_dm_bucket, prefix=prefix, recursive=True)
-                ]
-            keys = await asyncio.to_thread(_list)
-            all_keys.update(keys)
-        except Exception as exc:
-            logger.error("[STORAGE_DM] list_object_keys_dm hata: prefix=%s node=%s | %s", prefix, node_label, exc)
-
-    return list(all_keys)
+    return await _list_object_keys_impl(settings.minio_dm_bucket, prefix, "STORAGE_DM", strict=True)
 
 
 async def upload_bytes_dm(key: str, data: bytes, content_type: str) -> str:

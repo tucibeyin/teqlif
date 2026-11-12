@@ -2,11 +2,11 @@
 
 1 yıldan eski, her iki tarafça okunmuş metin mesajlarını:
   - Konuşma + yıl bazında gzip JSON olarak MinIO'ya yazar
-    (teqlif/dm-archive/{user_a}_{user_b}/{year}.json.gz)
+    (teqlif-dm/dm-archive/{user_a}_{user_b}/{year}.json.gz)
   - message_threads.has_archive = TRUE yapar
   - PG'den siler
 
-Pazar 03:00 UTC'de çalışır; büyük çalışmalar için Telegram bildirir.
+Pazar 03:20 UTC'de çalışır (03:00 pg_dump sonrası); büyük çalışmalar için Telegram bildirir.
 """
 from __future__ import annotations
 

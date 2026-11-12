@@ -316,7 +316,7 @@ async def get_archived_messages(
                 ))
         except Exception as exc:
             logger.error("[ARCHIVE] DM nesne okunamadı: key=%s | %s", key, exc)
-            continue
+            raise HTTPException(status_code=502, detail="Arşiv verisi alınamadı")
 
     all_messages.sort(key=lambda x: x.created_at)
     return all_messages
