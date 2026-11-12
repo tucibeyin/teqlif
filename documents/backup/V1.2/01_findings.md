@@ -510,6 +510,7 @@ systemctl enable \
 
 ##### ✅ Çözüm Damgası
 - `2026-11-12` · commit `1ce09741` — `bootstrap_node2.sh`: `install_backup_tools()` eklendi; `setup_backup_directories()` 4 → 10 dizin; `setup_backup_services()` 4 → 12 timer ✓.
+- `2026-11-12` · commit `a1dbf1a1` — `CLICKHOUSE_PASSWORD` placeholder `<clickhouse_password>` → `<teqlif_ch_password>` (secrets.env.template uyumu) ✓; `install_node_exporter`: service dosyası her çalıştırmada güncellenir (listen_addr SRP) + `/tmp` cleanup ✓.
 - `2026-11-12` · commit `b7a45d18` — **İdempotency + DRY + güvenlik düzeltmeleri**: `_common.sh`'e `install_node_exporter(listen_addr)` ortak fonksiyon (sürüm guard + `Text-file-busy` önlemi) ✓; `bootstrap_node2.sh`: `curl|bash` → `apt restic rclone` ✓; `chmod -R 700` → `find -type d` ✓; `.env.backup` idempotent (`[ ! -f ]` + `_add_env_key` eksik anahtar ekleme) + `CLICKHOUSE_PASSWORD`, `CLICKHOUSE_DEFAULT_PASSWORD`, `UPTIME_KUMA_DB_PASS` şablona eklendi ✓; `bootstrap_node101.sh`: `prune/verify.timer` enable Adım 10'a bırakıldı ✓. **Doğrulama:** `bash -n _common.sh bootstrap_node2.sh bootstrap_node101.sh` syntax-clean ✓; canlı node2 tüm timer'lar `enabled` ✓.
 
 ---
