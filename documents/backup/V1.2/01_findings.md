@@ -62,7 +62,7 @@
 | [`MAINT-03`](#maint-03) | 🔴 **P0** | `node2` `redis-failover*`, `redis_failover.sh` | **`promoted` (`18 Eki`) bayrağı nedeniyle resmi failover kör** + düz metin şifreli rogue timer | [Adım 4](#adim-4) | ✅ Çözüldü `c0154e66` |
 | [`MAINT-04`](#maint-04) | 🟡 **P2** | `node1..6`, `node2`, `nodeMonitor` OS Timer | `apt-daily-upgrade` (`06:05–06:50 UTC`) + `node2` `mdcheck` (`06:46 UTC`) backup bloğuna biniyor | [Adım 27](#adim-27) | ✅ `5694a626` |
 | [`MAINT-05`](#maint-05) | 🟡 **P2** | `schedule.yaml`, `schedule_loader.py`, `worker.py` | `backup:` YAML anahtarı yok, `chat_messages` çift kayıt, hatalı saat yorumları | [Adım 28](#adim-28) | ✅ `ecc3f71a` |
-| [`MAINT-06`](#maint-06) | 🟡 **P2** | `loki`, `kuma`, `config`, `pg_wal_cleanup`, `node2` | Redis `job_ok` atmayan 4 script + `0B` yetim `.last_mail_backup_ok` + eski `03:45` mail timer | [Adım 29](#adim-29) | ⬜ Açık |
+| [`MAINT-06`](#maint-06) | 🟡 **P2** | `loki`, `kuma`, `config`, `pg_wal_cleanup`, `node2` | Redis `job_ok` atmayan 4 script + `0B` yetim `.last_mail_backup_ok` + eski `03:45` mail timer | [Adım 29](#adim-29) | ✅ `85954a42` |
 | [`MAINT-07`](#maint-07) | 🟡 **P2** | `nodeMonitor` (`1.9 GiB RAM`) | **`240 MiB` aktif swap**, `165 MiB` free RAM darboğazı — Prometheus/Loki bellek limiti ayarı | [Adım 30](#adim-30) | ⬜ Açık |
 | [`MAINT-08`](#maint-08) | 🟢 **P3** | `node2` `wg show`, `systemd` timeout'lar | Canlı `node2` `wg show` `node3`/`node4` peer eksikliği + backup servislerinde `TimeoutStartSec` | [Adım 34](#adim-34) | ⬜ Açık |
 
@@ -704,8 +704,14 @@ sudo wg-quick save wg0
 * 4 scriptin sonuna `redis-cli ... HSET teqlif:agent:job_ok <job> "$(date -u +%Y-%m-%dT%H:%M:%SZ)"` eklenir; `schedule.yaml` `backup:` listesine ve `health.py` `_BACKUP_MAX_MIN` sözlüğüne hepsi işlenir; `0B` yetim dosya ve eski `.timer` kalıntısı kaldırılır.
 * **Doğrulama:** `redis-cli HGETALL teqlif:agent:job_ok` içinde tüm 11 yerel yedek/temizlik + offsite anahtarı güncellenir.
 
-##### ⬜ Çözüm Damgası
-- *(Henüz uygulanmadı — [Adım 29](#adim-29) bekliyor)*
+##### ✅ Çözüm Damgası
+- `2026-11-12` · commit `85954a42` — **MAINT-06 Adım 29 kapatıldı** ✓:
+  - `pg_wal_cleanup.sh`: `source .env.backup` + `touch .last_wal_cleanup_ok` + `redis-cli HSET job_ok pg_wal_cleanup` eklendi ✓ (`loki`/`kuma`/`config` önceden eklenmişti)
+  - `schedule.yaml backup:`: `pg_wal_cleanup` (06:30 UTC, `watchdog_m: 1500`) eklendi → toplam 13 backup entry ✓
+  - `health.py`: `_BACKUP_MAX_MIN` + `sentinel_dirs` + `blabel`'a `pg_wal_cleanup` eklendi ✓
+  - `teqlif-mail-backup.timer` repo: `03:45 UTC → 03:50 UTC` (live timer ile hizalandı) ✓
+  - node2 `/project/teqlif/backups/.last_mail_backup_ok` 0B yetim sentinel silindi ✓
+  - **Doğrulama:** node2 `mail timer: 03:50 UTC` ✓, `pg_wal_cleanup script: job_ok + sentinel` ✓, `backup entries: 13` ✓
 
 ---
 
@@ -1380,7 +1386,7 @@ await redis.set("ch:last_sync_at", now.isoformat())  # Aradakiler kalıcı kaybo
 ~~28. **Adım 28 (`MAINT-05`):** [`schedule.yaml:304`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/schedule.yaml#L304) içine üst seviye `backup:` anahtarını ekle, [`worker.py:4847`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/worker.py#L4847) mükerrer `cleanup_old_stream_chat_messages_task` satırını sil, `03:00` temizliklerini `03:10 UTC`'ye al ve tüm yanlış yorumları [Kanonik Tablo](#zamanlama-matrisi) ile eşitle → _Neden:_ `schedule_loader` `backup` watch'ını çalıştırmak ve çift cron riskini kaldırmak. → ([Detay](#maint-05))~~ ✅ `ecc3f71a`
 
 <a id="adim-29"></a>
-29. **Adım 29 (`MAINT-06`):** `loki_backup.sh`, `uptime_kuma_backup.sh`, `nodemonitor_config_backup.sh`, `pg_wal_cleanup.sh` scriptlerine Redis `HSET teqlif:agent:job_ok` ekle; `/project/teqlif/backups/.last_mail_backup_ok` `0B` yetimini ve eski `node2/resources/systemd/teqlif-mail-backup.timer` (`03:45`) dosyasını temizle → _Neden:_ Tüm 11 yerel yedekleme/temizlik + offsite anahtarını `watchdog`/`health` izlemesinde tek standarda bağlamak. → ([Detay](#maint-06))
+~~29. **Adım 29 (`MAINT-06`):** `loki_backup.sh`, `uptime_kuma_backup.sh`, `nodemonitor_config_backup.sh`, `pg_wal_cleanup.sh` scriptlerine Redis `HSET teqlif:agent:job_ok` ekle; `/project/teqlif/backups/.last_mail_backup_ok` `0B` yetimini ve eski `node2/resources/systemd/teqlif-mail-backup.timer` (`03:45`) dosyasını temizle → _Neden:_ Tüm 11 yerel yedekleme/temizlik + offsite anahtarını `watchdog`/`health` izlemesinde tek standarda bağlamak. → ([Detay](#maint-06))~~ ✅ `85954a42`
 
 <a id="adim-30"></a>
 30. **Adım 30 (`MAINT-07`):** `nodeMonitor` üzerinde Prometheus (`--storage.tsdb.retention.size=1GB`), Loki/Grafana/MariaDB (`MemoryMax` + `innodb_buffer_pool_size=64M`) bellek optimizasyonu uygula → _Neden:_ `240 MiB` aktif swap kullanımını ve OOM düşüş riskini ortadan kaldırmak. → ([Detay](#maint-07))
