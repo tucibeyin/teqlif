@@ -40,7 +40,7 @@
 | ID | Seviye | Bileşen / Dosya | Zaaf / Hata / Bulgu Özeti | Bağlı Adım | Durum |
 | :---: | :---: | :--- | :--- | :---: | :---: |
 | [`OFFSITE-01`](#offsite-01) | 🔴 **P0** | `cluster.yaml`, `node101/specs.md` | MinIO 2g ILM sonrası tek-kopya riski + `node101` tek volume (`vdb`, RAID yok), IPv4-only ve `/` (`6.1 GB` boş) | [Adım 11](#adim-11) | ⬜ Açık |
-| [`OFFSITE-02`](#offsite-02) | 🔴 **P0** | `offsite_sync.sh`, `node101` (`ext4`) | `rclone sync` destrüktif silme yayılımı + `ext4` snapshot yokluğu + 7g retention kırpması | [Adım 9](#adim-9) | ⬜ Açık |
+| [`OFFSITE-02`](#offsite-02) | 🔴 **P0** | `offsite_sync.sh`, `node101` (`ext4`) | `rclone sync` destrüktif silme yayılımı + `ext4` snapshot yokluğu + 7g retention kırpması | [Adım 9](#adim-9) | ✅ `f773a084` |
 | [`OFFSITE-03`](#offsite-03) | 🔴 **P0** | `offsite_sync.sh`, `.env.backup` | İstemci şifrelemesi (`restic`) ve sunucu dışı **3'lü Key Escrow** eksikliği | [Adım 10](#adim-10) | ⬜ Açık |
 | [`OFFSITE-04`](#offsite-04) | 🔴 **P0** | `teqlif-offsite-sync.*`, `watchdog`, `health`, `schedule.yaml` | 3 izleme katmanında tam körlük, sessiz `exit 0`, `OnFailure` yok + `disabled` vs `active` timer sapması | [Adım 13](#adim-13) | ⬜ Açık |
 | [`OFFSITE-05`](#offsite-05) | 🟠 **P1** | `wg_mesh_apply.sh`, `secrets.env.template`, `node101` UFW | `node101` WG (`10.10.0.101`) peer izolasyonu (yalnız `node2`+`nodeMonitor`), UFW ve SSH sertleştirmesi | [Adım 2](#adim-2) | ✅ Çözüldü `c5cb95a2` |
@@ -277,8 +277,8 @@ ExecStart=/usr/bin/restic forget --tag pg_wal --keep-within 7d --prune
 ```
 * **Doğrulama:** `node2` üzerinden `restic forget --prune` denemesi HTTP `403/Forbidden (append-only)` hatası döndürmelidir; `systemctl is-active restic-rest-server` `active` olmalıdır.
 
-##### ⬜ Çözüm Damgası
-- *(Henüz uygulanmadı — [Adım 9](#adim-9) bekliyor)*
+##### ✅ Çözüm Damgası
+- `2026-11-12` · commit `f773a084` — **P0 OFFSITE-02 kapatıldı** ✓: `restic-rest-server.service` `MemoryMax` `256M→512M` (peak 259MB OOM riskini giderir) ✓; `After=wg-quick@wg0.service` bağımlılığı eklendi ✓; `teqlif-offsite-prune.service` `MemoryMax` `1536M→2G` (GOMEMLIMIT 1536MiB için GC headroom) ✓; `bootstrap_node101.sh` prune+verify timer'lar artık kurulumda enable ediliyor ✓. Live node101: servis dosyaları `sudo cp` + `daemon-reload` ✓; `restic-rest-server` restart — `active`, `MemoryMax=536870912` (512M), `After=wg-quick@wg0.service` ✓; `teqlif-offsite-prune.timer` + `teqlif-offsite-verify.timer` enable + start ✓; Sonraki tetik: Pazar `2026-11-15 08:00/09:00 UTC` ✓; `--append-only`, `--private-repos`, `Authentication enabled` journal'da onaylı ✓.
 
 ---
 
@@ -1188,7 +1188,7 @@ await redis.set("ch:last_sync_at", now.isoformat())  # Aradakiler kalıcı kaybo
 ~~8. **Adım 8 (`BIZ-01` — Bölüm B) [P0/P1/P2 fix `5dedcce8`]:** [`streams.py:300-365`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/routers/streams.py#L300-L365) + [`stream_recording_tasks.py`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/tasks/stream_recording_tasks.py) içine 14 günlük pencerede PRO'ya yükselten kullanıcılar için `node2` arşivinden (`30g` saklama, [Karar K3](#kilitli-kararlar)) `node1` MinIO'ya on-demand geri çekme (rehydrate) + 24h presign akışını ekle → _Neden:_ Standart yayıncılara vaat edilen 14g PRO upsell özelliğinin `404 NoSuchKey`/`RECORDING_EXPIRED` ile kırılmasını önlemek ve `T+14` hakedişle 16g güvenli tampon sağlamak. → ([Detay](#biz-01), [Birlikte: Adım 18](#adim-18))~~ ✅ `5dedcce8`
 
 <a id="adim-9"></a>
-9. **Adım 9 (`OFFSITE-02`):** `node101` üzerinde `restic-rest-server 0.13.0` (`--append-only --listen 10.10.0.101:8000 --htpasswd-file ... --path /mnt/data`) servisini kur (`--private-repos` ile her HTTP user kendi `/mnt/data/<user>/` alt dizinini görür); `node101` yerel `teqlif-offsite-prune.{service,timer}` (`Pazar 08:00 UTC`, `GOMEMLIMIT=1536MiB`, `GOGC=20`, `MemoryMax=2G`) oluştur → _Neden:_ `node2` ele geçirilse bile `node101`'deki yedeklerin silinememesini (WORM) ve `2.9 GiB RAM` korunmasını garanti etmek. → ([Detay](#offsite-02))
+~~9. **Adım 9 (`OFFSITE-02`):** `node101` üzerinde `restic-rest-server 0.13.0` (`--append-only --listen 10.10.0.101:8000 --htpasswd-file ... --path /mnt/data`) servisini kur (`--private-repos` ile her HTTP user kendi `/mnt/data/<user>/` alt dizinini görür); `node101` yerel `teqlif-offsite-prune.{service,timer}` (`Pazar 08:00 UTC`, `GOMEMLIMIT=1536MiB`, `GOGC=20`, `MemoryMax=2G`) oluştur → _Neden:_ `node2` ele geçirilse bile `node101`'deki yedeklerin silinememesini (WORM) ve `2.9 GiB RAM` korunmasını garanti etmek. → ([Detay](#offsite-02))~~ ✅ `f773a084`
 
 <a id="adim-10"></a>
 10. **Adım 10 (`OFFSITE-03`):** `node2` üzerinde `/etc/teqlif/restic.pass` (`chmod 600`, Git dışı) oluşturup şifreli `restic init` (`AES-256-CTR + Poly1305`) çalıştır; `RESTIC_PASSWORD` ve HTTP auth sırlarını **3 bağımsız noktada Key Escrow** kasasına kaydet ve şifreli test doğrulaması yap → _Neden:_ `node101` diskinde PII/DM/finans verisinin şifreli kalması ve `node2` yansa bile kilitsiz kurtarma sağlanması. → ([Detay](#offsite-03))
