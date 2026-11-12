@@ -22,7 +22,8 @@ MAX_FAILURES=3
 ALERT_COOLDOWN_SEC=1800   # 30 dakika — aynı arıza için tekrar alarm
 
 PROM_URL="http://10.10.0.99:9090/-/healthy"
-AM_URL="http://10.10.0.99:9093/-/healthy"
+# Alertmanager 127.0.0.1:9093 — sadece localhost dinliyor, WireGuard üzerinden ulaşılamaz
+# Prometheus sağlıklıysa izleme altyapısı çalışıyor demektir; AM check kaldırıldı
 
 mkdir -p "${FAILURES_DIR}"
 chmod 700 "${FAILURES_DIR}"
@@ -85,11 +86,9 @@ set_cooldown() {
 
 # ── Ana kontrol ───────────────────────────────────────────────────────────────
 prom_ok=0
-am_ok=0
-check_healthy "${PROM_URL}"  && prom_ok=1 || true
-check_healthy "${AM_URL}"    && am_ok=1   || true
+check_healthy "${PROM_URL}" && prom_ok=1 || true
 
-if [ "${prom_ok}" -eq 1 ] && [ "${am_ok}" -eq 1 ]; then
+if [ "${prom_ok}" -eq 1 ]; then
     was_active=0
     [ -f "${ALERT_SENT_FILE}" ] && was_active=1
     reset_failures
@@ -104,7 +103,7 @@ fi
 # Başarısız: sayacı artır
 increment_failures
 failures=$(current_failures)
-logger "teqlif-dms: nodeMonitor erişilemiyor (ardışık=${failures}, prom=${prom_ok}, am=${am_ok})"
+logger "teqlif-dms: nodeMonitor Prometheus erişilemiyor (ardışık=${failures})"
 
 if [ "${failures}" -lt "${MAX_FAILURES}" ]; then
     exit 0
@@ -116,12 +115,10 @@ if in_cooldown; then
 fi
 
 ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-prom_status=$([ "${prom_ok}" -eq 1 ] && echo "✅" || echo "❌")
-am_status=$([ "${am_ok}" -eq 1 ]   && echo "✅" || echo "❌")
 
 send_telegram "🚨 <b>nodeMonitor ÇÖKTÜ!</b>
 ${ts}
-Prometheus ${prom_status} · Alertmanager ${am_status}
+Prometheus ❌ (10.10.0.99:9090 yanıt vermiyor)
 Ardışık başarısız kontrol: ${failures}
 
 <b>nodeMonitor (10.10.0.99) erişilemiyor.</b> İzleme altyapısı ve teqlif-agent lider çalışmıyor olabilir." || true
