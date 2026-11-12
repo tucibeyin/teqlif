@@ -1,0 +1,11 @@
+[Unit]
+Description=nodeMonitor Dead Man's Switch — her 2 dakikada bir kontrol
+PartOf=teqlif-dms.service
+
+[Timer]
+OnBootSec=60s
+OnUnitActiveSec=2min
+AccuracySec=10s
+
+[Install]
+WantedBy=timers.target

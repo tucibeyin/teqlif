@@ -53,6 +53,7 @@ main() {
     setup_redis_failover "${NODE_DIR}"
     setup_venv "${REPO_DIR}"
     setup_dr_app "${NODE_DIR}"
+    setup_exporters_node2 "${NODE_DIR}"
 
     if [ -n "${SECRETS_FILE:-}" ]; then
         apply_secrets "${SECRETS_FILE}" \
@@ -69,7 +70,62 @@ main() {
         "Redis failover aktif: systemctl status teqlif-redis-failover.timer" \
         "Restic repo başlatma (Faz 2 sonrası): sudo -u tucibeyin restic init" \
         "Offsite timer başlatma (Faz 2 sonrası): systemctl start teqlif-offsite-sync.timer teqlif-offsite-wal.timer" \
-        "Cluster secrets SSH key: cat ~/.ssh/id_ed25519_cluster_backup.pub → node1..6+nodeMonitor+node101 authorized_keys'e 'from=\"10.10.0.2\" <pubkey>' sat olarak ekle (secrets.env.template BÖLÜM 4)"
+        "Cluster secrets SSH key: cat ~/.ssh/id_ed25519_cluster_backup.pub → node1..6+nodeMonitor+node101 authorized_keys'e 'from=\"10.10.0.2\" <pubkey>' sat olarak ekle (secrets.env.template BÖLÜM 4)" \
+        "MinIO metrics token (nodeMonitor'da): mc admin prometheus generate <alias> cluster > /opt/teqlif-agent/minio_metrics_token"
+}
+
+setup_exporters_node2() {
+    local node_dir="${1}"
+    log_step "BIZ-04-B: Redis replica exporter + ClickHouse Prometheus + DMS"
+
+    # prometheus system user
+    if ! id prometheus &>/dev/null; then
+        useradd --system --no-create-home --shell /usr/sbin/nologin prometheus
+    fi
+
+    # Redis replica exporter
+    if ! dpkg -l prometheus-redis-exporter &>/dev/null; then
+        apt-get install -y prometheus-redis-exporter
+    fi
+    REDIS_CONF="/etc/redis/redis-replica.conf"
+    REDIS_PASS=$(grep -m1 '^requirepass' "${REDIS_CONF}" 2>/dev/null | awk '{print $2}' || true)
+    echo "ARGS=--redis.addr=redis://127.0.0.1:6379 --redis.password=${REDIS_PASS} --web.listen-address=10.10.0.2:9121" \
+        > /etc/default/prometheus-redis-exporter
+    chmod 640 /etc/default/prometheus-redis-exporter
+    chown root:prometheus /etc/default/prometheus-redis-exporter
+    mkdir -p /etc/systemd/system/prometheus-redis-exporter.service.d
+    cat > /etc/systemd/system/prometheus-redis-exporter.service.d/override.conf <<'DROPIN'
+[Service]
+ExecStart=
+ExecStart=/usr/bin/prometheus-redis-exporter $ARGS
+DROPIN
+
+    # ClickHouse Prometheus endpoint config
+    mkdir -p /etc/clickhouse-server/config.d
+    local prom_xml="${node_dir}/resources/clickhouse/config.d/prometheus.xml"
+    local dest_xml="/etc/clickhouse-server/config.d/prometheus.xml"
+    if [ ! -f "${dest_xml}" ]; then
+        cp "${prom_xml}" "${dest_xml}"
+        chown root:clickhouse "${dest_xml}"
+        chmod 640 "${dest_xml}"
+    fi
+
+    # DMS state dizini
+    mkdir -p /var/lib/teqlif-dms
+    chown tucibeyin:tucibeyin /var/lib/teqlif-dms
+    chmod 700 /var/lib/teqlif-dms
+
+    # DMS script çalıştırma izni
+    chmod 755 "${node_dir}/resources/scripts/nodemonitor_dms_check.sh"
+
+    # DMS systemd dosyaları
+    cp "${node_dir}/resources/systemd/teqlif-dms.service" /etc/systemd/system/
+    cp "${node_dir}/resources/systemd/teqlif-dms.timer"   /etc/systemd/system/
+
+    systemctl daemon-reload
+    systemctl enable --now prometheus-redis-exporter
+    systemctl enable --now teqlif-dms.timer
+    log_ok "Redis replica exporter + DMS timer aktif"
 }
 
 setup_backup_directories() {

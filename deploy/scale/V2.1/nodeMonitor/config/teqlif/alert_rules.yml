@@ -123,3 +123,44 @@ groups:
         annotations:
           summary: "PostgreSQL replikasyon gecikmesi"
           description: "Replikasyon gecikmesi {{ $value }}s — replica güncel değil."
+
+  # ── BIZ-04-B: PG replication slot izleme ──────────────────────────────
+  - name: pg_replication_slots
+    interval: 60s
+    rules:
+      - alert: PgReplicationSlotInactive
+        expr: pg_replication_slots_active == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PG replication slot inaktif: {{ $labels.slot_name }}"
+          description: "{{ $labels.slot_name }} slot'u en az 5 dakikadır inaktif — WAL birikmeye başlar, disk dolabilir."
+
+      - alert: PgReplicationSlotWalRetentionHigh
+        # pg_wal_lsn_diff: current_wal_lsn - confirmed_flush_lsn (bytes)
+        # 5 GB = 5 * 1024^3 = 5368709120
+        expr: pg_replication_slots_pg_wal_lsn_diff > 5368709120
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PG slot WAL birikimi yüksek: {{ $labels.slot_name }}"
+          description: "{{ $labels.slot_name }} için {{ $value | humanize1024 }}B WAL tutulluyor (eşik: 5 GB) — replica gecikmesi veya inaktif slot."
+
+  # ── BIZ-04-B: Aktif swap izleme ───────────────────────────────────────
+  - name: system_swap
+    interval: 60s
+    rules:
+      - alert: ActiveSwapHigh
+        # node_memory_SwapTotal_bytes > 0 koşulu: swap yapılandırılmamış node'lar için yanlış alarm önler
+        expr: |
+          node_memory_SwapTotal_bytes > 0
+          and
+          (1 - (node_memory_SwapFree_bytes / node_memory_SwapTotal_bytes)) * 100 > 50
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.node }} aktif swap yüksek"
+          description: "{{ $labels.node }} swap kullanımı %{{ $value | printf \"%.1f\" }} — bellek baskısı kritik düzeye yaklaşıyor, OOM riski artar."

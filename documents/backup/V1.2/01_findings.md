@@ -1203,7 +1203,16 @@ await _agent_ok(ctx, "daily_financial_reconciliation_task")  # Telegram / Sentry
   - `.tmp` staging + `tar -tzf` bütünlük doğrulaması eklendi ✓
   - `schedule.yaml`: `mail_backup hour:6 → hour:3, minute:50` ✓
   - node2 test: **OK (5.4M)**, `NextElapseUSecRealtime=2026-11-13 03:50:00 UTC` ✓
-- *(Adım 20: nodeMonitor SPOF + Prometheus hedefleri bekliyor)*
+- `2026-11-12` · commit `TBD` — **BIZ-04 Adım 20 (nodeMonitor SPOF + Prometheus) kapatıldı** ✓:
+  - `prometheus.yml`: `rest-server` (node101:8000) + `clickhouse` (node2:9363) + `minio` (node1:9000/metrics, bearer_token_file) + `redis-replica` (node2:9121) + `stalwart` (node2:8080) eklendi ✓
+  - `alert_rules.yml`: `PgReplicationSlotInactive` + `PgReplicationSlotWalRetentionHigh` (>5 GB) + `ActiveSwapHigh` (>50%) eklendi ✓
+  - `node2/resources/scripts/nodemonitor_dms_check.sh`: Dead Man's Switch — 3 ardışık başarısızlıkta Telegram uyarısı ✓
+  - `node2/resources/systemd/teqlif-dms.service` + `teqlif-dms.timer` (her 2 dk) ✓
+  - `node2/resources/clickhouse/config.d/prometheus.xml`: ClickHouse Prometheus endpoint (port 9363) ✓
+  - `node2/resources/setup_exporters.sh`: redis_exporter (replica) + ClickHouse Prometheus + DMS kurulum scripti ✓
+  - `bootstrap_node2.sh`: `setup_exporters_node2()` fonksiyonu eklendi ✓
+  - `node5` staging: ClickHouse + MinIO kasıtlı yedeksiz (staging — prod SLA dışı)
+  - Kalan manuel adımlar: MinIO bearer token (`mc admin prometheus generate`), node2'de `setup_exporters.sh` çalıştırma, Prometheus reload
 
 ---
 
@@ -1307,7 +1316,7 @@ await redis.set("ch:last_sync_at", now.isoformat())  # Aradakiler kalıcı kaybo
 19. **Adım 19 (`AUDIT-02`):** [`watchdog.py`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/teqlif-agent/modules/watchdog.py#L49-L64) `_CONTINUOUS_REGISTRY` ile [`worker.py:4816-4853`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/worker.py#L4816-L4853) statik görevlerini eşitle; eksik `10+` göreve (ve early-return'lere) `_agent_ok` ekle; [`db.py:130-137`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/teqlif-agent/db.py#L130-L137) "hiç çalışmamış iş" (`last_ok_at IS NULL`) körlüğünü aç; [`recorder.py`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/teqlif-agent/modules/recorder.py#L338-L340) aktif edge heartbeat ayarla ve [`reporter.py:47-53`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/teqlif-agent/modules/reporter.py#L47-L53) raporunu tüm yerel + offsite yedekleri (`offsite_sync`, `offsite_wal_sync` dahil) kapsayacak biçimde tamamla → _Neden:_ `Nov 1`'de donan watchdog SQLite tablosunu ve sessiz duran ARQ cron körlüklerini kaldırmak. → ([Detay](#audit-02), [Birlikte: Adım 13](#adim-13))
 
 <a id="adim-20"></a>
-20. **Adım 20 (`BIZ-04` — Bölüm B):** [`prometheus.yml`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/nodeMonitor/config/teqlif/prometheus.yml) içine `node101`, `rest-server`, `ClickHouse`, `MinIO`, `Redis Replica`, `pg_receivewal`, `Stalwart` scrape hedeflerini ve [`alert_rules.yml`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/nodeMonitor/config/teqlif/alert_rules.yml) içine inaktif/şişen PG slot (`> 5 GB`), swap ve backup fail kurallarını ekle; `node2`'den `nodeMonitor` için dış **Dead Man's Switch** kur + `node5` staging yedek politikasını netleştir → _Neden:_ `nodeMonitor` SPOF arızasında ve kör kritik servislerde sessiz kesinti yaşanmasını önlemek. → ([Detay](#biz-04))
+~~20. **Adım 20 (`BIZ-04` — Bölüm B):** [`prometheus.yml`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/nodeMonitor/config/teqlif/prometheus.yml) içine `node101`, `rest-server`, `ClickHouse`, `MinIO`, `Redis Replica`, `pg_receivewal`, `Stalwart` scrape hedeflerini ve [`alert_rules.yml`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/nodeMonitor/config/teqlif/alert_rules.yml) içine inaktif/şişen PG slot (`> 5 GB`), swap ve backup fail kurallarını ekle; `node2`'den `nodeMonitor` için dış **Dead Man's Switch** kur + `node5` staging yedek politikasını netleştir → _Neden:_ `nodeMonitor` SPOF arızasında ve kör kritik servislerde sessiz kesinti yaşanmasını önlemek. → ([Detay](#biz-04))~~ ✅ `TBD`
 
 <a id="adim-21"></a>
 21. **Adım 21 (`MAINT-01`):** [`cleaner.py:35-112`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/teqlif-agent/modules/cleaner.py#L35-L112) içindeki `message_threads` (`180d`) ve batch'siz PG `DELETE` tablosunu emekliye ayır; tüm PG temizliğini batched ARQ (`worker.py` + `schedule.yaml`) tek otoritesine bırak → _Neden:_ `PG_DSN` tanımlandığı an 180–365 günlük mesaj thread'lerinin silinmesini ve çift temizlik WAL patlamasını engellemek. → ([Detay](#maint-01))

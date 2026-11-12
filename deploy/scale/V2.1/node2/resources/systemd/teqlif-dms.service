@@ -1,0 +1,20 @@
+[Unit]
+Description=nodeMonitor Dead Man's Switch kontrol servisi
+Documentation=file:///var/www/teqlif.com/deploy/scale/V2.1/node2/resources/scripts/nodemonitor_dms_check.sh
+After=network-online.target wg-quick@wg0.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=tucibeyin
+Group=tucibeyin
+ExecStart=/var/www/teqlif.com/deploy/scale/V2.1/node2/resources/scripts/nodemonitor_dms_check.sh
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=teqlif-dms
+
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
