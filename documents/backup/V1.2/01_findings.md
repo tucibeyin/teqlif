@@ -862,6 +862,18 @@ EOF
   - Kök neden: node1/5 `cf-origin.key` → `root:root 600` (tucibeyin okuyamazken); node5 bazı `.env` → `root:root 600`; node6 `/project/teqlif/config/` → `root:root 700`
   - Live fix: `cf-origin.key` → `root:tucibeyin 640`; root-owned `.env` → `tucibeyin`; node6 config dir → `tucibeyin`
   - `_common.sh apply_secrets()`: TLS normalize bloğu eklendi (`*.key` → `root:tucibeyin 640`) — bootstrap tekrarında sorun çıkmaz
+- `2026-11-12` · commit `cadedc0d` — **AUDIT-03 reviewer P1/P2 fix** ✓:
+  - `teqlif-cluster-secrets-backup.service`: `OnFailure=teqlif-notify-failure@%n.service` → `teqlif-backup-failed@%n.service` (yanlış unit adı) ✓
+  - `cluster_secrets_backup.sh`: node2 kendisi için SSH-to-self kaldırıldı → yerel rsync; SSH bağlantı hatası `rc=255` ile `rc=1` ("dizin yok") ayrıştırıldı; `A && B || C` operatör zincirleri güvenlileştirildi; `job_ok` + `.last_backup_ok` `TOTAL_FAIL=0` sonrasına taşındı ✓
+  - `schedule.yaml`: `cluster_secrets_backup` girdisi eklendi (`hour:6, minute:20, watchdog_m:1500`) ✓
+  - `health.py`: `_BACKUP_MAX_MIN`, `blabel`, `sentinel_dirs` sözlüklerine `cluster_secrets_backup` girdisi eklendi ✓
+- `2026-11-12` · commit `71cb88e1` — **AUDIT-03 WireGuard dizin traverse izni** ✓:
+  - `_common.sh apply_secrets()`: WireGuard normalize bloğu eklendi (`/etc/wireguard` → `root:tucibeyin 710`, `privatekey`+`wg0.conf` → `root:tucibeyin 640`) ✓
+  - `710` = execute(traverse) evet, read(listing) hayır — rsync dizin-sync modu `readdir()` çağırır, `x`-only dizinde `Permission denied` → 0 dosya kopyalar; düzeltme bir sonraki commit'te
+- `2026-11-12` · commit `5fb6e696` — **AUDIT-03 WireGuard rsync explicit dosya path** ✓:
+  - `cluster_secrets_backup.sh`: WireGuard rsync dizin-sync → explicit dosya path'i (`privatekey`, `wg0.conf`, `pubkey` ayrı ayrı) — `710` dizinde `readdir()` gerekmez, sadece `execute` yeterli ✓
+  - node2 `.env.metrics-agent` `root:root 600` → `tucibeyin:tucibeyin` live fix ✓
+  - **Final test: ok=8 fail=0** (268K — TLS+WG+env tüm 8 node) ✓
 
 ---
 
