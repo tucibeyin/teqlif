@@ -87,7 +87,7 @@
 | [`BIZ-02`](#biz-02) | 🔴 **P0** | `wallet_tasks.py:102-262`, `node1` PG, `redis_failover.sh` | **Alarmsız mutabakat** + **Sınırsız `max_slot_wal_keep_size = -1`** (prod disk crash!) + `wg` peer tuzağı | [Adım 6](#adim-6), [Adım 4](#adim-4) | ✅ Çözüldü `8234ee8d` |
 | [`BIZ-03`](#biz-03) | 🟠 **P1** | `auth.py:1638`, `analytics_tasks`, `listing_tasks`, `notification_service` | KVKK `delete_account` (bakiye kilidi/DM yok) + `--remove` yok + **`07:00 TR` push fırtınası** | [Adım 24](#adim-24), [Adım 18](#adim-18) | ✅ `8895adae` |
 | [`BIZ-04`](#biz-04) | 🟠 **P1** | `mail_backup.sh`, `nodeMonitor` SPOF, Prometheus kapsamı | **`09:15 TR` Mail Stop** (`config.toml`/`.env.mail` yok) + **`nodeMonitor` SPOF** + CH/MinIO/Mail kör | [Adım 17](#adim-17), [Adım 20](#adim-20) | ✅ Çözüldü `8f668955` (Adım 17) + `214c287a..91239cee` (Adım 20) |
-| [`BIZ-05`](#biz-05) | 🟠 **P1** | `worker.py:4153-4264`, `listing_tasks.py:84-160` | `sync_pg_to_clickhouse` `LIMIT` sessiz veri silme + sınırsız/retry'sız ilan temizleme (`>50K`) | [Adım 25](#adim-25) | ⬜ Açık |
+| [`BIZ-05`](#biz-05) | 🟠 **P1** | `worker.py:4153-4264`, `listing_tasks.py:84-160` | `sync_pg_to_clickhouse` `LIMIT` sessiz veri silme + sınırsız/retry'sız ilan temizleme (`>50K`) | [Adım 25](#adim-25) | ✅ `f47c66ab` |
 
 ---
 
@@ -1249,8 +1249,11 @@ await redis.set("ch:last_sync_at", now.isoformat())  # Aradakiler kalıcı kaybo
 2. `listing_tasks.py`: İlanları `LIMIT 500` batch'lerle işle, `delete_listing_files` çağrılarını `asyncio.Semaphore(10)` ile paralel yürüt ve `except` bloklarının sonuna `raise` ekle.
 * **Doğrulama:** `LIMIT` testinde `500.001+` satırlık mock tabloda tüm partilerin ClickHouse'a eksiksiz aktarıldığı ve cursor öncesi dışında silme yapılmadığı doğrulanır.
 
-##### ⬜ Çözüm Damgası
-- *(Henüz uygulanmadı — [Adım 25](#adim-25) bekliyor)*
+##### ✅ Çözüm Damgası
+- `2026-11-12` · commit `f47c66ab` — **BIZ-05 Adım 25 kapatıldı** ✓:
+  - `worker.py`: `LIMIT 200K/500K` kaldırıldı; `(created_at, id)` cursor + `while True` loop — tüm sayfalar bitmeden `ch:last_sync_at` güncellenmez ✓
+  - `worker.py`: `analytics_events` DELETE → 5000'lik batch + `created_at < now-48h` güvencesi ✓
+  - `listing_tasks.py`: `UPDATE … IN (SELECT … LIMIT 500)` subquery batch; medya silme `asyncio.Semaphore(10)` ile paralel; `except` → `raise` ✓
 
 ---
 
@@ -1342,7 +1345,7 @@ await redis.set("ch:last_sync_at", now.isoformat())  # Aradakiler kalıcı kaybo
 ~~24. **Adım 24 (`BIZ-03`):** [`auth.py:1638-1719`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/routers/auth.py#L1638-L1719) `delete_account` içine `UserWalletEarnings` / `WithdrawalRequest` `409 Conflict` koruması ([Karar K5](#kilitli-kararlar)) + ilan/DM temizliği ekle; `schedule.yaml`'daki airdrop/ilan/retarget promosyonel push'larını `08:00–08:30 UTC` (`11:00–11:30 TR`) penceresine alıp `quiet_hours` kontrolü uygula ([Karar K6](#kilitli-kararlar)); [`analytics_tasks.py:171-321`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/tasks/analytics_tasks.py#L171-L321) CH hatasında `raise` et + `wallet_ledger` bağla → _Neden:_ KVKK uyumu, açık bakiye korunması ve `07:00 TR` push fırtınasının önlenmesi. → ([Detay](#biz-03), [Birlikte: Adım 18](#adim-18))~~ ✅ `8895adae`
 
 <a id="adim-25"></a>
-25. **Adım 25 (`BIZ-05`):** [`worker.py:4145-4268`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/worker.py#L4145-L4268) `sync_pg_to_clickhouse_task` içine cursor pagination + `ch:last_sync_at` öncesi dışında silmeme + 5.000 batch `DELETE` koy; [`listing_tasks.py:84-160`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/tasks/listing_tasks.py#L84-L160) 500'lük chunk, paralel `delete_listing_files` ve `except` içine `raise` ekle → _Neden:_ `>50K` kullanıcı ölçeğinde sessiz ClickHouse veri kaybını ve ARQ timeout/kilit patlamasını önlemek. → ([Detay](#biz-05))
+~~25. **Adım 25 (`BIZ-05`):** [`worker.py:4145-4268`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/worker.py#L4145-L4268) `sync_pg_to_clickhouse_task` içine cursor pagination + `ch:last_sync_at` öncesi dışında silmeme + 5.000 batch `DELETE` koy; [`listing_tasks.py:84-160`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/tasks/listing_tasks.py#L84-L160) 500'lük chunk, paralel `delete_listing_files` ve `except` içine `raise` ekle → _Neden:_ `>50K` kullanıcı ölçeğinde sessiz ClickHouse veri kaybını ve ARQ timeout/kilit patlamasını önlemek. → ([Detay](#biz-05))~~ ✅ `f47c66ab`
 
 ---
 
