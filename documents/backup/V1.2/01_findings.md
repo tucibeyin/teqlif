@@ -48,7 +48,7 @@
 | [`OFFSITE-07`](#offsite-07) | 🟠 **P1** | `offsite_sync.sh`, `pg_basebackup.sh`, `pg_wal`, `pg_dump.sh` | Offsite PG PITR (`pg_basebackup`+`pg_wal`) eksikliği (24s RPO) + `pg_dump/*.dump.gz` (2–8 Eki) yetimleri | [Adım 12](#adim-12) | ✅ `114c0ee4` |
 | [`OFFSITE-08`](#offsite-08) | 🟠 **P1** | `clickhouse_backup.sh`, canlı `node2` CH | Method 1/2 çalışmıyor (`/var/lib/clickhouse/backups` boş), fallback `285B` arşiv, `BACKUP` izni/DDL yok | [Adım 14](#adim-14) | ✅ `350df516` |
 | [`OFFSITE-09`](#offsite-09) | 🟠 **P1** | `nodemonitor_config_backup.sh`, canlı `node2` | **`979 MB` TSDB/WAL sızıntısı** (`prometheus/data` 823M + `loki` 156M) — `--delete-excluded` yok | [Adım 15](#adim-15) | ✅ `3afe4310` |
-| [`OFFSITE-10`](#offsite-10) | 🟡 **P2** | `node2/systemd/*.service`, `offsite_sync` | Tüm backup servislerinde `IOSchedulingClass=idle`/`Nice=19` eşitleme ve `.tmp`/`.partial` filtre | [Adım 26](#adim-26) | ⬜ Açık |
+| [`OFFSITE-10`](#offsite-10) | 🟡 **P2** | `node2/systemd/*.service`, `offsite_sync` | Tüm backup servislerinde `IOSchedulingClass=idle`/`Nice=19` eşitleme ve `.tmp`/`.partial` filtre | [Adım 26](#adim-26) | ✅ `095f7f31` |
 | [`OFFSITE-11`](#offsite-11) | 🟡 **P2** | `runbook.sh`, `node101/resources/` | `node101 → yeni node1/node2` çifte felaket DR runbook'u + periyodik decrypt/PITR tatbikatı | [Adım 36](#adim-36) | ⬜ Açık |
 | [`OFFSITE-12`](#offsite-12) | 🟡 **P2** | `_common.sh`, `bootstrap_node2.sh`, `bootstrap_node101.sh` | Tekrarlanabilir `bootstrap_node101.sh` yok; `node2` bootstrap'ta `rclone`/7 timer `enable` eksik | [Adım 3](#adim-3) | ✅ Çözüldü `1ce09741` |
 | [`OFFSITE-13`](#offsite-13) | 🟢 **P3** | `documents/wallet/V1.0`, `node101` | TTK/MASAK 5–10 yıl `financial_archives` WORM şifreli mühürlü akışı eksik | [Adım 35](#adim-35) | ⬜ Açık |
@@ -485,8 +485,11 @@ rsync_from_nodemonitor "/opt/monitor/teqlif/" "${BACKUP_DIR}/monitor-config" \
 * `offsite-sync` ([Adım 13](#adim-13)) dahil eksik 7 `.service` biriminin `[Service]` altına `Nice=19` + `IOSchedulingClass=idle` + `IOSchedulingPriority=7` ekle; `restic` scriptlerinde `--exclude '*.tmp' --exclude '*.partial' --exclude '.last_*'` sabitle.
 * **Doğrulama:** `systemctl show teqlif-*-backup teqlif-offsite-sync -p IOSchedulingClass,Nice` tamamı `idle` / `19` döner.
 
-##### ⬜ Çözüm Damgası
-- *(Henüz uygulanmadı — [Adım 26](#adim-26) bekliyor)*
+##### ✅ Çözüm Damgası
+- `2026-11-12` · commit `095f7f31` — **OFFSITE-10 Adım 26 kapatıldı** ✓:
+  - `teqlif-pg-basebackup`, `teqlif-loki-backup`, `teqlif-uptime-kuma-backup`, `teqlif-nodemonitor-config-backup`, `teqlif-mail-backup`, `teqlif-pg-wal-cleanup` → `Nice=19` + `IOSchedulingClass=idle` ✓
+  - `offsite_wal_sync.sh`: `restic backup` → `--exclude '.last_*'` eklendi (`.tmp`+`.partial` zaten vardı) ✓
+  - Doğrulama: `systemctl show … -p IOSchedulingClass,Nice` → tüm 6 servis `idle/19` ✓
 
 ---
 
@@ -1354,7 +1357,7 @@ await redis.set("ch:last_sync_at", now.isoformat())  # Aradakiler kalıcı kaybo
 ### 🟡 Faz 3: Sistem Hijyeni, OS Zamanlama, Batch Temizlik & Kurtarma Tatbikatı (P2–P3 — 11 Adım)
 
 <a id="adim-26"></a>
-26. **Adım 26 (`OFFSITE-10`):** Kalan 6 yerel `node2/systemd/*.service` (`pg-basebackup`, `loki`, `uptime-kuma`, `nodemonitor-config`, `mail`, `pg-wal-cleanup`; `offsite-sync` [Adım 13](#adim-13)'te) birimine `IOSchedulingClass=idle`, `IOSchedulingPriority=7`, `Nice=19` ekle ve `*.tmp`/`*.partial`/`.last_*` hariç tutmasını tüm scriptlerde kilitle → _Neden:_ `node2` HDD kuyruğunun yedekler yüzünden ClickHouse/WAL/posta I/O'sunu boğmasını engellemek. → ([Detay](#offsite-10))
+~~26. **Adım 26 (`OFFSITE-10`):** Kalan 6 yerel `node2/systemd/*.service` (`pg-basebackup`, `loki`, `uptime-kuma`, `nodemonitor-config`, `mail`, `pg-wal-cleanup`; `offsite-sync` [Adım 13](#adim-13)'te) birimine `IOSchedulingClass=idle`, `IOSchedulingPriority=7`, `Nice=19` ekle ve `*.tmp`/`*.partial`/`.last_*` hariç tutmasını tüm scriptlerde kilitle → _Neden:_ `node2` HDD kuyruğunun yedekler yüzünden ClickHouse/WAL/posta I/O'sunu boğmasını engellemek. → ([Detay](#offsite-10))~~ ✅ `095f7f31`
 
 <a id="adim-27"></a>
 27. **Adım 27 (`MAINT-04`):** `node1..6`, `node2` ve `nodeMonitor` üzerinde `apt-daily-upgrade.timer` `override.conf` ile **`07:45 UTC`**'ye ve `node2` `mdcheck_continue.timer` `07:35 UTC` sonrasına çek → _Neden:_ Otomatik APT restart ve aylık RAID parity scrub'ının sabah backup/offsite bloğuna girmesini önlemek. → ([Detay](#maint-04))
