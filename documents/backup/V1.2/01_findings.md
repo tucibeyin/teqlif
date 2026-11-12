@@ -661,6 +661,10 @@ sudo wg-quick save wg0
   - `node1-6/nodeMonitor/systemd-overrides/apt-daily-upgrade.timer.d/teqlif-timing.conf` repo'da ✓
   - `node2/systemd-overrides/mdcheck_continue.timer.d/teqlif-timing.conf` repo'da ✓
   - **Doğrulama:** `apt-daily-upgrade.timer` Next: `07:47–07:54 UTC` (tüm node'lar); `mdcheck_continue` override: `07:35 UTC ±15m` ✓
+- `2026-11-12` · commit `ca336741` — **MAINT-04 follow-up (UTC eksplisit + timer restart)** ✓:
+  - **P2:** `OnCalendar` ifadelerine `UTC` eklendi — 8 override dosyası + `_common.sh` heredoc'ları; nodeMonitor CET (UTC+1) saat diliminde çalıştığından `07:45:00` yerel = `06:46 UTC` hatası giderildi ✓
+  - **P3:** `sync_timer_overrides()` override değiştiğinde `daemon-reload` sonrası `systemctl restart <timer>` yapar; saat dilimi farkından bağımsız olarak zamanlamayı anında aktive eder ✓
+  - **Doğrulama:** `nodeMonitor apt-daily-upgrade.timer` Next: `08:46:50 CET` = **`07:46:50 UTC`** ✓ (önceki: `06:46 UTC`)
 
 ---
 
