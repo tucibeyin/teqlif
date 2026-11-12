@@ -18,7 +18,7 @@
 
 batch:
 
-  # ── 01:50 — PG→CH sync (CH backup 01:30'da biter, cache batch'inden önce olmalı) ─
+  # ── 01:50 — PG→CH sync (analitik cache 02:30 başlamadan önce olmalı) ───────
 
   - name: sync_pg_to_clickhouse_task
     hour: 1
@@ -66,22 +66,19 @@ batch:
     minute: 15
     watchdog_m: 1440
 
-  # ── 03:00 — Temizlik penceresi açılır ──────────────────────────────────────
+  # ── 03:10 — Temizlik penceresi (pg_dump 03:00 sonrası) ────────────────────
 
   - name: cleanup_old_notifications_task
     hour: 3
-    minute: 0
+    minute: 10
     watchdog_m: 1440          # günlük
 
   - name: cleanup_old_stream_likes_task
     hour: 3
-    minute: 0
+    minute: 10
     watchdog_m: 1440
 
-  # ── 03:10 — PRO abonelik expiry sigortası (wallet) ─────────────────────────
-  # Apple webhook (EXPIRED) zaten yapar; bu cron ağ hatası / worker restart sigortasıdır.
-  # 03:00'daki pg_dump + cleanup_old_notifications kalabalığından 10 dk ötelendi.
-
+  # PRO abonelik expiry sigortası — Apple webhook (EXPIRED) sigortası; pg_dump sonrası
   - name: check_expired_pro_users_task
     hour: 3
     minute: 10
@@ -259,7 +256,7 @@ batch:
   # ── ML Eğitim — 05:15+ ──────────────────────────────────────────────────────
   # Bu blok 06:30 UTC = 09:30 TR'de biter — sabah commute başlamadan önce.
   #
-  # ⚠️  ÖLÇEK RİSKİ (>50K kullanıcı): Pazar ML bloku uzarsa pg_basebackup (08:30)
+  # ⚠️  ÖLÇEK RİSKİ (>50K kullanıcı): Pazar ML bloku uzarsa pg_basebackup (02:00 UTC, Pazar)
   # ile çakışabilir; canlı Pazar trafiği (en yoğun gün) CPU/RAM rekabetine girer.
   # Eylem: task_start / task_end Redis key'leri eklenerek süre izlenmeli;
   # max_duration_m alanı ile agent alarm verebilmeli. Şimdilik watchdog_m yalnızca
@@ -302,6 +299,8 @@ batch:
     hour: 5
     minute: 10
     watchdog_m: 43200
+
+backup:
 
 # ── node2 Backup Script'leri (job_ok sinyali gönderirler, ARQ değil) ───────────
 # watchdog_m: timer periyodundan biraz fazla — gecikme toleransı

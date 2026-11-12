@@ -4892,8 +4892,6 @@ class WorkerSettings:
         cron(archive_recordings_task,       minute={15}),
         # minio_backup (05:30) biter, 05:45'te bildirim gönder — günde 1 kez
         cron(notify_new_recordings_task, hour=5, minute=45),
-        # Her gün 04:30 UTC — replay olmayan stream'lerin chat satırlarını temizle
-        cron(cleanup_old_stream_chat_messages_task, hour=4, minute=30),
         # Her 30 dakikada — finalize sırasında başarısız olan chat dump'larını yeniden dene
         cron(retry_failed_chat_dumps_task, minute={0, 30}),
 
