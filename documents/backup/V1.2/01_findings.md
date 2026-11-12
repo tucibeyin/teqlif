@@ -59,7 +59,7 @@
 | :---: | :---: | :--- | :--- | :---: | :---: |
 | [`MAINT-01`](#maint-01) | 🟠 **P1** | `cleaner.py` vs `schedule.yaml` / `worker.py` | Çift & batch'siz PG `DELETE` (`message_threads 180d` < `dm_archive 365d` veri kaybı tuzağı!) | [Adım 21](#adim-21) | ⬜ Açık |
 | [`MAINT-02`](#maint-02) | 🟠 **P1** | `cluster.yaml`, `encoder.py:357`, `minio_backup`, `worker.py` | Video transfer (`05:00–07:00`) ↔ `minio_backup` (`05:30`) ↔ `notify` (`05:00/06:00`) çarpışması | [Adım 22](#adim-22) | ⬜ Açık |
-| [`MAINT-03`](#maint-03) | 🔴 **P0** | `node2` `redis-failover*`, `redis_failover.sh` | **`promoted` (`18 Eki`) bayrağı nedeniyle resmi failover kör** + düz metin şifreli rogue timer | [Adım 4](#adim-4) | ⬜ Açık |
+| [`MAINT-03`](#maint-03) | 🔴 **P0** | `node2` `redis-failover*`, `redis_failover.sh` | **`promoted` (`18 Eki`) bayrağı nedeniyle resmi failover kör** + düz metin şifreli rogue timer | [Adım 4](#adim-4) | ✅ Çözüldü `c0154e66` |
 | [`MAINT-04`](#maint-04) | 🟡 **P2** | `node1..6`, `node2`, `nodeMonitor` OS Timer | `apt-daily-upgrade` (`06:05–06:50 UTC`) + `node2` `mdcheck` (`06:46 UTC`) backup bloğuna biniyor | [Adım 27](#adim-27) | ⬜ Açık |
 | [`MAINT-05`](#maint-05) | 🟡 **P2** | `schedule.yaml`, `schedule_loader.py`, `worker.py` | `backup:` YAML anahtarı yok, `chat_messages` çift kayıt, hatalı saat yorumları | [Adım 28](#adim-28) | ⬜ Açık |
 | [`MAINT-06`](#maint-06) | 🟡 **P2** | `loki`, `kuma`, `config`, `pg_wal_cleanup`, `node2` | Redis `job_ok` atmayan 4 script + `0B` yetim `.last_mail_backup_ok` + eski `03:45` mail timer | [Adım 29](#adim-29) | ⬜ Açık |
@@ -611,8 +611,8 @@ sudo wg-quick save wg0
 3. `redis_failover.sh:62-69` içindeki **WG peer `0.0.0.1/32` bloğu kaldırılır** (VIP `10.10.0.1/32` `lo` + `iptables PREROUTING/OUTPUT` `6379` DNAT yalnızca Redis trafiğini yakalar; `pg_receivewal` `5432` ve MinIO `9000` WG tünelinden `node1`'e kesilmez!).
 * **Doğrulama:** `systemctl list-timers '*failover*'` yalnız `teqlif-redis-failover.timer` gösterir; `journalctl -u teqlif-redis-failover -n 5` sağlıklı `exit 0` (`fail_count=0`) kanıtlar.
 
-##### ⬜ Çözüm Damgası
-- *(Henüz uygulanmadı — [Adım 4](#adim-4) bekliyor)*
+##### ✅ Çözüm Damgası
+- `2026-11-12` · commit `c0154e66` — Canlı `node2` temizliği: rogue `redis-failover.timer`+`redis-failover.service` durdurulup devre dışı bırakıldı; `/etc/systemd/system/redis-failover.{timer,service}` silindi; `/usr/local/bin/redis-failover-check.sh` (düz metin şifreli) silindi; `/var/lib/redis-failover/` silindi. `node1` Redis `PONG` + `node2` `role:slave master_link_status:up` doğrulandıktan sonra `/var/lib/teqlif-redis-failover/promoted` (18 Eki 15:06) silindi — resmi failover aktif. `redis_failover.sh:62-69` WG peer `0.0.0.1/32` bloğu kaldırıldı — promote anında `pg_receivewal`/`MinIO` trafiği kopmaz; VIP lo alias + iptables DNAT port 6379 trafiğini yakalar.
 
 ---
 
@@ -1064,7 +1064,7 @@ await redis.set("ch:last_sync_at", now.isoformat())  # Aradakiler kalıcı kaybo
 ### 🔴 Faz 1: Canlı Failover, DR, PG Disk Koruması, Ürün/Finans Bütünlüğü & Şifreli Offsite (P0 Kritik — 10 Adım)
 
 <a id="adim-4"></a>
-4. **Adım 4 (`MAINT-03`):** Canlı `node2` üzerinde yetkisiz `redis-failover.timer`/`service` + düz metin şifreli `/usr/local/bin/redis-failover-check.sh` kalıntılarını kaldır, `node1` Redis sağlığı doğrulandıktan sonra `/var/lib/teqlif-redis-failover/promoted` bayrağını sil ve [`redis_failover.sh:62-69`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/redis_failover.sh#L62-L69) içindeki `node1` WG peer'ını `0.0.0.1/32` yapan bloğu kaldır → _Neden:_ 18 Ekim'den beri kör olan otomatik Redis failover'ı tekrar aktif etmek ve promote anında `pg_receivewal`/`MinIO` trafiğinin kopmasını önlemek. → ([Detay](#maint-03), [İlişkili: BIZ-02](#biz-02))
+~~4. **Adım 4 (`MAINT-03`):** Canlı `node2` üzerinde yetkisiz `redis-failover.timer`/`service` + düz metin şifreli `/usr/local/bin/redis-failover-check.sh` kalıntılarını kaldır, `node1` Redis sağlığı doğrulandıktan sonra `/var/lib/teqlif-redis-failover/promoted` bayrağını sil ve [`redis_failover.sh:62-69`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/redis_failover.sh#L62-L69) içindeki `node1` WG peer'ını `0.0.0.1/32` yapan bloğu kaldır → _Neden:_ 18 Ekim'den beri kör olan otomatik Redis failover'ı tekrar aktif etmek ve promote anında `pg_receivewal`/`MinIO` trafiğinin kopmasını önlemek. → ([Detay](#maint-03), [İlişkili: BIZ-02](#biz-02))~~ ✅ `c0154e66` (2026-11-12)
 
 <a id="adim-5"></a>
 5. **Adım 5 (`AUDIT-01`):** `node2` üzerine `postgresql-17-pgvector` paketini kur + `main` cluster hazırlığı, `/project/teqlif/config/.env.dr` ve `/etc/ssl/teqlif/cf-origin.{crt,key}` dosyalarını yerleştir; [`pg_basebackup.sh`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/pg_basebackup.sh#L19-L35) atomik `.tmp`→`mv` yap, [`pg_dump.sh`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/pg_dump.sh) içine `--globals-only` ekle ve [`runbook.sh:134-155`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/runbook.sh#L134-L155) içinde `pg_wal.tar.gz` açılımı + `recovery_target = 'immediate'` → `'latest'` düzeltmesini yap → _Neden:_ `node1` çöktüğünde `node2` DR failover ve 1 dk PITR kurtarmasının gerçekten çalışmasını sağlamak. → ([Detay](#audit-01))
