@@ -52,17 +52,21 @@ mkdir -p "${RESTIC_CACHE_DIR}" "${TMPDIR}"
 # pg_basebackup + clickhouse + uptime_kuma + nodeMonitor teqlif-config
 restic backup \
     /project/teqlif/backups/pg_dump \
-    /project/teqlif/backups/minio \
-    /project/teqlif/backups/stalwart \
-    /project/teqlif/backups/redis \
     /project/teqlif/backups/pg_basebackup \
+    /project/teqlif/backups/pg_wal \
+    /project/teqlif/backups/minio \
     /project/teqlif/backups/clickhouse \
+    /project/teqlif/backups/redis \
+    /project/teqlif/backups/loki \
+    /project/teqlif/backups/stalwart \
     /project/teqlif/backups/uptime_kuma \
     /project/teqlif/backups/nodemonitor_config/teqlif-config \
     --tag daily-full \
     --pack-size 32 \
     --compression max \
     --exclude "*.tmp" \
+    --exclude "*.partial" \
+    --exclude ".last_*" \
     --exclude ".restic-*"
 
 echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) offsite_sync: daily-full snapshot OK"
