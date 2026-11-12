@@ -15,18 +15,20 @@ mc alias set node1minio "${MINIO_URL}" "${MINIO_ROOT_USER}" "${MINIO_ROOT_PASSWO
 
 mirror_bucket() {
     local bucket="$1"
+    shift
     local dest="${BACKUP_DIR}/${bucket}"
     install -d "${dest}"
-    mc mirror --overwrite --quiet "node1minio/${bucket}" "${dest}"
+    mc mirror --overwrite --quiet "$@" "node1minio/${bucket}" "${dest}"
     echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) minio_backup: ${bucket} OK ($(du -sh "${dest}" | cut -f1))"
 }
 
 # WireGuard ağ dalgalanmalarına karşı 3x retry, 2 dakika backoff
 mirror_bucket_with_retry() {
     local bucket="$1"
+    shift
     local attempt
     for attempt in 1 2 3; do
-        if mirror_bucket "${bucket}"; then
+        if mirror_bucket "${bucket}" "$@"; then
             return 0
         fi
         echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) minio_backup: ${bucket} deneme ${attempt}/3 başarısız"
@@ -66,10 +68,20 @@ for line in sys.stdin:
     fi
 }
 
+# SYNC_START: confirm_recordings bu anı kesme noktası olarak kullanır (race koruması)
+SYNC_START=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
 teqlif_ok=false
 teqlif_dm_ok=false
-mirror_bucket_with_retry teqlif    && teqlif_ok=true  || true
-mirror_bucket_with_retry teqlif-dm && teqlif_dm_ok=true || true
+
+# teqlif: recordings/ dışı --remove ile KVKK silmelerini yansıt; recordings/ ayrıca --remove'suz
+{ mirror_bucket_with_retry teqlif --remove --exclude 'recordings/*' && \
+  mirror_bucket_with_retry teqlif --include 'recordings/*'; } && teqlif_ok=true || true
+
+# 30 günden eski recordings yerel kopyalarını temizle (MinIO ILM'den bağımsız yerel retention)
+find "${BACKUP_DIR}/teqlif/recordings" -type f -mtime +30 -delete 2>/dev/null || true
+
+mirror_bucket_with_retry teqlif-dm --remove && teqlif_dm_ok=true || true
 
 if ! $teqlif_ok || ! $teqlif_dm_ok; then
     ilm_set_days "${MINIO_ILM_EMERGENCY_DAYS}"
@@ -91,6 +103,7 @@ confirm_recordings() {
                 WHERE node2_confirmed_at IS NULL
                   AND minio_key IS NOT NULL
                   AND COALESCE(transferred_at, available_at) IS NOT NULL
+                  AND COALESCE(transferred_at, available_at, created_at) <= '${SYNC_START}'::timestamptz
                   AND status IN ('available','expired')
                 RETURNING 1
             ) SELECT COUNT(*) FROM upd" 2>&1) || { \
