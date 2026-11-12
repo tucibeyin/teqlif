@@ -12,6 +12,7 @@ Sürekli görevler (flush_interactions, vb.) burada sabit kalır.
 """
 from __future__ import annotations
 
+import html
 import logging
 import time
 from pathlib import Path
@@ -151,7 +152,7 @@ class JobWatchdog:
             return
         self._alerted[cooldown_key] = now
         await self._db.set_job_alert_sent(job)
-        reason_line = f"\nNeden: {reason}" if reason else ""
+        reason_line = f"\nNeden: {html.escape(reason)}" if reason else ""
         msg = (
             f"🚨 <b>{self._cfg.node_id}</b> — Job hata verdi\n"
             f"<code>{job}</code>\n"

@@ -144,7 +144,8 @@ class AgentDB:
     async def get_failed_jobs(self) -> list[dict]:
         """fail_count > 0 ve son fail, son ok'tan sonra olan job'lar."""
         cur = await self._db.execute("""
-            SELECT job_name, last_ok_at, last_fail_at, fail_count, expected_every_m, last_alert_at
+            SELECT job_name, last_ok_at, last_fail_at, fail_reason,
+                   fail_count, expected_every_m, last_alert_at
             FROM job_health
             WHERE fail_count > 0
               AND (last_ok_at IS NULL OR last_fail_at > last_ok_at)
@@ -275,18 +276,20 @@ class AgentDB:
         for row in delta.get("job_health", []):
             await self._db.execute("""
                 INSERT INTO job_health
-                    (job_name, last_ok_at, last_fail_at, fail_count, expected_every_m, last_alert_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                    (job_name, last_ok_at, last_fail_at, fail_reason,
+                     fail_count, expected_every_m, last_alert_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(job_name) DO UPDATE SET
-                    last_ok_at       = CASE WHEN excluded.updated_at > updated_at THEN excluded.last_ok_at   ELSE last_ok_at   END,
-                    last_fail_at     = CASE WHEN excluded.updated_at > updated_at THEN excluded.last_fail_at  ELSE last_fail_at  END,
-                    fail_count       = CASE WHEN excluded.updated_at > updated_at THEN excluded.fail_count    ELSE fail_count    END,
+                    last_ok_at       = CASE WHEN excluded.updated_at > updated_at THEN excluded.last_ok_at    ELSE last_ok_at    END,
+                    last_fail_at     = CASE WHEN excluded.updated_at > updated_at THEN excluded.last_fail_at   ELSE last_fail_at   END,
+                    fail_reason      = CASE WHEN excluded.updated_at > updated_at THEN excluded.fail_reason    ELSE fail_reason    END,
+                    fail_count       = CASE WHEN excluded.updated_at > updated_at THEN excluded.fail_count     ELSE fail_count     END,
                     expected_every_m = CASE WHEN excluded.updated_at > updated_at THEN excluded.expected_every_m ELSE expected_every_m END,
                     updated_at       = MAX(updated_at, excluded.updated_at)
             """, (
                 row["job_name"], row.get("last_ok_at"), row.get("last_fail_at"),
-                row.get("fail_count", 0), row.get("expected_every_m", 60),
-                row.get("last_alert_at"), row["updated_at"],
+                row.get("fail_reason"), row.get("fail_count", 0),
+                row.get("expected_every_m", 60), row.get("last_alert_at"), row["updated_at"],
             ))
 
         for row in delta.get("node_state", []):
