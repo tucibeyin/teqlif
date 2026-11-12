@@ -25,6 +25,19 @@ if [[ -z "${RESTIC_REST_USER:-}" ]] || [[ -z "${RESTIC_REST_PASSWORD:-}" ]] || [
     exit 0
 fi
 
+# minio_backup.sh'nin bu gün başarıyla tamamlandığını doğrula (3-2-1 bütünlük garantisi)
+# .last_backup_ok 2 saatten eskiyse ILM acil moda girmiş olabilir — offsite'ı durdur
+_MINIO_OK="/project/teqlif/backups/minio/.last_backup_ok"
+if [[ ! -f "${_MINIO_OK}" ]]; then
+    echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) offsite_sync: FAIL — ${_MINIO_OK} bulunamadı (minio_backup hiç çalışmadı?)"
+    exit 1
+fi
+_minio_age=$(( $(date +%s) - $(stat -c %Y "${_MINIO_OK}") ))
+if [[ ${_minio_age} -gt 7200 ]]; then
+    echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) offsite_sync: FAIL — minio_backup ${_minio_age}s önce tamamlandı (eşik: 7200s) — ILM acil moda geçti mi?"
+    exit 1
+fi
+
 export RESTIC_REPOSITORY="rest:http://${RESTIC_REST_USER}:${RESTIC_REST_PASSWORD}@10.10.0.101:8000/${RESTIC_REST_USER}/"
 export RESTIC_PASSWORD
 export RESTIC_CACHE_DIR=/project/teqlif/backups/.restic-cache

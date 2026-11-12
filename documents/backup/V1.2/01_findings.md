@@ -218,8 +218,8 @@ Debian 13 (`trixie`) deposunda her iki paket yerel olarak vardır. `node2` WG ü
 2. **Offsite Kapsamında `minio` Sıralaması:** `offsite_sync.sh` içinde `pg_dump`, `minio/teqlif/recordings` ve `minio/teqlif-dm` en üst öncelikte `restic backup --tag daily-full` paketine dahil edilir.
 * **Doğrulama:** `ssh node101 "df -h / /mnt/data"` sonrası `/` kullanımının `%40` altında ve `restic snapshots --tag daily-full` içinde `/project/teqlif/backups/minio` yolunun mevcut olduğu doğrulanır.
 
-##### ⬜ Çözüm Damgası
-- *(Henüz uygulanmadı — [Adım 11](#adim-11) bekliyor)*
+##### ✅ Çözüm Damgası
+- `2026-11-12` · commit `PENDING` — **P0 OFFSITE-01 kapatıldı** ✓: 3-2-1 kural doğrulaması: `offsite_sync.sh` `/project/teqlif/backups/minio` (teqlif + teqlif-dm bucketları) `daily-full` restic snapshot'ına dahil ✓; timer sırası 05:30 minio_backup → 06:30 offsite_sync ✓; ILM 2d normal / 7d emergency ✓. Canlı doğrulama: `restic snapshots --tag daily-full` (node2) → `e9549003` `2026-11-12 06:30` → paths içinde `/project/teqlif/backups/minio` mevcut ✓; `df -h /` node101 → 37% (< %40) ✓; `/mnt/data` 1% ✓. **P1 ek fix:** `offsite_sync.sh`'ye `minio_backup.sh` staleness guard eklendi — `.last_backup_ok` 2 saatten eskiyse offsite FAIL + OnFailure bildirim tetiklenir (3-2-1 bütünlük garantisi).
 
 ---
 
