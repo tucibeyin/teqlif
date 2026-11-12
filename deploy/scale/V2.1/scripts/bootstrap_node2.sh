@@ -44,6 +44,7 @@ main() {
     install_pg_server
     install_clickhouse
     setup_clickhouse   "${NODE_DIR}"
+    install_backup_tools
     setup_backup_services "${NODE_DIR}"
     install_promtail
     setup_promtail "${NODE_DIR}" "${NODE_ID}"
@@ -63,13 +64,14 @@ main() {
         "node1'de replication user ve slot oluştur (plan §3.2)" \
         "systemctl start teqlif-pg-receivewal" \
         "systemctl start clickhouse-server" \
-        "Backup timer'larını etkinleştir: systemctl enable --now teqlif-*.timer" \
-        "Redis failover aktif: systemctl status teqlif-redis-failover.timer"
+        "Redis failover aktif: systemctl status teqlif-redis-failover.timer" \
+        "Restic repo başlatma (Faz 2 sonrası): sudo -u tucibeyin restic init" \
+        "Offsite timer başlatma (Faz 2 sonrası): systemctl start teqlif-offsite-sync.timer teqlif-offsite-wal.timer"
 }
 
 setup_backup_directories() {
     log_step "Backup dizinleri"
-    mkdir -p /project/teqlif/backups/{pg_dump,pg_wal,redis,minio}
+    mkdir -p /project/teqlif/backups/{pg_dump,pg_wal,pg_basebackup,redis,minio,clickhouse,loki,stalwart,uptime_kuma,nodemonitor_config}
     chown -R tucibeyin:tucibeyin /project/teqlif/backups
     chmod -R 700 /project/teqlif/backups
     log_ok "Backup dizinleri: /project/teqlif/backups/"
@@ -109,6 +111,16 @@ install_pg_server() {
     mkdir -p "/etc/postgresql/${PG_VERSION}/main/conf.d"
     chown -R postgres:postgres "/etc/postgresql/${PG_VERSION}/main/conf.d"
     log_ok "postgresql-${PG_VERSION} kuruldu, standby modda durduruldu"
+}
+
+install_backup_tools() {
+    log_step "restic + rclone (backup motorları)"
+    apt-get install -y -qq restic
+    # rclone — Adım 12'de restic ile değiştirilecek; offsite_sync.sh için şimdilik gerekli
+    if ! command -v rclone &>/dev/null; then
+        curl -fsSL https://rclone.org/install.sh | bash
+    fi
+    log_ok "restic $(restic version | awk '{print $2}') + rclone $(rclone --version 2>/dev/null | head -1 | awk '{print $2}') kuruldu"
 }
 
 install_clickhouse() {
@@ -206,12 +218,20 @@ setup_backup_services() {
     systemctl daemon-reload
     # WAL stream her zaman açık
     systemctl enable teqlif-pg-receivewal
-    # Timer'lar enable ama başlatma adım adım yapılır
+    # Tüm backup + bakım timer'ları enable (başlatma adım adım print_summary'de)
     systemctl enable \
         teqlif-pg-dump.timer \
+        teqlif-pg-basebackup.timer \
+        teqlif-pg-wal-cleanup.timer \
         teqlif-redis-backup.timer \
+        teqlif-clickhouse-backup.timer \
         teqlif-minio-backup.timer \
-        teqlif-offsite-sync.timer
+        teqlif-loki-backup.timer \
+        teqlif-uptime-kuma-backup.timer \
+        teqlif-nodemonitor-config-backup.timer \
+        teqlif-mail-backup.timer \
+        teqlif-offsite-sync.timer \
+        teqlif-offsite-wal.timer
     # Backup için minimal env (minio credentials)
     cat > /project/teqlif/config/.env.backup <<'ENVEOF'
 MINIO_ROOT_USER=<minio_root_user>
