@@ -110,8 +110,8 @@ scrape_configs:
         labels: { node: node2, component: redis-replica }
 
   - job_name: 'stalwart'
-    # Stalwart mail server admin HTTP (10.10.0.2:8080) — /metrics v0.6+ destekli
-    metrics_path: /metrics
+    # Stalwart mail server admin HTTP (10.10.0.2:8080/prometheus) — kimlik doğrulama gerektirmez
+    metrics_path: /prometheus
     static_configs:
       - targets: ['10.10.0.2:8080']
         labels: { node: node2, component: stalwart }

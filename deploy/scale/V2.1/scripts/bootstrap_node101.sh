@@ -249,7 +249,9 @@ ufw_node101() {
     ufw allow 22/tcp
     ufw allow 51820/udp
     # Restic REST server: yalnız node2 (10.10.0.2)
-    ufw allow in on wg0 from 10.10.0.2 to any port 8000 proto tcp
+    ufw allow in on wg0 from 10.10.0.2  to any port 8000 proto tcp
+    # nodeMonitor port 8000: Prometheus /metrics scrape (--prometheus-no-auth)
+    ufw allow in on wg0 from 10.10.0.99 to any port 8000 proto tcp
     # node_exporter: yalnız nodeMonitor (10.10.0.99)
     ufw allow in on wg0 from 10.10.0.99 to any port 9100 proto tcp
     # teqlif-agent gossip: node2 + nodeMonitor

@@ -14,7 +14,9 @@ ExecStart=/usr/bin/restic-rest-server \
     --listen 10.10.0.101:8000 \
     --htpasswd-file /etc/teqlif-offsite/htpasswd \
     --append-only \
-    --private-repos
+    --private-repos \
+    --prometheus \
+    --prometheus-no-auth
 Restart=always
 RestartSec=5
 MemoryMax=512M
