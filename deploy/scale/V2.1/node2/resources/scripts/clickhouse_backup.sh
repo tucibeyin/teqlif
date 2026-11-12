@@ -36,7 +36,7 @@ exec >> "${LOGFILE}" 2>&1
 
 echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) clickhouse_backup: start"
 
-install -d "${BACKUP_DIR}"
+mkdir -p "${BACKUP_DIR}"
 
 # Yöntem 1: clickhouse-backup CLI (tercih edilen, atomik snapshot)
 if command -v clickhouse-backup &>/dev/null && \
