@@ -14,8 +14,9 @@ from datetime import datetime, timezone, timedelta
 
 from sqlalchemy import text
 
-from app.core.logger import get_logger, capture_exception
+from app.core.logger import get_logger, capture_exception, capture_message
 from app.database import AsyncSessionLocal
+from app.utils.telegram import send_telegram_alert
 
 logger = get_logger(__name__)
 
@@ -99,12 +100,18 @@ async def release_pending_earnings_task(ctx: dict) -> None:
 
 
 async def daily_financial_reconciliation_task(ctx: dict) -> None:
-    """Günlük finansal denetim — negatif bakiye + withdrawal tutarsızlığı kontrolü."""
+    """Günlük finansal denetim — 3 kontrol:
+    1. Negatif available/pending bakiye
+    2. Withdrawal tutarsızlığı (son 30 gün): withdrawal_requests ↔ wallet_ledger
+    3. Genel defter dengesi (tüm zaman): SUM(available+pending) ↔ SUM(delta_teqlik)
+    Anomali varsa Telegram + Sentry error + _agent_fail; temizse _agent_ok.
+    """
     anomalies = 0
+    alert_lines: list[str] = []
 
     try:
         async with AsyncSessionLocal() as session:
-            # Negatif available/pending bakiye tespiti
+            # 1. Negatif available/pending bakiye tespiti
             neg_rows = await session.execute(
                 text(
                     "SELECT user_id, available, pending "
@@ -115,14 +122,15 @@ async def daily_financial_reconciliation_task(ctx: dict) -> None:
             neg_list = neg_rows.fetchall()
             if neg_list:
                 anomalies += len(neg_list)
-                logger.warning(
-                    "[Reconciliation] Negatif bakiye tespit edildi: %d kayıt | %s",
-                    len(neg_list),
-                    [(r[0], r[1], r[2]) for r in neg_list[:10]],
+                msg = (
+                    f"Negatif bakiye: {len(neg_list)} kayıt | "
+                    f"örnek: {[(r[0], int(r[1]), int(r[2])) for r in neg_list[:5]]}"
                 )
+                logger.warning("[Reconciliation] %s", msg)
+                alert_lines.append(msg)
 
-            # Withdrawal tutarsızlığı:
-            # wr_total = aktif çekimler (pending+approved+completed)
+            # 2. Withdrawal tutarsızlığı (son 30 gün):
+            # wr_total  = aktif çekimler (pending+approved+completed)
             # ledger_net = withdrawal_request - (cancelled + rejected) = gerçek net çıkış
             wr_row = await session.execute(
                 text(
@@ -132,7 +140,7 @@ async def daily_financial_reconciliation_task(ctx: dict) -> None:
                     "  AND created_at >= NOW() - INTERVAL '30 days'"
                 )
             )
-            wr_total = wr_row.fetchone()[0]
+            wr_val = int(wr_row.fetchone()[0] or 0)
 
             ledger_net_row = await session.execute(
                 text(
@@ -145,20 +153,57 @@ async def daily_financial_reconciliation_task(ctx: dict) -> None:
                     "            AND created_at >= NOW() - INTERVAL '30 days'), 0)"
                 )
             )
-            ledger_total = ledger_net_row.fetchone()[0]
+            ledger_val = int(ledger_net_row.fetchone()[0] or 0)
 
-            wr_val = int(wr_total or 0)
-            ledger_val = int(ledger_total or 0)
             if abs(wr_val - ledger_val) > 0:
                 anomalies += 1
-                logger.warning(
-                    "[Reconciliation] withdrawal tutarsızlığı: wr_total=%s ledger_net=%s diff=%s",
-                    wr_val, ledger_val, abs(wr_val - ledger_val),
+                msg = (
+                    f"Withdrawal tutarsızlığı (30g): "
+                    f"wr_total={wr_val} ledger_net={ledger_val} diff={abs(wr_val - ledger_val)}"
                 )
+                logger.warning("[Reconciliation] %s", msg)
+                alert_lines.append(msg)
 
-        status = "ok" if anomalies == 0 else f"anomalies={anomalies}"
-        logger.info("[WalletTask] daily_financial_reconciliation tamamlandı | status=%s", status)
-        await _agent_ok(ctx, "daily_financial_reconciliation_task")
+            # 3. Genel defter dengesi (tüm zaman):
+            # SUM(available + pending) ↔ SUM(delta_teqlik) — uzun vadeli kayma tespiti
+            wallet_total_row = await session.execute(
+                text(
+                    "SELECT COALESCE(SUM(available + pending), 0) "
+                    "FROM user_wallet_earnings"
+                )
+            )
+            wallet_total = int(wallet_total_row.fetchone()[0] or 0)
+
+            ledger_all_row = await session.execute(
+                text("SELECT COALESCE(SUM(delta_teqlik), 0) FROM wallet_ledger")
+            )
+            ledger_all = int(ledger_all_row.fetchone()[0] or 0)
+
+            if abs(wallet_total - ledger_all) > 0:
+                anomalies += 1
+                msg = (
+                    f"Genel defter dengesi tutarsız: "
+                    f"wallet_total={wallet_total} ledger_net={ledger_all} "
+                    f"diff={abs(wallet_total - ledger_all)}"
+                )
+                logger.warning("[Reconciliation] %s", msg)
+                alert_lines.append(msg)
+
+        if anomalies > 0:
+            summary = (
+                f"🚨 Finansal mutabakat anomalisi!\n"
+                f"Anomali sayısı: {anomalies}\n"
+                + "\n".join(f"• {line}" for line in alert_lines)
+            )
+            logger.error("[WalletTask] daily_financial_reconciliation | %s", summary)
+            capture_message(
+                f"[daily_financial_reconciliation] {summary}", level="error"
+            )
+            await send_telegram_alert(summary, rate_key="financial_reconciliation_anomaly")
+            await _agent_fail(ctx, "daily_financial_reconciliation_task", f"anomalies={anomalies}")
+        else:
+            logger.info("[WalletTask] daily_financial_reconciliation tamamlandı | status=ok")
+            await _agent_ok(ctx, "daily_financial_reconciliation_task")
 
     except Exception as exc:
         logger.error("[WalletTask] daily_financial_reconciliation başarısız | %s", exc, exc_info=True)
@@ -289,6 +334,17 @@ async def _agent_ok(ctx: dict, job_name: str) -> None:
         await ctx["redis"].hset(
             "teqlif:agent:job_ok", job_name,
             datetime.now(timezone.utc).isoformat(),
+        )
+    except Exception:
+        pass
+
+
+async def _agent_fail(ctx: dict, job_name: str, reason: str = "") -> None:
+    """teqlif-agent watchdog'a 'job başarısız' sinyali gönderir. job_ok yazılmaz."""
+    try:
+        await ctx["redis"].hset(
+            "teqlif:agent:job_fail", job_name,
+            f"{datetime.now(timezone.utc).isoformat()} | {reason}",
         )
     except Exception:
         pass
