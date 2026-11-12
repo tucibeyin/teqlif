@@ -1,7 +1,7 @@
 [Unit]
 Description=Restic REST Server — teqlif offsite repo
 Documentation=https://github.com/restic/rest-server
-After=network-online.target
+After=network-online.target wg-quick@wg0.service
 Wants=network-online.target
 
 [Service]
@@ -17,7 +17,7 @@ ExecStart=/usr/bin/restic-rest-server \
     --private-repos
 Restart=always
 RestartSec=5
-MemoryMax=256M
+MemoryMax=512M
 StandardOutput=journal
 StandardError=journal
 

@@ -317,8 +317,9 @@ setup_offsite_services() {
     systemctl daemon-reload
     # restic-rest-server: enable ama başlatma apply_secrets sonraya bırakılır
     systemctl enable restic-rest-server
-    # prune + verify: RESTIC_PASSWORD henüz set edilmemiş — Adım 10 (Key Escrow) sonrası aktif edilir
-    # systemctl enable teqlif-offsite-prune.timer teqlif-offsite-verify.timer
+    # prune + verify timer'ları enable et; RESTIC_PASSWORD placeholder ile ilk atış başarısız
+    # olur ama zararsız — gerçek şifre Adım 10 (Key Escrow) sonrası restic.env'e yazılacak
+    systemctl enable teqlif-offsite-prune.timer teqlif-offsite-verify.timer
     log_ok "Offsite servisler enable edildi (htpasswd + restic.env sonrası başlat)"
 }
 
