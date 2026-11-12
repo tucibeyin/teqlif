@@ -225,6 +225,8 @@ class HealthMonitor:
                 "mail_backup":               "Mail (Stalwart) yedeği",
                 "clickhouse_backup":         "ClickHouse yedeği",
                 "pg_basebackup":             "PostgreSQL base backup",
+                "offsite_sync":              "Offsite Sync (daily)",
+                "offsite_wal_sync":          "Offsite WAL Sync (saatlik)",
             }.get(bkey, bkey)
             if isinstance(mins, int) and mins > max_min:
                 await self._fire(fkey, f"⚠️ <b>{node_id}</b> — {blabel} eski ({_fmt(mins)})")
