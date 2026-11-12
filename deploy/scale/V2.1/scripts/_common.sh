@@ -578,6 +578,13 @@ apply_secrets() {
         log_ok "Config dosyaları normalize edildi (tucibeyin 700/600)"
     fi
 
+    # TLS private key: root:tucibeyin 640 — nginx root olarak okur, tucibeyin backup alabilir
+    if [ -d /etc/ssl/teqlif ]; then
+        find /etc/ssl/teqlif -name '*.key' -exec chown root:tucibeyin {} + -exec chmod 640 {} + 2>/dev/null || true
+        find /etc/ssl/teqlif -name '*.crt' -exec chmod 644 {} + 2>/dev/null || true
+        log_ok "TLS izinleri normalize edildi (/etc/ssl/teqlif *.key → root:tucibeyin 640)"
+    fi
+
     if command -v shred &>/dev/null; then
         shred -u "${secrets_file}"
         log_ok "Secrets dosyası güvenli silindi: ${secrets_file}"
