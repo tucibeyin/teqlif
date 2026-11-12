@@ -58,7 +58,7 @@
 | ID | Seviye | Bileşen / Node | Tespit Edilen Anomali / Çakışma | Bağlı Adım | Durum |
 | :---: | :---: | :--- | :--- | :---: | :---: |
 | [`MAINT-01`](#maint-01) | 🟠 **P1** | `cleaner.py` vs `schedule.yaml` / `worker.py` | Çift & batch'siz PG `DELETE` (`message_threads 180d` < `dm_archive 365d` veri kaybı tuzağı!) | [Adım 21](#adim-21) | ✅ `422cd879` |
-| [`MAINT-02`](#maint-02) | 🟠 **P1** | `cluster.yaml`, `encoder.py:357`, `minio_backup`, `worker.py` | Video transfer (`05:00–07:00`) ↔ `minio_backup` (`05:30`) ↔ `notify` (`05:00/06:00`) çarpışması | [Adım 22](#adim-22) | ⬜ Açık |
+| [`MAINT-02`](#maint-02) | 🟠 **P1** | `cluster.yaml`, `encoder.py:357`, `minio_backup`, `worker.py` | Video transfer (`05:00–07:00`) ↔ `minio_backup` (`05:30`) ↔ `notify` (`05:00/06:00`) çarpışması | [Adım 22](#adim-22) | ✅ `dcda70b6` |
 | [`MAINT-03`](#maint-03) | 🔴 **P0** | `node2` `redis-failover*`, `redis_failover.sh` | **`promoted` (`18 Eki`) bayrağı nedeniyle resmi failover kör** + düz metin şifreli rogue timer | [Adım 4](#adim-4) | ✅ Çözüldü `c0154e66` |
 | [`MAINT-04`](#maint-04) | 🟡 **P2** | `node1..6`, `node2`, `nodeMonitor` OS Timer | `apt-daily-upgrade` (`06:05–06:50 UTC`) + `node2` `mdcheck` (`06:46 UTC`) backup bloğuna biniyor | [Adım 27](#adim-27) | ⬜ Açık |
 | [`MAINT-05`](#maint-05) | 🟡 **P2** | `schedule.yaml`, `schedule_loader.py`, `worker.py` | `backup:` YAML anahtarı yok, `chat_messages` çift kayıt, hatalı saat yorumları | [Adım 28](#adim-28) | ⬜ Açık |
@@ -602,8 +602,8 @@ return effective_start <= now_h < end_utc  # Normalde 05:00–07:00 UTC!
 2. `worker.py:4845`: `notify_new_recordings_task` saatini `05:30` `minio_backup` sonrası **`hour=5, minute=45`** (`05:45 UTC`) olarak güncelle.
 * **Doğrulama:** `_can_transfer_now()` normal diskte `04:00–04:59 UTC` için `True`, `05:30 UTC` için `False` döner.
 
-##### ⬜ Çözüm Damgası
-- *(Henüz uygulanmadı — [Adım 22](#adim-22) bekliyor)*
+##### ✅ Çözüm Damgası
+- `2026-11-12` · commit `dcda70b6` — `cluster.yaml`: start 4→3, end 7→5, retention 15→30. `worker.py`: `notify_new_recordings_task` `hour={5,6}/minute=0` → `hour=5/minute=45`.
 
 ---
 
@@ -1322,7 +1322,7 @@ await redis.set("ch:last_sync_at", now.isoformat())  # Aradakiler kalıcı kaybo
 ~~21. **Adım 21 (`MAINT-01`):** [`cleaner.py:35-112`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/teqlif-agent/modules/cleaner.py#L35-L112) içindeki `message_threads` (`180d`) ve batch'siz PG `DELETE` tablosunu emekliye ayır; tüm PG temizliğini batched ARQ (`worker.py` + `schedule.yaml`) tek otoritesine bırak → _Neden:_ `PG_DSN` tanımlandığı an 180–365 günlük mesaj thread'lerinin silinmesini ve çift temizlik WAL patlamasını engellemek. → ([Detay](#maint-01))~~ ✅ `422cd879`
 
 <a id="adim-22"></a>
-22. **Adım 22 (`MAINT-02`):** [`cluster.yaml:36-47`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/cluster.yaml#L36-L47) içinde `transfer_window_start_utc: 3`, `transfer_window_end_utc: 5` (`04:00–05:00` normal / `03:00–05:00` disk uyarısı), `retention_days: 30` ayarla; [`worker.py:4845`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/worker.py#L4845) `notify_new_recordings_task` saatini **`05:45 UTC`** yap → _Neden:_ `node3`/`node4` video transferi ile `05:30` `minio_backup` ve `05:00/06:00` push çarpışmasını ortadan kaldırmak. → ([Detay](#maint-02), [Birlikte: Adım 8](#adim-8))
+~~22. **Adım 22 (`MAINT-02`):** [`cluster.yaml:36-47`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/cluster.yaml#L36-L47) içinde `transfer_window_start_utc: 3`, `transfer_window_end_utc: 5` (`04:00–05:00` normal / `03:00–05:00` disk uyarısı), `retention_days: 30` ayarla; [`worker.py:4845`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/worker.py#L4845) `notify_new_recordings_task` saatini **`05:45 UTC`** yap → _Neden:_ `node3`/`node4` video transferi ile `05:30` `minio_backup` ve `05:00/06:00` push çarpışmasını ortadan kaldırmak. → ([Detay](#maint-02), [Birlikte: Adım 8](#adim-8))~~ ✅ `dcda70b6`
 
 <a id="adim-23"></a>
 23. **Adım 23 (`AUDIT-05`):** `node2` ve `node5` ClickHouse `system.*_log` tabloları için 7 günlük `TTL DELETE` (`system_logs_ttl.xml`) + tek seferlik `TRUNCATE` uygula, [`encoder.py`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/teqlif-agent/modules/encoder.py#L162-L274) `.log`/0-byte/`failed > 48h` yetim temizliği ekle ve canlı `node5` `194 MB /var/recordings` + `3.2 GB /root/.cache` artığını sil → _Neden:_ `%56` doluluğa ulaşan `node5` diskiyle `node2`/`edge` disklerinin log ve ham video artıklarıyla dolmasını engellemek. → ([Detay](#audit-05))
