@@ -613,7 +613,8 @@ sudo wg-quick save wg0
 
 ##### ✅ Çözüm Damgası
 - `2026-11-12` · commit `c0154e66` — Canlı `node2` temizliği: rogue `redis-failover.timer`+`redis-failover.service` durdurulup devre dışı bırakıldı; `/etc/systemd/system/redis-failover.{timer,service}` silindi; `/usr/local/bin/redis-failover-check.sh` (düz metin şifreli) silindi; `/var/lib/redis-failover/` silindi. `node1` Redis `PONG` + `node2` `role:slave master_link_status:up` doğrulandıktan sonra `/var/lib/teqlif-redis-failover/promoted` (18 Eki 15:06) silindi — resmi failover aktif. `redis_failover.sh` WG peer `0.0.0.1/32` bloğu kaldırıldı.
-- `2026-11-12` · commit `2fe7c172` — **P0:** `ip addr add 10.10.0.1/32 dev lo` kaldırıldı (kernel local tablosu pg_receivewal/MinIO trafiğini lo'ya düşürüyordu; iptables DNAT port 6379 için yeterli). **P0:** `iptables -A` → `-C ... || -A` idempotency guard. **P1:** `redis_failback.sh` oluşturuldu — doğru sıra: `REPLICAOF` → NAT/lo temizliği → `fail_count` sıfırlama → `promoted` kaldırma (OUTPUT DNAT silinmeden promoted kaldırılırsa self-PING körlüğü oluşurdu). **Not:** `redis_vip_check.sh` (node3/4/5/6) WG `0.0.0.1/32` bloğu → BIZ-02 ilgili adımda ele alınacak.
+- `2026-11-12` · commit `2fe7c172` — **P0:** `ip addr add 10.10.0.1/32 dev lo` kaldırıldı; iptables idempotency guard eklendi; `redis_failback.sh` oluşturuldu.
+- `2026-11-12` · commit `ad968d7d` — **redis_failback.sh sıralama düzeltmesi:** `_nat_cleanup()` ÖNCE çalışır (OUTPUT DNAT aktifken PING/REPLICAOF yapılırsa 127.0.0.1:6379'a düşüyor = sahte PONG + self-replication); node1 erişilemezse `_nat_restore()` + `exit 1`; `master_link_status` grep `|| true` ile `set -e` korumalı; `fail_count` sonrası `chown tucibeyin:tucibeyin`. **Not:** `redis_vip_check.sh` (node3/4/5/6) WG `0.0.0.1/32` bloğu → BIZ-02 ilgili adımda ele alınacak.
 
 ---
 
