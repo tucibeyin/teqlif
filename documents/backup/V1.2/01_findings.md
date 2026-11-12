@@ -435,6 +435,11 @@ PersistentKeepalive = 25
   - `clickhouse_backup.sh`: log redirection, `CH_DISK_DIR` kaldırıldı, Yöntem 3 fallback'e `schema.sql` DDL eklendi ✓
   - `bootstrap_node2.sh`: clickhouse backup dir chown+chmod 2775 + grant adımları print_summary'e eklendi ✓
   - `teqlif_staging_analytics` (orphan, 25 satır) DROP ile temizlendi ✓
+- `2026-11-12` · commit `b897da48` — **P2/P3 iyileştirme** ✓:
+  - Method 2 `2>/dev/null` kaldırıldı; hata logfile'a düşer ✓
+  - Fallback: CH ping fail-fast + `schema.sql` CREATE içerik doğrulaması — kapalı CH'da boş arşiv + exit 0 riski kapandı ✓
+  - `users.d/teqlif.xml` SQL yorumuna GRANT BACKUP + GRANT WRITE ON DISK eklendi ✓
+  - `01_findings.md` OFFSITE-08 kartında `backups.xml` → `teqlif.xml` düzeltildi ✓
   - Canlı doğrulama: `OK (sql)` → `.zip 4.7K` (DDL+şema, gerçek atomik backup) ✓
   - Not: `teqlif_prod_analytics` 0 satır — 30 günde INSERT yok; `sync_pg_to_clickhouse_task` işliyor fakat veri yazmıyor (ayrı bug, bu adımın kapsamı dışı).
 
