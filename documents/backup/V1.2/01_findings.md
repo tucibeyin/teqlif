@@ -293,12 +293,13 @@ ExecStart=/usr/bin/restic forget --tag pg_wal --keep-within 7d --prune
 * `offsite_sync.sh` şifrelemesiz tasarlandığı için PII (`pg_dump`), özel DM medyası (`teqlif-dm`), mail (`stalwart`) ve tüm cluster `.env` sırları (`nodemonitor_config`) `node101` KVM host diskinde düz metin dururdu. Öte yandan şifre yalnız `node2`'de tutulursa `node2` kaybında offsite yedek ebediyen kilitlenir.
 
 ##### 2. Hedef Mimari & Çözüm Reçetesi (Ne İçin / Nasıl?)
-1. `node2` RAM'inde `restic` (`AES-256-CTR + Poly1305`, `AES-NI` donanım hızlandırmalı) ile istemci taraflı şifreli `restic init` çalıştırılır (`/etc/teqlif/restic.pass`, `chmod 600`, **Git'e asla commit edilmez**).
+1. `node2` RAM'inde `restic` (`AES-256-CTR + Poly1305`, `AES-NI` donanım hızlandırmalı) ile istemci taraflı şifreli `restic init` çalıştırılır (parola `node2:/project/teqlif/config/.env.backup` → `RESTIC_PASSWORD`, `640 root:tucibeyin`; node101 `/etc/teqlif-offsite/restic.env` → `640 root:teqlif-backup`; **Git'e asla commit edilmez**).
 2. **Üçlü Key Escrow Zorunluluğu:** `RESTIC_PASSWORD` + `rest-server` kullanıcı parolası en az 2 sunucu dışı ortama (yerel yönetici Password Manager + offline şifreli USB/kağıt kasa) kaydedilir.
 * **Doğrulama:** Rastgele bir test dizinine yalnız Key Escrow şifresiyle `restic -r ... restore latest --target /tmp/escrow-test` okuma testi sıfır hatayla tamamlanır ve `/tmp/escrow-test` temizlenir.
 
 ##### ✅ Çözüm Damgası
 - `2026-11-12` · commit `1bf776a7` — **P0 OFFSITE-03 kapatıldı** ✓: `RESTIC_PASSWORD` node2 `.env.backup`'ta mevcut ✓; restic repo initialize edilmiş — 27 snapshot (daily-full + pg_wal) aktif ✓; RESTIC_PASSWORD node101 `/etc/teqlif-offsite/restic.env`'e stdin pipe ile sync edildi (şifre komut argümanına geçmedi) ✓; `restic check --read-data-subset=5%` node101 lokal → `no errors were found` ✓; `restic restore e9549003 --include pg_dump → /tmp/escrow-test` 8.072 MiB başarıyla geri yüklendi, cleanup OK ✓; `secrets.env.template`'e `restic_aes_password=` + `restic_rest_password=` eklendi (apply_secrets bootstrap bütünlüğü) ✓. **Key Escrow:** `secrets.env` (gitignore, lokal) proje için birincil escrow — `restic_aes_password=` + `restic_rest_password=` girdileri `secrets.env.template`'e eklendi; kullanıcı node2 `.env.backup` değerlerini kendi `secrets.env`'ine kaydetti ✓.
+- `2026-11-12` · **P2 ek düzeltmeler** ✓: `secrets.env.template`'e `restic_rest_user=teqlif` eklendi (DR bootstrap RESTIC_REST_USER placeholder tutarlılığı) ✓; `01_findings.md` L296 eski `/etc/teqlif/restic.pass` yolu fiili `.env.backup` / `restic.env` lokasyonlarıyla güncellendi ✓. **Operasyonel not:** `RESTIC_PASSWORD` + `RESTIC_REST_PASSWORD` için 2. bağımsız offsite kopya (Password Manager / offline şifreli USB) kullanıcı sorumluluğunda.
 
 ---
 
