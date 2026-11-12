@@ -219,7 +219,7 @@ Debian 13 (`trixie`) deposunda her iki paket yerel olarak vardır. `node2` WG ü
 * **Doğrulama:** `ssh node101 "df -h / /mnt/data"` sonrası `/` kullanımının `%40` altında ve `restic snapshots --tag daily-full` içinde `/project/teqlif/backups/minio` yolunun mevcut olduğu doğrulanır.
 
 ##### ✅ Çözüm Damgası
-- `2026-11-12` · commit `c5133ac3` — **P0 OFFSITE-01 kapatıldı** ✓: 3-2-1 kural doğrulaması: `offsite_sync.sh` `/project/teqlif/backups/minio` (teqlif + teqlif-dm bucketları) `daily-full` restic snapshot'ına dahil ✓; timer sırası 05:30 minio_backup → 06:30 offsite_sync ✓; ILM 2d normal / 7d emergency ✓. Canlı doğrulama: `restic snapshots --tag daily-full` (node2) → `e9549003` `2026-11-12 06:30` → paths içinde `/project/teqlif/backups/minio` mevcut ✓; `df -h /` node101 → 37% (< %40) ✓; `/mnt/data` 1% ✓. **P1 ek fix:** `offsite_sync.sh`'ye `minio_backup.sh` staleness guard eklendi — `.last_backup_ok` 2 saatten eskiyse offsite FAIL + OnFailure bildirim tetiklenir (3-2-1 bütünlük garantisi).
+- `2026-11-12` · commit `c5133ac3` → `0e61ca9a` — **P0+P1 OFFSITE-01 kapatıldı** ✓: 3-2-1 kural doğrulaması: `offsite_sync.sh` `/project/teqlif/backups/minio` (teqlif + teqlif-dm) `daily-full` restic snapshot'ına dahil ✓; timer sırası 05:30 minio_backup → 06:30 offsite_sync ✓; ILM 2d normal / 7d emergency ✓. Canlı: `e9549003` (2026-11-12 06:30) paths → `/project/teqlif/backups/minio` ✓; node101 `/` 37% ✓; `/mnt/data` 1% ✓. **P1 staleness guard** (`0e61ca9a`): eşik 43200s (12h) — Persistent/retry/manuel çalıştırma yanlış alarm üretmez; minio stale ise restic tüm kritik yollar için çalışır (fate-sharing kırıldı), tamamlandıktan sonra exit 1 + OnFailure alarmı.
 
 ---
 
