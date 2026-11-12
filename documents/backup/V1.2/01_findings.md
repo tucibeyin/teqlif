@@ -739,21 +739,34 @@ EOF
 * **Doğrulama:** `ssh node2 "dpkg -l postgresql-17-pgvector && pg_lsclusters && ls -la /etc/ssl/teqlif/cf-origin.* /project/teqlif/config/.env.dr"` tamamı ✔.
 
 ##### ✅ Çözüm Damgası
-- `2026-11-12` · commit `76628e6f` — Tüm P0 kırıklıklar giderildi:
-  - `pg_basebackup.sh`: `-D "${DEST}.tmp"` → `mv` atomicity ✓
-  - `runbook.sh:94`: `.tmp` dizinlerini `LATEST_BASEBACKUP` seçiminden dışla ✓
+- `2026-11-12` · commit `76628e6f` — Altyapı hazırlığı (pgvector, cluster, CF cert, .env.dr, atomik backup):
+  - `pg_basebackup.sh`: `.tmp`→`mv` atomicity + retention .tmp guard ✓
+  - `runbook.sh:94`: `LATEST_BASEBACKUP`/`LATEST_DUMP` .tmp dışlandı ✓
   - `runbook.sh:PITR`: `pg_wal.tar.gz` → `${PG_DATA}/pg_wal/` açılımı ✓
   - `runbook.sh:PITR`: `recovery_target='immediate'` → `recovery_target_timeline='latest'` ✓
   - `runbook.sh:DUMP`: globals SQL restore + teqlif rol yoksa `CREATE ROLE` ✓
   - `pg_dump.sh`: `pg_dumpall --globals-only -U teqlif_repl` (7g retention) ✓
   - `bootstrap_node2.sh`: `postgresql-17-pgvector` + `pg_createcluster` guard ✓
   - `bootstrap_node2.sh`: `.env.dr` placeholder idempotent oluşturma ✓
-  - Live node1: `ALTER USER teqlif_repl WITH SUPERUSER` + `pg_hba.conf` `host all teqlif_repl 10.10.0.2/32` + `pg_reload_conf()` ✓
-  - Live node2: `postgresql-17-pgvector 0.8.7` kuruldu, `pg_lsclusters` → `17 main down` ✓
+  - Live node1: `teqlif_repl SUPERUSER` + `pg_hba host all 10.10.0.2/32` ✓ *(sonraki commit'te revize edildi)*
+  - Live node2: `postgresql-17-pgvector 0.8.7`, `pg_lsclusters → 17 main down` ✓
   - Live node2: `/etc/ssl/teqlif/cf-origin.{crt,key}` node1'den kopyalandı ✓
   - Live node2: `/project/teqlif/config/.env.dr` placeholder oluşturuldu ✓
-  - `pg_dumpall --globals-only` test: roller ve `pgvector` uyumu doğrulandı ✓
-  - **Doğrulama:** `dpkg -l postgresql-17-pgvector ✓`, `pg_lsclusters → down ✓`, `cf-origin.* ✓`, `.env.dr ✓`
+
+- `2026-11-12` · commit `7fb43506` — Reviewer P0/P1 düzeltmeleri (DR uçtan uca çalışır hale getirildi):
+  - `runbook.sh:PITR`: WAL_DIR geçici 750/postgres erişimi + restore sonrası 700'e dön ✓
+  - `runbook.sh:PITR`: `conf.d/dr.conf` max_connections=200/hot_standby=on (node1 150'den fazla) ✓
+  - `runbook.sh:PITR`: `sleep 5` → `pg_is_in_recovery()=false` döngüsü (maks 10 dk) ✓
+  - `runbook.sh:DUMP`: `pg_restore -h 127.0.0.1 --role=teqlif` kaldırıldı (local socket + postgres superuser → CREATE EXTENSION çalışır) ✓
+  - `runbook.sh`: `.env.dr` placeholder guard (`<[a-z_]*>`) eklendi ✓
+  - `bootstrap_node2.sh`: `setup_venv` eklendi; `.env.dr` lowercase + `USE_PGBOUNCER=false` ✓
+  - `nginx.conf`: `include /etc/nginx/sites-enabled/*` eklendi (webmail uyumu) ✓
+  - `pg_dump.sh`: `--no-role-passwords` eklendi ✓
+  - Live node1: `teqlif_repl NOSUPERUSER` + `host all→postgres` (dar HBA) + `pg_reload_conf()` ✓
+  - Live node2: uvicorn + tüm backend requirements `.venv`'e kuruldu ✓
+  - Live node2: `.env.dr` lowercase placeholder güncellendi ✓
+  - node101 dahil tüm 8 node `7fb43506`'da ✓
+  - **Doğrulama:** `pg_dumpall --globals-only --no-role-passwords` NOSUPERUSER ile başarılı ✓; `uvicorn` `.venv`'de ✓; `runbook.sh` bash -n temiz ✓
 
 ---
 
