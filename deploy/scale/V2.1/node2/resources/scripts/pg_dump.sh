@@ -19,7 +19,8 @@ source /project/teqlif/config/.env.backup
 # teqlif_repl SUPERUSER ile bağlanır — pg_hba.conf: host all teqlif_repl 10.10.0.2/32 scram-sha-256
 GLOBALS_TMP="${GLOBALS_DEST}.tmp"
 PGPASSWORD="${REPL_PASSWORD}" pg_dumpall \
-    --globals-only -h "${PGHOST}" -p "${PGPORT}" -U teqlif_repl \
+    --globals-only --no-role-passwords \
+    -h "${PGHOST}" -p "${PGPORT}" -U teqlif_repl \
     > "${GLOBALS_TMP}"
 mv "${GLOBALS_TMP}" "${GLOBALS_DEST}"
 find "${BACKUP_DIR}" -name "globals_*.sql" -mtime +${RETENTION_DAYS} -delete

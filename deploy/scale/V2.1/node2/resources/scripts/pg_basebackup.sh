@@ -41,8 +41,8 @@ SIZE=$(du -sh "${DEST}" | cut -f1)
 echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) pg_basebackup: tamamlandı (${SIZE}) → ${DEST}"
 logger "teqlif pg_basebackup: tamamlandı (${SIZE})"
 
-# Eski yedekleri temizle — en son RETENTION_COUNT adedini sakla
-mapfile -t OLD < <(ls -1dt "${BACKUP_DIR}"/[0-9]* 2>/dev/null | tail -n +$((RETENTION_COUNT + 1)))
+# Eski yedekleri temizle — .tmp dizinlerini atla; tamamlanmış en son RETENTION_COUNT adedini sakla
+mapfile -t OLD < <(ls -1dt "${BACKUP_DIR}"/[0-9]* 2>/dev/null | grep -v '\.tmp$' | tail -n +$((RETENTION_COUNT + 1)))
 for OLD_DIR in "${OLD[@]}"; do
     rm -rf "${OLD_DIR}"
     echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) pg_basebackup: eski yedek silindi → ${OLD_DIR}"

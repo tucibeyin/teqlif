@@ -51,6 +51,7 @@ main() {
     install_node_exporter "10.10.0.2"
     setup_redis_replica  "${NODE_DIR}"
     setup_redis_failover "${NODE_DIR}"
+    setup_venv "${REPO_DIR}"
     setup_dr_app "${NODE_DIR}"
 
     if [ -n "${SECRETS_FILE:-}" ]; then
@@ -178,10 +179,12 @@ setup_dr_app() {
         cat > "${DR_ENV}" <<'ENVEOF'
 # .env.dr — node2 DR uygulama ortamı (runbook.sh için zorunlu)
 # Bu dosya node1 çöküşünde teqlif-dr.service tarafından kullanılır.
-# Runbook başlatılmadan önce gerçek değerleri doldur:
-DATABASE_URL=postgresql://teqlif:<TEQLIF_DB_PASSWORD>@127.0.0.1:5432/teqlif
-REDIS_URL=redis://:<CORE_REDIS_PASS>@127.0.0.1:6379/0
-SECRET_KEY=<SECRET_KEY>
+# apply_secrets veya manuel olarak <...> yer tutucularını gerçek değerlerle doldur.
+# Küçük harf anahtar adları secrets.env.template ile eşleşir (apply_secrets uyumu).
+DATABASE_URL=postgresql://teqlif:<teqlif_db_password>@127.0.0.1:5432/teqlif
+REDIS_URL=redis://:<core_redis_pass>@127.0.0.1:6379/0
+SECRET_KEY=<secret_key>
+USE_PGBOUNCER=false
 # Diğer değişkenler için node1:/project/teqlif/config/.env.production referans alın
 ENVEOF
         chmod 600 "${DR_ENV}"

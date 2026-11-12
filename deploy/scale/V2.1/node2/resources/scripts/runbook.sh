@@ -92,7 +92,7 @@ log_step "3. Kurtarma Modu Seç"
 # ────────────────────────────────────────────────────────────────────────────
 
 LATEST_BASEBACKUP=$(ls -1dt "${BASEBACKUP_DIR}"/[0-9]* 2>/dev/null | grep -v '\.tmp$' | head -1 || true)
-LATEST_DUMP=$(ls -1t "${DUMP_DIR}"/teqlif_*.dump* 2>/dev/null | head -1 || true)
+LATEST_DUMP=$(ls -1t "${DUMP_DIR}"/teqlif_*.dump 2>/dev/null | grep -v '\.tmp$' | head -1 || true)
 
 if [ -n "${LATEST_BASEBACKUP}" ]; then
     BB_AGE=$(( ( $(date +%s) - $(stat -c %Y "${LATEST_BASEBACKUP}") ) / 3600 ))
@@ -149,6 +149,20 @@ if [ "${RESTORE_MODE}" = "PITR" ]; then
     mkdir -p "${PG_CONF}/conf.d"
     chown postgres:postgres "${PG_CONF}/conf.d"
 
+    # WAL_DIR'i PITR süresince postgres'e eriş: restore_command 'cp' postgres UID ile çalışır
+    # (pg_receivewal tucibeyin:tucibeyin 700 yazar; postgres read edemez → WAL replay başarısız)
+    chgrp postgres "${WAL_DIR}"
+    chmod 750 "${WAL_DIR}"
+    log_ok "WAL_DIR geçici erişim: 750 postgres grubu → restore_command için"
+
+    # max_connections ve hot_standby: node1 (150) ile uyumlu olmazsa PG açılışta FATAL verir
+    cat > "${PG_CONF}/conf.d/dr.conf" <<EOF
+max_connections = 200
+hot_standby = on
+EOF
+    chown postgres:postgres "${PG_CONF}/conf.d/dr.conf"
+    log_ok "dr.conf: max_connections=200, hot_standby=on yazıldı"
+
     # restore_command yapılandır
     # recovery_target_timeline='latest': pg_wal.tar.gz + pg_receivewal WAL'larının
     # TÜMünü replay eder. 'immediate' kullanılmamalı — ilk checkpoint'te durur.
@@ -185,11 +199,14 @@ else
     sudo -u postgres psql -c "DROP DATABASE IF EXISTS teqlif;" postgres || true
     sudo -u postgres psql -c "CREATE DATABASE teqlif OWNER teqlif;" postgres
 
+    # pg_restore: local socket (peer auth), postgres superuser ile restore
+    # --role=teqlif kaldırıldı: CREATE EXTENSION (vector/pg_trgm/unaccent) SUPERUSER gerektirir
+    # dump içindeki "ALTER TABLE ... OWNER TO teqlif" komutları sahipliği doğru aktarır
     EXT="${LATEST_DUMP##*.}"
     if [ "${EXT}" = "gz" ]; then
-        zcat "${LATEST_DUMP}" | sudo -u postgres pg_restore -d teqlif --no-owner --role=teqlif
+        zcat "${LATEST_DUMP}" | sudo -u postgres pg_restore -d teqlif
     else
-        sudo -u postgres pg_restore -h 127.0.0.1 -d teqlif --no-owner --role=teqlif "${LATEST_DUMP}"
+        sudo -u postgres pg_restore -d teqlif "${LATEST_DUMP}"
     fi
     log_ok "pg_restore tamamlandı"
 fi
@@ -199,21 +216,41 @@ log_step "5. PostgreSQL Başlat"
 # ────────────────────────────────────────────────────────────────────────────
 
 systemctl start postgresql
-sleep 5
+
+if [ "${RESTORE_MODE}" = "PITR" ]; then
+    # WAL replay bitene kadar bekle (pg_is_in_recovery() = false → tamamlandı)
+    log_ok "PITR WAL replay bekleniyor (maks 10 dk)..."
+    pitr_ok=false
+    for i in $(seq 1 120); do
+        if sudo -u postgres psql -At -c "SELECT NOT pg_is_in_recovery();" postgres 2>/dev/null | grep -q '^t$'; then
+            pitr_ok=true
+            break
+        fi
+        sleep 5
+    done
+    if ! $pitr_ok; then
+        log_err "PITR 10 dakikada tamamlanamadı — 'journalctl -u postgresql' kontrol et."
+        exit 1
+    fi
+    log_ok "PITR tamamlandı (pg_is_in_recovery = false)"
+
+    # WAL_DIR izinlerini geri al
+    chgrp tucibeyin "${WAL_DIR}"
+    chmod 700 "${WAL_DIR}"
+
+    # conf.d temizle (artık gerekmiyor)
+    rm -f "${PG_CONF}/conf.d/recovery.conf"
+    systemctl reload postgresql 2>/dev/null || true
+    log_ok "PITR recovery modu kapatıldı, WAL_DIR izinleri geri alındı"
+else
+    sleep 5
+fi
 
 if sudo -u postgres psql -At -c "SELECT 'OK';" teqlif 2>/dev/null | grep -q OK; then
     log_ok "PostgreSQL ayakta — teqlif veritabanı erişilebilir"
 else
     log_err "PostgreSQL başlatılamadı! 'journalctl -u postgresql' kontrol et."
     exit 1
-fi
-
-if [ "${RESTORE_MODE}" = "PITR" ]; then
-    # PITR tamamlanınca recovery.signal otomatik silinir
-    # conf.d/recovery.conf'u temizle (artık gerekmiyor)
-    rm -f "${PG_CONF}/conf.d/recovery.conf"
-    systemctl reload postgresql 2>/dev/null || true
-    log_ok "PITR tamamlandı — recovery modu kapatıldı"
 fi
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -231,9 +268,13 @@ if [ ! -f "${DR_ENV}" ]; then
     log_err ".env.dr bulunamadı: ${DR_ENV}"
     echo "  FastAPI DR için bu dosya zorunludur. İçermesi gereken değişkenler:"
     echo "  DATABASE_URL=postgresql://teqlif:<şifre>@127.0.0.1:5432/teqlif"
-    echo "  REDIS_URL=redis://:${CORE_REDIS_PASS:-<redis_şifre>}@127.0.0.1:6379/0"
-    echo "  SECRET_KEY=<üretim_secret_key>"
-    echo "  (Diğer değişkenler için /var/www/teqlif.com'daki .env.production referans alın)"
+    echo "  REDIS_URL=redis://:<redis_şifre>@127.0.0.1:6379/0"
+    echo "  SECRET_KEY=<üretim_secret_key>, USE_PGBOUNCER=false"
+    echo "  (node1:/project/teqlif/config/.env.production referans alın)"
+    prereq_ok=false
+elif grep -q '<[a-z_]*>' "${DR_ENV}" 2>/dev/null; then
+    log_err ".env.dr içinde doldurulmamış yer tutucu var:"
+    grep '<[a-z_]*>' "${DR_ENV}" | sed 's/^/    /' >&2
     prereq_ok=false
 fi
 if [ ! -f "${CF_CERT}" ] || [ ! -f "${CF_KEY}" ]; then
