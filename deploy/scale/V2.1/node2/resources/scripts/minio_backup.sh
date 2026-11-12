@@ -74,9 +74,10 @@ SYNC_START=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 teqlif_ok=false
 teqlif_dm_ok=false
 
-# teqlif: recordings/ dışı --remove ile KVKK silmelerini yansıt; recordings/ ayrıca --remove'suz
-{ mirror_bucket_with_retry teqlif --remove --exclude 'recordings/*' && \
-  mirror_bucket_with_retry teqlif --include 'recordings/*'; } && teqlif_ok=true || true
+# teqlif: önce tüm yeni/güncellenen nesneleri indir (recordings dahil, --remove'suz)
+# ardından recordings/ dışındaki silinmiş nesneleri KVKK gereği node2'den temizle
+{ mirror_bucket_with_retry teqlif && \
+  mirror_bucket_with_retry teqlif --remove --exclude 'recordings/*'; } && teqlif_ok=true || true
 
 # 30 günden eski recordings yerel kopyalarını temizle (MinIO ILM'den bağımsız yerel retention)
 find "${BACKUP_DIR}/teqlif/recordings" -type f -mtime +30 -delete 2>/dev/null || true
