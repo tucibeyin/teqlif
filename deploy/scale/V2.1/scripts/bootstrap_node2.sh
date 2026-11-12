@@ -65,7 +65,7 @@ main() {
         "node1'de replication user ve slot oluştur (ADR §PG-HA)" \
         "systemctl start teqlif-pg-receivewal" \
         "systemctl start clickhouse-server" \
-        "ClickHouse BACKUP grant: clickhouse-client --host 127.0.0.1 --user default -q \"GRANT BACKUP ON *.* TO teqlif\"" \
+        "ClickHouse grants: clickhouse-client --host 127.0.0.1 --user default -q \"GRANT BACKUP ON *.* TO teqlif; GRANT WRITE ON DISK TO teqlif\"" \
         "Redis failover aktif: systemctl status teqlif-redis-failover.timer" \
         "Restic repo başlatma (Faz 2 sonrası): sudo -u tucibeyin restic init" \
         "Offsite timer başlatma (Faz 2 sonrası): systemctl start teqlif-offsite-sync.timer teqlif-offsite-wal.timer"
