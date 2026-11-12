@@ -84,6 +84,7 @@ async def deactivate_expired_listings_task(ctx: dict) -> None:
     except Exception as exc:
         logger.error("[ListingTasks] deactivate_expired_listings_task başarısız | %s", exc, exc_info=True)
         capture_exception(exc)
+        raise
 
 
 async def delete_expired_inactive_listings_task(ctx: dict) -> None:
