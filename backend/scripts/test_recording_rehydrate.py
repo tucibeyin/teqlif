@@ -247,6 +247,7 @@ class TestGetStreamRecording(unittest.IsolatedAsyncioTestCase):
 
         with patch("app.services.storage_service._get_presign_client") as mock_pf, \
              patch("app.config.settings") as mock_settings, \
+             patch("app.services.storage_service.check_exists_on_node1", new=AsyncMock(return_value=False)), \
              patch("app.services.storage_service.rehydrate_from_node2", new=AsyncMock(return_value="http://node1/url")) as mock_rehydrate:
             mock_settings.minio_bucket = "teqlif"
             mock_pf.return_value.presigned_get_object = MagicMock(return_value="https://presigned.url/p0fix")
@@ -298,6 +299,7 @@ class TestGetStreamRecording(unittest.IsolatedAsyncioTestCase):
 
         with patch("app.services.storage_service._get_presign_client") as mock_pf, \
              patch("app.config.settings") as mock_settings, \
+             patch("app.services.storage_service.check_exists_on_node1", new=AsyncMock(return_value=False)), \
              patch("app.services.storage_service.rehydrate_from_node2", new=AsyncMock(return_value="http://node1/url")) as mock_rehydrate:
             mock_settings.minio_bucket = "teqlif"
             mock_pf.return_value.presigned_get_object = MagicMock(return_value="https://presigned.url/rehydrated")
@@ -358,7 +360,8 @@ class TestGetStreamRecording(unittest.IsolatedAsyncioTestCase):
         )
         db = self._make_db(row=row)
 
-        with patch("app.services.storage_service.rehydrate_from_node2",
+        with patch("app.services.storage_service.check_exists_on_node1", new=AsyncMock(return_value=False)), \
+             patch("app.services.storage_service.rehydrate_from_node2",
                    new=AsyncMock(side_effect=FileNotFoundError("kayıt yok"))):
             with self.assertRaises(HTTPException) as ctx:
                 await get_stream_recording(stream_id=1, db=db, current_user=_make_user())
@@ -378,7 +381,8 @@ class TestGetStreamRecording(unittest.IsolatedAsyncioTestCase):
         )
         db = self._make_db(row=row)
 
-        with patch("app.services.storage_service.rehydrate_from_node2",
+        with patch("app.services.storage_service.check_exists_on_node1", new=AsyncMock(return_value=False)), \
+             patch("app.services.storage_service.rehydrate_from_node2",
                    new=AsyncMock(side_effect=RuntimeError("HTTP 503"))):
             with self.assertRaises(HTTPException) as ctx:
                 await get_stream_recording(stream_id=1, db=db, current_user=_make_user())
@@ -401,6 +405,7 @@ class TestGetStreamRecording(unittest.IsolatedAsyncioTestCase):
 
         with patch("app.services.storage_service._get_presign_client") as mock_pf, \
              patch("app.config.settings") as mock_settings, \
+             patch("app.services.storage_service.check_exists_on_node1", new=AsyncMock(return_value=False)), \
              patch("app.services.storage_service.rehydrate_from_node2", new=AsyncMock(return_value="http://node1/url")) as mock_rehydrate:
             mock_settings.minio_bucket = "teqlif"
             mock_pf.return_value.presigned_get_object = MagicMock(return_value="https://presigned.url/expired")
@@ -414,6 +419,7 @@ class TestGetStreamRecording(unittest.IsolatedAsyncioTestCase):
 if __name__ == "__main__":
     loader = unittest.TestLoader()
     suite = loader.loadTestsFromTestCase(TestRehydrateFromNode2)
+    suite.addTests(loader.loadTestsFromTestCase(TestCheckExistsOnNode1))
     suite.addTests(loader.loadTestsFromTestCase(TestGetStreamRecording))
     runner = unittest.TextTestRunner(verbosity=2)
     result = runner.run(suite)
