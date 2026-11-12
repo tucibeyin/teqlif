@@ -405,8 +405,8 @@ PersistentKeepalive = 25
 2. `pg_dump.sh:26` filtresi `find "${BACKUP_DIR}" -name "teqlif_*.dump*" -mtime +${RETENTION_DAYS} -delete` yapılır ve canlıdaki eski `.dump.gz` dosyaları silinir.
 * **Doğrulama:** `restic snapshots --tag daily-full --latest 1 --json` içinde `.partial` dosyası olmamalı ve `/project/teqlif/backups/pg_basebackup` snapshot'a dahil görünmelidir.
 
-##### ⬜ Çözüm Damgası
-- *(Henüz uygulanmadı — [Adım 12](#adim-12) bekliyor)*
+##### ✅ Çözüm Damgası
+- `2026-11-12` · commit `114c0ee4` — **P1 OFFSITE-07 kapatıldı** ✓: `offsite_sync.sh`'ye `pg_wal` (625MB, PITR) + `loki` (413MB) eklendi ✓; `--exclude '*.partial' --exclude '.last_*'` eklendi ✓; `pg_dump.sh:39` filtresi `teqlif_*.dump` → `teqlif_*.dump*` (`.dump.gz` yetimlerini otomatik temizler) ✓; canlı node2'de 7× eski `.dump.gz` (Oct 2–8) manuel silindi ✓. Doğrulama: `restic snapshots --tag daily-full` sonraki çalışmada `pg_wal` + `loki` paths içerecek; `pg_dump.sh` artık `.dump.gz` uzantılı yetim bırakmaz.
 
 ---
 
@@ -1200,7 +1200,7 @@ await redis.set("ch:last_sync_at", now.isoformat())  # Aradakiler kalıcı kaybo
 ~~11. **Adım 11 (`OFFSITE-01`):** `node1` MinIO 2g ILM öncesinde `node2` mirror + `node101` offsite ilk `daily-full` kopyasının garanti altına alınmasını (öncelikli mirror + offsite akışı ve `node101` tek-volume izleme rolü) kilitle → _Neden:_ Video kayıtlarında `node1` ILM sonrası 3-2-1 kopya kuralını tamamlamak. → ([Detay](#offsite-01), [Blueprint](#blueprint))~~ ✅ `c5133ac3`
 
 <a id="adim-12"></a>
-12. **Adım 12 (`OFFSITE-07`):** [`offsite_sync.sh`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/offsite_sync.sh) içeriğini `rclone sync` → **`restic backup --pack-size 32 --tag daily-full`** olarak yeniden yaz, kapsamına `pg_basebackup` + `pg_wal` (`--exclude '*.partial' --exclude '*.tmp' --exclude '.last_*'`) ekle, saatini **`06:30 UTC`** yap ve [`pg_dump.sh:26`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/pg_dump.sh#L26) `.dump*` filtresiyle canlı `2–8 Eki` `.dump.gz` yetimlerini temizle → _Neden:_ Offsite PG PITR kapsamını açmak ve `node101` `fdatasync` darboğazını `--pack-size 32` ile aşmak. → ([Detay](#offsite-07))
+~~12. **Adım 12 (`OFFSITE-07`):** [`offsite_sync.sh`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/offsite_sync.sh) içeriğini `rclone sync` → **`restic backup --pack-size 32 --tag daily-full`** olarak yeniden yaz, kapsamına `pg_basebackup` + `pg_wal` (`--exclude '*.partial' --exclude '*.tmp' --exclude '.last_*'`) ekle, saatini **`06:30 UTC`** yap ve [`pg_dump.sh:26`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/pg_dump.sh#L26) `.dump*` filtresiyle canlı `2–8 Eki` `.dump.gz` yetimlerini temizle → _Neden:_ Offsite PG PITR kapsamını açmak ve `node101` `fdatasync` darboğazını `--pack-size 32` ile aşmak. → ([Detay](#offsite-07))~~ ✅ `114c0ee4`
 
 <a id="adim-13"></a>
 13. **Adım 13 (`OFFSITE-04`):** `offsite_sync.sh` boş config'te **`exit 2` + Telegram**, `teqlif-offsite-sync.service` içine `OnFailure=teqlif-backup-failed@%n.service` + `IOSchedulingClass=idle` + `Nice=19` ekle; yeni saatlik **`offsite_wal_sync.sh` + `teqlif-offsite-wal.{service,timer}` (`*:45:00 UTC`, `--tag pg_wal`)** oluştur; her iki timer'ı `systemctl enable --now` yap ve sentinel + `schedule.yaml` + [`health.py`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/teqlif-agent/modules/health.py#L44-L54) entegrasyonunu tamamla → _Neden:_ 3 katmanlı izleme körlüğünü gidermek ve çifte felakette PG RPO'sunu `24 saat → ≤ 1 saate` indirmek. → ([Detay](#offsite-04))
