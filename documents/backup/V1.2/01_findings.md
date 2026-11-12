@@ -85,7 +85,7 @@
 | :---: | :---: | :--- | :--- | :---: | :---: |
 | [`BIZ-01`](#biz-01) | 🔴 **P0** | `messages.py` vs `dm_archive`, `streams.py` vs `stream_recording` | **DM Arşivi public bucket okuyup `[]` döner** + **Standart 14g PRO upsell `404 NoSuchKey` kırık** | [Adım 7](#adim-7) ✅, [Adım 8](#adim-8) ✅ | ✅ Çözüldü (`622507fc`) |
 | [`BIZ-02`](#biz-02) | 🔴 **P0** | `wallet_tasks.py:102-262`, `node1` PG, `redis_failover.sh` | **Alarmsız mutabakat** + **Sınırsız `max_slot_wal_keep_size = -1`** (prod disk crash!) + `wg` peer tuzağı | [Adım 6](#adim-6), [Adım 4](#adim-4) | ✅ Çözüldü `8234ee8d` |
-| [`BIZ-03`](#biz-03) | 🟠 **P1** | `auth.py:1638`, `analytics_tasks`, `listing_tasks`, `notification_service` | KVKK `delete_account` (bakiye kilidi/DM yok) + `--remove` yok + **`07:00 TR` push fırtınası** | [Adım 24](#adim-24), [Adım 18](#adim-18) | ⬜ Açık |
+| [`BIZ-03`](#biz-03) | 🟠 **P1** | `auth.py:1638`, `analytics_tasks`, `listing_tasks`, `notification_service` | KVKK `delete_account` (bakiye kilidi/DM yok) + `--remove` yok + **`07:00 TR` push fırtınası** | [Adım 24](#adim-24), [Adım 18](#adim-18) | ✅ `8895adae` |
 | [`BIZ-04`](#biz-04) | 🟠 **P1** | `mail_backup.sh`, `nodeMonitor` SPOF, Prometheus kapsamı | **`09:15 TR` Mail Stop** (`config.toml`/`.env.mail` yok) + **`nodeMonitor` SPOF** + CH/MinIO/Mail kör | [Adım 17](#adim-17), [Adım 20](#adim-20) | ✅ Çözüldü `8f668955` (Adım 17) + `214c287a..91239cee` (Adım 20) |
 | [`BIZ-05`](#biz-05) | 🟠 **P1** | `worker.py:4153-4264`, `listing_tasks.py:84-160` | `sync_pg_to_clickhouse` `LIMIT` sessiz veri silme + sınırsız/retry'sız ilan temizleme (`>50K`) | [Adım 25](#adim-25) | ⬜ Açık |
 
@@ -1178,8 +1178,12 @@ await _agent_ok(ctx, "daily_financial_reconciliation_task")  # Telegram / Sentry
 3. `analytics_tasks.py:171-173`: ClickHouse erişilemediğinde hatayı yutup `_agent_ok` basmak yerine `raise` et (ve airdrop kredi logunu `wallet_ledger` muhasebesiyle senkronla).
 * **Doğrulama:** Açık `pending=100` bakiyeli test kullanıcısı `DELETE /auth/delete-account` çağrısında `HTTP 409` alır; CH kapalıyken `process_churn_and_airdrop` exception fırlatır (`_agent_ok` basmaz).
 
-##### ⬜ Çözüm Damgası
-- *(Henüz uygulanmadı — [Adım 24](#adim-24) bekliyor)*
+##### ✅ Çözüm Damgası
+- `2026-11-12` · commit `8895adae` — **BIZ-03 Adım 24 kapatıldı** ✓:
+  - `auth.py`: `UserWalletEarnings`/`WithdrawalRequest` → `HTTP 409 ACTIVE_BALANCE_OR_WITHDRAWAL_PENDING` kilidi ✓
+  - `schedule.yaml`: `process_churn_and_airdrop` `04:00`→`08:00`, `deactivate_expired_listings_task` `04:15`→`08:10`, `delete_expired_inactive_listings_task` `04:20`→`08:20`, `hesitation_retarget_task` `05:00`→`08:30` UTC (K6) ✓
+  - `notification_service.py`: `_PROMOTIONAL_NOTIF_TYPES` + `pref_key=None` quiet_hours desteği ✓
+  - `analytics_tasks.py`: CH hata → `raise` (sahte `_agent_ok` kalkmadı); `teqlik_transactions` → `wallet_ledger` ✓
 
 ---
 
@@ -1335,7 +1339,7 @@ await redis.set("ch:last_sync_at", now.isoformat())  # Aradakiler kalıcı kaybo
 ~~23. **Adım 23 (`AUDIT-05`):** `node2` ve `node5` ClickHouse `system.*_log` tabloları için 7 günlük `TTL DELETE` (`system_logs_ttl.xml`) + tek seferlik `TRUNCATE` uygula, [`encoder.py`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/teqlif-agent/modules/encoder.py#L162-L274) `.log`/0-byte/`failed > 48h` yetim temizliği ekle ve canlı `node5` `194 MB /var/recordings` + `3.2 GB /root/.cache` artığını sil → _Neden:_ `%56` doluluğa ulaşan `node5` diskiyle `node2`/`edge` disklerinin log ve ham video artıklarıyla dolmasını engellemek. → ([Detay](#audit-05))~~ ✅ `0845f6d8`
 
 <a id="adim-24"></a>
-24. **Adım 24 (`BIZ-03`):** [`auth.py:1638-1719`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/routers/auth.py#L1638-L1719) `delete_account` içine `UserWalletEarnings` / `WithdrawalRequest` `409 Conflict` koruması ([Karar K5](#kilitli-kararlar)) + ilan/DM temizliği ekle; `schedule.yaml`'daki airdrop/ilan/retarget promosyonel push'larını `08:00–08:30 UTC` (`11:00–11:30 TR`) penceresine alıp `quiet_hours` kontrolü uygula ([Karar K6](#kilitli-kararlar)); [`analytics_tasks.py:171-321`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/tasks/analytics_tasks.py#L171-L321) CH hatasında `raise` et + `wallet_ledger` bağla → _Neden:_ KVKK uyumu, açık bakiye korunması ve `07:00 TR` push fırtınasının önlenmesi. → ([Detay](#biz-03), [Birlikte: Adım 18](#adim-18))
+~~24. **Adım 24 (`BIZ-03`):** [`auth.py:1638-1719`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/routers/auth.py#L1638-L1719) `delete_account` içine `UserWalletEarnings` / `WithdrawalRequest` `409 Conflict` koruması ([Karar K5](#kilitli-kararlar)) + ilan/DM temizliği ekle; `schedule.yaml`'daki airdrop/ilan/retarget promosyonel push'larını `08:00–08:30 UTC` (`11:00–11:30 TR`) penceresine alıp `quiet_hours` kontrolü uygula ([Karar K6](#kilitli-kararlar)); [`analytics_tasks.py:171-321`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/tasks/analytics_tasks.py#L171-L321) CH hatasında `raise` et + `wallet_ledger` bağla → _Neden:_ KVKK uyumu, açık bakiye korunması ve `07:00 TR` push fırtınasının önlenmesi. → ([Detay](#biz-03), [Birlikte: Adım 18](#adim-18))~~ ✅ `8895adae`
 
 <a id="adim-25"></a>
 25. **Adım 25 (`BIZ-05`):** [`worker.py:4145-4268`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/worker.py#L4145-L4268) `sync_pg_to_clickhouse_task` içine cursor pagination + `ch:last_sync_at` öncesi dışında silmeme + 5.000 batch `DELETE` koy; [`listing_tasks.py:84-160`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/tasks/listing_tasks.py#L84-L160) 500'lük chunk, paralel `delete_listing_files` ve `except` içine `raise` ekle → _Neden:_ `>50K` kullanıcı ölçeğinde sessiz ClickHouse veri kaybını ve ARQ timeout/kilit patlamasını önlemek. → ([Detay](#biz-05))
