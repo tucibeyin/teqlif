@@ -328,6 +328,7 @@ fi
 
 ##### ✅ Çözüm Damgası
 - `2026-11-12` · commit `2214bff7` — **P0 OFFSITE-04 kapatıldı** ✓: `offsite_sync.sh` / `offsite_wal_sync.sh` sessiz `exit 0` → `exit 2` (OFFSITE_MODE=disabled olmadıkça) ✓; `.last_offsite_sync_ok` + `.last_offsite_wal_ok` sentinel dosyaları başarılı çalışmada dokunuluyor ✓; `teqlif-offsite-sync.service` `Nice=10→19`, `EnvironmentFile=` eklendi ✓; `schedule.yaml`: `offsite_sync` (watchdog_m:1500) + `offsite_wal_sync` (watchdog_m:90) ✓; `health.py` `_BACKUP_MAX_MIN` + `sentinel_dirs` offsite girişleri ✓. Canlı doğrulama: sentinel dosyaları `Nov 12 14:01/14:02` ✓; her iki timer `enabled` ✓; `teqlif-agent` yeniden başlatıldı.
+- `2026-11-12` · commit `f41689e6` — **P2 kapatıldı** ✓: `health.py` `blabel` sözlüğüne `"offsite_sync"` + `"offsite_wal_sync"` Türkçe etiketler eklendi ✓; `teqlif-offsite-wal.service` `Nice=10→19` + `EnvironmentFile=/project/teqlif/config/.env.backup` ✓.
 
 ---
 
