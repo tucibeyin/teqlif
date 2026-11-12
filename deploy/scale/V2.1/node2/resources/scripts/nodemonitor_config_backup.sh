@@ -26,6 +26,7 @@ rsync_from_nodemonitor() {
     install -d "${dest}"
     rsync -az \
         --delete \
+        --delete-excluded \
         "$@" \
         -e "ssh -i /home/tucibeyin/.ssh/id_ed25519 -o StrictHostKeyChecking=no" \
         tucibeyin@10.10.0.99:"${src}" \
@@ -35,10 +36,13 @@ rsync_from_nodemonitor() {
 # teqlif servis config (env dosyaları, sertifikalar, vb.)
 rsync_from_nodemonitor "/project/teqlif/config/" "${BACKUP_DIR}/teqlif-config"
 
-# Monitoring stack config — TSDB ve chunk dizinleri hariç
+# Monitoring stack config — TSDB, WAL ve index cache dizinleri hariç
 rsync_from_nodemonitor "/opt/monitor/teqlif/" "${BACKUP_DIR}/monitor-config" \
     --exclude 'prometheus/data/' \
-    --exclude 'loki/data/'
+    --exclude 'loki/data/' \
+    --exclude 'loki/wal/' \
+    --exclude 'loki/tsdb-shipper-active/' \
+    --exclude 'loki/tsdb-shipper-cache/'
 
 USED=$(du -sh "${BACKUP_DIR}" 2>/dev/null | cut -f1 || echo "?")
 echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) nodemonitor_config_backup: tamamlandı (${USED})"
