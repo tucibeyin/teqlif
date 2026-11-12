@@ -1051,6 +1051,11 @@ await _agent_ok(ctx, "daily_financial_reconciliation_task")  # Telegram / Sentry
   - **`db.py`:** `fail_reason TEXT` kolonu; `mark_fail()` idempotent — aynı timestamp'te `fail_count` artmaz; `reason` parametresi eklendi ✓
   - **`watchdog.py`:** payload reason ayrıştırılıp `mark_fail(reason=...)` ile yazılıyor; `_alert_fail` Telegram mesajına `fail_reason` eklendi ✓
   - **8/8 node:** `/opt/teqlif-agent/` sync + `teqlif-agent` restart — watchdog hash `4e3a4ef5` tüm node'larda eşit ✓
+- `2026-11-12` · commit `297d71e9` — fail_reason SELECT + gossip + html.escape:
+  - `get_failed_jobs()` SELECT listesine `fail_reason` eklendi (yoksa `None` dönüyordu) ✓
+  - `apply_delta()` gossip merge'e `fail_reason` sütunu eklendi ✓
+  - `_alert_fail`: `html.escape(reason)` → Telegram HTML parse `400` riski kapatıldı ✓
+  - 8/8 node `/opt/teqlif-agent` sync + restart ✓
 
 ---
 
