@@ -916,7 +916,10 @@ mc mirror --overwrite --quiet "node1minio/${bucket}" "${dest}"  # 30g silme yok 
   - `uptime_kuma_backup.sh`: `.tmp` + `gzip -t` bütünlük doğrulaması ✓
   - `uptime_kuma_backup.sh`: `job_ok` Redis sinyali eklendi ✓
   - `uptime_kuma_backup.sh`: `find -size -100c` yetim bozuk arşiv temizliği (13 Eki 20B) ✓
-  - node2 uptime_kuma test: **OK (688K)** ✓; minio_backup.sh sözdizimi temiz (tam test 05:30 UTC)
+  - node2 uptime_kuma test: **OK (688K)** ✓
+- `2026-11-12` · commit `4ea59542` — **AUDIT-04 P0 fix** ✓:
+  - `mc mirror --include` bayrağı mevcut değil → iki aşamalı mirror: (1) tüm yeni nesneler `--remove'suz`, (2) `--remove --exclude 'recordings/*'` KVKK temizliği ✓
+  - node2 live test: teqlif OK (4.0K), teqlif-dm OK, ILM retention=2d (normal), **tamamlandı** ✓
 
 ---
 
