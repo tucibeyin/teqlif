@@ -151,6 +151,7 @@
   "EMAIL_OR_USERNAME_TAKEN": "E-Mail oder Benutzername ist bereits in Verwendung.",
   "ADMIN_DELETE_FORBIDDEN": "Systemadministrator kann nicht gelöscht werden.",
   "USER_ALREADY_DELETED": "Benutzer wurde bereits gelöscht.",
+  "ACTIVE_BALANCE_OR_WITHDRAWAL_PENDING": "Sie können Ihr Konto nicht löschen, solange Sie ein aktives Guthaben oder eine ausstehende Auszahlungsanfrage haben.",
   "USER_FCM_NOT_FOUND": "Benutzer nicht gefunden oder FCM-Token fehlt.",
   "STORY_DELETE_FORBIDDEN": "Sie dürfen diese Story nicht löschen."
 }

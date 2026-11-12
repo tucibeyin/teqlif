@@ -151,6 +151,7 @@
   "EMAIL_OR_USERNAME_TAKEN": "البريد الإلكتروني أو اسم المستخدم مستخدم بالفعل.",
   "ADMIN_DELETE_FORBIDDEN": "لا يمكن حذف مدير النظام.",
   "USER_ALREADY_DELETED": "تم حذف المستخدم بالفعل.",
+  "ACTIVE_BALANCE_OR_WITHDRAWAL_PENDING": "لا يمكنك حذف حسابك أثناء وجود رصيد نشط أو طلب سحب معلّق.",
   "USER_FCM_NOT_FOUND": "المستخدم غير موجود أو رمز FCM مفقود.",
   "STORY_DELETE_FORBIDDEN": "غير مسموح لك بحذف هذه القصة."
 }

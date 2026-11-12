@@ -151,6 +151,7 @@
   "EMAIL_OR_USERNAME_TAKEN": "E-posta veya kullanıcı adı zaten kullanımda.",
   "ADMIN_DELETE_FORBIDDEN": "Sistem yöneticisi silinemez.",
   "USER_ALREADY_DELETED": "Kullanıcı zaten silinmiş.",
+  "ACTIVE_BALANCE_OR_WITHDRAWAL_PENDING": "Hesabınızda aktif bakiye veya bekleyen para çekme talebi varken hesabınızı silemezsiniz.",
   "USER_FCM_NOT_FOUND": "Kullanıcı bulunamadı veya FCM token yok.",
   "STORY_DELETE_FORBIDDEN": "Bu hikayeyi silme yetkiniz yok."
 }
