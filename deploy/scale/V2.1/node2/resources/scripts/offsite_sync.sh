@@ -25,17 +25,20 @@ if [[ -z "${RESTIC_REST_USER:-}" ]] || [[ -z "${RESTIC_REST_PASSWORD:-}" ]] || [
     exit 0
 fi
 
-# minio_backup.sh'nin bu gün başarıyla tamamlandığını doğrula (3-2-1 bütünlük garantisi)
-# .last_backup_ok 2 saatten eskiyse ILM acil moda girmiş olabilir — offsite'ı durdur
+# minio_backup.sh staleness kontrolü (3-2-1 bütünlük garantisi)
+# .last_backup_ok 12 saatten eskiyse minio bayat — diğer yolların offsite'ını bloklamaz,
+# restic tamamlandıktan sonra exit 1 ile OnFailure alarmı tetiklenir.
 _MINIO_OK="/project/teqlif/backups/minio/.last_backup_ok"
+_stale_minio=0
 if [[ ! -f "${_MINIO_OK}" ]]; then
-    echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) offsite_sync: FAIL — ${_MINIO_OK} bulunamadı (minio_backup hiç çalışmadı?)"
-    exit 1
-fi
-_minio_age=$(( $(date +%s) - $(stat -c %Y "${_MINIO_OK}") ))
-if [[ ${_minio_age} -gt 7200 ]]; then
-    echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) offsite_sync: FAIL — minio_backup ${_minio_age}s önce tamamlandı (eşik: 7200s) — ILM acil moda geçti mi?"
-    exit 1
+    echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) offsite_sync: WARN — ${_MINIO_OK} bulunamadı (minio_backup hiç çalışmadı?)"
+    _stale_minio=1
+else
+    _minio_age=$(( $(date +%s) - $(stat -c %Y "${_MINIO_OK}") ))
+    if [[ ${_minio_age} -gt 43200 ]]; then
+        echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) offsite_sync: WARN — minio_backup ${_minio_age}s önce tamamlandı (eşik: 43200s) — minio bayat, diğer yollar devam ediyor"
+        _stale_minio=1
+    fi
 fi
 
 export RESTIC_REPOSITORY="rest:http://${RESTIC_REST_USER}:${RESTIC_REST_PASSWORD}@10.10.0.101:8000/${RESTIC_REST_USER}/"
@@ -67,5 +70,10 @@ echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) offsite_sync: daily-full snapshot OK"
 # ── job_ok Redis kaydı ────────────────────────────────────────────────────────
 redis-cli -h 10.10.0.1 -p 6379 -a "${CORE_REDIS_PASS:-}" --no-auth-warning \
     HSET teqlif:agent:job_ok offsite_sync "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >/dev/null 2>&1 || true
+
+if [[ ${_stale_minio} -eq 1 ]]; then
+    echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) offsite_sync: FAIL — minio bayattı, snapshot alındı ama minio eksik (OnFailure tetiklendi)"
+    exit 1
+fi
 
 echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) offsite_sync: tamamlandı"
