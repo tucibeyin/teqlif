@@ -53,7 +53,9 @@ mkdir -p "${RESTIC_CACHE_DIR}" "${TMPDIR}"
 
 # ── daily-full snapshot ───────────────────────────────────────────────────────
 # Tüm kritik uygulama verisi: pg_dump + pg_basebackup + pg_wal (PITR) +
-# minio + clickhouse + redis + loki + stalwart + uptime_kuma + nodeMonitor teqlif-config
+# minio + clickhouse + redis + loki (chunks+meta) + stalwart + uptime_kuma +
+# nodeMonitor (teqlif-config + shared-config + grafana.db) +
+# cluster_secrets (tüm node TLS/env — AES-256 şifreli)
 restic backup \
     /project/teqlif/backups/pg_dump \
     /project/teqlif/backups/pg_basebackup \
@@ -65,6 +67,9 @@ restic backup \
     /project/teqlif/backups/stalwart \
     /project/teqlif/backups/uptime_kuma \
     /project/teqlif/backups/nodemonitor_config/teqlif-config \
+    /project/teqlif/backups/nodemonitor_config/shared-config \
+    /project/teqlif/backups/nodemonitor_config/grafana \
+    /project/teqlif/backups/cluster_secrets \
     --tag daily-full \
     --pack-size 32 \
     --compression max \

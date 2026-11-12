@@ -1,5 +1,10 @@
 #!/bin/bash
-# nodeMonitor'dan Loki chunk backup'ı.
+# nodeMonitor'dan Loki backup'ı.
+#
+# Kapsam:
+#   chunks/    — Loki log chunk'ları (90 günlük, --ignore-existing: silinmişler korunur)
+#   compactor/ — TSDB compactor meta (küçük, tam mirror, indeks bütünlüğü için)
+#   rules/     — Loki alert kuralları
 #
 # Ön koşul: node2'den nodeMonitor'a SSH key-based auth:
 #   ~/.ssh/config'de şu blok olmalı:
@@ -10,30 +15,48 @@
 #       StrictHostKeyChecking no
 set -euo pipefail
 
-BACKUP_DIR=/project/teqlif/backups/loki/chunks
+LOKI_BACKUP_BASE=/project/teqlif/backups/loki
+CHUNKS_DIR="${LOKI_BACKUP_BASE}/chunks"
+META_DIR="${LOKI_BACKUP_BASE}/meta"
 RETENTION_DAYS=90
 LOGFILE=/project/teqlif/logs/loki_backup.log
-NODEMONITOR_CHUNKS="/opt/monitor/teqlif/loki/data/chunks/"
+SSH_OPTS="-e ssh -i /home/tucibeyin/.ssh/id_ed25519 -o StrictHostKeyChecking=no"
+NODEMONITOR="tucibeyin@10.10.0.99"
 
-install -d "${BACKUP_DIR}"
+install -d "${CHUNKS_DIR}" "${META_DIR}"
 exec >> "${LOGFILE}" 2>&1
 echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) loki_backup: start"
 
-# --ignore-existing: nodeMonitor'ın sildiği chunk'lar backup'ta korunur.
-# --delete-after YOK: silme işi alttaki find -mtime +90 -delete'e bırakılmıştır.
+# -- 1. Chunk'lar: --ignore-existing (nodeMonitor'ın sildiği chunk'lar backup'ta korunur)
 rsync -az \
     --ignore-existing \
     -e "ssh -i /home/tucibeyin/.ssh/id_ed25519 -o StrictHostKeyChecking=no" \
-    tucibeyin@10.10.0.99:"${NODEMONITOR_CHUNKS}" \
-    "${BACKUP_DIR}/"
+    "${NODEMONITOR}:/opt/monitor/teqlif/loki/data/chunks/" \
+    "${CHUNKS_DIR}/"
+
+# -- 2. Compactor meta + rules: tam mirror (--delete), değişkenler küçük
+rsync -az \
+    --delete \
+    --delete-excluded \
+    -e "ssh -i /home/tucibeyin/.ssh/id_ed25519 -o StrictHostKeyChecking=no" \
+    "${NODEMONITOR}:/opt/monitor/teqlif/loki/data/compactor/" \
+    "${META_DIR}/compactor/"
+
+rsync -az \
+    --delete \
+    --delete-excluded \
+    -e "ssh -i /home/tucibeyin/.ssh/id_ed25519 -o StrictHostKeyChecking=no" \
+    "${NODEMONITOR}:/opt/monitor/teqlif/loki/data/rules/" \
+    "${META_DIR}/rules/"
 
 # Sentinel: health.py bu dosyanın mtime'ına bakar
-touch "${BACKUP_DIR}/../.last_backup_ok"
+touch "${LOKI_BACKUP_BASE}/.last_backup_ok"
 
-# 90 günden eski chunk'ları sil
-find "${BACKUP_DIR}" -type f -mtime "+${RETENTION_DAYS}" -delete
-find "${BACKUP_DIR}" -type d -empty -mindepth 1 -delete
+# 90 günden eski chunk'ları sil (meta dizini retention'a tabi değil — küçük ve kalıcı)
+find "${CHUNKS_DIR}" -type f -mtime "+${RETENTION_DAYS}" -delete
+find "${CHUNKS_DIR}" -type d -empty -mindepth 1 -delete
 
-USED=$(du -sh "${BACKUP_DIR}" 2>/dev/null | cut -f1 || echo "?")
-echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) loki_backup: tamamlandı (${USED})"
-logger "teqlif loki_backup: tamamlandı (${USED})"
+CHUNKS_USED=$(du -sh "${CHUNKS_DIR}" 2>/dev/null | cut -f1 || echo "?")
+META_USED=$(du -sh "${META_DIR}" 2>/dev/null | cut -f1 || echo "?")
+echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) loki_backup: tamamlandı (chunks=${CHUNKS_USED} meta=${META_USED})"
+logger "teqlif loki_backup: tamamlandı (chunks=${CHUNKS_USED} meta=${META_USED})"

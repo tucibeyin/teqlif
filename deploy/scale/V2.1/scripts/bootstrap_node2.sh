@@ -68,12 +68,13 @@ main() {
         "ClickHouse grants: clickhouse-client --host 127.0.0.1 --user default -q \"GRANT BACKUP ON *.* TO teqlif; GRANT WRITE ON DISK TO teqlif\"" \
         "Redis failover aktif: systemctl status teqlif-redis-failover.timer" \
         "Restic repo başlatma (Faz 2 sonrası): sudo -u tucibeyin restic init" \
-        "Offsite timer başlatma (Faz 2 sonrası): systemctl start teqlif-offsite-sync.timer teqlif-offsite-wal.timer"
+        "Offsite timer başlatma (Faz 2 sonrası): systemctl start teqlif-offsite-sync.timer teqlif-offsite-wal.timer" \
+        "Cluster secrets SSH key: cat ~/.ssh/id_ed25519_cluster_backup.pub → node1..6+nodeMonitor+node101 authorized_keys'e 'from=\"10.10.0.2\" <pubkey>' sat olarak ekle (secrets.env.template BÖLÜM 4)"
 }
 
 setup_backup_directories() {
     log_step "Backup dizinleri"
-    mkdir -p /project/teqlif/backups/{pg_dump,pg_wal,pg_basebackup,redis,minio,clickhouse,loki,stalwart,uptime_kuma,nodemonitor_config}
+    mkdir -p /project/teqlif/backups/{pg_dump,pg_wal,pg_basebackup,redis,minio,clickhouse,loki,stalwart,uptime_kuma,nodemonitor_config,cluster_secrets}
     chown -R tucibeyin:tucibeyin /project/teqlif/backups
     find /project/teqlif/backups -type d -exec chmod 700 {} +
     # nginx (www-data) backup/minio altına ulaşabilmek için üst dizinlere traverse izni
@@ -265,6 +266,7 @@ setup_backup_services() {
         teqlif-loki-backup.timer \
         teqlif-uptime-kuma-backup.timer \
         teqlif-nodemonitor-config-backup.timer \
+        teqlif-cluster-secrets-backup.timer \
         teqlif-mail-backup.timer \
         teqlif-offsite-sync.timer \
         teqlif-offsite-wal.timer

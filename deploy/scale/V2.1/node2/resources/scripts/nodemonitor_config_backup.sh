@@ -3,13 +3,17 @@
 #
 # Kapsam:
 #   /project/teqlif/config/     — teqlif servis konfigürasyonu (env, certs, secrets)
-#   /opt/monitor/teqlif/        — Prometheus/Loki/Grafana config dosyaları
+#   /project/shared/config/     — Grafana + Uptime Kuma paylaşımlı config (grafana.ini, .env)
+#   /opt/monitor/teqlif/        — Prometheus/Loki/Alertmanager config dosyaları
+#   /opt/monitor/shared/grafana/data/  — grafana.db (dashboard, alert, user) + diğerleri
 #
 # KAPSAM DIŞI (bilinçli):
-#   prometheus/data/            — TSDB (30 günlük, onlarca GB — loki_backup gibi ayrı yönetilmeli)
-#   loki/data/                  — Loki chunk + compactor çalışma dizini
+#   prometheus/data/            — TSDB (30 günlük, onlarca GB)
+#   loki/data,wal,tsdb-*/       — Loki runtime (loki_backup.sh'de chunks + compactor)
+#   grafana/data/plugins/       — Paket verileri (grafana.ini'den yeniden yüklenebilir)
+#   grafana/data/logs/          — Log dosyaları
 #   Git repo'su içindeki yml dosyaları zaten sürüm kontrolünde;
-#   burada yalnızca runtime secrets ve Grafana durumu korunur.
+#   burada yalnızca runtime secrets, Grafana DB ve statik config korunur.
 set -euo pipefail
 
 BACKUP_DIR=/project/teqlif/backups/nodemonitor_config
@@ -36,6 +40,9 @@ rsync_from_nodemonitor() {
 # teqlif servis config (env dosyaları, sertifikalar, vb.)
 rsync_from_nodemonitor "/project/teqlif/config/" "${BACKUP_DIR}/teqlif-config"
 
+# Paylaşımlı servis config — grafana.ini, uptime-kuma.env
+rsync_from_nodemonitor "/project/shared/config/" "${BACKUP_DIR}/shared-config"
+
 # Monitoring stack config — TSDB, WAL ve index cache dizinleri hariç
 rsync_from_nodemonitor "/opt/monitor/teqlif/" "${BACKUP_DIR}/monitor-config" \
     --exclude 'prometheus/data/' \
@@ -43,6 +50,13 @@ rsync_from_nodemonitor "/opt/monitor/teqlif/" "${BACKUP_DIR}/monitor-config" \
     --exclude 'loki/wal/' \
     --exclude 'loki/tsdb-shipper-active/' \
     --exclude 'loki/tsdb-shipper-cache/'
+
+# Grafana veritabanı — dashboardlar, alertler, kullanıcılar, veri kaynakları
+# Plugins (509MB) ve logs yedeksiz; grafana.ini shared-config'de.
+# grafana.db WAL modunda: ana dosya her zaman commit'lenmiş transaksiyonları içerir.
+rsync_from_nodemonitor "/opt/monitor/shared/grafana/data/" "${BACKUP_DIR}/grafana" \
+    --exclude 'plugins/' \
+    --exclude 'logs/'
 
 USED=$(du -sh "${BACKUP_DIR}" 2>/dev/null | cut -f1 || echo "?")
 echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) nodemonitor_config_backup: tamamlandı (${USED})"
