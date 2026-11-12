@@ -83,7 +83,7 @@
 
 | ID | Seviye | Bileşen / İş Akışı | Tespit Edilen İş Mantığı / Uyum / Ölçek Riski | Bağlı Adım | Durum |
 | :---: | :---: | :--- | :--- | :---: | :---: |
-| [`BIZ-01`](#biz-01) | 🔴 **P0** | `messages.py` vs `dm_archive`, `streams.py` vs `stream_recording` | **DM Arşivi public bucket okuyup `[]` döner** + **Standart 14g PRO upsell `404 NoSuchKey` kırık** | [Adım 7](#adim-7) ✅, [Adım 8](#adim-8) ⬜ | 🔄 Kısmi (`7238a841`) |
+| [`BIZ-01`](#biz-01) | 🔴 **P0** | `messages.py` vs `dm_archive`, `streams.py` vs `stream_recording` | **DM Arşivi public bucket okuyup `[]` döner** + **Standart 14g PRO upsell `404 NoSuchKey` kırık** | [Adım 7](#adim-7) ✅, [Adım 8](#adim-8) ⬜ | 🔄 Kısmi (`287ab13e`) |
 | [`BIZ-02`](#biz-02) | 🔴 **P0** | `wallet_tasks.py:102-262`, `node1` PG, `redis_failover.sh` | **Alarmsız mutabakat** + **Sınırsız `max_slot_wal_keep_size = -1`** (prod disk crash!) + `wg` peer tuzağı | [Adım 6](#adim-6), [Adım 4](#adim-4) | ✅ Çözüldü `8234ee8d` |
 | [`BIZ-03`](#biz-03) | 🟠 **P1** | `auth.py:1638`, `analytics_tasks`, `listing_tasks`, `notification_service` | KVKK `delete_account` (bakiye kilidi/DM yok) + `--remove` yok + **`07:00 TR` push fırtınası** | [Adım 24](#adim-24), [Adım 18](#adim-18) | ⬜ Açık |
 | [`BIZ-04`](#biz-04) | 🟠 **P1** | `mail_backup.sh`, `nodeMonitor` SPOF, Prometheus kapsamı | **`09:15 TR` Mail Stop** (`config.toml`/`.env.mail` yok) + **`nodeMonitor` SPOF** + CH/MinIO/Mail kör | [Adım 17](#adim-17), [Adım 20](#adim-20) | ⬜ Açık |
@@ -977,11 +977,13 @@ raw = await storage.get_object_bytes(key)
 * **Doğrulama:** Test DM arşivi `upload_bytes_dm` → `GET /messages/{id}/archive` ile geri okunur (`200`, boş değil); `expired` 5 günlük kayıt PRO yükseltme sonrası indirilebilir.
 
 ##### 🔄 Çözüm Damgası
-- **Bölüm A (Adım 7) ✅ `7238a841` — 2026-11-12:**
-  - `storage_service.py`: `list_object_keys_dm(prefix)` eklendi (`settings.minio_dm_bucket`)
-  - `messages.py`: `get_archived_messages` → `list_object_keys_dm` + `get_object_bytes_dm`; sessiz `except→[]` yerine `logger.error` + `HTTPException(502)`
+- **Bölüm A (Adım 7) ✅ `287ab13e` — 2026-11-12:**
+  - `storage_service.py`: `_list_object_keys_impl(strict=)` ortak yardımcı; `list_object_keys_dm` strict=True ile hiçbir node başarısız olduğunda son hatayı fırlatır (HTTP 502 garantisi)
+  - `messages.py`: `get_archived_messages` → `list_object_keys_dm` + `get_object_bytes_dm`; `get_object_bytes_dm` ağ hatası → `continue` yerine `HTTPException(502)`
+  - `dm_archive_tasks.py`: docstring `teqlif-dm` bucket + `03:20 UTC` olarak düzeltildi
   - `schedule.yaml`: `archive_old_dm_task` minute: `0` → `20` (Pazar 03:20 UTC)
-  - 8/8 node `7238a841` — teqlif-agent schedule.yaml güncellendi
+  - `scripts/test_dm_archive.py`: 10/10 sentetik test (`_list_object_keys_impl` + endpoint)
+  - 8/8 node `287ab13e`
 - **Bölüm B (Adım 8) ⬜** — *(14g PRO Video on-demand rehydrate bekliyor)*
 
 ---
