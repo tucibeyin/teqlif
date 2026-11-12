@@ -48,8 +48,8 @@ export TMPDIR=/project/teqlif/backups/.restic-tmp
 mkdir -p "${RESTIC_CACHE_DIR}" "${TMPDIR}"
 
 # ── daily-full snapshot ───────────────────────────────────────────────────────
-# Tüm kritik uygulama verisi: pg_dump + minio + stalwart + redis +
-# pg_basebackup + clickhouse + uptime_kuma + nodeMonitor teqlif-config
+# Tüm kritik uygulama verisi: pg_dump + pg_basebackup + pg_wal (PITR) +
+# minio + clickhouse + redis + loki + stalwart + uptime_kuma + nodeMonitor teqlif-config
 restic backup \
     /project/teqlif/backups/pg_dump \
     /project/teqlif/backups/pg_basebackup \
