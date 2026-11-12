@@ -1254,6 +1254,8 @@ await redis.set("ch:last_sync_at", now.isoformat())  # Aradakiler kalıcı kaybo
   - `worker.py`: `LIMIT 200K/500K` kaldırıldı; `(created_at, id)` cursor + `while True` loop — tüm sayfalar bitmeden `ch:last_sync_at` güncellenmez ✓
   - `worker.py`: `analytics_events` DELETE → 5000'lik batch + `created_at < now-48h` güvencesi ✓
   - `listing_tasks.py`: `UPDATE … IN (SELECT … LIMIT 500)` subquery batch; medya silme `asyncio.Semaphore(10)` ile paralel; `except` → `raise` ✓
+- `2026-11-12` · commit `54e3d05e` — **BIZ-05 follow-up** ✓:
+  - `listing_tasks.py`: `deactivate_expired_listings_task` except bloğuna `raise` eklendi (P3 reviewer bulgusu — iki görev arasında tutarlılık)
 
 ---
 
