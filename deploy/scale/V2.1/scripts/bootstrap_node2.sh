@@ -65,6 +65,7 @@ main() {
         "node1'de replication user ve slot oluştur (ADR §PG-HA)" \
         "systemctl start teqlif-pg-receivewal" \
         "systemctl start clickhouse-server" \
+        "ClickHouse BACKUP grant: clickhouse-client --host 127.0.0.1 --user default -q \"GRANT BACKUP ON *.* TO teqlif\"" \
         "Redis failover aktif: systemctl status teqlif-redis-failover.timer" \
         "Restic repo başlatma (Faz 2 sonrası): sudo -u tucibeyin restic init" \
         "Offsite timer başlatma (Faz 2 sonrası): systemctl start teqlif-offsite-sync.timer teqlif-offsite-wal.timer"
@@ -78,6 +79,10 @@ setup_backup_directories() {
     # nginx (www-data) backup/minio altına ulaşabilmek için üst dizinlere traverse izni
     chmod o+x /project/teqlif/backups
     chmod o+x /project/teqlif/backups/minio  # mkdir -p tarafından oluşturuldu, 700'ü aç
+    # ClickHouse backup diski /project/teqlif/backups/clickhouse/ yazmalı:
+    # clickhouse OS user BACKUP komutunu yürütür; tucibeyin grubu retention cleanup için
+    chown clickhouse:tucibeyin /project/teqlif/backups/clickhouse
+    chmod 2775 /project/teqlif/backups/clickhouse   # setgid: yeni dosyalar tucibeyin grubunu alır
     log_ok "Backup dizinleri: /project/teqlif/backups/"
 }
 

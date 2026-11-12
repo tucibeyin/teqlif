@@ -28,17 +28,18 @@
     </logger>
 
     <!-- Backup diski — BACKUP DATABASE ... TO Disk('backups', ...) için zorunlu -->
-    <!-- /var/lib/clickhouse/backups/ clickhouse kullanıcısına ait; /project/... tucibeyin'e ait -->
+    <!-- /project/teqlif/backups/clickhouse/ clickhouse:tucibeyin (2775) -->
+    <!-- clickhouse_backup.sh aynı dizini okur → restic offsite_sync.sh da buradan alır -->
     <storage_configuration>
         <disks>
             <backups>
                 <type>local</type>
-                <path>/var/lib/clickhouse/backups/</path>
+                <path>/project/teqlif/backups/clickhouse/</path>
             </backups>
         </disks>
     </storage_configuration>
     <backups>
         <allowed_disk>backups</allowed_disk>
-        <allowed_path>/var/lib/clickhouse/backups/</allowed_path>
+        <allowed_path>/project/teqlif/backups/clickhouse/</allowed_path>
     </backups>
 </clickhouse>
