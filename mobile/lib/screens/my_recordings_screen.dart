@@ -199,7 +199,7 @@ class _RecordingCard extends StatelessWidget {
                       ],
                     ],
                   ),
-                  if (item.expiresAt != null && item.status.canWatch) ...[
+                  if (item.expiresAt != null && item.status == RecordingStatus.available) ...[
                     const SizedBox(height: 2),
                     _ExpiryRow(expiresAt: item.expiresAt!, loc: loc),
                   ],

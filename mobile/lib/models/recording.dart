@@ -18,7 +18,9 @@ enum RecordingStatus {
   bool get isProcessing =>
       this == recording || this == encoding || this == encoded || this == transferring;
 
-  bool get canWatch => this == available;
+  // available: doğrudan izlenebilir.
+  // expired/archived: backend rehydrate edecek (14g penceresi backend tarafında kontrol edilir).
+  bool get canWatch => this == available || this == expired || this == archived;
 
   bool get isOver => this == expired || this == archived;
 }

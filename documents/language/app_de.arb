@@ -6638,6 +6638,7 @@
   "errorRecordingNotFound": "Aufnahme nicht gefunden.",
   "errorRecordingExpired": "Diese Aufnahme ist abgelaufen.",
   "errorRecordingNotAvailable": "Aufnahme ist noch nicht bereit.",
+  "errorRehydrateFailed": "Die Aufnahme kann gerade nicht geladen werden, bitte versuche es in einigen Minuten erneut.",
   "salesPaywallDesc": "Erhalte mit PRO Zugriff auf deine Verkaufsberichte, Umsatzanalysen und die besten Angebote.",
   "conversionPaywallDesc": "Sieh dir mit PRO die Gewinnraten von Auktionen auf Kategorieebene und die durchschnittlichen Verkaufspreise an.",
   "demandPaywallDesc": "Entdecke mit PRO aufstrebende Kategorien und Angebotslücken vor der Konkurrenz.",

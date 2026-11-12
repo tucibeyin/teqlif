@@ -365,28 +365,56 @@ async def rehydrate_from_node2(minio_key: str) -> str:
     """node2 backup dosya sunucusundan kaydı node1 MinIO'ya geri yükler (on-demand rehydrate).
 
     node2'deki `/project/teqlif/backups/minio/teqlif/{minio_key}` dosyasını HTTP GET ile
-    çeker, node1 public MinIO bucket'ına yükler ve public URL döner.
+    chunk stream olarak geçici dosyaya indirir, node1 MinIO'ya fput_object (multipart) ile
+    yükler. RAM'e almaz — büyük video dosyaları için OOM güvenli.
 
     Raises:
         FileNotFoundError: node2'de kayıt yoksa (HTTP 404)
         RuntimeError:      node2 HTTP hatası veya bağlantı sorunu
     """
     import aiohttp
+    import tempfile
+    import os
 
-    url = f"{settings.minio_node2_rehydrate_url}/teqlif/{minio_key}"
+    base_url = settings.minio_node2_rehydrate_url.rstrip("/")
+    url = f"{base_url}/teqlif/{minio_key}"
     timeout = aiohttp.ClientTimeout(total=300)  # 5 dk — büyük video dosyaları için
 
-    async with aiohttp.ClientSession(timeout=timeout) as sess:
-        async with sess.get(url) as resp:
-            if resp.status == 404:
-                raise FileNotFoundError(f"node2 rehydrate: kayıt bulunamadı: {minio_key}")
-            if resp.status != 200:
-                raise RuntimeError(f"node2 rehydrate HTTP {resp.status}: {minio_key}")
-            content_type = resp.content_type or "video/mp4"
-            data = await resp.read()
+    tmp_path: str | None = None
+    try:
+        async with aiohttp.ClientSession(timeout=timeout) as sess:
+            async with sess.get(url) as resp:
+                if resp.status == 404:
+                    raise FileNotFoundError(f"node2 rehydrate: kayıt bulunamadı: {minio_key}")
+                if resp.status != 200:
+                    raise RuntimeError(f"node2 rehydrate HTTP {resp.status}: {minio_key}")
+                content_type = resp.content_type or "video/mp4"
 
-    logger.info("[REHYDRATE] node2→node1 indirildi: key=%s size=%d", minio_key, len(data))
-    return await upload_bytes(minio_key, data, content_type)
+                # Chunk stream → geçici dosya (RAM sabit ~4MB, GB video için güvenli)
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp:
+                    tmp_path = tmp.name
+                    async for chunk in resp.content.iter_chunked(4 * 1024 * 1024):
+                        tmp.write(chunk)
+
+        logger.info("[REHYDRATE] node2→node1 indirildi: key=%s", minio_key)
+
+        # Doğrudan node1 MinIO'ya yükle — orchestrator bypass (Redis geçici boşalma dayanıklılığı)
+        client = _get_client_for_internal_url(settings.minio_endpoint)
+
+        def _fput():
+            client.fput_object(
+                settings.minio_bucket,
+                minio_key,
+                tmp_path,
+                content_type=content_type,
+            )
+
+        await asyncio.to_thread(_fput)
+        logger.info("[REHYDRATE] node2→node1 yüklendi: key=%s", minio_key)
+        return f"{settings.minio_endpoint.rstrip('/')}/{settings.minio_bucket}/{minio_key}"
+    finally:
+        if tmp_path and os.path.exists(tmp_path):
+            os.unlink(tmp_path)
 
 
 def _get_presign_client() -> Minio:

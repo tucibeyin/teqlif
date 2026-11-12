@@ -6,6 +6,7 @@ class GetMyRecordingsQuery:
     """Host'un aktif kayıtlarını döner."""
 
     _ACTIVE_STATUSES = ("recording", "encoding", "encoded", "available", "expired")
+    # 'archived' kayıtlar 14g PRO upsell penceresi kapsamında ayrıca eklenir (K3)
 
     def __init__(self, db: AsyncSession):
         self._db = db
@@ -28,7 +29,13 @@ class GetMyRecordingsQuery:
             FROM stream_recordings sr
             JOIN live_streams ls ON ls.id = sr.stream_id
             WHERE sr.host_id = :host_id
-              AND sr.status = ANY(:statuses)
+              AND (
+                sr.status = ANY(:statuses)
+                OR (
+                  sr.status = 'archived'
+                  AND sr.created_at >= NOW() - INTERVAL '14 days'
+                )
+              )
             ORDER BY sr.recording_started_at DESC
         """), {
             "host_id": host_id,

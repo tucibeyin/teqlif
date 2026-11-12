@@ -110,6 +110,8 @@ class ErrorMapper {
         return loc.t('errorRecordingExpired');
       case 'RECORDING_NOT_AVAILABLE':
         return loc.t('errorRecordingNotAvailable');
+      case 'REHYDRATE_FAILED':
+        return loc.t('errorRehydrateFailed');
     }
 
     // HTTP status bazlı fallback

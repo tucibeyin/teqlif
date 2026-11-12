@@ -332,14 +332,25 @@ async def get_stream_recording(
         raise HTTPException(status_code=404, detail={"error": {"code": "RECORDING_NOT_FOUND"}})
 
     now = datetime.now(timezone.utc)
+    # node1 MinIO ILM: recordings/ 2 günde silinir (Karar K3).
+    # created_at < now-2g ise dosya node1'den gitmiş olabilir → rehydrate gerekli.
+    _ILM_DAYS = 2
     is_available = (
         row["status"] == "available"
         and (row["expires_at"] is None or row["expires_at"] > now)
+        and row["created_at"] >= now - timedelta(days=_ILM_DAYS)
     )
-    is_rehydratable = (
-        row["status"] in ("archived", "expired")
-        and row["node2_confirmed_at"] is not None
+    _node2_eligible = (
+        row["node2_confirmed_at"] is not None
         and row["created_at"] >= now - timedelta(days=14)
+    )
+    is_rehydratable = _node2_eligible and (
+        row["status"] in ("archived", "expired")
+        or (  # 'available' ama ILM node1'den sildi (2g+ eski)
+            row["status"] == "available"
+            and (row["expires_at"] is None or row["expires_at"] > now)
+            and row["created_at"] < now - timedelta(days=_ILM_DAYS)
+        )
     )
 
     if not is_available and not is_rehydratable:
@@ -356,7 +367,8 @@ async def get_stream_recording(
             await db.execute(text("""
                 UPDATE stream_recordings
                 SET status     = 'available',
-                    expires_at = NOW() + INTERVAL '24 hours'
+                    expires_at = NOW() + INTERVAL '24 hours',
+                    updated_at = NOW()
                 WHERE id = :id
             """), {"id": row["id"]})
             await db.commit()

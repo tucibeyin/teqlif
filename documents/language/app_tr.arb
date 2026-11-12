@@ -6567,6 +6567,7 @@
   "errorRecordingNotFound": "Kayıt bulunamadı.",
   "errorRecordingExpired": "Bu kaydın süresi dolmuş.",
   "errorRecordingNotAvailable": "Kayıt henüz hazır değil.",
+  "errorRehydrateFailed": "Kayıt şu an yüklenemiyor, lütfen birkaç dakika sonra tekrar dene.",
   "salesPaywallDesc": "Satış raporlarına, gelir analizine ve sıcak fırsatlara ulaşmak için PRO'ya geçin.",
   "conversionPaywallDesc": "Kategori bazlı dönüşüm oranlarını ve ortalama satış fiyatlarını görmek için PRO'ya geçin.",
   "demandPaywallDesc": "Yükselen kategorileri ve arz açığı olan fırsatları keşfetmek için PRO'ya geçin.",

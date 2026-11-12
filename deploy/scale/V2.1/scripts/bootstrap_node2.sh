@@ -75,6 +75,8 @@ setup_backup_directories() {
     mkdir -p /project/teqlif/backups/{pg_dump,pg_wal,pg_basebackup,redis,minio,clickhouse,loki,stalwart,uptime_kuma,nodemonitor_config}
     chown -R tucibeyin:tucibeyin /project/teqlif/backups
     find /project/teqlif/backups -type d -exec chmod 700 {} +
+    # nginx (www-data) backup/minio altına ulaşabilmek için üst dizine traverse izni
+    chmod o+x /project/teqlif/backups
     log_ok "Backup dizinleri: /project/teqlif/backups/"
 }
 
@@ -192,6 +194,8 @@ ENVEOF
         log_ok ".env.dr mevcut: ${DR_ENV}"
     fi
 
+    # nginx'i etkinleştir ve başlat (teqlif-rehydrate.conf dahil)
+    systemctl enable --now nginx
     log_ok "DR nginx config + teqlif-dr.service kuruldu (devre dışı)"
     log_warn ".env.dr doldurulması gerekiyor: ${DR_ENV} içindeki <...> yer tutucuları gerçek değerlerle değiştir"
     log_warn "CF origin sertifikası eksik: apply_secrets ile veya manuel olarak yerleştirin:"
