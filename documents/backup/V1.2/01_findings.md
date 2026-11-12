@@ -73,7 +73,7 @@
 | [`AUDIT-01`](#audit-01) | 🔴 **P0** | `node2` DR (`runbook.sh`, `pg_basebackup.sh`, `pg_dump.sh`) | **Yerel DR/PITR kırık:** `pg_lsclusters` boş, **`postgresql-17-pgvector` yok**, `.env.dr`/`cf-origin.*` yok, `pg_wal.tar.gz` atlanıyor + `immediate` PITR'ı kesiyor | [Adım 5](#adim-5) | ✅ Çözüldü `f48e8eaf` |
 | [`AUDIT-02`](#audit-02) | 🟠 **P1** | `watchdog.py`, `db.py`, `worker.py`, `reporter.py`, `recorder.py` | Donmuş SQLite (`1 Kas`), `IS NULL` körlüğü, 10+ statik/early-return cron `_agent_ok` yok, `5/11` rapor | [Adım 19](#adim-19) | ⬜ Açık |
 | [`AUDIT-03`](#audit-03) | 🟠 **P1** | `nodemonitor_config_backup.sh`, `loki_backup.sh`, cluster sırları | Grafana (`521 MB` + `shared/config`) ve `loki/compactor/` yedeksiz; `node1..6` TLS/WG/`.env` yedeksiz | [Adım 16](#adim-16) | ✅ `7ab35bde` |
-| [`AUDIT-04`](#audit-04) | 🟠 **P1** | `minio_backup.sh`, `uptime_kuma_backup.sh` | `node2` `30g` video temizlik eksiği + `confirm_recordings` race + Kuma `20B` boş `.sql.gz`/inline şifre | [Adım 18](#adim-18) | ⬜ Açık |
+| [`AUDIT-04`](#audit-04) | 🟠 **P1** | `minio_backup.sh`, `uptime_kuma_backup.sh` | `node2` `30g` video temizlik eksiği + `confirm_recordings` race + Kuma `20B` boş `.sql.gz`/inline şifre | [Adım 18](#adim-18) | ✅ `8029c16c` |
 | [`AUDIT-05`](#audit-05) | 🟠 **P1** | `node2`/`node5` ClickHouse, `encoder.py`, `node5:/var/recordings` | TTL'siz CH `system.*_log` (**`node2 2.38 GiB`**, **`node5 5.4 GiB`**) + `3.2G` cache + **`194M` video artığı** | [Adım 23](#adim-23) | ⬜ Açık |
 | [`AUDIT-06`](#audit-06) | 🟡 **P2** | `_common.sh`, `teqlif-agent`, `journald` | Kırık `**/*.log` glob (`16M` Redis log), **`565 MB` `agent.log`**, kotasız **`journald` (`1.2G`/`1.6G`)** | [Adım 31](#adim-31) | ⬜ Açık |
 | [`AUDIT-07`](#audit-07) | 🟡 **P2** | `teqlif-agent` (`db.py`, `gossip.py`, `janitor.py`) | `cleanup_log` `UNIQUE` eksik + RAM-only `_last_sync` çoğaltma + `janitor.py:149` stale yorum | [Adım 32](#adim-32) | ⬜ Açık |
@@ -904,8 +904,19 @@ mc mirror --overwrite --quiet "node1minio/${bucket}" "${dest}"  # 30g silme yok 
 2. **`uptime_kuma_backup.sh`:** `--single-transaction` + `MYSQL_PWD` yerine SSH stdin/uzak `~/.my.cnf` oku → `${DEST}.tmp` → `gzip -t "${DEST}.tmp"` → `mv`, sonuna `job_ok` ekle ve `13 Eki` `20B` boş `.sql.gz`'yi sil.
 * **Doğrulama:** `gzip -t /project/teqlif/backups/uptime_kuma/uptime_kuma_*.sql.gz` tamamı ✔; `minio_backup.sh` logunda `recordings/` dışı silinen test dosyası `node2`'den de silinirken `recordings/` dosyası `30g` boyunca korunur.
 
-##### ⬜ Çözüm Damgası
-- *(Henüz uygulanmadı — [Adım 18](#adim-18) bekliyor)*
+##### ✅ Çözüm Damgası
+- `2026-11-12` · commit `8029c16c` — **AUDIT-04 kapatıldı** ✓:
+  - `minio_backup.sh`: `mirror_bucket()`/`mirror_bucket_with_retry()` `"$@"` ile extra flag desteği ✓
+  - `minio_backup.sh`: `SYNC_START` → `confirm_recordings` race koruması (`mirror-sonrası upload'ı damgalamaz`) ✓
+  - `minio_backup.sh`: `teqlif` recordings/ dışı `--remove` (KVKK silme yansıması); recordings/ `--remove'suz` ✓
+  - `minio_backup.sh`: `find -mtime +30 -delete` ile 30g yerel recordings temizliği ✓
+  - `minio_backup.sh`: `teqlif-dm` → `--remove` (KVKK) ✓
+  - `uptime_kuma_backup.sh`: `MYSQL_PWD` inline → `printf|ssh stdin .my.cnf` (ps aux'da görünmez) ✓
+  - `uptime_kuma_backup.sh`: `--single-transaction` eklendi ✓
+  - `uptime_kuma_backup.sh`: `.tmp` + `gzip -t` bütünlük doğrulaması ✓
+  - `uptime_kuma_backup.sh`: `job_ok` Redis sinyali eklendi ✓
+  - `uptime_kuma_backup.sh`: `find -size -100c` yetim bozuk arşiv temizliği (13 Eki 20B) ✓
+  - node2 uptime_kuma test: **OK (688K)** ✓; minio_backup.sh sözdizimi temiz (tam test 05:30 UTC)
 
 ---
 
@@ -1276,7 +1287,7 @@ await redis.set("ch:last_sync_at", now.isoformat())  # Aradakiler kalıcı kaybo
 ~~17. **Adım 17 (`BIZ-04` — Bölüm A):** [`mail_backup.sh`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/mail_backup.sh#L21-L39) zamanını `06:15 UTC` (`09:15 TR`) → **`03:50 UTC` (`06:50 TR`, [Karar K1](#kilitli-kararlar))** al; arşive `/project/mail/config/{config.toml,.env.mail,acme}` ekle, `2>/dev/null` kaldır ve `.tmp` + `tar -tzf` bütünlük doğrulaması ekle → _Neden:_ Sabah mesai açılışında OTP/e-posta düşüşünü bitirmek ve mail sunucusunun tüm kimliğini yedeklemek. → ([Detay](#biz-04))~~ ✅ `8f668955`
 
 <a id="adim-18"></a>
-18. **Adım 18 (`AUDIT-04`):** [`minio_backup.sh`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/minio_backup.sh) içine `recordings/` `30g` temizlik + `recordings/` dışı tüm prefix'lerde KVKK `--remove` + `confirm_recordings()` `created_at <= sync_started_at` zaman kilidi ekle ([Karar K3](#kilitli-kararlar)); [`uptime_kuma_backup.sh`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/uptime_kuma_backup.sh) atomik `.tmp` + `gzip -t` + `--single-transaction` + inline şifresiz `.my.cnf` yap ve `13 Eki` `20B` boş `.sql.gz`'yi sil → _Neden:_ Silinen kullanıcı medyalarının KVKK'ya aykırı biçimde `node2`'de süresiz kalmasını ve Kuma bozuk yedek/şifre sızıntısını önlemek. → ([Detay](#audit-04), [Birlikte: Adım 8](#adim-8), [Adım 24](#adim-24))
+~~18. **Adım 18 (`AUDIT-04`):** [`minio_backup.sh`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/minio_backup.sh) içine `recordings/` `30g` temizlik + `recordings/` dışı tüm prefix'lerde KVKK `--remove` + `confirm_recordings()` `created_at <= sync_started_at` zaman kilidi ekle ([Karar K3](#kilitli-kararlar)); [`uptime_kuma_backup.sh`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/node2/resources/scripts/uptime_kuma_backup.sh) atomik `.tmp` + `gzip -t` + `--single-transaction` + inline şifresiz `.my.cnf` yap ve `13 Eki` `20B` boş `.sql.gz`'yi sil → _Neden:_ Silinen kullanıcı medyalarının KVKK'ya aykırı biçimde `node2`'de süresiz kalmasını ve Kuma bozuk yedek/şifre sızıntısını önlemek. → ([Detay](#audit-04), [Birlikte: Adım 8](#adim-8), [Adım 24](#adim-24))~~ ✅ `8029c16c`
 
 <a id="adim-19"></a>
 19. **Adım 19 (`AUDIT-02`):** [`watchdog.py`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/teqlif-agent/modules/watchdog.py#L49-L64) `_CONTINUOUS_REGISTRY` ile [`worker.py:4816-4853`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/worker.py#L4816-L4853) statik görevlerini eşitle; eksik `10+` göreve (ve early-return'lere) `_agent_ok` ekle; [`db.py:130-137`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/teqlif-agent/db.py#L130-L137) "hiç çalışmamış iş" (`last_ok_at IS NULL`) körlüğünü aç; [`recorder.py`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/teqlif-agent/modules/recorder.py#L338-L340) aktif edge heartbeat ayarla ve [`reporter.py:47-53`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/teqlif-agent/modules/reporter.py#L47-L53) raporunu tüm yerel + offsite yedekleri (`offsite_sync`, `offsite_wal_sync` dahil) kapsayacak biçimde tamamla → _Neden:_ `Nov 1`'de donan watchdog SQLite tablosunu ve sessiz duran ARQ cron körlüklerini kaldırmak. → ([Detay](#audit-02), [Birlikte: Adım 13](#adim-13))
