@@ -4,6 +4,8 @@
 # Günlük 06:30 UTC'de çalışır.
 set -euo pipefail
 
+source /project/teqlif/config/.env.backup
+
 WAL_DIR=/project/teqlif/backups/pg_wal
 BASEBACKUP_DIR=/project/teqlif/backups/pg_basebackup
 LOGFILE=/project/teqlif/logs/pg_wal_cleanup.log
@@ -39,3 +41,5 @@ deleted=$(( before - after ))
 
 echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) pg_wal_cleanup: ${deleted} segment silindi, kalan ${after} (${size}) — referans: ${start_wal}"
 logger "teqlif pg_wal_cleanup: ${deleted} silindi, kalan ${after} (${size})"
+touch "${WAL_DIR}/.last_wal_cleanup_ok"
+redis-cli -h 10.10.0.1 -p 6379 -a "${CORE_REDIS_PASS}" --no-auth-warning HSET teqlif:agent:job_ok pg_wal_cleanup "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >/dev/null 2>&1 || true

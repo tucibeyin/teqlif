@@ -359,6 +359,11 @@ backup:
   - name: offsite_wal_sync
     watchdog_m: 90            # saatlik *:45 UTC — WAL restic → node101
 
+  - name: pg_wal_cleanup
+    hour: 6
+    minute: 30
+    watchdog_m: 1500          # ~25 saat — günlük PITR zinciri temizliği
+
   # pg_basebackup --max-rate=40M (~40MB/s, ~320 Mbps) — 02:00'de başlar,
   # ~02:30-02:45'te biter. transfer_window_start_utc:4 ile video transfer
   # 04:00'e ötelenmiş; ağ darboğazı (Pazar 02:00 çakışması) ortadan kalktı.

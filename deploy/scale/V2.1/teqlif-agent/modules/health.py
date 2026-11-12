@@ -54,6 +54,7 @@ _BACKUP_MAX_MIN = {
     "pg_basebackup":               7 * 24 * 60,  # haftalık
     "offsite_sync":               25 * 60,       # günlük daily-full → node101
     "offsite_wal_sync":           90,            # saatlik WAL → node101
+    "pg_wal_cleanup":             25 * 60,       # günlük PITR zinciri temizliği
 }
 
 # Servisler her node'un rolüne göre farklıdır; her node sadece kendi
@@ -229,6 +230,7 @@ class HealthMonitor:
                 "pg_basebackup":             "PostgreSQL base backup",
                 "offsite_sync":              "Offsite Sync (daily)",
                 "offsite_wal_sync":          "Offsite WAL Sync (saatlik)",
+                "pg_wal_cleanup":            "WAL temizliği (PITR)",
             }.get(bkey, bkey)
             if isinstance(mins, int) and mins > max_min:
                 await self._fire(fkey, f"⚠️ <b>{node_id}</b> — {blabel} eski ({_fmt(mins)})")
@@ -424,6 +426,7 @@ async def _backup_ages() -> dict:
         "cluster_secrets_backup":    "/project/teqlif/backups/cluster_secrets/.last_backup_ok",
         "offsite_sync":              "/project/teqlif/backups/.last_offsite_sync_ok",
         "offsite_wal_sync":          "/project/teqlif/backups/.last_offsite_wal_ok",
+        "pg_wal_cleanup":            "/project/teqlif/backups/pg_wal/.last_wal_cleanup_ok",
     }
     result = {}
     for key, path in backup_dirs.items():
