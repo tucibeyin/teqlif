@@ -12,19 +12,26 @@ LOGFILE=/project/teqlif/logs/mail_backup.log
 RETENTION_DAYS=90
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 DEST="${BACKUP_DIR}/stalwart_${TIMESTAMP}.tar.gz"
+DEST_TMP="${DEST}.tmp"
 
 install -d "${BACKUP_DIR}"
 exec >> "${LOGFILE}" 2>&1
 echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) mail_backup: start"
 
 # RocksDB tutarlı snapshot için servisi durdur — trap: tar başarısız olsa bile servis yeniden başlar
-trap 'sudo systemctl start stalwart-mail' EXIT
+trap 'sudo systemctl start stalwart-mail 2>/dev/null || true; rm -f "${DEST_TMP:-}"' EXIT
 sudo systemctl stop stalwart-mail
 
-tar -czf "${DEST}" \
+tar -czf "${DEST_TMP}" \
     /project/mail/data \
-    /project/mail/config/dkim \
-    2>/dev/null
+    /project/mail/config/config.toml \
+    /project/mail/config/.env.mail \
+    /project/mail/config/acme \
+    /project/mail/config/dkim
+
+# Bütünlük doğrulaması — bozuk arşiv sentinel yazılmadan önce tespit edilir
+tar -tzf "${DEST_TMP}" >/dev/null
+mv "${DEST_TMP}" "${DEST}"
 
 sudo systemctl start stalwart-mail
 

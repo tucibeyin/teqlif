@@ -326,8 +326,8 @@ batch:
     watchdog_m: 1500          # ~25 saat — günlük TLS/WG/env tüm node'lardan node2'ye
 
   - name: mail_backup
-    hour: 6
-    minute: 15
+    hour: 3
+    minute: 50
     watchdog_m: 1500
 
   - name: minio_backup

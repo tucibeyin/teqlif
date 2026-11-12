@@ -1,8 +1,8 @@
 [Unit]
-Description=teqlif Mail Backup — günlük 06:15 UTC
+Description=teqlif Mail Backup — günlük 03:50 UTC
 
 [Timer]
-OnCalendar=*-*-* 06:15:00
+OnCalendar=*-*-* 03:50:00
 AccuracySec=5m
 Persistent=true
 
