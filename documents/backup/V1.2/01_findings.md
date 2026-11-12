@@ -60,7 +60,7 @@
 | [`MAINT-01`](#maint-01) | 🟠 **P1** | `cleaner.py` vs `schedule.yaml` / `worker.py` | Çift & batch'siz PG `DELETE` (`message_threads 180d` < `dm_archive 365d` veri kaybı tuzağı!) | [Adım 21](#adim-21) | ✅ `422cd879` |
 | [`MAINT-02`](#maint-02) | 🟠 **P1** | `cluster.yaml`, `encoder.py:357`, `minio_backup`, `worker.py` | Video transfer (`05:00–07:00`) ↔ `minio_backup` (`05:30`) ↔ `notify` (`05:00/06:00`) çarpışması | [Adım 22](#adim-22) | ✅ `dcda70b6` |
 | [`MAINT-03`](#maint-03) | 🔴 **P0** | `node2` `redis-failover*`, `redis_failover.sh` | **`promoted` (`18 Eki`) bayrağı nedeniyle resmi failover kör** + düz metin şifreli rogue timer | [Adım 4](#adim-4) | ✅ Çözüldü `c0154e66` |
-| [`MAINT-04`](#maint-04) | 🟡 **P2** | `node1..6`, `node2`, `nodeMonitor` OS Timer | `apt-daily-upgrade` (`06:05–06:50 UTC`) + `node2` `mdcheck` (`06:46 UTC`) backup bloğuna biniyor | [Adım 27](#adim-27) | ⬜ Açık |
+| [`MAINT-04`](#maint-04) | 🟡 **P2** | `node1..6`, `node2`, `nodeMonitor` OS Timer | `apt-daily-upgrade` (`06:05–06:50 UTC`) + `node2` `mdcheck` (`06:46 UTC`) backup bloğuna biniyor | [Adım 27](#adim-27) | ✅ `5694a626` |
 | [`MAINT-05`](#maint-05) | 🟡 **P2** | `schedule.yaml`, `schedule_loader.py`, `worker.py` | `backup:` YAML anahtarı yok, `chat_messages` çift kayıt, hatalı saat yorumları | [Adım 28](#adim-28) | ⬜ Açık |
 | [`MAINT-06`](#maint-06) | 🟡 **P2** | `loki`, `kuma`, `config`, `pg_wal_cleanup`, `node2` | Redis `job_ok` atmayan 4 script + `0B` yetim `.last_mail_backup_ok` + eski `03:45` mail timer | [Adım 29](#adim-29) | ⬜ Açık |
 | [`MAINT-07`](#maint-07) | 🟡 **P2** | `nodeMonitor` (`1.9 GiB RAM`) | **`240 MiB` aktif swap**, `165 MiB` free RAM darboğazı — Prometheus/Loki bellek limiti ayarı | [Adım 30](#adim-30) | ⬜ Açık |
@@ -654,8 +654,13 @@ sudo wg-quick save wg0
 * Tüm node'larda `/etc/systemd/system/apt-daily-upgrade.timer.d/override.conf` ile zaman **`07:45 UTC`** (ve `RandomizedDelaySec=15m`) olarak çekilir; `node2` `mdcheck_continue.timer` `07:35 UTC` sonrasına ötelenir.
 * **Doğrulama:** `systemctl list-timers apt-daily-upgrade.timer mdcheck_continue.timer` tüm node'larda `07:35+ UTC` gösterir.
 
-##### ⬜ Çözüm Damgası
-- *(Henüz uygulanmadı — [Adım 27](#adim-27) bekliyor)*
+##### ✅ Çözüm Damgası
+- `2026-11-12` · commit `31b78737` → `5694a626` — **MAINT-04 Adım 27 kapatıldı** ✓:
+  - `_common.sh`: `setup_apt_timing()` (07:45 UTC ±15m) + `setup_mdcheck_timing()` (07:35 UTC ±15m) eklendi; tüm bootstrap scriptlerine çağrı eklendi ✓
+  - `teqlif-restart.sh`: `sync_timer_overrides()` fonksiyonu + tüm node case'lerine çağrı; her `teqlif-restart`'ta idempotent olarak uygulanır ✓
+  - `node1-6/nodeMonitor/systemd-overrides/apt-daily-upgrade.timer.d/teqlif-timing.conf` repo'da ✓
+  - `node2/systemd-overrides/mdcheck_continue.timer.d/teqlif-timing.conf` repo'da ✓
+  - **Doğrulama:** `apt-daily-upgrade.timer` Next: `07:47–07:54 UTC` (tüm node'lar); `mdcheck_continue` override: `07:35 UTC ±15m` ✓
 
 ---
 
@@ -1360,7 +1365,7 @@ await redis.set("ch:last_sync_at", now.isoformat())  # Aradakiler kalıcı kaybo
 ~~26. **Adım 26 (`OFFSITE-10`):** Kalan 6 yerel `node2/systemd/*.service` (`pg-basebackup`, `loki`, `uptime-kuma`, `nodemonitor-config`, `mail`, `pg-wal-cleanup`; `offsite-sync` [Adım 13](#adim-13)'te) birimine `IOSchedulingClass=idle`, `IOSchedulingPriority=7`, `Nice=19` ekle ve `*.tmp`/`*.partial`/`.last_*` hariç tutmasını tüm scriptlerde kilitle → _Neden:_ `node2` HDD kuyruğunun yedekler yüzünden ClickHouse/WAL/posta I/O'sunu boğmasını engellemek. → ([Detay](#offsite-10))~~ ✅ `095f7f31`
 
 <a id="adim-27"></a>
-27. **Adım 27 (`MAINT-04`):** `node1..6`, `node2` ve `nodeMonitor` üzerinde `apt-daily-upgrade.timer` `override.conf` ile **`07:45 UTC`**'ye ve `node2` `mdcheck_continue.timer` `07:35 UTC` sonrasına çek → _Neden:_ Otomatik APT restart ve aylık RAID parity scrub'ının sabah backup/offsite bloğuna girmesini önlemek. → ([Detay](#maint-04))
+~~27. **Adım 27 (`MAINT-04`):** `node1..6`, `node2` ve `nodeMonitor` üzerinde `apt-daily-upgrade.timer` `override.conf` ile **`07:45 UTC`**'ye ve `node2` `mdcheck_continue.timer` `07:35 UTC` sonrasına çek → _Neden:_ Otomatik APT restart ve aylık RAID parity scrub'ının sabah backup/offsite bloğuna girmesini önlemek. → ([Detay](#maint-04))~~ ✅ `5694a626`
 
 <a id="adim-28"></a>
 28. **Adım 28 (`MAINT-05`):** [`schedule.yaml:304`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/schedule.yaml#L304) içine üst seviye `backup:` anahtarını ekle, [`worker.py:4847`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/worker.py#L4847) mükerrer `cleanup_old_stream_chat_messages_task` satırını sil, `03:00` temizliklerini `03:10 UTC`'ye al ve tüm yanlış yorumları [Kanonik Tablo](#zamanlama-matrisi) ile eşitle → _Neden:_ `schedule_loader` `backup` watch'ını çalıştırmak ve çift cron riskini kaldırmak. → ([Detay](#maint-05))
