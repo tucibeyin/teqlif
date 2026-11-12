@@ -984,17 +984,19 @@ raw = await storage.get_object_bytes(key)
   - `schedule.yaml`: `archive_old_dm_task` minute: `0` → `20` (Pazar 03:20 UTC)
   - `scripts/test_dm_archive.py`: 10/10 sentetik test (`_list_object_keys_impl` + endpoint)
   - 8/8 node `287ab13e`
-- **Bölüm B (Adım 8) ✅ `5dedcce8` — 2026-11-12 (P0/P1/P2 düzeltmeleriyle):**
+- **Bölüm B (Adım 8) ✅ `5dedcce8` / P2-P3 `54939dad` — 2026-11-12 (P0/P1/P2/P3 tam):**
   - `storage_service.py`: `rehydrate_from_node2` — iter_chunked(4MB)+tempfile+fput_object (RAM sabit, OOM güvenli); orchestrator bypass → `settings.minio_endpoint` doğrudan; rstrip("/")
-  - `streams.py`: `is_available` ILM sınırı (`created_at >= now-2g`); `is_rehydratable` yeni case: `available` ama ILM-deleted; `updated_at=NOW()` eklendi
+  - `storage_service.py`: `check_exists_on_node1` — stat_object ön kontrolü; 24h penceresi içinde tekrar istek geldiğinde download atlanır (tekrarlı rehydrate önleme, `198eea74`)
+  - `streams.py`: `is_available` ILM sınırı (`created_at >= now-2g`); `is_rehydratable` yeni case: `available` ama ILM-deleted; `updated_at=NOW()` eklendi; `check_exists_on_node1` kullanır
   - `get_my_recordings.py`: `archived` kayıtlar 14g penceresi içindeyse listede görünür
-  - `recording.dart`: `canWatch` → expired/archived tıklanabilir; `_ExpiryRow` sadece available
+  - `recording.dart`: `canWatch` → expired/archived tıklanabilir; `_ExpiryRow` sadece available; `RecordingFilterStatus.available` filtresi `canWatch` → `== available` (`198eea74`)
+  - `recording_detail_screen.dart`: `_playerError` REHYDRATE_FAILED için `errorRehydrateFailed` mesajı (`198eea74`)
   - `error_mapper.dart`: `REHYDRATE_FAILED` eşlemesi eklendi
   - ARB (5 dil): `errorRehydrateFailed` anahtarı eklendi
-  - `bootstrap_node2.sh`: `chmod o+x /project/teqlif/backups` + `systemctl enable --now nginx`
+  - `bootstrap_node2.sh`: `chmod o+x /project/teqlif/backups` + `/backups/minio` (`198eea74`) + `systemctl enable --now nginx`
   - `node1/.env.production`: `MINIO_NODE2_REHYDRATE_URL=http://10.10.0.2:9200` eklendi (canlı)
-  - `scripts/test_recording_rehydrate.py`: 12/12 test (P0 ILM-deleted testi dahil)
-  - 8/8 node `5dedcce8`
+  - `scripts/test_recording_rehydrate.py`: 16/16 test (P0 ILM-deleted + check_exists_on_node1 + tekrarlı rehydrate skip dahil)
+  - 8/8 node `54939dad`
 
 ---
 
