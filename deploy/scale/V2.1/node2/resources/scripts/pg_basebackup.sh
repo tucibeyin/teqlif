@@ -24,6 +24,7 @@ exec >> "${LOGFILE}" 2>&1
 
 echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) pg_basebackup: başlıyor → ${DEST}"
 
+DEST_TMP="${DEST}.tmp"
 PGPASSWORD="${REPL_PASSWORD}" pg_basebackup \
     -h "${PGHOST}" -p "${PGPORT}" -U "${PGUSER}" \
     --checkpoint=fast \
@@ -32,8 +33,10 @@ PGPASSWORD="${REPL_PASSWORD}" pg_basebackup \
     --gzip \
     --compress=1 \
     --max-rate=40M \
-    -D "${DEST}"
+    -D "${DEST_TMP}"
 
+# Atomik: tamamlanan yedek ancak şimdi DEST adına geçer
+mv "${DEST_TMP}" "${DEST}"
 SIZE=$(du -sh "${DEST}" | cut -f1)
 echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) pg_basebackup: tamamlandı (${SIZE}) → ${DEST}"
 logger "teqlif pg_basebackup: tamamlandı (${SIZE})"

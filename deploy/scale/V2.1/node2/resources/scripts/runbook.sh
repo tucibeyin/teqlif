@@ -91,7 +91,7 @@ fi
 log_step "3. Kurtarma Modu Seç"
 # ────────────────────────────────────────────────────────────────────────────
 
-LATEST_BASEBACKUP=$(ls -1dt "${BASEBACKUP_DIR}"/[0-9]* 2>/dev/null | head -1 || true)
+LATEST_BASEBACKUP=$(ls -1dt "${BASEBACKUP_DIR}"/[0-9]* 2>/dev/null | grep -v '\.tmp$' | head -1 || true)
 LATEST_DUMP=$(ls -1t "${DUMP_DIR}"/teqlif_*.dump* 2>/dev/null | head -1 || true)
 
 if [ -n "${LATEST_BASEBACKUP}" ]; then
@@ -135,18 +135,26 @@ if [ "${RESTORE_MODE}" = "PITR" ]; then
     log_ok "Aç: ${BASE_TAR} → ${PG_DATA}"
     sudo -u postgres tar -xzf "${BASE_TAR}" -C "${PG_DATA}"
 
-    # pg_wal içeriğini WAL dizininden tamamla
-    log_ok "WAL dizini: ${WAL_DIR}"
+    # pg_wal.tar.gz varsa pg_wal dizinine aç (--wal-method=stream ürünü)
+    WAL_TAR="${LATEST_BASEBACKUP}/pg_wal.tar.gz"
     sudo -u postgres mkdir -p "${PG_DATA}/pg_wal"
+    if [ -f "${WAL_TAR}" ]; then
+        log_ok "Aç: ${WAL_TAR} → ${PG_DATA}/pg_wal/"
+        sudo -u postgres tar -xzf "${WAL_TAR}" -C "${PG_DATA}/pg_wal/"
+    else
+        log_warn "pg_wal.tar.gz bulunamadı: ${WAL_TAR} — pg_receivewal WAL'larıyla devam"
+    fi
 
     # conf.d dizini yoksa oluştur (pg_basebackup data dizini oluşturur, conf dizini ayrı)
     mkdir -p "${PG_CONF}/conf.d"
     chown postgres:postgres "${PG_CONF}/conf.d"
 
     # restore_command yapılandır
+    # recovery_target_timeline='latest': pg_wal.tar.gz + pg_receivewal WAL'larının
+    # TÜMünü replay eder. 'immediate' kullanılmamalı — ilk checkpoint'te durur.
     cat > "${PG_CONF}/conf.d/recovery.conf" <<EOF
 restore_command = 'cp ${WAL_DIR}/%f %p'
-recovery_target = 'immediate'
+recovery_target_timeline = 'latest'
 EOF
     chown postgres:postgres "${PG_CONF}/conf.d/recovery.conf"
 
@@ -162,6 +170,16 @@ else
     # node2 local PostgreSQL başlat (varsa, temiz halde)
     systemctl start postgresql
     sleep 3
+
+    # Globals (roller, pgvector uyumu) önce restore et
+    LATEST_GLOBALS=$(ls -1t "${DUMP_DIR}"/globals_*.sql 2>/dev/null | head -1 || true)
+    if [ -n "${LATEST_GLOBALS}" ]; then
+        log_ok "Globals restore: ${LATEST_GLOBALS}"
+        sudo -u postgres psql -f "${LATEST_GLOBALS}" postgres || true
+    else
+        log_warn "globals_*.sql bulunamadı — teqlif rolü manuel oluşturulacak"
+        sudo -u postgres psql -c "CREATE ROLE teqlif WITH LOGIN;" postgres 2>/dev/null || true
+    fi
 
     # Veritabanı oluştur ve restore et
     sudo -u postgres psql -c "DROP DATABASE IF EXISTS teqlif;" postgres || true

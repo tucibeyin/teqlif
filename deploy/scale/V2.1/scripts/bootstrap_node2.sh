@@ -103,14 +103,22 @@ ufw_node2() {
 }
 
 install_pg_server() {
-    log_step "PostgreSQL ${PG_VERSION} Server + Client (Standby/DR node)"
-    apt-get install -y -qq "postgresql-${PG_VERSION}" "postgresql-client-${PG_VERSION}"
+    log_step "PostgreSQL ${PG_VERSION} Server + Client + pgvector (Standby/DR node)"
+    apt-get install -y -qq \
+        "postgresql-${PG_VERSION}" \
+        "postgresql-client-${PG_VERSION}" \
+        "postgresql-${PG_VERSION}-pgvector"
+    # Cluster yoksa oluştur (pg_restore EXTENSION vector için şart)
+    if ! pg_lsclusters 2>/dev/null | grep -q "^${PG_VERSION}"; then
+        pg_createcluster "${PG_VERSION}" main
+        log_ok "pg_createcluster ${PG_VERSION} main: cluster oluşturuldu"
+    fi
     # Cluster standby/DR modunda: servis otomatik başlamayacak
     systemctl disable --now postgresql 2>/dev/null || true
     # conf.d dizinini hazırla (runbook.sh recovery.conf için ihtiyaç duyar)
     mkdir -p "/etc/postgresql/${PG_VERSION}/main/conf.d"
     chown -R postgres:postgres "/etc/postgresql/${PG_VERSION}/main/conf.d"
-    log_ok "postgresql-${PG_VERSION} kuruldu, standby modda durduruldu"
+    log_ok "postgresql-${PG_VERSION} + pgvector kuruldu, standby modda durduruldu"
 }
 
 install_backup_tools() {
@@ -162,9 +170,27 @@ setup_dr_app() {
     # nginx de disabled — sadece DR runbook'u aktif eder
     systemctl disable nginx 2>/dev/null || true
 
+    # .env.dr placeholder — runbook öncesinde doldurulacak
+    DR_ENV="/project/teqlif/config/.env.dr"
+    if [ ! -f "${DR_ENV}" ]; then
+        cat > "${DR_ENV}" <<'ENVEOF'
+# .env.dr — node2 DR uygulama ortamı (runbook.sh için zorunlu)
+# Bu dosya node1 çöküşünde teqlif-dr.service tarafından kullanılır.
+# Runbook başlatılmadan önce gerçek değerleri doldur:
+DATABASE_URL=postgresql://teqlif:<TEQLIF_DB_PASSWORD>@127.0.0.1:5432/teqlif
+REDIS_URL=redis://:<CORE_REDIS_PASS>@127.0.0.1:6379/0
+SECRET_KEY=<SECRET_KEY>
+# Diğer değişkenler için node1:/project/teqlif/config/.env.production referans alın
+ENVEOF
+        chmod 600 "${DR_ENV}"
+        chown tucibeyin:tucibeyin "${DR_ENV}"
+        log_ok ".env.dr placeholder oluşturuldu: ${DR_ENV}"
+    else
+        log_ok ".env.dr mevcut: ${DR_ENV}"
+    fi
+
     log_ok "DR nginx config + teqlif-dr.service kuruldu (devre dışı)"
-    log_warn ".env.dr eksik: runbook öncesinde /project/teqlif/config/.env.dr dosyasını oluşturun"
-    log_warn "  Gerekli değişkenler: DATABASE_URL (127.0.0.1:5432), REDIS_URL, SECRET_KEY vb."
+    log_warn ".env.dr doldurulması gerekiyor: ${DR_ENV} içindeki <...> yer tutucuları gerçek değerlerle değiştir"
     log_warn "CF origin sertifikası eksik: apply_secrets ile veya manuel olarak yerleştirin:"
     log_warn "  /etc/ssl/teqlif/cf-origin.crt ve cf-origin.key"
 }

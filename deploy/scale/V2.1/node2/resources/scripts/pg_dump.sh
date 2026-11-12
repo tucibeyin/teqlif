@@ -9,10 +9,22 @@ PGDATABASE=teqlif
 RETENTION_DAYS=7
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 DEST="${BACKUP_DIR}/teqlif_${TIMESTAMP}.dump"
+GLOBALS_DEST="${BACKUP_DIR}/globals_${TIMESTAMP}.sql"
 
 install -d "${BACKUP_DIR}"
 
-# .tmp'ye yaz — başarısız dump kırık dosya olarak kalmasın
+source /project/teqlif/config/.env.backup
+
+# ── 1. Globals dump (roller, pgvector uyumu) ─────────────────────────────────
+# teqlif_repl SUPERUSER ile bağlanır — pg_hba.conf: host all teqlif_repl 10.10.0.2/32 scram-sha-256
+GLOBALS_TMP="${GLOBALS_DEST}.tmp"
+PGPASSWORD="${REPL_PASSWORD}" pg_dumpall \
+    --globals-only -h "${PGHOST}" -p "${PGPORT}" -U teqlif_repl \
+    > "${GLOBALS_TMP}"
+mv "${GLOBALS_TMP}" "${GLOBALS_DEST}"
+find "${BACKUP_DIR}" -name "globals_*.sql" -mtime +${RETENTION_DAYS} -delete
+
+# ── 2. Veritabanı dump (.tmp → doğrulama → mv) ───────────────────────────────
 DEST_TMP="${DEST}.tmp"
 PGPASSWORD="${TEQLIF_DB_PASSWORD}" pg_dump \
     -h "${PGHOST}" -p "${PGPORT}" -U "${PGUSER}" \
