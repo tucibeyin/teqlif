@@ -297,8 +297,8 @@ ExecStart=/usr/bin/restic forget --tag pg_wal --keep-within 7d --prune
 2. **Üçlü Key Escrow Zorunluluğu:** `RESTIC_PASSWORD` + `rest-server` kullanıcı parolası en az 2 sunucu dışı ortama (yerel yönetici Password Manager + offline şifreli USB/kağıt kasa) kaydedilir.
 * **Doğrulama:** Rastgele bir test dizinine yalnız Key Escrow şifresiyle `restic -r ... restore latest --target /tmp/escrow-test` okuma testi sıfır hatayla tamamlanır ve `/tmp/escrow-test` temizlenir.
 
-##### ⬜ Çözüm Damgası
-- *(Henüz uygulanmadı — [Adım 10](#adim-10) bekliyor)*
+##### ✅ Çözüm Damgası
+- `2026-11-12` · commit `...` — **P0 OFFSITE-03 kapatıldı** ✓: `RESTIC_PASSWORD` node2 `.env.backup`'ta mevcut ✓; restic repo initialize edilmiş — 27 snapshot (daily-full + pg_wal) aktif ✓; RESTIC_PASSWORD node101 `/etc/teqlif-offsite/restic.env`'e stdin pipe ile sync edildi (şifre komut argümanına geçmedi) ✓; `restic check --read-data-subset=5%` node101 lokal → `no errors were found` ✓; `restic restore e9549003 --include pg_dump → /tmp/escrow-test` 8.072 MiB başarıyla geri yüklendi, cleanup OK ✓; `secrets.env.template`'e `restic_aes_password=` + `restic_rest_password=` eklendi (apply_secrets bootstrap bütünlüğü) ✓. **Key Escrow:** RESTIC_PASSWORD + restic-rest HTTP parolası 3 bağımsız noktada (password manager + offline) kayıt kullanıcı tarafından onaylandı ✓.
 
 ---
 
@@ -1193,7 +1193,7 @@ await redis.set("ch:last_sync_at", now.isoformat())  # Aradakiler kalıcı kaybo
 ~~9. **Adım 9 (`OFFSITE-02`):** `node101` üzerinde `restic-rest-server 0.13.0` (`--append-only --listen 10.10.0.101:8000 --htpasswd-file ... --path /mnt/data`) servisini kur (`--private-repos` ile her HTTP user kendi `/mnt/data/<user>/` alt dizinini görür); `node101` yerel `teqlif-offsite-prune.{service,timer}` (`Pazar 08:00 UTC`, `GOMEMLIMIT=1536MiB`, `GOGC=20`, `MemoryMax=2G`) oluştur → _Neden:_ `node2` ele geçirilse bile `node101`'deki yedeklerin silinememesini (WORM) ve `2.9 GiB RAM` korunmasını garanti etmek. → ([Detay](#offsite-02))~~ ✅ `f773a084`
 
 <a id="adim-10"></a>
-10. **Adım 10 (`OFFSITE-03`):** `node2` üzerinde `/etc/teqlif/restic.pass` (`chmod 600`, Git dışı) oluşturup şifreli `restic init` (`AES-256-CTR + Poly1305`) çalıştır; `RESTIC_PASSWORD` ve HTTP auth sırlarını **3 bağımsız noktada Key Escrow** kasasına kaydet ve şifreli test doğrulaması yap → _Neden:_ `node101` diskinde PII/DM/finans verisinin şifreli kalması ve `node2` yansa bile kilitsiz kurtarma sağlanması. → ([Detay](#offsite-03))
+~~10. **Adım 10 (`OFFSITE-03`):** `node2` üzerinde `/etc/teqlif/restic.pass` (`chmod 600`, Git dışı) oluşturup şifreli `restic init` (`AES-256-CTR + Poly1305`) çalıştır; `RESTIC_PASSWORD` ve HTTP auth sırlarını **3 bağımsız noktada Key Escrow** kasasına kaydet ve şifreli test doğrulaması yap → _Neden:_ `node101` diskinde PII/DM/finans verisinin şifreli kalması ve `node2` yansa bile kilitsiz kurtarma sağlanması. → ([Detay](#offsite-03))~~ ✅ `...`
 
 <a id="adim-11"></a>
 11. **Adım 11 (`OFFSITE-01`):** `node1` MinIO 2g ILM öncesinde `node2` mirror + `node101` offsite ilk `daily-full` kopyasının garanti altına alınmasını (öncelikli mirror + offsite akışı ve `node101` tek-volume izleme rolü) kilitle → _Neden:_ Video kayıtlarında `node1` ILM sonrası 3-2-1 kopya kuralını tamamlamak. → ([Detay](#offsite-01), [Blueprint](#blueprint))
