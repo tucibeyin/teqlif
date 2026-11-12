@@ -109,9 +109,10 @@ scrape_configs:
       - targets: ['10.10.0.2:9121']
         labels: { node: node2, component: redis-replica }
 
-  - job_name: 'stalwart'
-    # Stalwart mail server admin HTTP (10.10.0.2:8080/prometheus) — kimlik doğrulama gerektirmez
-    metrics_path: /prometheus
-    static_configs:
-      - targets: ['10.10.0.2:8080']
-        labels: { node: node2, component: stalwart }
+  # stalwart: config.toml'da [metrics] bölümü açılana kadar devre dışı (NodeDown alarmı üretir)
+  # Aktifleştirmek için: stalwart config.toml → [metrics] endpoint + prometheus.yml uncomment
+  # - job_name: 'stalwart'
+  #   metrics_path: /api/telemetry/metrics
+  #   static_configs:
+  #     - targets: ['10.10.0.2:8080']
+  #       labels: { node: node2, component: stalwart }
