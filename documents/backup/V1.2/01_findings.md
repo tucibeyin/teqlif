@@ -984,14 +984,17 @@ raw = await storage.get_object_bytes(key)
   - `schedule.yaml`: `archive_old_dm_task` minute: `0` → `20` (Pazar 03:20 UTC)
   - `scripts/test_dm_archive.py`: 10/10 sentetik test (`_list_object_keys_impl` + endpoint)
   - 8/8 node `287ab13e`
-- **Bölüm B (Adım 8) ✅ `622507fc` — 2026-11-12:**
-  - `storage_service.py`: `rehydrate_from_node2(minio_key)` — node2 HTTP GET → node1 MinIO upload (aiohttp, 5dk timeout)
-  - `streams.py`: `get_stream_recording` → `node2_confirmed_at`+`created_at` SELECT'e eklendi; `is_available`/`is_rehydratable` ayrımı; rehydrate path: `status='available'`, `expires_at=NOW()+24h` DB güncellemesi; 503 `REHYDRATE_FAILED` yeni hata kodu
-  - `config.py`: `minio_node2_rehydrate_url` (varsayılan `http://10.10.0.2:9200`)
-  - `.env.production.template` (node1): `MINIO_NODE2_REHYDRATE_URL` eklendi
-  - `nginx/teqlif-rehydrate.conf` (node2): `10.10.0.2:9200` WireGuard-only read-only dosya sunucusu; UFW `10.10.0.0/24→9200/tcp` izni; `chmod o+x /project/teqlif/backups`
-  - `scripts/test_recording_rehydrate.py`: 10/10 sentetik test (`rehydrate_from_node2` + endpoint)
-  - 8/8 node `622507fc`
+- **Bölüm B (Adım 8) ✅ `5dedcce8` — 2026-11-12 (P0/P1/P2 düzeltmeleriyle):**
+  - `storage_service.py`: `rehydrate_from_node2` — iter_chunked(4MB)+tempfile+fput_object (RAM sabit, OOM güvenli); orchestrator bypass → `settings.minio_endpoint` doğrudan; rstrip("/")
+  - `streams.py`: `is_available` ILM sınırı (`created_at >= now-2g`); `is_rehydratable` yeni case: `available` ama ILM-deleted; `updated_at=NOW()` eklendi
+  - `get_my_recordings.py`: `archived` kayıtlar 14g penceresi içindeyse listede görünür
+  - `recording.dart`: `canWatch` → expired/archived tıklanabilir; `_ExpiryRow` sadece available
+  - `error_mapper.dart`: `REHYDRATE_FAILED` eşlemesi eklendi
+  - ARB (5 dil): `errorRehydrateFailed` anahtarı eklendi
+  - `bootstrap_node2.sh`: `chmod o+x /project/teqlif/backups` + `systemctl enable --now nginx`
+  - `node1/.env.production`: `MINIO_NODE2_REHYDRATE_URL=http://10.10.0.2:9200` eklendi (canlı)
+  - `scripts/test_recording_rehydrate.py`: 12/12 test (P0 ILM-deleted testi dahil)
+  - 8/8 node `5dedcce8`
 
 ---
 
@@ -1180,7 +1183,7 @@ await redis.set("ch:last_sync_at", now.isoformat())  # Aradakiler kalıcı kaybo
 ~~7. **Adım 7 (`BIZ-01` — Bölüm A):** [`storage_service.py`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/services/storage_service.py#L137-L160) içine `list_object_keys_dm` metodunu ekle, [`messages.py:292-299`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/routers/messages.py#L292-L299) `get_archived_messages` endpoint'ini public `teqlif` yerine private **`teqlif-dm`** okur hale getir ve [`schedule.yaml`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/schedule.yaml) içinde `archive_old_dm_task` saatini Pazar `03:00` → **`03:20 UTC`** (`03:00 pg_dump` sonrasına, [Karar K2](#kilitli-kararlar)) taşı → _Neden:_ 1 yıl+ tüm DM geçmişinin boş `[]` dönmesini çözmek ve `pg_dump` öncesi tek-kopya penceresini sıfırlamak. → ([Detay](#biz-01))~~ ✅ `287ab13e`
 
 <a id="adim-8"></a>
-~~8. **Adım 8 (`BIZ-01` — Bölüm B):** [`streams.py:300-365`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/routers/streams.py#L300-L365) + [`stream_recording_tasks.py`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/tasks/stream_recording_tasks.py) içine 14 günlük pencerede PRO'ya yükselten kullanıcılar için `node2` arşivinden (`30g` saklama, [Karar K3](#kilitli-kararlar)) `node1` MinIO'ya on-demand geri çekme (rehydrate) + 24h presign akışını ekle → _Neden:_ Standart yayıncılara vaat edilen 14g PRO upsell özelliğinin `404 NoSuchKey`/`RECORDING_EXPIRED` ile kırılmasını önlemek ve `T+14` hakedişle 16g güvenli tampon sağlamak. → ([Detay](#biz-01), [Birlikte: Adım 18](#adim-18))~~ ✅ `622507fc`
+~~8. **Adım 8 (`BIZ-01` — Bölüm B) [P0/P1/P2 fix `5dedcce8`]:** [`streams.py:300-365`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/routers/streams.py#L300-L365) + [`stream_recording_tasks.py`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/tasks/stream_recording_tasks.py) içine 14 günlük pencerede PRO'ya yükselten kullanıcılar için `node2` arşivinden (`30g` saklama, [Karar K3](#kilitli-kararlar)) `node1` MinIO'ya on-demand geri çekme (rehydrate) + 24h presign akışını ekle → _Neden:_ Standart yayıncılara vaat edilen 14g PRO upsell özelliğinin `404 NoSuchKey`/`RECORDING_EXPIRED` ile kırılmasını önlemek ve `T+14` hakedişle 16g güvenli tampon sağlamak. → ([Detay](#biz-01), [Birlikte: Adım 18](#adim-18))~~ ✅ `622507fc`
 
 <a id="adim-9"></a>
 9. **Adım 9 (`OFFSITE-02`):** `node101` üzerinde `restic-rest-server 0.13.0` (`--append-only --listen 10.10.0.101:8000 --htpasswd-file ... --path /mnt/data`) servisini kur (`--private-repos` ile her HTTP user kendi `/mnt/data/<user>/` alt dizinini görür); `node101` yerel `teqlif-offsite-prune.{service,timer}` (`Pazar 08:00 UTC`, `GOMEMLIMIT=1536MiB`, `GOGC=20`, `MemoryMax=2G`) oluştur → _Neden:_ `node2` ele geçirilse bile `node101`'deki yedeklerin silinememesini (WORM) ve `2.9 GiB RAM` korunmasını garanti etmek. → ([Detay](#offsite-02))
