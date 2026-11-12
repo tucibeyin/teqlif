@@ -61,6 +61,7 @@ class Settings(BaseSettings):
     minio_endpoint: str = "http://10.10.0.1:9000"
     minio_endpoint_dm: str = "http://10.10.0.1:9000"
     minio_public_base: str = ""   # Staging override: https://staging.uploads.teqlif.com
+    minio_node2_rehydrate_url: str = "http://10.10.0.2:9200"  # node2 on-demand rehydrate (WireGuard internal)
     media_host: str = ""
     uploads_host: str = ""
     upload_presign_ttl: int = 900

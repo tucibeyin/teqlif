@@ -361,6 +361,34 @@ async def delete_object_dm(url_or_key: str) -> None:
     await asyncio.gather(*[_try_delete(c, nid) for c, nid in storage_nodes])
 
 
+async def rehydrate_from_node2(minio_key: str) -> str:
+    """node2 backup dosya sunucusundan kaydı node1 MinIO'ya geri yükler (on-demand rehydrate).
+
+    node2'deki `/project/teqlif/backups/minio/teqlif/{minio_key}` dosyasını HTTP GET ile
+    çeker, node1 public MinIO bucket'ına yükler ve public URL döner.
+
+    Raises:
+        FileNotFoundError: node2'de kayıt yoksa (HTTP 404)
+        RuntimeError:      node2 HTTP hatası veya bağlantı sorunu
+    """
+    import aiohttp
+
+    url = f"{settings.minio_node2_rehydrate_url}/teqlif/{minio_key}"
+    timeout = aiohttp.ClientTimeout(total=300)  # 5 dk — büyük video dosyaları için
+
+    async with aiohttp.ClientSession(timeout=timeout) as sess:
+        async with sess.get(url) as resp:
+            if resp.status == 404:
+                raise FileNotFoundError(f"node2 rehydrate: kayıt bulunamadı: {minio_key}")
+            if resp.status != 200:
+                raise RuntimeError(f"node2 rehydrate HTTP {resp.status}: {minio_key}")
+            content_type = resp.content_type or "video/mp4"
+            data = await resp.read()
+
+    logger.info("[REHYDRATE] node2→node1 indirildi: key=%s size=%d", minio_key, len(data))
+    return await upload_bytes(minio_key, data, content_type)
+
+
 def _get_presign_client() -> Minio:
     """Presigned URL için public endpoint client'ı döndürür.
 

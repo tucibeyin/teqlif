@@ -23,7 +23,10 @@ from app.schemas.stream import StreamStart, StreamOut, StreamTokenOut, JoinToken
 from app.utils.auth import get_current_user, bearer_scheme, decode_token
 from app.core.uow import SqlAlchemyUnitOfWork
 
+from app.core.logger import get_logger
 from app.services.like_service import LikeService
+
+logger = get_logger(__name__)
 from app.use_cases.feed.queries.swipe_live_queries import SwipeLiveQueries
 
 from app.use_cases.streams.commands.start_stream import StartStreamCommand
@@ -297,7 +300,11 @@ async def get_stream_recording(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Canlı yayın kaydı için presigned URL döner. Sadece host erişebilir, 24 saat geçerli."""
+    """Canlı yayın kaydı için presigned URL döner. Sadece host erişebilir, 24 saat geçerli.
+
+    expired/archived kayıtlar 14 gün içindeyse ve node2'de onaylanmışsa
+    on-demand rehydrate edilir (node2 backup → node1 MinIO → 24h presign).
+    """
     from datetime import datetime, timezone, timedelta
     from fastapi import HTTPException
     from sqlalchemy import text
@@ -312,7 +319,8 @@ async def get_stream_recording(
 
     # Concat tamamlanmışsa birleşik kayıt önceliklenir; yoksa en son part döner
     row = (await db.execute(text("""
-        SELECT id, status, minio_key, available_at, expires_at
+        SELECT id, status, minio_key, available_at, expires_at,
+               node2_confirmed_at, created_at
         FROM stream_recordings
         WHERE stream_id = :stream_id
           AND status IN ('available', 'expired', 'archived')
@@ -323,22 +331,53 @@ async def get_stream_recording(
     if not row:
         raise HTTPException(status_code=404, detail={"error": {"code": "RECORDING_NOT_FOUND"}})
 
-    if row["status"] != "available":
-        raise HTTPException(status_code=410, detail={"error": {"code": "RECORDING_EXPIRED"}})
+    now = datetime.now(timezone.utc)
+    is_available = (
+        row["status"] == "available"
+        and (row["expires_at"] is None or row["expires_at"] > now)
+    )
+    is_rehydratable = (
+        row["status"] in ("archived", "expired")
+        and row["node2_confirmed_at"] is not None
+        and row["created_at"] >= now - timedelta(days=14)
+    )
 
-    if row["expires_at"] and row["expires_at"] < datetime.now(timezone.utc):
+    if not is_available and not is_rehydratable:
         raise HTTPException(status_code=410, detail={"error": {"code": "RECORDING_EXPIRED"}})
 
     if not row["minio_key"]:
         raise HTTPException(status_code=404, detail={"error": {"code": "RECORDING_NOT_AVAILABLE"}})
+
+    # On-demand rehydrate: node2 backup → node1 MinIO
+    if is_rehydratable:
+        try:
+            from app.services.storage_service import rehydrate_from_node2
+            await rehydrate_from_node2(row["minio_key"])
+            await db.execute(text("""
+                UPDATE stream_recordings
+                SET status     = 'available',
+                    expires_at = NOW() + INTERVAL '24 hours'
+                WHERE id = :id
+            """), {"id": row["id"]})
+            await db.commit()
+            expires_at_for_presign = now + timedelta(hours=24)
+            logger.info("[REHYDRATE] Kayıt geri yüklendi: rec_id=%d key=%s", row["id"], row["minio_key"])
+        except FileNotFoundError:
+            logger.warning("[REHYDRATE] node2'de bulunamadı: rec_id=%d key=%s", row["id"], row["minio_key"])
+            raise HTTPException(status_code=410, detail={"error": {"code": "RECORDING_EXPIRED"}})
+        except Exception as exc:
+            logger.error("[REHYDRATE] Hata: rec_id=%d | %s", row["id"], exc)
+            raise HTTPException(status_code=503, detail={"error": {"code": "REHYDRATE_FAILED"}})
+    else:
+        expires_at_for_presign = row["expires_at"]
 
     try:
         from app.services.storage_service import _get_presign_client
         from app.config import settings
         client = _get_presign_client()
         loop = __import__("asyncio").get_event_loop()
-        if row["expires_at"]:
-            remaining = row["expires_at"] - datetime.now(timezone.utc)
+        if expires_at_for_presign:
+            remaining = expires_at_for_presign - now
             presign_ttl = max(
                 timedelta(minutes=1),
                 min(remaining - timedelta(minutes=5), timedelta(hours=25)),
@@ -361,7 +400,7 @@ async def get_stream_recording(
         "recording_id": row["id"],
         "url": presigned_url,
         "available_at": row["available_at"],
-        "expires_at": row["expires_at"],
+        "expires_at": expires_at_for_presign,
     }
 
 
