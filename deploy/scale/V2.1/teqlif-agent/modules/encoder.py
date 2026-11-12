@@ -6,9 +6,9 @@ teqlif-livekit (veya staging) çalışan node'larda otomatik yüklenir.
   1. status='encoding' → FFmpeg ile H.264/AAC encode, raw sil, 'encoded'
   2. status='encoded'  → Transfer penceresi kontrolü → mc cp → 'available'
 
-Transfer penceresi (UTC):
-  free_gb ≥  15GB : 03:00–08:00 (normal)
-  free_gb  10–15GB : 02:00–08:00 (erken tetik)
+Transfer penceresi (UTC) — K3 / MAINT-02:
+  free_gb ≥  15GB : 04:00–05:00 (normal)
+  free_gb  10–15GB : 03:00–05:00 (disk_warn erken tetik)
   free_gb < 10GB  : her an (acil)
 """
 from __future__ import annotations
@@ -18,7 +18,7 @@ import json
 import logging
 import os
 import shutil
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from config import AgentConfig
@@ -46,6 +46,7 @@ class EncoderManager:
         self._encoding:   set[int] = set()
         self._transferring: set[int] = set()
         self._mc_ready    = False
+        self._last_cleanup_day: date | None = None
 
     def _resolve_max_parallel(self, rec_cfg: dict, svc_cfg: dict | None = None) -> int:
         if len(self._recording_procs) > 0:
@@ -80,6 +81,11 @@ class EncoderManager:
         # mc alias'ını ilk çalışmada kur; kurulum başarısız olursa bir sonraki döngüde tekrar dene
         if not self._mc_ready:
             self._mc_ready = await self._setup_mc_alias(svc_cfg)
+
+        today = datetime.now(timezone.utc).date()
+        if today != self._last_cleanup_day:
+            await self._cleanup_orphans(svc_cfg)
+            self._last_cleanup_day = today
 
         await self._run_encodes(dsn, svc_cfg, rec_cfg)
         await self._run_transfers(dsn, svc_cfg, rec_cfg)
@@ -159,11 +165,12 @@ class EncoderManager:
             enc_size = enc_path.stat().st_size
             duration_secs = await _probe_duration(enc_path)
 
-            # Raw sil
-            try:
-                raw.unlink(missing_ok=True)
-            except Exception as exc:
-                logger.warning("Raw silme hatası | rec_id=%d | %s", rec_id, exc)
+            # Raw + eşlik eden .log dosyasını sil
+            for f in (raw, raw.with_suffix(".log")):
+                try:
+                    f.unlink(missing_ok=True)
+                except Exception as exc:
+                    logger.warning("Raw/log silme hatası | rec_id=%d | %s", rec_id, exc)
 
             await _pg_exec(dsn,
                 """UPDATE stream_recordings
@@ -266,11 +273,12 @@ class EncoderManager:
                 )
                 return
 
-            # Encoded lokal dosyayı sil
-            try:
-                enc.unlink(missing_ok=True)
-            except Exception as exc:
-                logger.warning("Encoded sil hatası | rec_id=%d | %s", rec_id, exc)
+            # Encoded + eşlik eden .log dosyasını sil
+            for f in (enc, enc.with_suffix(".log")):
+                try:
+                    f.unlink(missing_ok=True)
+                except Exception as exc:
+                    logger.warning("Encoded/log sil hatası | rec_id=%d | %s", rec_id, exc)
 
             access_hours = int(rec_cfg.get("user_access_hours", 24))
             now_utc      = datetime.now(timezone.utc)
@@ -294,6 +302,34 @@ class EncoderManager:
                 "UPDATE stream_recordings SET status='encoded', updated_at=NOW() WHERE id=$1", rec_id)
         finally:
             self._transferring.discard(rec_id)
+
+    # ── Yetim dosya temizleme (günde 1 kez) ──────────────────────────────────
+
+    async def _cleanup_orphans(self, svc_cfg: dict) -> None:
+        """48 saatten eski 0-byte ve .log yetim dosyalarını siler."""
+        raw_dir = Path(svc_cfg.get("raw_dir", "/var/recordings/raw"))
+        enc_dir = Path(svc_cfg.get("encoded_dir", "/var/recordings/encoded"))
+        cutoff  = datetime.now(timezone.utc) - timedelta(hours=48)
+        deleted = 0
+        for d in (raw_dir, enc_dir):
+            if not d.exists():
+                continue
+            for f in d.iterdir():
+                if not f.is_file():
+                    continue
+                try:
+                    st = f.stat()
+                    mtime = datetime.fromtimestamp(st.st_mtime, tz=timezone.utc)
+                    if mtime > cutoff:
+                        continue
+                    if st.st_size == 0 or f.suffix == ".log":
+                        f.unlink()
+                        deleted += 1
+                        logger.info("Yetim silindi | %s", f.name)
+                except Exception as exc:
+                    logger.warning("Yetim temizleme hatası | %s | %s", f.name, exc)
+        if deleted:
+            logger.info("Yetim cleanup tamamlandı | silinen=%d", deleted)
 
     # ── mc alias kurulumu ─────────────────────────────────────────────────────
 
