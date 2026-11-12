@@ -111,7 +111,9 @@ install_pg_server() {
     # Cluster yoksa oluştur (pg_restore EXTENSION vector için şart)
     if ! pg_lsclusters 2>/dev/null | grep -q "^${PG_VERSION}"; then
         pg_createcluster "${PG_VERSION}" main
-        log_ok "pg_createcluster ${PG_VERSION} main: cluster oluşturuldu"
+        # Cluster oluştu, hemen durdur — standby/DR modunda çalışmayacak
+        systemctl stop "postgresql@${PG_VERSION}-main" 2>/dev/null || true
+        log_ok "pg_createcluster ${PG_VERSION} main: cluster oluşturuldu (stopped)"
     fi
     # Cluster standby/DR modunda: servis otomatik başlamayacak
     systemctl disable --now postgresql 2>/dev/null || true
