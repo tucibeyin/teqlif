@@ -59,7 +59,7 @@ main() {
         "nodeMonitor'da: wg_add_node101.sh çalıştır" \
         "wg-quick up wg0 && systemctl enable wg-quick@wg0" \
         "restic init: sudo -u teqlif-backup restic init (RESTIC_REPOSITORY + RESTIC_PASSWORD)" \
-        "htpasswd oluştur: htpasswd -B /etc/teqlif-offsite/htpasswd tucibeyin" \
+        "htpasswd oluştur: htpasswd -B /etc/teqlif-offsite/htpasswd teqlif" \
         "apply_secrets ile restic.env + wg0.conf doldur" \
         "systemctl start restic-rest-server teqlif-agent" \
         "node2'de offsite_sync.sh ilk test: systemctl start teqlif-offsite-sync" \
@@ -278,9 +278,12 @@ setup_offsite_dirs() {
     # /mnt/data mount point'i root'a ait olmalı; alt dizinler servis kullanıcılarına
     chown root:root /mnt/data
     chmod 755 /mnt/data
+    # restic repo dizini: --private-repos HTTP user=teqlif → /mnt/data/teqlif/
+    # restic-rest-server User=teqlif-backup; root:root 755 altında yazamaz — önceden oluştur
+    mkdir -p /mnt/data/teqlif
+    chown teqlif-backup:teqlif-backup /mnt/data/teqlif
+    chmod 700 /mnt/data/teqlif
     # Yardımcı dizinler HDD üzerinde
-    # NOT: restic repo dizini (ör. /mnt/data/teqlif/) restic-rest-server --private-repos
-    # bayrağıyla HTTP auth kullanıcı adına göre otomatik oluşturulur (restic init sırasında).
     mkdir -p \
         /mnt/data/tmp \
         /mnt/data/cache/restic
@@ -311,6 +314,8 @@ setup_offsite_services() {
     local node_dir="${1}"
     log_step "Offsite systemd servisleri"
     chmod +x "${node_dir}/resources/scripts/"*.sh
+    cp "${node_dir}/resources/scripts/notify_backup_failed.sh" /usr/local/bin/
+    chmod +x /usr/local/bin/notify_backup_failed.sh
     for f in "${node_dir}/systemd/"*.service "${node_dir}/systemd/"*.timer; do
         [ -f "${f}" ] && cp "${f}" /etc/systemd/system/ || true
     done
