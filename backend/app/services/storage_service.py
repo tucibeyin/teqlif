@@ -277,6 +277,31 @@ async def download_dm_to_file(key: str, local_path: str) -> None:
     raise FileNotFoundError(f"DM object not found on any node: {key}")
 
 
+async def list_object_keys_dm(prefix: str) -> list[str]:
+    """Private DM bucket'taki belirtilen prefix altındaki tüm nesne key'lerini döner.
+    Tüm storage node'larını tarar ve birleşik listeyi döner.
+    """
+    storage_nodes = await _get_all_storage_clients()
+    if not storage_nodes:
+        logger.error("[STORAGE_DM] list_object_keys_dm: storage node bulunamadı | prefix=%s", prefix)
+        raise RuntimeError(f"No storage node available for DM prefix: {prefix}")
+
+    all_keys: set[str] = set()
+    for client, node_label in storage_nodes:
+        try:
+            def _list(_c=client) -> list[str]:
+                return [
+                    obj.object_name
+                    for obj in _c.list_objects(settings.minio_dm_bucket, prefix=prefix, recursive=True)
+                ]
+            keys = await asyncio.to_thread(_list)
+            all_keys.update(keys)
+        except Exception as exc:
+            logger.error("[STORAGE_DM] list_object_keys_dm hata: prefix=%s node=%s | %s", prefix, node_label, exc)
+
+    return list(all_keys)
+
+
 async def upload_bytes_dm(key: str, data: bytes, content_type: str) -> str:
     node = await orchestrator.allocate_node(ServiceType.STORAGE)
     client = _get_client_for_internal_url(node["minio_url"])

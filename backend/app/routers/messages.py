@@ -4,7 +4,7 @@ import json
 import os
 import tempfile
 
-from fastapi import APIRouter, Depends, Form, Query, Request, UploadFile, File, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, UploadFile, File, WebSocket, WebSocketDisconnect
 from app.core.exceptions import BadRequestException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -277,10 +277,9 @@ async def get_archived_messages(
     other_user_id: int,
     current_user: User = Depends(get_current_user),
 ):
-    """1 yıldan eski arşivlenmiş metin mesajlarını MinIO'dan getirir."""
+    """1 yıldan eski arşivlenmiş metin mesajlarını MinIO DM bucket'tan getirir."""
     import gzip
     from app.services import storage_service as storage
-    from app.schemas.message import MessageOut
     from datetime import datetime, timezone
 
     uid = current_user.id
@@ -289,14 +288,15 @@ async def get_archived_messages(
     prefix = f"dm-archive/{user_a}_{user_b}/"
 
     try:
-        keys = await storage.list_object_keys(prefix)
-    except Exception:
-        return []
+        keys = await storage.list_object_keys_dm(prefix)
+    except Exception as exc:
+        logger.error("[ARCHIVE] DM listing başarısız: prefix=%s | %s", prefix, exc)
+        raise HTTPException(status_code=502, detail="Arşiv listesi alınamadı")
 
     all_messages: list[MessageOut] = []
     for key in sorted(keys):
         try:
-            raw = await storage.get_object_bytes(key)
+            raw = await storage.get_object_bytes_dm(key)
             if not raw:
                 continue
             msgs = json.loads(gzip.decompress(raw))
@@ -314,7 +314,8 @@ async def get_archived_messages(
                     is_read=True,
                     created_at=created_at,
                 ))
-        except Exception:
+        except Exception as exc:
+            logger.error("[ARCHIVE] DM nesne okunamadı: key=%s | %s", key, exc)
             continue
 
     all_messages.sort(key=lambda x: x.created_at)
