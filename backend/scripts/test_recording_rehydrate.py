@@ -176,7 +176,8 @@ class TestCheckExistsOnNode1(unittest.IsolatedAsyncioTestCase):
         from app.services.storage_service import check_exists_on_node1
         from minio.error import S3Error
 
-        err = S3Error("NoSuchKey", "Not found", "/", "req", None, MagicMock())
+        # S3Error(response, code, message, resource, request_id, host_id)
+        err = S3Error(MagicMock(), "NoSuchKey", "Not found", "/", "req", None)
         mock_client = MagicMock()
         mock_client.stat_object = MagicMock(side_effect=err)
         with patch("app.services.storage_service._get_client_for_internal_url", return_value=mock_client), \
