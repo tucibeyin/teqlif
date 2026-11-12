@@ -261,9 +261,14 @@ class _RecordingDetailScreenState extends ConsumerState<RecordingDetailScreen>
   }
 
   Widget _playerError(String? code, TranslationPack loc) {
-    final msg = code == null
-        ? loc.t('recordingLoading')
-        : loc.t('errorRecordingNotAvailable');
+    final String msg;
+    if (code == null) {
+      msg = loc.t('recordingLoading');
+    } else if (code == 'REHYDRATE_FAILED') {
+      msg = loc.t('errorRehydrateFailed');
+    } else {
+      msg = loc.t('errorRecordingNotAvailable');
+    }
     return Center(
       child: Text(msg,
           style: const TextStyle(color: Colors.white70, fontSize: 14)),

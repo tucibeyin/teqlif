@@ -75,8 +75,9 @@ setup_backup_directories() {
     mkdir -p /project/teqlif/backups/{pg_dump,pg_wal,pg_basebackup,redis,minio,clickhouse,loki,stalwart,uptime_kuma,nodemonitor_config}
     chown -R tucibeyin:tucibeyin /project/teqlif/backups
     find /project/teqlif/backups -type d -exec chmod 700 {} +
-    # nginx (www-data) backup/minio altına ulaşabilmek için üst dizine traverse izni
+    # nginx (www-data) backup/minio altına ulaşabilmek için üst dizinlere traverse izni
     chmod o+x /project/teqlif/backups
+    chmod o+x /project/teqlif/backups/minio  # mkdir -p tarafından oluşturuldu, 700'ü aç
     log_ok "Backup dizinleri: /project/teqlif/backups/"
 }
 

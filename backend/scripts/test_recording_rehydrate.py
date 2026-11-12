@@ -1,12 +1,14 @@
-"""Sentetik birim testi — BIZ-01 Bölüm B P0/P1 fix: 14g PRO Video on-demand rehydrate.
+"""Sentetik birim testi — BIZ-01 Bölüm B P0/P1/P2 fix: 14g PRO Video on-demand rehydrate.
 
 Çalıştır: cd backend && .venv/bin/python3 scripts/test_recording_rehydrate.py
 
 İçerik:
   - rehydrate_from_node2 (başarı/streaming, 404→FileNotFoundError, HTTP hata→RuntimeError)
+  - check_exists_on_node1 (stat_object başarı/NoSuchKey/diğer hata)
   - get_stream_recording endpoint:
       available presign, archived rehydrate, 14g dışı→410, node2'de yok→410, 503,
-      expired rehydrate, P0: available ama ILM-deleted (created_at > 2g) → rehydrate
+      expired rehydrate, P0: available ama ILM-deleted (created_at > 2g) → rehydrate,
+      P2: node1'de zaten mevcut → indir atlanır (tekrarlı rehydrate önleme)
 """
 import sys
 import os
@@ -155,6 +157,45 @@ class TestRehydrateFromNode2(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("//teqlif", captured_urls[0], "Double slash in URL")
 
 
+class TestCheckExistsOnNode1(unittest.IsolatedAsyncioTestCase):
+    """check_exists_on_node1 birim testleri (tekrarlı rehydrate önleme)."""
+
+    async def test_file_exists_returns_true(self):
+        """stat_object başarılı → True."""
+        from app.services.storage_service import check_exists_on_node1
+
+        mock_client = MagicMock()
+        mock_client.stat_object = MagicMock(return_value=MagicMock())
+        with patch("app.services.storage_service._get_client_for_internal_url", return_value=mock_client), \
+             patch("asyncio.to_thread", new=AsyncMock(side_effect=lambda fn, *a, **kw: fn())):
+            result = await check_exists_on_node1("recordings/test.mp4")
+        self.assertTrue(result)
+
+    async def test_no_such_key_returns_false(self):
+        """stat_object S3Error NoSuchKey → False."""
+        from app.services.storage_service import check_exists_on_node1
+        from minio.error import S3Error
+
+        err = S3Error("NoSuchKey", "Not found", "/", "req", None, MagicMock())
+        mock_client = MagicMock()
+        mock_client.stat_object = MagicMock(side_effect=err)
+        with patch("app.services.storage_service._get_client_for_internal_url", return_value=mock_client), \
+             patch("asyncio.to_thread", new=AsyncMock(side_effect=lambda fn, *a, **kw: fn())):
+            result = await check_exists_on_node1("recordings/missing.mp4")
+        self.assertFalse(result)
+
+    async def test_connection_error_returns_false(self):
+        """Bağlantı hatası → False (güvenli fallback)."""
+        from app.services.storage_service import check_exists_on_node1
+
+        mock_client = MagicMock()
+        mock_client.stat_object = MagicMock(side_effect=ConnectionError("MinIO unreachable"))
+        with patch("app.services.storage_service._get_client_for_internal_url", return_value=mock_client), \
+             patch("asyncio.to_thread", new=AsyncMock(side_effect=lambda fn, *a, **kw: fn())):
+            result = await check_exists_on_node1("recordings/test.mp4")
+        self.assertFalse(result)
+
+
 class TestGetStreamRecording(unittest.IsolatedAsyncioTestCase):
     """get_stream_recording endpoint birim testleri (BIZ-01 Bölüm B P0/P1 doğrulama)."""
 
@@ -215,6 +256,33 @@ class TestGetStreamRecording(unittest.IsolatedAsyncioTestCase):
         mock_rehydrate.assert_called_once_with("recordings/test.mp4")
         db.commit.assert_called_once()
         self.assertEqual(result["url"], "https://presigned.url/p0fix")
+
+    async def test_already_on_node1_skips_rehydrate_download(self):
+        """P2: node1'de zaten mevcut → indir atlanır, DB güncellenir, presign döner."""
+        from app.routers.streams import get_stream_recording
+
+        now = datetime.now(timezone.utc)
+        row = _make_row(
+            status="available",
+            expires_at=now + timedelta(days=11),
+            node2_confirmed_at=now - timedelta(days=1),
+            created_at=now - timedelta(days=3),  # P0 senaryosu: ILM > 2g
+        )
+        db = self._make_db(row=row)
+
+        with patch("app.services.storage_service.check_exists_on_node1", new=AsyncMock(return_value=True)) as mock_check, \
+             patch("app.services.storage_service.rehydrate_from_node2", new=AsyncMock()) as mock_rehydrate, \
+             patch("app.services.storage_service._get_presign_client") as mock_pf, \
+             patch("app.config.settings") as mock_settings:
+            mock_settings.minio_bucket = "teqlif"
+            mock_pf.return_value.presigned_get_object = MagicMock(return_value="https://presigned.url/cached")
+
+            result = await get_stream_recording(stream_id=1, db=db, current_user=_make_user())
+
+        mock_check.assert_called_once_with("recordings/test.mp4")
+        mock_rehydrate.assert_not_called()   # indir atlandı
+        db.commit.assert_called_once()       # DB expires_at güncellendi
+        self.assertEqual(result["url"], "https://presigned.url/cached")
 
     async def test_archived_within_14d_rehydrates(self):
         """status=archived, node2_confirmed, 3 gün önce → rehydrate çağrılır."""

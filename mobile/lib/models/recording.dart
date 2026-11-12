@@ -744,7 +744,7 @@ class RecordingFilterState {
       result = result.where((i) {
         switch (statusFilter) {
           case RecordingFilterStatus.available:
-            return i.status.canWatch;
+            return i.status == RecordingStatus.available;
           case RecordingFilterStatus.preparing:
             return i.status.isProcessing;
           case RecordingFilterStatus.expired:

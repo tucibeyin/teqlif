@@ -362,8 +362,16 @@ async def get_stream_recording(
     # On-demand rehydrate: node2 backup → node1 MinIO
     if is_rehydratable:
         try:
-            from app.services.storage_service import rehydrate_from_node2
-            await rehydrate_from_node2(row["minio_key"])
+            from app.services.storage_service import rehydrate_from_node2, check_exists_on_node1
+
+            # Tekrarlı rehydrate'i önle: 24h penceresi içinde tekrar istek gelirse indir atlansın
+            _already_on_node1 = await check_exists_on_node1(row["minio_key"])
+            if not _already_on_node1:
+                await rehydrate_from_node2(row["minio_key"])
+                logger.info("[REHYDRATE] Kayıt geri yüklendi: rec_id=%d key=%s", row["id"], row["minio_key"])
+            else:
+                logger.info("[REHYDRATE] node1'de mevcut, indir atlandı: rec_id=%d key=%s", row["id"], row["minio_key"])
+
             await db.execute(text("""
                 UPDATE stream_recordings
                 SET status     = 'available',
@@ -373,7 +381,6 @@ async def get_stream_recording(
             """), {"id": row["id"]})
             await db.commit()
             expires_at_for_presign = now + timedelta(hours=24)
-            logger.info("[REHYDRATE] Kayıt geri yüklendi: rec_id=%d key=%s", row["id"], row["minio_key"])
         except FileNotFoundError:
             logger.warning("[REHYDRATE] node2'de bulunamadı: rec_id=%d key=%s", row["id"], row["minio_key"])
             raise HTTPException(status_code=410, detail={"error": {"code": "RECORDING_EXPIRED"}})

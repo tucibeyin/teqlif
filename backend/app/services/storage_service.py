@@ -417,6 +417,23 @@ async def rehydrate_from_node2(minio_key: str) -> str:
             os.unlink(tmp_path)
 
 
+async def check_exists_on_node1(minio_key: str) -> bool:
+    """node1 MinIO'da dosya var mı? Tekrarlı rehydrate'i önlemek için stat_object ön kontrolü.
+
+    Beklenmedik S3 hatası → yeniden yükseltir; NoSuchKey veya bağlantı sorunu → False döner.
+    """
+    try:
+        client = _get_client_for_internal_url(settings.minio_endpoint)
+        await asyncio.to_thread(client.stat_object, settings.minio_bucket, minio_key)
+        return True
+    except S3Error as exc:
+        if exc.code != "NoSuchKey":
+            raise
+        return False
+    except Exception:
+        return False  # bağlantı sorunu → güvenli fallback, rehydrate dene
+
+
 def _get_presign_client() -> Minio:
     """Presigned URL için public endpoint client'ı döndürür.
 
