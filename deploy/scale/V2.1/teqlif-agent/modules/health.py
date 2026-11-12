@@ -51,6 +51,8 @@ _BACKUP_MAX_MIN = {
     "mail_backup":                25 * 60,
     "clickhouse_backup":          25 * 60,
     "pg_basebackup":               7 * 24 * 60,  # haftalık
+    "offsite_sync":               25 * 60,       # günlük daily-full → node101
+    "offsite_wal_sync":           90,            # saatlik WAL → node101
 }
 
 # Servisler her node'un rolüne göre farklıdır; her node sadece kendi
@@ -415,6 +417,8 @@ async def _backup_ages() -> dict:
         "uptime_kuma_backup":        "/project/teqlif/backups/uptime_kuma/.last_backup_ok",
         "nodemonitor_config_backup": "/project/teqlif/backups/nodemonitor_config/.last_backup_ok",
         "mail_backup":               "/project/teqlif/backups/stalwart/.last_mail_backup_ok",
+        "offsite_sync":              "/project/teqlif/backups/.last_offsite_sync_ok",
+        "offsite_wal_sync":          "/project/teqlif/backups/.last_offsite_wal_ok",
     }
     result = {}
     for key, path in backup_dirs.items():

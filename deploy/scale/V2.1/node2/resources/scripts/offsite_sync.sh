@@ -19,10 +19,14 @@ exec >> "${LOGFILE}" 2>&1
 
 echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) offsite_sync: start"
 
-# restic-rest-server yapılandırılmamışsa sessizce çık
+# restic-rest-server credentials kontrolü — eksikse fail (OFFSITE_MODE=disabled ile devre dışı bırakılabilir)
 if [[ -z "${RESTIC_REST_USER:-}" ]] || [[ -z "${RESTIC_REST_PASSWORD:-}" ]] || [[ -z "${RESTIC_PASSWORD:-}" ]]; then
-    echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) offsite_sync: SKIP — RESTIC_REST_USER/PASSWORD/RESTIC_PASSWORD tanımlı değil"
-    exit 0
+    if [[ "${OFFSITE_MODE:-}" == "disabled" ]]; then
+        echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) offsite_sync: SKIP — OFFSITE_MODE=disabled"
+        exit 0
+    fi
+    echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) offsite_sync: FAIL — credentials tanımlı değil; OFFSITE_MODE=disabled ile susturulabilir"
+    exit 2
 fi
 
 # minio_backup.sh staleness kontrolü (3-2-1 bütünlük garantisi)
@@ -80,4 +84,5 @@ if [[ ${_stale_minio} -eq 1 ]]; then
     exit 1
 fi
 
+touch /project/teqlif/backups/.last_offsite_sync_ok
 echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) offsite_sync: tamamlandı"

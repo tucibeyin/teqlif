@@ -330,6 +330,14 @@ batch:
     minute: 30
     watchdog_m: 1500
 
+  - name: offsite_sync
+    hour: 6
+    minute: 30
+    watchdog_m: 1500          # ~25 saat — günlük daily-full restic → node101
+
+  - name: offsite_wal_sync
+    watchdog_m: 90            # saatlik *:45 UTC — WAL restic → node101
+
   # pg_basebackup --max-rate=40M (~40MB/s, ~320 Mbps) — 02:00'de başlar,
   # ~02:30-02:45'te biter. transfer_window_start_utc:4 ile video transfer
   # 04:00'e ötelenmiş; ağ darboğazı (Pazar 02:00 çakışması) ortadan kalktı.

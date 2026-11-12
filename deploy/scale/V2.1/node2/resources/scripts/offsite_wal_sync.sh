@@ -14,8 +14,12 @@ exec >> "${LOGFILE}" 2>&1
 echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) offsite_wal_sync: start"
 
 if [[ -z "${RESTIC_REST_USER:-}" ]] || [[ -z "${RESTIC_REST_PASSWORD:-}" ]] || [[ -z "${RESTIC_PASSWORD:-}" ]]; then
-    echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) offsite_wal_sync: SKIP — credentials tanımlı değil"
-    exit 0
+    if [[ "${OFFSITE_MODE:-}" == "disabled" ]]; then
+        echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) offsite_wal_sync: SKIP — OFFSITE_MODE=disabled"
+        exit 0
+    fi
+    echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) offsite_wal_sync: FAIL — credentials tanımlı değil"
+    exit 2
 fi
 
 export RESTIC_REPOSITORY="rest:http://${RESTIC_REST_USER}:${RESTIC_REST_PASSWORD}@10.10.0.101:8000/${RESTIC_REST_USER}/"
@@ -35,4 +39,5 @@ restic backup \
 redis-cli -h 10.10.0.1 -p 6379 -a "${CORE_REDIS_PASS:-}" --no-auth-warning \
     HSET teqlif:agent:job_ok offsite_wal_sync "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >/dev/null 2>&1 || true
 
+touch /project/teqlif/backups/.last_offsite_wal_ok
 echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) offsite_wal_sync: OK"
