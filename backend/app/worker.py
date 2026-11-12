@@ -4122,15 +4122,18 @@ async def sync_pg_to_clickhouse_task(ctx: dict) -> None:
       2. analytics_events (feed_impression/click/skip) → CH feed_analytics
       3. analytics_events (swipelive_raw) → CH swipe_live_events
 
-    Son sync zamanı Redis ch:last_sync_at key'inde tutulur.
-    CH insert başarısız olursa key güncellenmez → bir sonraki gece yeniden denenir.
+    Cursor pagination: (created_at, id) çiftiyle sayfa sayfa ilerler; LIMIT dolunca
+    kayıt kaybolmaz. ch:last_sync_at yalnız tüm sayfalar başarıyla işlendikten sonra
+    güncellenir. Buffer cleanup 5000'lik batch + 48h güvence şartıyla çalışır.
     """
     from datetime import datetime, timezone, timedelta
     from app.database import AsyncSessionLocal
     from app.database_clickhouse import get_clickhouse_client
     from app.utils.redis_client import get_redis
     from sqlalchemy import text as _sql_text
-    import json as _json
+
+    _PAGE = 10_000       # sayfa başına kayıt
+    _DEL_BATCH = 5_000   # batch silme boyutu
 
     try:
         redis = await get_redis()
@@ -4149,19 +4152,25 @@ async def sync_pg_to_clickhouse_task(ctx: dict) -> None:
 
         total_inserted = 0
 
-        # ── 1. user_interactions → CH user_events ─────────────────────────────
-        async with AsyncSessionLocal() as db:
-            ui_result = await db.execute(_sql_text("""
-                SELECT user_id, item_id, item_type, interaction_type,
-                       duration_seconds, created_at
-                FROM user_interactions
-                WHERE created_at > :last_sync AND created_at <= :now
-                ORDER BY created_at
-                LIMIT 200000
-            """), {"last_sync": last_sync, "now": now})
-            ui_rows = ui_result.all()
+        # ── 1. user_interactions → CH user_events (cursor pagination) ─────────
+        cur_ts, cur_id = last_sync, 0
+        ui_total = 0
+        while True:
+            async with AsyncSessionLocal() as db:
+                ui_result = await db.execute(_sql_text("""
+                    SELECT id, user_id, item_id, item_type, interaction_type,
+                           duration_seconds, created_at
+                    FROM user_interactions
+                    WHERE (created_at > :lts OR (created_at = :lts AND id > :lid))
+                      AND created_at <= :now
+                    ORDER BY created_at, id
+                    LIMIT :page
+                """), {"lts": cur_ts, "lid": cur_id, "now": now, "page": _PAGE})
+                ui_rows = ui_result.all()
 
-        if ui_rows:
+            if not ui_rows:
+                break
+
             ch_data = [
                 [
                     r.user_id,
@@ -4182,93 +4191,123 @@ async def sync_pg_to_clickhouse_task(ctx: dict) -> None:
                 column_names=["user_id", "item_id", "item_type", "event_type",
                                "price_point", "duration_seconds", "metadata", "subcategory", "timestamp"],
             )
-            total_inserted += len(ch_data)
-            logger.info("[SyncCH] user_events: %d kayıt CH'a yazıldı", len(ch_data))
+            ui_total += len(ch_data)
+            cur_ts = ui_rows[-1].created_at
+            cur_id = ui_rows[-1].id
 
-        # ── 2. analytics_events (feed + swipe) → CH ───────────────────────────
-        async with AsyncSessionLocal() as db:
-            ae_result = await db.execute(_sql_text("""
-                SELECT user_id, event_type, event_metadata, created_at
-                FROM analytics_events
-                WHERE event_type IN ('feed_impression', 'feed_click', 'feed_skip', 'swipelive_raw')
-                  AND created_at > :last_sync AND created_at <= :now
-                ORDER BY created_at
-                LIMIT 500000
-            """), {"last_sync": last_sync, "now": now})
-            ae_rows = ae_result.all()
+        if ui_total:
+            logger.info("[SyncCH] user_events: %d kayıt CH'a yazıldı", ui_total)
+        total_inserted += ui_total
 
-        feed_rows = []
-        swipe_rows = []
-        for row in ae_rows:
-            m = row.event_metadata or {}
-            if row.event_type in ('feed_impression', 'feed_click', 'feed_skip'):
-                feed_rows.append([
-                    row.created_at.replace(tzinfo=None),
-                    row.user_id or 0,
-                    int(m.get("listing_id") or 0),
-                    row.event_type.replace("feed_", ""),  # 'impression', 'click', 'skip'
-                    int(m.get("dwell_time_ms") or 0),
-                    str(m.get("content_type") or ""),
-                    int(m.get("slot_index") or 0),
-                    str(m.get("stream_category") or ""),
-                    str(m.get("listing_condition") or ""),
-                    str(m.get("listing_subcategory") or ""),
-                ])
-            elif row.event_type == 'swipelive_raw':
-                swipe_rows.append([
-                    row.user_id or 0,
-                    int(m.get("stream_id") or 0),
-                    int(m.get("listing_id") or 0),
-                    str(m.get("swipe_event_type") or ""),
-                    int(m.get("dwell_ms") or 0),
-                    str(m.get("stream_category") or ""),
-                    str(m.get("listing_category") or ""),
-                    str(m.get("listing_condition") or ""),
-                    int(m.get("listings_seen") or 0),
-                    int(m.get("slot_index") or 0),
-                    str(m.get("session_id") or ""),
-                    str(m.get("stream_subcategory") or ""),
-                    str(m.get("listing_subcategory") or ""),
-                    row.created_at.replace(tzinfo=None),
-                ])
+        # ── 2. analytics_events (feed + swipe) → CH (cursor pagination) ───────
+        cur_ts, cur_id = last_sync, 0
+        ae_total_feed = ae_total_swipe = 0
+        while True:
+            async with AsyncSessionLocal() as db:
+                ae_result = await db.execute(_sql_text("""
+                    SELECT id, user_id, event_type, event_metadata, created_at
+                    FROM analytics_events
+                    WHERE event_type IN ('feed_impression', 'feed_click', 'feed_skip', 'swipelive_raw')
+                      AND (created_at > :lts OR (created_at = :lts AND id > :lid))
+                      AND created_at <= :now
+                    ORDER BY created_at, id
+                    LIMIT :page
+                """), {"lts": cur_ts, "lid": cur_id, "now": now, "page": _PAGE})
+                ae_rows = ae_result.all()
 
-        if feed_rows:
-            await ch.insert(
-                "feed_analytics",
-                feed_rows,
-                column_names=["timestamp", "user_id", "listing_id", "event_type", "dwell_time_ms",
-                               "content_type", "slot_index", "stream_category", "listing_condition",
-                               "listing_subcategory"],
-            )
-            total_inserted += len(feed_rows)
-            logger.info("[SyncCH] feed_analytics: %d kayıt CH'a yazıldı", len(feed_rows))
+            if not ae_rows:
+                break
 
-        if swipe_rows:
-            await ch.insert(
-                "swipe_live_events",
-                swipe_rows,
-                column_names=["user_id", "stream_id", "listing_id", "event_type", "dwell_ms",
-                               "stream_category", "listing_category", "listing_condition",
-                               "listings_seen", "slot_index", "session_id",
-                               "stream_subcategory", "listing_subcategory", "timestamp"],
-            )
-            total_inserted += len(swipe_rows)
-            logger.info("[SyncCH] swipe_live_events: %d kayıt CH'a yazıldı", len(swipe_rows))
+            feed_rows = []
+            swipe_rows = []
+            for row in ae_rows:
+                m = row.event_metadata or {}
+                if row.event_type in ('feed_impression', 'feed_click', 'feed_skip'):
+                    feed_rows.append([
+                        row.created_at.replace(tzinfo=None),
+                        row.user_id or 0,
+                        int(m.get("listing_id") or 0),
+                        row.event_type.replace("feed_", ""),  # 'impression', 'click', 'skip'
+                        int(m.get("dwell_time_ms") or 0),
+                        str(m.get("content_type") or ""),
+                        int(m.get("slot_index") or 0),
+                        str(m.get("stream_category") or ""),
+                        str(m.get("listing_condition") or ""),
+                        str(m.get("listing_subcategory") or ""),
+                    ])
+                elif row.event_type == 'swipelive_raw':
+                    swipe_rows.append([
+                        row.user_id or 0,
+                        int(m.get("stream_id") or 0),
+                        int(m.get("listing_id") or 0),
+                        str(m.get("swipe_event_type") or ""),
+                        int(m.get("dwell_ms") or 0),
+                        str(m.get("stream_category") or ""),
+                        str(m.get("listing_category") or ""),
+                        str(m.get("listing_condition") or ""),
+                        int(m.get("listings_seen") or 0),
+                        int(m.get("slot_index") or 0),
+                        str(m.get("session_id") or ""),
+                        str(m.get("stream_subcategory") or ""),
+                        str(m.get("listing_subcategory") or ""),
+                        row.created_at.replace(tzinfo=None),
+                    ])
+
+            if feed_rows:
+                await ch.insert(
+                    "feed_analytics",
+                    feed_rows,
+                    column_names=["timestamp", "user_id", "listing_id", "event_type", "dwell_time_ms",
+                                   "content_type", "slot_index", "stream_category", "listing_condition",
+                                   "listing_subcategory"],
+                )
+                ae_total_feed += len(feed_rows)
+
+            if swipe_rows:
+                await ch.insert(
+                    "swipe_live_events",
+                    swipe_rows,
+                    column_names=["user_id", "stream_id", "listing_id", "event_type", "dwell_ms",
+                                   "stream_category", "listing_category", "listing_condition",
+                                   "listings_seen", "slot_index", "session_id",
+                                   "stream_subcategory", "listing_subcategory", "timestamp"],
+                )
+                ae_total_swipe += len(swipe_rows)
+
+            cur_ts = ae_rows[-1].created_at
+            cur_id = ae_rows[-1].id
+
+        if ae_total_feed:
+            logger.info("[SyncCH] feed_analytics: %d kayıt CH'a yazıldı", ae_total_feed)
+        if ae_total_swipe:
+            logger.info("[SyncCH] swipe_live_events: %d kayıt CH'a yazıldı", ae_total_swipe)
+        total_inserted += ae_total_feed + ae_total_swipe
 
         # Tüm insertler başarılı → sync zamanını güncelle
         await redis.set("ch:last_sync_at", now.isoformat())
 
-        # ── Buffer cleanup — PG'nin şişmesini önle ────────────────────────────
-        # feed/swipe raw eventler CH'a gittikten sonra PG'de sadece 48 saat tutulur.
-        # 48h > 24h (sync penceresi) → yeterli güvenlik marjı.
-        async with AsyncSessionLocal() as db:
-            del_result = await db.execute(_sql_text("""
-                DELETE FROM analytics_events
-                WHERE event_type IN ('feed_impression', 'feed_click', 'feed_skip', 'swipelive_raw')
-                  AND created_at < NOW() - INTERVAL '48 hours'
-            """))
-            await db.commit()
-            logger.info("[SyncCH] buffer cleanup: %d eski raw event silindi", del_result.rowcount)
+        # ── Buffer cleanup — 5000'lik batch, CH'a gitmemiş satır asla silinmez ─
+        # Güvence: created_at < now - 48h (ch:last_sync_at = now, 48h < sync_at)
+        safe_before = now - timedelta(hours=48)
+        deleted_total = 0
+        while True:
+            async with AsyncSessionLocal() as db:
+                del_result = await db.execute(_sql_text("""
+                    DELETE FROM analytics_events
+                    WHERE id IN (
+                        SELECT id FROM analytics_events
+                        WHERE event_type IN ('feed_impression', 'feed_click', 'feed_skip', 'swipelive_raw')
+                          AND created_at < :safe_before
+                        LIMIT :batch
+                    )
+                """), {"safe_before": safe_before, "batch": _DEL_BATCH})
+                await db.commit()
+            if del_result.rowcount == 0:
+                break
+            deleted_total += del_result.rowcount
+
+        if deleted_total:
+            logger.info("[SyncCH] buffer cleanup: %d eski raw event silindi", deleted_total)
 
         logger.info(
             "[SyncCH] sync_pg_to_clickhouse tamamlandı | toplam=%d | pencere=%s→%s",

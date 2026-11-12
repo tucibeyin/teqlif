@@ -15,7 +15,7 @@ from __future__ import annotations
 import asyncio
 from datetime import datetime, timezone, timedelta
 
-from sqlalchemy import update, or_
+from sqlalchemy import update, or_, select
 
 from app.models.enums import ListingStatus
 from app.core.logger import get_logger, capture_exception
@@ -88,8 +88,9 @@ async def deactivate_expired_listings_task(ctx: dict) -> None:
 
 async def delete_expired_inactive_listings_task(ctx: dict) -> None:
     """
-    ARQ cron görevi — her gün 04:30'da çalışır.
-    60+ gün önce pasife alınmış ilanları siler ve sahibine bildirim gönderir.
+    ARQ cron görevi — her gün 08:20 UTC'de çalışır.
+    60+ gün önce pasife alınmış ilanları 500'lük batch'lerle siler.
+    Medya silme işlemleri asyncio.Semaphore(10) ile paralel yürütülür.
     """
     from app.utils.listing_cleanup import (
         delete_listing_files,
@@ -97,19 +98,29 @@ async def delete_expired_inactive_listings_task(ctx: dict) -> None:
         cleanup_listings_notifications_batch,
     )
 
+    _DELETE_BATCH = 500
+    _MEDIA_SEM = 10
+
     cutoff = datetime.now(timezone.utc) - timedelta(days=_INACTIVE_DELETE_DAYS)
+    sem = asyncio.Semaphore(_MEDIA_SEM)
+    total_deleted = 0
 
     try:
-        async with AsyncSessionLocal() as db:
-            # Tek UPDATE ... RETURNING: SELECT + IN parametre patlaması yok;
-            # medya sütunları RETURNING ile alınır, ayrı SELECT gerekmez.
-            stmt = (
-                update(Listing)
+        while True:
+            batch_ids_subq = (
+                select(Listing.id)
                 .where(
                     Listing.status == ListingStatus.PASSIVE,
                     Listing.deactivated_at.is_not(None),
                     Listing.deactivated_at < cutoff,
                 )
+                .order_by(Listing.deactivated_at)
+                .limit(_DELETE_BATCH)
+                .scalar_subquery()
+            )
+            stmt = (
+                update(Listing)
+                .where(Listing.id.in_(batch_ids_subq))
                 .values(status=ListingStatus.DELETED)
                 .returning(
                     Listing.id, Listing.user_id, Listing.title,
@@ -118,16 +129,13 @@ async def delete_expired_inactive_listings_task(ctx: dict) -> None:
                 )
                 .execution_options(synchronize_session=False)
             )
-            result = await db.execute(stmt)
-            updated_rows = result.all()
 
-            if not updated_rows:
-                logger.info("[ListingTasks] Silinecek pasif ilan bulunamadı.")
-                from app.worker import _agent_ok
-                await _agent_ok(ctx, "delete_expired_inactive_listings_task")
-                return
-
-            await db.commit()
+            async with AsyncSessionLocal() as db:
+                result = await db.execute(stmt)
+                updated_rows = result.all()
+                if not updated_rows:
+                    break
+                await db.commit()
 
             listing_ids: list[int] = []
             user_ids_set: set[int] = set()
@@ -139,24 +147,31 @@ async def delete_expired_inactive_listings_task(ctx: dict) -> None:
                 user_listing_map.setdefault(row_user_id, []).append((row_id, row_title))
                 media_info.append((row_id, img_url, img_urls, thumb_url, vid_url))
 
-            logger.info("[ListingTasks] %d pasif ilan silindi | ids=%s", len(listing_ids), listing_ids[:10])
+            async def _del_files(lid, img_url, img_urls, thumb, vid):
+                async with sem:
+                    await delete_listing_files(lid, img_url, img_urls, thumb, vid)
 
-        # Commit sonrası: dosyaları sil
-        for lid, img_url, img_urls, thumb, vid in media_info:
-            await delete_listing_files(lid, img_url, img_urls, thumb, vid)
+            await asyncio.gather(
+                *[_del_files(*m) for m in media_info],
+                cleanup_listings_redis_batch(listing_ids),
+                cleanup_listings_notifications_batch(listing_ids),
+            )
 
-        # Redis ALS vektörleri + bildirimleri toplu temizle
-        await asyncio.gather(
-            cleanup_listings_redis_batch(listing_ids),
-            cleanup_listings_notifications_batch(listing_ids),
-        )
+            await _notify_deleted(list(user_ids_set), user_listing_map)
+            total_deleted += len(listing_ids)
+            logger.info("[ListingTasks] %d pasif ilan silindi (batch)", len(listing_ids))
 
-        await _notify_deleted(list(user_ids_set), user_listing_map)
+        if total_deleted == 0:
+            logger.info("[ListingTasks] Silinecek pasif ilan bulunamadı.")
+        else:
+            logger.info("[ListingTasks] Toplam %d pasif ilan silindi.", total_deleted)
+
         from app.worker import _agent_ok
         await _agent_ok(ctx, "delete_expired_inactive_listings_task")
     except Exception as exc:
         logger.error("[ListingTasks] delete_expired_inactive_listings_task başarısız | %s", exc, exc_info=True)
         capture_exception(exc)
+        raise
 
 
 # ── Cache temizleme ───────────────────────────────────────────────────────────
