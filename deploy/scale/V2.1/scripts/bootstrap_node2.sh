@@ -170,8 +170,6 @@ setup_dr_app() {
     # teqlif-dr.service yükle (disabled — sadece DR runbook'u aktif eder)
     cp "${node_dir}/systemd/teqlif-dr.service" /etc/systemd/system/
     systemctl daemon-reload
-    # nginx de disabled — sadece DR runbook'u aktif eder
-    systemctl disable nginx 2>/dev/null || true
 
     # .env.dr placeholder — runbook öncesinde doldurulacak
     DR_ENV="/project/teqlif/config/.env.dr"

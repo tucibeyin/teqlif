@@ -149,11 +149,18 @@ if [ "${RESTORE_MODE}" = "PITR" ]; then
     mkdir -p "${PG_CONF}/conf.d"
     chown postgres:postgres "${PG_CONF}/conf.d"
 
-    # WAL_DIR'i PITR süresince postgres'e eriş: restore_command 'cp' postgres UID ile çalışır
-    # (pg_receivewal tucibeyin:tucibeyin 700 yazar; postgres read edemez → WAL replay başarısız)
-    chgrp postgres "${WAL_DIR}"
-    chmod 750 "${WAL_DIR}"
-    log_ok "WAL_DIR geçici erişim: 750 postgres grubu → restore_command için"
+    # WAL dosyalarını staging'e kopyala — 700/600 backup ağacını değiştirmeden postgres erişimi sağlar.
+    # /project/teqlif/backups üst dizini 700 ve WAL dosyaları 600 tucibeyin:tucibeyin olduğundan
+    # 'chgrp postgres + chmod 750 pg_wal' yaklaşımı üst dizin (700) traversal bariyerini aşamaz.
+    WAL_STAGE="${RESTORE_DIR}/pg_wal_stage"
+    rm -rf "${WAL_STAGE}"
+    install -d -o postgres -g postgres -m 755 "${WAL_STAGE}"
+    cp "${WAL_DIR}"/* "${WAL_STAGE}/" 2>/dev/null || true
+    chown -R postgres:postgres "${WAL_STAGE}"
+    chmod -R 640 "${WAL_STAGE}"
+    WAL_STAGE_COUNT=$(ls -1 "${WAL_STAGE}" 2>/dev/null | wc -l)
+    log_ok "WAL staging: ${WAL_STAGE} (${WAL_STAGE_COUNT} segment)"
+    [ "${WAL_STAGE_COUNT}" -eq 0 ] && { log_err "WAL_DIR boş — staging başarısız"; exit 1; }
 
     # max_connections ve hot_standby: node1 (150) ile uyumlu olmazsa PG açılışta FATAL verir
     cat > "${PG_CONF}/conf.d/dr.conf" <<EOF
@@ -167,7 +174,7 @@ EOF
     # recovery_target_timeline='latest': pg_wal.tar.gz + pg_receivewal WAL'larının
     # TÜMünü replay eder. 'immediate' kullanılmamalı — ilk checkpoint'te durur.
     cat > "${PG_CONF}/conf.d/recovery.conf" <<EOF
-restore_command = 'cp ${WAL_DIR}/%f %p'
+restore_command = 'cp ${WAL_STAGE}/%f %p'
 recovery_target_timeline = 'latest'
 EOF
     chown postgres:postgres "${PG_CONF}/conf.d/recovery.conf"
@@ -234,14 +241,13 @@ if [ "${RESTORE_MODE}" = "PITR" ]; then
     fi
     log_ok "PITR tamamlandı (pg_is_in_recovery = false)"
 
-    # WAL_DIR izinlerini geri al
-    chgrp tucibeyin "${WAL_DIR}"
-    chmod 700 "${WAL_DIR}"
+    # WAL staging temizle (backup ağacı hiç değiştirilmedi — restore gerekmiyor)
+    rm -rf "${WAL_STAGE}"
 
     # conf.d temizle (artık gerekmiyor)
     rm -f "${PG_CONF}/conf.d/recovery.conf"
     systemctl reload postgresql 2>/dev/null || true
-    log_ok "PITR recovery modu kapatıldı, WAL_DIR izinleri geri alındı"
+    log_ok "PITR recovery modu kapatıldı, WAL staging temizlendi"
 else
     sleep 5
 fi
@@ -371,7 +377,7 @@ echo "  1. node1 bootstrap + sudo teqlif-restart"
 echo "  2. node2'den pg_dump al: pg_dump -h 127.0.0.1 -U teqlif -Fc teqlif > /tmp/recovery.dump"
 echo "  3. node1'e restore: scp /tmp/recovery.dump node1:/tmp/ && ssh node1 pg_restore ..."
 echo "  4. DNS'i node1'e geri al (tüm kayıtlar dahil uploads.teqlif.com)"
-echo "  5. node2 DR kapat: sudo systemctl disable --now teqlif-dr.service nginx"
+echo "  5. node2 DR kapat: sudo systemctl disable --now teqlif-dr.service"
 echo "  6. pg_receivewal yeniden başlat: sudo systemctl start teqlif-pg-receivewal"
 echo ""
 echo -e "${GREEN}  Runbook tamamlandı — $(date -u +%Y-%m-%dT%H:%M:%SZ)${NC}"

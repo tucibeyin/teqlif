@@ -16,7 +16,7 @@ install -d "${BACKUP_DIR}"
 source /project/teqlif/config/.env.backup
 
 # ── 1. Globals dump (roller, pgvector uyumu) ─────────────────────────────────
-# teqlif_repl SUPERUSER ile bağlanır — pg_hba.conf: host all teqlif_repl 10.10.0.2/32 scram-sha-256
+# teqlif_repl NOSUPERUSER — pg_hba.conf: host postgres teqlif_repl 10.10.0.2/32 scram-sha-256
 GLOBALS_TMP="${GLOBALS_DEST}.tmp"
 PGPASSWORD="${REPL_PASSWORD}" pg_dumpall \
     --globals-only --no-role-passwords \
