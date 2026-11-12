@@ -362,7 +362,7 @@ setup_apt_timing() {
     cat > /etc/systemd/system/apt-daily-upgrade.timer.d/teqlif-timing.conf <<'EOF'
 [Timer]
 OnCalendar=
-OnCalendar=*-*-* 07:45:00
+OnCalendar=*-*-* 07:45:00 UTC
 RandomizedDelaySec=15m
 EOF
     systemctl daemon-reload
@@ -384,7 +384,7 @@ setup_mdcheck_timing() {
     cat > /etc/systemd/system/mdcheck_continue.timer.d/teqlif-timing.conf <<'EOF'
 [Timer]
 OnCalendar=
-OnCalendar=*-*-* 07:35:00
+OnCalendar=*-*-* 07:35:00 UTC
 RandomizedDelaySec=15m
 EOF
     systemctl daemon-reload

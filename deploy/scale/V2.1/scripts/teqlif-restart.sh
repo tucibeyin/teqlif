@@ -217,7 +217,16 @@ sync_timer_overrides() {
       fi
     done
   done
-  [ -n "$reloaded" ] && systemctl daemon-reload && log "daemon-reload (timer overrides) tamamlandı"
+  if [ -n "$reloaded" ]; then
+    systemctl daemon-reload
+    log "daemon-reload (timer overrides) tamamlandı"
+    for unit_d in "$overrides_dir"/*.d; do
+      [ -d "$unit_d" ] || continue
+      local timer_unit
+      timer_unit="$(basename "${unit_d%.d}")"
+      systemctl restart "$timer_unit" 2>/dev/null || true
+    done
+  fi
   return 0
 }
 
