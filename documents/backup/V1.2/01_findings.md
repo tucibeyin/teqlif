@@ -50,7 +50,7 @@
 | [`OFFSITE-09`](#offsite-09) | 🟠 **P1** | `nodemonitor_config_backup.sh`, canlı `node2` | **`979 MB` TSDB/WAL sızıntısı** (`prometheus/data` 823M + `loki` 156M) — `--delete-excluded` yok | [Adım 15](#adim-15) | ⬜ Açık |
 | [`OFFSITE-10`](#offsite-10) | 🟡 **P2** | `node2/systemd/*.service`, `offsite_sync` | Tüm backup servislerinde `IOSchedulingClass=idle`/`Nice=19` eşitleme ve `.tmp`/`.partial` filtre | [Adım 26](#adim-26) | ⬜ Açık |
 | [`OFFSITE-11`](#offsite-11) | 🟡 **P2** | `runbook.sh`, `node101/resources/` | `node101 → yeni node1/node2` çifte felaket DR runbook'u + periyodik decrypt/PITR tatbikatı | [Adım 36](#adim-36) | ⬜ Açık |
-| [`OFFSITE-12`](#offsite-12) | 🟡 **P2** | `_common.sh`, `bootstrap_node2.sh`, `bootstrap_node101.sh` | Tekrarlanabilir `bootstrap_node101.sh` yok; `node2` bootstrap'ta `rclone`/7 timer `enable` eksik | [Adım 3](#adim-3) | ⬜ Açık |
+| [`OFFSITE-12`](#offsite-12) | 🟡 **P2** | `_common.sh`, `bootstrap_node2.sh`, `bootstrap_node101.sh` | Tekrarlanabilir `bootstrap_node101.sh` yok; `node2` bootstrap'ta `rclone`/7 timer `enable` eksik | [Adım 3](#adim-3) | ✅ Çözüldü `1ce09741` |
 | [`OFFSITE-13`](#offsite-13) | 🟢 **P3** | `documents/wallet/V1.0`, `node101` | TTK/MASAK 5–10 yıl `financial_archives` WORM şifreli mühürlü akışı eksik | [Adım 35](#adim-35) | ⬜ Açık |
 
 ### B. Sistem Geneli Bakım, Zamanlama & Donanım Anomalileri (`MAINT-01` .. `MAINT-08`)
@@ -508,8 +508,8 @@ systemctl enable \
 * `deploy/scale/V2.1/scripts/bootstrap_node101.sh` (idempotent Debian 13 kurulum) oluştur; `bootstrap_node2.sh:210-214`'e tüm timer'ları + `restic` paketini ekle.
 * **Doğrulama:** `bash -n deploy/scale/V2.1/scripts/bootstrap_node101.sh deploy/scale/V2.1/scripts/bootstrap_node2.sh` sözdizimi hatasız geçer.
 
-##### ⬜ Çözüm Damgası
-- *(Henüz uygulanmadı — [Adım 3](#adim-3) bekliyor)*
+##### ✅ Çözüm Damgası
+- `2026-11-12` · commit `1ce09741` — `bootstrap_node2.sh`: `install_backup_tools()` eklendi (restic apt + rclone official script idempotent) ✓; `setup_backup_directories()` 4 → 10 dizin ✓; `setup_backup_services()` 4 → 12 timer (`pg-basebackup`, `pg-wal-cleanup`, `clickhouse`, `loki`, `uptime-kuma`, `nodemonitor-config`, `mail`, `offsite-wal`) ✓; `bootstrap_node101.sh` Adım 1'de zaten oluşturulmuştu ✓. **Doğrulama:** `bash -n bootstrap_node2.sh bootstrap_node101.sh` syntax-clean ✓; canlı node2 tüm timer'lar zaten `enabled` ✓.
 
 ---
 
@@ -1055,7 +1055,7 @@ await redis.set("ch:last_sync_at", now.isoformat())  # Aradakiler kalıcı kaybo
 ~~2. **Adım 2 (`OFFSITE-05`):** `node101` WireGuard (`10.10.0.101/24` — yalnız `node2` ve `nodeMonitor` peer'ları) ve UFW (`IPV6=no`, port `8000` yalnız `10.10.0.2`, port `9100` yalnız `10.10.0.99`, SSH Ed25519 key-only) kurallarını `deploy/scale/V2.1/node101/` altında tanımla; [`wg_mesh_apply.sh`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/scripts/wg_mesh_apply.sh), `secrets.env.template` ve `teqlif-restart.sh` içine `node101` kaydını ekle → _Neden:_ Web/edge node'larının yedek sunucusuna doğrudan erişimini (blast-radius) kesmek ve IPv4-only sunucuyu güvenli tünele almak. → ([Detay](#offsite-05))~~ ✅ `351c35fb`
 
 <a id="adim-3"></a>
-3. **Adım 3 (`OFFSITE-12`):** `deploy/scale/V2.1/scripts/bootstrap_node101.sh` (Debian 13 idempotent kurulum) dosyasını oluştur; [`_common.sh`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/scripts/_common.sh) + [`bootstrap_node2.sh:210-214`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/scripts/bootstrap_node2.sh#L210-L214) içine `restic`, `rclone` ve atlanan 7+1 backup timer `enable` listesini ekle → _Neden:_ Sunucu yeniden kurulumlarında otomasyonun kırılmasını ve 7 timer'ın kapalı kalmasını engellemek. → ([Detay](#offsite-12))
+~~3. **Adım 3 (`OFFSITE-12`):** `deploy/scale/V2.1/scripts/bootstrap_node101.sh` (Debian 13 idempotent kurulum) dosyasını oluştur; [`_common.sh`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/scripts/_common.sh) + [`bootstrap_node2.sh:210-214`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/scripts/bootstrap_node2.sh#L210-L214) içine `restic`, `rclone` ve atlanan 7+1 backup timer `enable` listesini ekle → _Neden:_ Sunucu yeniden kurulumlarında otomasyonun kırılmasını ve 7 timer'ın kapalı kalmasını engellemek. → ([Detay](#offsite-12))~~ ✅ `1ce09741` (2026-11-12)
 
 ---
 
