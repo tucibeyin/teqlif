@@ -83,7 +83,7 @@
 
 | ID | Seviye | Bileşen / İş Akışı | Tespit Edilen İş Mantığı / Uyum / Ölçek Riski | Bağlı Adım | Durum |
 | :---: | :---: | :--- | :--- | :---: | :---: |
-| [`BIZ-01`](#biz-01) | 🔴 **P0** | `messages.py` vs `dm_archive`, `streams.py` vs `stream_recording` | **DM Arşivi public bucket okuyup `[]` döner** + **Standart 14g PRO upsell `404 NoSuchKey` kırık** | [Adım 7](#adim-7), [Adım 8](#adim-8) | ⬜ Açık |
+| [`BIZ-01`](#biz-01) | 🔴 **P0** | `messages.py` vs `dm_archive`, `streams.py` vs `stream_recording` | **DM Arşivi public bucket okuyup `[]` döner** + **Standart 14g PRO upsell `404 NoSuchKey` kırık** | [Adım 7](#adim-7) ✅, [Adım 8](#adim-8) ⬜ | 🔄 Kısmi (`7238a841`) |
 | [`BIZ-02`](#biz-02) | 🔴 **P0** | `wallet_tasks.py:102-262`, `node1` PG, `redis_failover.sh` | **Alarmsız mutabakat** + **Sınırsız `max_slot_wal_keep_size = -1`** (prod disk crash!) + `wg` peer tuzağı | [Adım 6](#adim-6), [Adım 4](#adim-4) | ✅ Çözüldü `8234ee8d` |
 | [`BIZ-03`](#biz-03) | 🟠 **P1** | `auth.py:1638`, `analytics_tasks`, `listing_tasks`, `notification_service` | KVKK `delete_account` (bakiye kilidi/DM yok) + `--remove` yok + **`07:00 TR` push fırtınası** | [Adım 24](#adim-24), [Adım 18](#adim-18) | ⬜ Açık |
 | [`BIZ-04`](#biz-04) | 🟠 **P1** | `mail_backup.sh`, `nodeMonitor` SPOF, Prometheus kapsamı | **`09:15 TR` Mail Stop** (`config.toml`/`.env.mail` yok) + **`nodeMonitor` SPOF** + CH/MinIO/Mail kör | [Adım 17](#adim-17), [Adım 20](#adim-20) | ⬜ Açık |
@@ -976,8 +976,13 @@ raw = await storage.get_object_bytes(key)
    - 14g penceresi içinde PRO olan kullanıcı `GET /streams/{id}/recording` çağırdığında kayıt `node1` MinIO'da yoksa (`expired`/`archived`, `node2_confirmed_at IS NOT NULL`, `created_at >= NOW() - INTERVAL '14 days'`), backend internal on-demand transfer ile (örn. `node2` read-only internal HTTP endpoint / `node2` → `node1` MinIO `mc cp`) kaydı `node1`'e geri çekip `status='available'`, `expires_at = NOW() + 24h` ile presign döner (böylece `node1` NVMe 2g ILM düşük kalırken **14g upsell vaadi %100 çalışır**!).
 * **Doğrulama:** Test DM arşivi `upload_bytes_dm` → `GET /messages/{id}/archive` ile geri okunur (`200`, boş değil); `expired` 5 günlük kayıt PRO yükseltme sonrası indirilebilir.
 
-##### ⬜ Çözüm Damgası
-- *(Henüz uygulanmadı — [Adım 7](#adim-7), [Adım 8](#adim-8) bekliyor)*
+##### 🔄 Çözüm Damgası
+- **Bölüm A (Adım 7) ✅ `7238a841` — 2026-11-12:**
+  - `storage_service.py`: `list_object_keys_dm(prefix)` eklendi (`settings.minio_dm_bucket`)
+  - `messages.py`: `get_archived_messages` → `list_object_keys_dm` + `get_object_bytes_dm`; sessiz `except→[]` yerine `logger.error` + `HTTPException(502)`
+  - `schedule.yaml`: `archive_old_dm_task` minute: `0` → `20` (Pazar 03:20 UTC)
+  - 8/8 node `7238a841` — teqlif-agent schedule.yaml güncellendi
+- **Bölüm B (Adım 8) ⬜** — *(14g PRO Video on-demand rehydrate bekliyor)*
 
 ---
 
@@ -1163,7 +1168,7 @@ await redis.set("ch:last_sync_at", now.isoformat())  # Aradakiler kalıcı kaybo
 ~~6. **Adım 6 (`BIZ-02`):** Canlı `node1` `postgresql.conf` içine [Karar K4](#kilitli-kararlar) gereği **`max_slot_wal_keep_size = '50GB'`**, `wal_compression = lz4`, `archive_timeout = 3600`, `lock_timeout = '5s'`, `idle_in_transaction_session_timeout = '5min'` ekle; [`wallet_tasks.py:102-262`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/tasks/wallet_tasks.py#L102-L262) `daily_financial_reconciliation_task`'ı `anomalies > 0` durumunda acil Telegram + Sentry alarmı verecek ve 3-kova formülü ile tam defter toplamını denetleyecek şekilde güncelle → _Neden:_ `node2_receivewal` kesildiğinde prod NVMe'nin %100 dolup PG'yi çökertmesini ve finansal defter sapmalarının sessiz kalmasını önlemek. → ([Detay](#biz-02), [Karar K4](#kilitli-kararlar))~~ ✅ `caf6938b` + `806cc9c0` + `13f18a60` + `8234ee8d` (2026-11-12)
 
 <a id="adim-7"></a>
-7. **Adım 7 (`BIZ-01` — Bölüm A):** [`storage_service.py`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/services/storage_service.py#L137-L160) içine `list_object_keys_dm` metodunu ekle, [`messages.py:292-299`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/routers/messages.py#L292-L299) `get_archived_messages` endpoint'ini public `teqlif` yerine private **`teqlif-dm`** okur hale getir ve [`schedule.yaml`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/schedule.yaml) içinde `archive_old_dm_task` saatini Pazar `03:00` → **`03:20 UTC`** (`03:00 pg_dump` sonrasına, [Karar K2](#kilitli-kararlar)) taşı → _Neden:_ 1 yıl+ tüm DM geçmişinin boş `[]` dönmesini çözmek ve `pg_dump` öncesi tek-kopya penceresini sıfırlamak. → ([Detay](#biz-01))
+~~7. **Adım 7 (`BIZ-01` — Bölüm A):** [`storage_service.py`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/services/storage_service.py#L137-L160) içine `list_object_keys_dm` metodunu ekle, [`messages.py:292-299`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/routers/messages.py#L292-L299) `get_archived_messages` endpoint'ini public `teqlif` yerine private **`teqlif-dm`** okur hale getir ve [`schedule.yaml`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/schedule.yaml) içinde `archive_old_dm_task` saatini Pazar `03:00` → **`03:20 UTC`** (`03:00 pg_dump` sonrasına, [Karar K2](#kilitli-kararlar)) taşı → _Neden:_ 1 yıl+ tüm DM geçmişinin boş `[]` dönmesini çözmek ve `pg_dump` öncesi tek-kopya penceresini sıfırlamak. → ([Detay](#biz-01))~~ ✅ `7238a841`
 
 <a id="adim-8"></a>
 8. **Adım 8 (`BIZ-01` — Bölüm B):** [`streams.py:300-365`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/routers/streams.py#L300-L365) + [`stream_recording_tasks.py`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/tasks/stream_recording_tasks.py) içine 14 günlük pencerede PRO'ya yükselten kullanıcılar için `node2` arşivinden (`30g` saklama, [Karar K3](#kilitli-kararlar)) `node1` MinIO'ya on-demand geri çekme (rehydrate) + 24h presign akışını ekle → _Neden:_ Standart yayıncılara vaat edilen 14g PRO upsell özelliğinin `404 NoSuchKey`/`RECORDING_EXPIRED` ile kırılmasını önlemek ve `T+14` hakedişle 16g güvenli tampon sağlamak. → ([Detay](#biz-01), [Birlikte: Adım 18](#adim-18))
