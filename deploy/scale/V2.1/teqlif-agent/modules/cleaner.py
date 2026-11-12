@@ -1,13 +1,11 @@
 """teqlif-agent — Zamanlı PG Temizlik (Scheduled Cleaner).
 
-Lider, UTC saat tablosuna göre her görevi günde bir kez çalıştırır.
-Süresi dolmuş satırları siler; büyük temizliklerde Telegram bildirir.
+MAINT-01 fix: Bu modül artık PG DELETE çalıştırmaz.
+Tüm PG tablo temizliği backend/app/worker.py (5.000 batch DELETE) + schedule.yaml
+tek otoritesine devredildi. _SCHEDULE boş — döngü çalışsa da _run_slot çağrılmaz.
 
-Zamanlama (UTC — Türkiye UTC+3):
-  00:00 → bildirimler 30d
-  00:05 → analytics 90d, user_interactions 90d
-  01:00 → listing_offers 60d, calls 90d, stream_viewers 90d
-  02:00 → exchange_rates 1y, live_streams 6mo, search_alerts 90d
+Sebep: message_threads (180d, DM kontrolsüz) → dm_archive (365d) veri kaybı tuzağı.
+Çift temizlik WAL patlaması ve batch'siz DELETE engellendi.
 """
 from __future__ import annotations
 
@@ -22,52 +20,20 @@ import telegram as tg
 
 logger = logging.getLogger("teqlif-agent.cleaner")
 
-# (utc_hour, utc_min, table, where_clause, label)
-_SCHEDULE: list[tuple[int, int, str, str, str]] = [
-    (0,  0,  "notifications",
-     "created_at < NOW() - INTERVAL '30 days' AND is_read = true",
-     "Bildirimler 30d"),
-
-    (0,  5,  "analytics_events",
-     "created_at < NOW() - INTERVAL '90 days'",
-     "Analytics 90d"),
-
-    (0,  7,  "user_interactions",
-     "created_at < NOW() - INTERVAL '90 days'",
-     "User interactions 90d"),
-
-    (1,  0,  "listing_offers",
-     "updated_at < NOW() - INTERVAL '60 days' AND status IN ('declined','expired')",
-     "Listing offers 60d"),
-
-    (1, 10,  "live_stream_viewers",
-     "left_at IS NOT NULL AND joined_at < NOW() - INTERVAL '3650 days'",
-     "Stream viewers 10y"),
-
-    (2,  0,  "exchange_rates",
-     "date < CURRENT_DATE - INTERVAL '365 days'",
-     "Exchange rates 1y"),
-
-    (2,  5,  "live_streams",
-     "ended_at < NOW() - INTERVAL '180 days' AND status = 'ended'",
-     "Live streams 6mo"),
-
-    (2, 10,  "search_alerts",
-     "created_at < NOW() - INTERVAL '90 days'",
-     "Search alerts 90d"),
-
-    (2, 15,  "message_threads",
-     "created_at < NOW() - INTERVAL '180 days' AND has_archive = false",
-     "Boş mesaj thread'leri 6mo"),
-
-    (2, 20,  "listing_impressions",
-     "seen_at < NOW() - INTERVAL '30 days'",
-     "İlan gösterimleri 30d"),
-
-    (3,  0,  "stream_recordings",
-     "archived_at < NOW() - INTERVAL '15 days' AND status = 'archived'",
-     "Yayın kayıtları 15d"),
-]
+# MAINT-01: Boş — PG DELETE yetkisi worker.py'e devredildi.
+# Eski schedule referans için yorum satırında tutuldu:
+#   (0,  0, "notifications",       "created_at < NOW() - INTERVAL '30 days' AND is_read = true")
+#   (0,  5, "analytics_events",    "created_at < NOW() - INTERVAL '90 days'")
+#   (0,  7, "user_interactions",   "created_at < NOW() - INTERVAL '90 days'")
+#   (1,  0, "listing_offers",      "updated_at < NOW() - INTERVAL '60 days' AND status IN ('declined','expired')")
+#   (1, 10, "live_stream_viewers", "left_at IS NOT NULL AND joined_at < NOW() - INTERVAL '3650 days'")
+#   (2,  0, "exchange_rates",      "date < CURRENT_DATE - INTERVAL '365 days'")
+#   (2,  5, "live_streams",        "ended_at < NOW() - INTERVAL '180 days' AND status = 'ended'")
+#   (2, 10, "search_alerts",       "created_at < NOW() - INTERVAL '90 days'")
+#   (2, 15, "message_threads",     "created_at < NOW() - INTERVAL '180 days' AND has_archive = false"  ← TEHLİKELİ: DM kontrolsüz)
+#   (2, 20, "listing_impressions", "seen_at < NOW() - INTERVAL '30 days'")
+#   (3,  0, "stream_recordings",   "archived_at < NOW() - INTERVAL '15 days' AND status = 'archived'")
+_SCHEDULE: list[tuple[int, int, str, str, str]] = []
 
 _LARGE_BATCH = 5_000   # bu sayıyı geçen temizliklerde Telegram bildirir
 
