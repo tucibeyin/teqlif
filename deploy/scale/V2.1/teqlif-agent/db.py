@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS job_health (
     job_name          TEXT PRIMARY KEY,
     last_ok_at        TEXT,
     last_fail_at      TEXT,
+    fail_reason       TEXT,
     fail_count        INTEGER DEFAULT 0,
     expected_every_m  INTEGER DEFAULT 60,
     last_alert_at     TEXT,
@@ -80,6 +81,11 @@ class AgentDB:
         self._db = await aiosqlite.connect(self._path)
         self._db.row_factory = aiosqlite.Row
         await self._db.executescript(_SCHEMA)
+        # fail_reason mevcut DB'lerde olmayabilir — idempotent ekle
+        try:
+            await self._db.execute("ALTER TABLE job_health ADD COLUMN fail_reason TEXT")
+        except Exception:
+            pass  # "duplicate column name" — zaten mevcut
         await self._db.commit()
 
     async def close(self) -> None:
@@ -112,18 +118,27 @@ class AgentDB:
         job_name: str,
         expected_every_m: int = 60,
         last_fail_at: str | None = None,
+        reason: str = "",
     ) -> None:
         now = _now()
         fail_time = last_fail_at or now
+        # fail_count yalnızca yeni bir hata zaman damgası geldiğinde artar —
+        # aynı job_fail Redis kaydı her 60s poll döngüsünde tekrar okunsa da şişmez
         await self._db.execute("""
-            INSERT INTO job_health (job_name, last_fail_at, fail_count, expected_every_m, updated_at)
-            VALUES (?, ?, 1, ?, ?)
+            INSERT INTO job_health
+                (job_name, last_fail_at, fail_reason, fail_count, expected_every_m, updated_at)
+            VALUES (?, ?, ?, 1, ?, ?)
             ON CONFLICT(job_name) DO UPDATE SET
+                fail_count       = CASE
+                                     WHEN excluded.last_fail_at != COALESCE(last_fail_at, '')
+                                     THEN fail_count + 1
+                                     ELSE fail_count
+                                   END,
                 last_fail_at     = excluded.last_fail_at,
-                fail_count       = fail_count + 1,
+                fail_reason      = excluded.fail_reason,
                 expected_every_m = excluded.expected_every_m,
                 updated_at       = excluded.updated_at
-        """, (job_name, fail_time, expected_every_m, now))
+        """, (job_name, fail_time, reason or None, expected_every_m, now))
         await self._db.commit()
 
     async def get_failed_jobs(self) -> list[dict]:

@@ -115,8 +115,12 @@ class JobWatchdog:
             if expected is None:
                 continue
             # payload: "<iso_ts> | <reason>"
-            fail_ts = payload.split(" | ")[0].strip()
-            await self._db.mark_fail(job_name, expected_every_m=expected, last_fail_at=fail_ts)
+            parts   = payload.split(" | ", 1)
+            fail_ts = parts[0].strip()
+            reason  = parts[1].strip() if len(parts) > 1 else ""
+            await self._db.mark_fail(
+                job_name, expected_every_m=expected, last_fail_at=fail_ts, reason=reason
+            )
 
     async def _alert_stale(self, row: dict, registry: dict[str, int]) -> None:
         job   = row["job_name"]
@@ -140,16 +144,19 @@ class JobWatchdog:
         job        = row["job_name"]
         fail_count = row.get("fail_count", 1)
         last_fail  = row.get("last_fail_at", "bilinmiyor")
+        reason     = row.get("fail_reason") or ""
         now        = time.monotonic()
         cooldown_key = f"fail:{job}"
         if now - self._alerted.get(cooldown_key, 0) < _COOLDOWN_SEC:
             return
         self._alerted[cooldown_key] = now
         await self._db.set_job_alert_sent(job)
+        reason_line = f"\nNeden: {reason}" if reason else ""
         msg = (
             f"🚨 <b>{self._cfg.node_id}</b> — Job hata verdi\n"
             f"<code>{job}</code>\n"
             f"Hata sayısı: {fail_count} · Son hata: {last_fail}"
+            f"{reason_line}"
         )
         await tg.send(self._cfg.telegram_bot_token, self._cfg.telegram_chat_id, msg)
         logger.warning("Job fail aktif: %s (count=%s)", job, fail_count)
