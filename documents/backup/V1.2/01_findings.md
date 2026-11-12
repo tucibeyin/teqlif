@@ -57,7 +57,7 @@
 
 | ID | Seviye | Bileşen / Node | Tespit Edilen Anomali / Çakışma | Bağlı Adım | Durum |
 | :---: | :---: | :--- | :--- | :---: | :---: |
-| [`MAINT-01`](#maint-01) | 🟠 **P1** | `cleaner.py` vs `schedule.yaml` / `worker.py` | Çift & batch'siz PG `DELETE` (`message_threads 180d` < `dm_archive 365d` veri kaybı tuzağı!) | [Adım 21](#adim-21) | ⬜ Açık |
+| [`MAINT-01`](#maint-01) | 🟠 **P1** | `cleaner.py` vs `schedule.yaml` / `worker.py` | Çift & batch'siz PG `DELETE` (`message_threads 180d` < `dm_archive 365d` veri kaybı tuzağı!) | [Adım 21](#adim-21) | ✅ `422cd879` |
 | [`MAINT-02`](#maint-02) | 🟠 **P1** | `cluster.yaml`, `encoder.py:357`, `minio_backup`, `worker.py` | Video transfer (`05:00–07:00`) ↔ `minio_backup` (`05:30`) ↔ `notify` (`05:00/06:00`) çarpışması | [Adım 22](#adim-22) | ⬜ Açık |
 | [`MAINT-03`](#maint-03) | 🔴 **P0** | `node2` `redis-failover*`, `redis_failover.sh` | **`promoted` (`18 Eki`) bayrağı nedeniyle resmi failover kör** + düz metin şifreli rogue timer | [Adım 4](#adim-4) | ✅ Çözüldü `c0154e66` |
 | [`MAINT-04`](#maint-04) | 🟡 **P2** | `node1..6`, `node2`, `nodeMonitor` OS Timer | `apt-daily-upgrade` (`06:05–06:50 UTC`) + `node2` `mdcheck` (`06:46 UTC`) backup bloğuna biniyor | [Adım 27](#adim-27) | ⬜ Açık |
@@ -578,8 +578,8 @@ systemctl enable \
 * `cleaner.py` içindeki PG `DELETE` sorumluluğu tamamen emekliye ayrılır (veya yalnızca güvenli no-op / salt okunur sayıma çekilir); tüm PG tablo temizliği tek otorite olarak `backend/app/worker.py` (5.000 batch `DELETE`) + `schedule.yaml` üzerinden yürütülür. `cleanup_empty_message_threads_task` `NOT EXISTS (SELECT 1 FROM direct_messages ...)` + `has_archive = FALSE` korumasını sürdürür.
 * **Doğrulama:** `teqlif-agent` `PG_DSN` tanımlı test ortamında dahi `cleaner.py` `DELETE FROM message_threads` veya batchsiz `DELETE` çalıştırmaz.
 
-##### ⬜ Çözüm Damgası
-- *(Henüz uygulanmadı — [Adım 21](#adim-21) bekliyor)*
+##### ✅ Çözüm Damgası
+- `2026-11-12` · commit `422cd879` — `_SCHEDULE = []` boşaltıldı; PG DELETE yetkisi tamamen `worker.py` + `schedule.yaml`'a devredildi. Eski schedule yorum satırında referans olarak korundu.
 
 ---
 
@@ -1319,7 +1319,7 @@ await redis.set("ch:last_sync_at", now.isoformat())  # Aradakiler kalıcı kaybo
 ~~20. **Adım 20 (`BIZ-04` — Bölüm B):** [`prometheus.yml`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/nodeMonitor/config/teqlif/prometheus.yml) içine `node101`, `rest-server`, `ClickHouse`, `MinIO`, `Redis Replica`, `pg_receivewal`, `Stalwart` scrape hedeflerini ve [`alert_rules.yml`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/nodeMonitor/config/teqlif/alert_rules.yml) içine inaktif/şişen PG slot (`> 5 GB`), swap ve backup fail kurallarını ekle; `node2`'den `nodeMonitor` için dış **Dead Man's Switch** kur + `node5` staging yedek politikasını netleştir → _Neden:_ `nodeMonitor` SPOF arızasında ve kör kritik servislerde sessiz kesinti yaşanmasını önlemek. → ([Detay](#biz-04))~~ ✅ `214c287a..91239cee`
 
 <a id="adim-21"></a>
-21. **Adım 21 (`MAINT-01`):** [`cleaner.py:35-112`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/teqlif-agent/modules/cleaner.py#L35-L112) içindeki `message_threads` (`180d`) ve batch'siz PG `DELETE` tablosunu emekliye ayır; tüm PG temizliğini batched ARQ (`worker.py` + `schedule.yaml`) tek otoritesine bırak → _Neden:_ `PG_DSN` tanımlandığı an 180–365 günlük mesaj thread'lerinin silinmesini ve çift temizlik WAL patlamasını engellemek. → ([Detay](#maint-01))
+~~21. **Adım 21 (`MAINT-01`):** [`cleaner.py:35-112`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/teqlif-agent/modules/cleaner.py#L35-L112) içindeki `message_threads` (`180d`) ve batch'siz PG `DELETE` tablosunu emekliye ayır; tüm PG temizliğini batched ARQ (`worker.py` + `schedule.yaml`) tek otoritesine bırak → _Neden:_ `PG_DSN` tanımlandığı an 180–365 günlük mesaj thread'lerinin silinmesini ve çift temizlik WAL patlamasını engellemek. → ([Detay](#maint-01))~~ ✅ `422cd879`
 
 <a id="adim-22"></a>
 22. **Adım 22 (`MAINT-02`):** [`cluster.yaml:36-47`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/cluster.yaml#L36-L47) içinde `transfer_window_start_utc: 3`, `transfer_window_end_utc: 5` (`04:00–05:00` normal / `03:00–05:00` disk uyarısı), `retention_days: 30` ayarla; [`worker.py:4845`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/worker.py#L4845) `notify_new_recordings_task` saatini **`05:45 UTC`** yap → _Neden:_ `node3`/`node4` video transferi ile `05:30` `minio_backup` ve `05:00/06:00` push çarpışmasını ortadan kaldırmak. → ([Detay](#maint-02), [Birlikte: Adım 8](#adim-8))
