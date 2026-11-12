@@ -138,8 +138,8 @@ class JobWatchdog:
 
     async def _alert_stale(self, row: dict, registry: dict[str, int]) -> None:
         job   = row["job_name"]
-        mins  = registry.get(job, 60)
-        last  = row.get("last_ok_at", "bilinmiyor")
+        mins  = row.get("expected_every_m") or registry.get(job, 60)
+        last  = row.get("last_ok_at") or "hiç çalışmadı"
         now   = time.monotonic()
         cooldown_key = f"stale:{job}"
         if now - self._alerted.get(cooldown_key, 0) < _COOLDOWN_SEC:
