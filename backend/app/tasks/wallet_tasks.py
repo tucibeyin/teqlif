@@ -96,6 +96,7 @@ async def release_pending_earnings_task(ctx: dict) -> None:
     except Exception as exc:
         logger.error("[WalletTask] release_pending_earnings başarısız | %s", exc, exc_info=True)
         capture_exception(exc)
+        await _agent_fail(ctx, "release_pending_earnings_task", str(exc))
         raise
 
 
@@ -176,11 +177,11 @@ async def daily_financial_reconciliation_task(ctx: dict) -> None:
             )
             wr_net = int(wr_net_row.fetchone()[0] or 0)
 
-            # Ledger net: withdrawal_request (-), cancelled/rejected (+)
-            # ABS toplamı = net outstanding teqlik
+            # Ledger net: withdrawal_request negatif, cancelled/rejected pozitif
+            # -SUM net outstanding teqlik verir; iptal/red toplamı işaret değiştirirse de doğru çalışır
             ledger_withdrawal_row = await session.execute(
                 text(
-                    "SELECT ABS(COALESCE(SUM(delta_teqlik), 0)) "
+                    "SELECT -COALESCE(SUM(delta_teqlik), 0) "
                     "FROM wallet_ledger "
                     "WHERE tx_type IN ('withdrawal_request', 'withdrawal_cancelled', 'withdrawal_rejected')"
                 )
@@ -274,6 +275,7 @@ async def reset_monthly_withdrawal_quota_task(ctx: dict) -> None:
     except Exception as exc:
         logger.error("[WalletTask] reset_monthly_withdrawal_quota başarısız | %s", exc, exc_info=True)
         capture_exception(exc)
+        await _agent_fail(ctx, "reset_monthly_withdrawal_quota_task", str(exc))
         raise
 
 
@@ -310,6 +312,7 @@ async def check_expired_pro_users_task(ctx: dict) -> None:
     except Exception as exc:
         logger.error("[WalletTask] check_expired_pro başarısız | %s", exc, exc_info=True)
         capture_exception(exc)
+        await _agent_fail(ctx, "check_expired_pro_users_task", str(exc))
         raise
 
 

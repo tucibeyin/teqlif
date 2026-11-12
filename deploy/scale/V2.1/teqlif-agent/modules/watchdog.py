@@ -79,40 +79,54 @@ class JobWatchdog:
 
     async def run(self, is_leader: bool) -> None:
         registry = _job_registry()
-        # Her node Redis'ten job_ok sinyallerini çeker ve DB'ye yazar
+        # Her node Redis'ten job_ok ve job_fail sinyallerini çeker, DB'ye yazar
         await self._sync_from_redis(registry)
 
         # Sadece lider değerlendirir ve Telegram gönderir
         if is_leader:
             stale = await self._db.get_stale_jobs()
             for row in stale:
-                await self._alert(row, registry)
+                await self._alert_stale(row, registry)
+
+            failed = await self._db.get_failed_jobs()
+            for row in failed:
+                await self._alert_fail(row)
 
     async def _sync_from_redis(self, registry: dict[str, int]) -> None:
         try:
             import redis.asyncio as aioredis
-            redis = await aioredis.from_url(self._cfg.redis_url, decode_responses=True)
-            data  = await redis.hgetall("teqlif:agent:job_ok")
-            await redis.aclose()
+            r = await aioredis.from_url(self._cfg.redis_url, decode_responses=True)
+            ok_data   = await r.hgetall("teqlif:agent:job_ok")
+            fail_data = await r.hgetall("teqlif:agent:job_fail")
+            await r.aclose()
         except Exception as exc:
-            logger.debug("Redis job_ok okunamadı: %s", exc)
+            logger.debug("Redis job_ok/job_fail okunamadı: %s", exc)
             return
 
-        for job_name, ts in data.items():
+        for job_name, ts in ok_data.items():
             expected = registry.get(job_name)
             if expected is None:
                 logger.debug("Registry'de tanımsız job atlandı: %s", job_name)
                 continue
             await self._db.mark_ok(job_name, last_ok_at=ts, expected_every_m=expected)
 
-    async def _alert(self, row: dict, registry: dict[str, int]) -> None:
+        for job_name, payload in fail_data.items():
+            expected = registry.get(job_name)
+            if expected is None:
+                continue
+            # payload: "<iso_ts> | <reason>"
+            fail_ts = payload.split(" | ")[0].strip()
+            await self._db.mark_fail(job_name, expected_every_m=expected, last_fail_at=fail_ts)
+
+    async def _alert_stale(self, row: dict, registry: dict[str, int]) -> None:
         job   = row["job_name"]
         mins  = registry.get(job, 60)
         last  = row.get("last_ok_at", "bilinmiyor")
         now   = time.monotonic()
-        if now - self._alerted.get(job, 0) < _COOLDOWN_SEC:
+        cooldown_key = f"stale:{job}"
+        if now - self._alerted.get(cooldown_key, 0) < _COOLDOWN_SEC:
             return
-        self._alerted[job] = now
+        self._alerted[cooldown_key] = now
         await self._db.set_job_alert_sent(job)
         msg = (
             f"⚠️ <b>{self._cfg.node_id}</b> — Job yanıt vermiyor\n"
@@ -121,3 +135,21 @@ class JobWatchdog:
         )
         await tg.send(self._cfg.telegram_bot_token, self._cfg.telegram_chat_id, msg)
         logger.warning("Job stale: %s", job)
+
+    async def _alert_fail(self, row: dict) -> None:
+        job        = row["job_name"]
+        fail_count = row.get("fail_count", 1)
+        last_fail  = row.get("last_fail_at", "bilinmiyor")
+        now        = time.monotonic()
+        cooldown_key = f"fail:{job}"
+        if now - self._alerted.get(cooldown_key, 0) < _COOLDOWN_SEC:
+            return
+        self._alerted[cooldown_key] = now
+        await self._db.set_job_alert_sent(job)
+        msg = (
+            f"🚨 <b>{self._cfg.node_id}</b> — Job hata verdi\n"
+            f"<code>{job}</code>\n"
+            f"Hata sayısı: {fail_count} · Son hata: {last_fail}"
+        )
+        await tg.send(self._cfg.telegram_bot_token, self._cfg.telegram_chat_id, msg)
+        logger.warning("Job fail aktif: %s (count=%s)", job, fail_count)

@@ -132,7 +132,7 @@ setup_postgresql_conf() {
     chmod 640 "${conf_dst}"
     # postgresql.conf'da include_dir etkinse conf.d otomatik yüklenir; değilse ekle
     local pg_conf="/etc/postgresql/${PG_VERSION}/main/postgresql.conf"
-    grep -qF "include_dir = 'conf.d'" "${pg_conf}" \
+    grep -qxF "include_dir = 'conf.d'" "${pg_conf}" \
         || echo "include_dir = 'conf.d'" >> "${pg_conf}"
     log_ok "conf.d/teqlif.conf kopyalandı (pg_reload_conf() ile aktif olur)"
 }

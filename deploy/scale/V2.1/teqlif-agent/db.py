@@ -107,8 +107,14 @@ class AgentDB:
         """, (job_name, ok_time, expected_every_m, now))
         await self._db.commit()
 
-    async def mark_fail(self, job_name: str, expected_every_m: int = 60) -> None:
+    async def mark_fail(
+        self,
+        job_name: str,
+        expected_every_m: int = 60,
+        last_fail_at: str | None = None,
+    ) -> None:
         now = _now()
+        fail_time = last_fail_at or now
         await self._db.execute("""
             INSERT INTO job_health (job_name, last_fail_at, fail_count, expected_every_m, updated_at)
             VALUES (?, ?, 1, ?, ?)
@@ -117,8 +123,19 @@ class AgentDB:
                 fail_count       = fail_count + 1,
                 expected_every_m = excluded.expected_every_m,
                 updated_at       = excluded.updated_at
-        """, (job_name, now, expected_every_m, now))
+        """, (job_name, fail_time, expected_every_m, now))
         await self._db.commit()
+
+    async def get_failed_jobs(self) -> list[dict]:
+        """fail_count > 0 ve son fail, son ok'tan sonra olan job'lar."""
+        cur = await self._db.execute("""
+            SELECT job_name, last_ok_at, last_fail_at, fail_count, expected_every_m, last_alert_at
+            FROM job_health
+            WHERE fail_count > 0
+              AND (last_ok_at IS NULL OR last_fail_at > last_ok_at)
+        """)
+        rows = await cur.fetchall()
+        return [dict(r) for r in rows]
 
     async def get_all_job_health(self) -> list[dict]:
         cur = await self._db.execute("SELECT * FROM job_health ORDER BY job_name")
