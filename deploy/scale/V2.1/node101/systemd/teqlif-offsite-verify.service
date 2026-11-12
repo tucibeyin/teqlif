@@ -7,11 +7,11 @@ OnFailure=teqlif-backup-failed@%n.service
 Type=oneshot
 User=teqlif-backup
 Group=teqlif-backup
-Environment=TMPDIR=/mnt/data/tmp
-Environment=RESTIC_CACHE_DIR=/mnt/data/cache/restic
 EnvironmentFile=/etc/teqlif-offsite/restic.env
 Environment=GOGC=20
 Environment=GOMEMLIMIT=384MiB
+Environment=TMPDIR=/mnt/data/tmp
+Environment=RESTIC_CACHE_DIR=/mnt/data/cache/restic
 IOSchedulingClass=idle
 Nice=19
 MemoryMax=512M
