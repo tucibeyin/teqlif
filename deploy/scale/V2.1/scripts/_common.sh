@@ -585,11 +585,12 @@ apply_secrets() {
         log_ok "TLS izinleri normalize edildi (/etc/ssl/teqlif *.key → root:tucibeyin 640)"
     fi
 
-    # WireGuard: dizin 710 (tucibeyin traverse), dosyalar root:tucibeyin 640
-    # wg-quick root olarak okur; tucibeyin backup için dosyalara erişebilir ama ls yapamaz
+    # WireGuard: dizin 710 (tucibeyin traverse, ls yapamaz), dosyalar root:tucibeyin 640
+    # rsync explicit dosya path'iyle çalışır (dizin read izni gerekmez)
+    # wg-quick root olarak okur; tucibeyin yalnız bilinen dosyalara erişebilir
     if [ -d /etc/wireguard ]; then
         chown root:tucibeyin /etc/wireguard && chmod 710 /etc/wireguard 2>/dev/null || true
-        for _wgf in /etc/wireguard/privatekey /etc/wireguard/wg0.conf; do
+        for _wgf in /etc/wireguard/privatekey /etc/wireguard/wg0.conf /etc/wireguard/pubkey; do
             [ -f "${_wgf}" ] && chown root:tucibeyin "${_wgf}" && chmod 640 "${_wgf}" 2>/dev/null || true
         done
         log_ok "WireGuard izinleri normalize edildi (/etc/wireguard 710, privatekey+wg0.conf → root:tucibeyin 640)"

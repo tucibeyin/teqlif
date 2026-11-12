@@ -59,10 +59,15 @@ for node in "${!NODES[@]}"; do
             rsync -az /etc/ssl/teqlif/ "${dest}/ssl_teqlif/" 2>/dev/null \
             || { ok=0; echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) cluster_secrets_backup: WARN node2 ssl rsync başarısız"; }
 
-        [[ -d /etc/wireguard ]] && \
-            rsync -az --include 'wg0.conf' --include 'privatekey' --include 'pubkey' --exclude '*' \
-                /etc/wireguard/ "${dest}/wireguard/" 2>/dev/null \
-            || { ok=0; echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) cluster_secrets_backup: WARN node2 wg rsync başarısız"; }
+        if [[ -f /etc/wireguard/privatekey ]]; then
+            mkdir -p "${dest}/wireguard"
+            for _wgf in privatekey wg0.conf pubkey; do
+                [[ -f /etc/wireguard/${_wgf} ]] && \
+                    rsync -az /etc/wireguard/${_wgf} "${dest}/wireguard/" 2>/dev/null || true
+            done
+            [[ -f "${dest}/wireguard/privatekey" ]] || \
+                { ok=0; echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) cluster_secrets_backup: WARN node2 wg rsync başarısız"; }
+        fi
 
         [[ -d /project/teqlif/config ]] && \
             rsync -az --include '.env*' --exclude '*' \
@@ -85,14 +90,20 @@ for node in "${!NODES[@]}"; do
             || { ok=0; echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) cluster_secrets_backup: WARN ${node} ssl rsync başarısız"; }
         fi
 
-        # WireGuard (yoksa sessiz geç)
-        if ssh -q ${SSH_OPTS} tucibeyin@"${wg_ip}" "[ -d /etc/wireguard ]" 2>/dev/null; then
-            rsync -az \
-                --include 'wg0.conf' --include 'privatekey' --include 'pubkey' --exclude '*' \
-                -e "ssh ${SSH_OPTS}" \
-                tucibeyin@"${wg_ip}":/etc/wireguard/ \
-                "${dest}/wireguard/" 2>/dev/null \
-            || { ok=0; echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) cluster_secrets_backup: WARN ${node} wg rsync başarısız"; }
+        # WireGuard — explicit dosya path'i (dizin read izni gerekmez, sadece execute)
+        if ssh -q ${SSH_OPTS} tucibeyin@"${wg_ip}" "[ -f /etc/wireguard/privatekey ]" 2>/dev/null; then
+            mkdir -p "${dest}/wireguard"
+            _wg_ok=1
+            for _wgf in privatekey wg0.conf pubkey; do
+                rsync -az \
+                    -e "ssh ${SSH_OPTS}" \
+                    tucibeyin@"${wg_ip}":/etc/wireguard/${_wgf} \
+                    "${dest}/wireguard/" 2>/dev/null || true
+            done
+            if [[ ! -f "${dest}/wireguard/privatekey" ]]; then
+                ok=0
+                echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) cluster_secrets_backup: WARN ${node} wg rsync başarısız"
+            fi
         fi
 
         # .env* (yoksa sessiz geç)
