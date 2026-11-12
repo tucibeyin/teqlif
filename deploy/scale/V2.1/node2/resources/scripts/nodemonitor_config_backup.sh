@@ -16,6 +16,8 @@
 #   burada yalnızca runtime secrets, Grafana DB ve statik config korunur.
 set -euo pipefail
 
+source /project/teqlif/config/.env.backup
+
 BACKUP_DIR=/project/teqlif/backups/nodemonitor_config
 LOGFILE=/project/teqlif/logs/nodemonitor_config_backup.log
 
@@ -62,3 +64,4 @@ USED=$(du -sh "${BACKUP_DIR}" 2>/dev/null | cut -f1 || echo "?")
 echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) nodemonitor_config_backup: tamamlandı (${USED})"
 touch "${BACKUP_DIR}/.last_backup_ok"
 logger "teqlif nodemonitor_config_backup: tamamlandı (${USED})"
+redis-cli -h 10.10.0.1 -p 6379 -a "${CORE_REDIS_PASS}" --no-auth-warning HSET teqlif:agent:job_ok nodemonitor_config_backup "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >/dev/null 2>&1 || true

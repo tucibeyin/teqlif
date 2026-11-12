@@ -45,11 +45,18 @@ _DAILY_BATCH_JOBS: list[str] = [
 ]
 
 _BACKUP_JOBS: list[tuple[str, str]] = [
-    ("pg_dump",           "PG dump"),
-    ("clickhouse_backup", "ClickHouse"),
-    ("redis_backup",      "Redis"),
-    ("minio_backup",      "MinIO"),
-    ("mail_backup",       "Mail"),
+    ("pg_dump",                    "PG dump"),
+    ("clickhouse_backup",          "ClickHouse"),
+    ("redis_backup",               "Redis"),
+    ("minio_backup",               "MinIO"),
+    ("mail_backup",                "Mail"),
+    ("loki_backup",                "Loki"),
+    ("uptime_kuma_backup",         "Uptime Kuma"),
+    ("nodemonitor_config_backup",  "NodeMon config"),
+    ("cluster_secrets_backup",     "Cluster sırları"),
+    ("pg_basebackup",              "PG basebackup"),
+    ("offsite_sync",               "Offsite (daily)"),
+    ("offsite_wal_sync",           "Offsite (WAL)"),
 ]
 
 _TR_MONTHS = ["Oca", "Şub", "Mar", "Nis", "May", "Haz",

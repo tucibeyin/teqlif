@@ -13,6 +13,17 @@ from app.core.logger import get_logger, capture_exception
 
 logger = get_logger(__name__)
 
+
+async def _agent_ok(ctx: dict, job_name: str) -> None:
+    try:
+        from datetime import datetime, timezone
+        await ctx["redis"].hset(
+            "teqlif:agent:job_ok", job_name,
+            datetime.now(timezone.utc).isoformat()
+        )
+    except Exception:
+        pass
+
 _LOCK_PREFIX = "lock:concat:"
 _LOCK_TTL_SEC = 3600  # maks 1 saat — ffmpeg için yeterli
 _MAX_RETRY = 3
@@ -54,6 +65,7 @@ async def stream_concat_task(ctx: dict) -> None:
                 capture_exception(exc)
                 logger.error("stream_concat_task: stream_id=%s hata: %s", stream_id, exc)
 
+        await _agent_ok(ctx, "stream_concat_task")
     except Exception as exc:
         capture_exception(exc)
         logger.error("stream_concat_task genel hata: %s", exc)

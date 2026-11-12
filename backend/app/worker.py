@@ -1206,6 +1206,7 @@ async def sync_swipelive_interests_task(ctx: dict) -> None:
                 continue
 
         if not events:
+            await _agent_ok(ctx, "sync_swipelive_interests_task")
             return
 
         async with AsyncSessionLocal() as db:
@@ -1213,6 +1214,7 @@ async def sync_swipelive_interests_task(ctx: dict) -> None:
             await db.commit()
 
         logger.info("[Worker] sync_swipelive_interests_task: %d kayıt yazıldı", len(events))
+        await _agent_ok(ctx, "sync_swipelive_interests_task")
 
     except Exception as exc:
         logger.error("[Worker] sync_swipelive_interests_task başarısız | %s", exc, exc_info=True)
@@ -2067,6 +2069,7 @@ async def backfill_listing_quality_scores_task(ctx: dict) -> None:
             )).all()
 
             if not rows:
+                await _agent_ok(ctx, "backfill_listing_quality_scores_task")
                 return
 
             count = 0
@@ -2083,6 +2086,7 @@ async def backfill_listing_quality_scores_task(ctx: dict) -> None:
             await db.commit()
             if count:
                 logger.info("[Worker] backfill_listing_quality_scores: %d ilan skorlandı", count)
+        await _agent_ok(ctx, "backfill_listing_quality_scores_task")
 
     except Exception as exc:
         logger.error("[Worker] backfill_listing_quality_scores başarısız | %s", str(exc), exc_info=True)
@@ -2106,6 +2110,7 @@ async def train_listing_quality_model_task(ctx: dict) -> None:
 
         if n < 50:
             logger.warning("[Worker] train_listing_quality_model: yetersiz veri (%d), yeniden skorlama atlandı", n)
+            await _agent_ok(ctx, "train_listing_quality_model_task")
             return
 
         # Tüm aktif ilanları yeni modelle yeniden skorla (200'er batch)
@@ -3578,6 +3583,7 @@ async def invalidate_swipe_live_configs_task(ctx: dict) -> None:
             """
         )
         if not result.result_rows:
+            await _agent_ok(ctx, "invalidate_swipe_live_configs_task")
             return
 
         redis = await get_redis()
@@ -3585,6 +3591,7 @@ async def invalidate_swipe_live_configs_task(ctx: dict) -> None:
         if keys:
             await redis.delete(*keys)
             logger.info("[Worker] invalidate_swipe_live_configs: %d kullanıcı cache sıfırlandı", len(keys))
+        await _agent_ok(ctx, "invalidate_swipe_live_configs_task")
     except Exception as exc:
         logger.warning("[Worker] invalidate_swipe_live_configs başarısız | %s", exc)
 
@@ -4637,18 +4644,21 @@ async def refresh_i18n_cache_task(ctx: dict) -> None:
     """Periyodik i18n bellek önbelleği yenileme — WorkerSettings cron'u tarafından her 4 dakikada çağrılır."""
     from app.utils.i18n import preload_i18n_cache
     await preload_i18n_cache()
+    await _agent_ok(ctx, "refresh_i18n_cache_task")
 
 
 async def flush_clickhouse_buffers_task(ctx: dict) -> None:
     """ClickHouse Redis buffer'larını diske yazar — her 30sn'de bir, tek worker (SRE-12)."""
     from app.database_clickhouse import flush_all_buffers
     await flush_all_buffers()
+    await _agent_ok(ctx, "flush_clickhouse_buffers_task")
 
 
 async def direct_sale_overdue_check_task(ctx: dict) -> None:
     """Süresi dolmuş sold_out satışları ended'a geçirir — her 10sn'de bir, tek worker (SRE-12)."""
     from app.use_cases.direct_sales.direct_sale_scheduler import _process_overdue_sales
     await _process_overdue_sales()
+    await _agent_ok(ctx, "direct_sale_overdue_check_task")
 
 
 # ── Task: Admin Toplu Push Bildirimi (SRE-77) ────────────────────────────────

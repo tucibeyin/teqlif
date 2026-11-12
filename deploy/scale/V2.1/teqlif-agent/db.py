@@ -159,18 +159,45 @@ class AgentDB:
         return [dict(r) for r in rows]
 
     async def get_stale_jobs(self) -> list[dict]:
-        """Beklenen interval'den fazla geçmesine rağmen çalışmayan job'lar."""
+        """Beklenen interval'den fazla geçmesine rağmen çalışmayan job'lar.
+
+        İki durumu yakalar:
+          1. Daha önce çalışmış ama beklenenden uzun süredir sessiz (last_ok_at IS NOT NULL).
+          2. Hiç çalışmamış (last_ok_at IS NULL) ama seed'lenme zamanından bu yana
+             beklenen interval * 1.5 geçmiş.
+        """
         cur = await self._db.execute("""
             SELECT job_name, last_ok_at, expected_every_m, last_alert_at
             FROM job_health
-            WHERE last_ok_at IS NOT NULL
-              AND (
-                CAST((julianday('now') - julianday(last_ok_at)) * 1440 AS INTEGER)
-                > expected_every_m * 1.5
-              )
+            WHERE (
+                last_ok_at IS NOT NULL
+                AND CAST((julianday('now') - julianday(last_ok_at)) * 1440 AS INTEGER)
+                    > expected_every_m * 1.5
+            ) OR (
+                last_ok_at IS NULL
+                AND CAST((julianday('now') - julianday(updated_at)) * 1440 AS INTEGER)
+                    > expected_every_m * 1.5
+            )
         """)
         rows = await cur.fetchall()
         return [dict(r) for r in rows]
+
+    async def seed_expected_jobs(self, registry: dict[str, int]) -> None:
+        """Registry job'larını job_health tablosuna ekle (henüz yoksa).
+
+        Var olan kayıtları bozmaz; yalnızca expected_every_m'i günceller.
+        updated_at korunur — bu sayede 'hiç çalışmamış iş' tespiti için
+        seed zamanı referans noktası olarak kullanılabilir.
+        """
+        now = _now()
+        for job_name, expected_m in registry.items():
+            await self._db.execute("""
+                INSERT INTO job_health (job_name, expected_every_m, updated_at)
+                VALUES (?, ?, ?)
+                ON CONFLICT(job_name) DO UPDATE SET
+                    expected_every_m = excluded.expected_every_m
+            """, (job_name, expected_m, now))
+        await self._db.commit()
 
     async def set_job_alert_sent(self, job_name: str) -> None:
         await self._db.execute(

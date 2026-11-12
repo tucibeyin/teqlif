@@ -62,6 +62,17 @@ _CONTINUOUS_REGISTRY: dict[str, int] = {
     # run_ml_training_pipeline_task alt adımları — haftalık pipeline içinde çalışır
     "train_feed_als_task":            10080,
     "compute_influence_scores_task":  10080,
+    "train_item2vec_task":            10080,
+    "train_swipe_live_als_task":      10080,
+    # Yüksek frekanslı sürekli görevler
+    "refresh_i18n_cache_task":         10,
+    "flush_clickhouse_buffers_task":    2,
+    "direct_sale_overdue_check_task":   2,
+    # Kayıt yaşam döngüsü görevleri (her 15–30 dakikada çalışır)
+    "stream_concat_task":               5,
+    "expire_recordings_task":          60,
+    "archive_recordings_task":         30,
+    "notify_new_recordings_task":     720,   # 2× günlük, maks boşluk ~12 saat
 }
 
 _COOLDOWN_SEC = 2 * 60 * 60   # aynı job için 2 saatte bir uyarı
@@ -80,6 +91,8 @@ class JobWatchdog:
 
     async def run(self, is_leader: bool) -> None:
         registry = _job_registry()
+        # Kayıtlı tüm job'ları DB'ye tohumla (hiç çalışmamış iş NULL tespiti için)
+        await self._db.seed_expected_jobs(registry)
         # Her node Redis'ten job_ok ve job_fail sinyallerini çeker, DB'ye yazar
         await self._sync_from_redis(registry)
 

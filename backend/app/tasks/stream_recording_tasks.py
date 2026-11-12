@@ -11,6 +11,18 @@ from app.core.logger import get_logger, capture_exception
 logger = get_logger(__name__)
 
 
+async def _agent_ok(ctx: dict, job_name: str) -> None:
+    """teqlif-agent watchdog'a 'job çalıştı' sinyali gönderir."""
+    try:
+        from datetime import datetime, timezone
+        await ctx["redis"].hset(
+            "teqlif:agent:job_ok", job_name,
+            datetime.now(timezone.utc).isoformat()
+        )
+    except Exception:
+        pass
+
+
 async def expire_recordings_task(ctx: dict) -> None:
     """expires_at geçmiş 'available' kayıtları 'expired' yapar."""
     try:
@@ -27,6 +39,7 @@ async def expire_recordings_task(ctx: dict) -> None:
             count = result.rowcount
         if count:
             logger.info("expire_recordings_task: %d kayıt expired", count)
+        await _agent_ok(ctx, "expire_recordings_task")
     except Exception as exc:
         capture_exception(exc)
         logger.error("expire_recordings_task hata: %s", exc)
@@ -127,6 +140,7 @@ async def notify_new_recordings_task(ctx: dict) -> None:
 
         if notified:
             logger.info("notify_new_recordings_task: %d kayıt için bildirim işlendi", notified)
+        await _agent_ok(ctx, "notify_new_recordings_task")
 
     except Exception as exc:
         capture_exception(exc)
@@ -173,6 +187,7 @@ async def archive_recordings_task(ctx: dict) -> None:
             count = result.rowcount
         if count:
             logger.info("archive_recordings_task: %d kayıt archived (staging=%s)", count, is_staging)
+        await _agent_ok(ctx, "archive_recordings_task")
     except Exception as exc:
         capture_exception(exc)
         logger.error("archive_recordings_task hata: %s", exc)

@@ -335,6 +335,21 @@ batch:
     minute: 30
     watchdog_m: 1500
 
+  - name: loki_backup
+    hour: 6
+    minute: 0
+    watchdog_m: 1500          # ~25 saat — Loki chunks+compactor+rules
+
+  - name: uptime_kuma_backup
+    hour: 6
+    minute: 5
+    watchdog_m: 1500          # ~25 saat — nodeMonitor MariaDB dump
+
+  - name: nodemonitor_config_backup
+    hour: 6
+    minute: 10
+    watchdog_m: 1500          # ~25 saat — Grafana DB + monitoring stack config
+
   - name: offsite_sync
     hour: 6
     minute: 30

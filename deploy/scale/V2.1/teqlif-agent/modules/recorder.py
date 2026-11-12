@@ -80,6 +80,11 @@ class RecordingManager:
         await self._sync_recordings(dsn, svc_cfg)
         await self._reap_finished(dsn)
 
+        # Aktif edge heartbeat — recorder loop çalışıyor
+        await self._db.mark_ok(
+            f"recorder.{self._cfg.node_id}", expected_every_m=10
+        )
+
     # ── Redis URL seçimi ──────────────────────────────────────────────────────
 
     def _event_redis_url(self, svc_cfg: dict) -> str:
@@ -336,7 +341,7 @@ class RecordingManager:
                         rec_id, raw_size / 1_048_576,
                     )
                     await self._db.mark_ok(
-                        f"recorder.{self._cfg.node_id}", expected_every_m=10080
+                        f"recorder.{self._cfg.node_id}", expected_every_m=10
                     )
                 else:
                     err = (stderr_b or b"").decode(errors="replace")[-400:].strip()
