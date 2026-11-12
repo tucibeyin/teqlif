@@ -1203,7 +1203,7 @@ await _agent_ok(ctx, "daily_financial_reconciliation_task")  # Telegram / Sentry
   - `.tmp` staging + `tar -tzf` bütünlük doğrulaması eklendi ✓
   - `schedule.yaml`: `mail_backup hour:6 → hour:3, minute:50` ✓
   - node2 test: **OK (5.4M)**, `NextElapseUSecRealtime=2026-11-13 03:50:00 UTC` ✓
-- `2026-11-12` · commit `TBD` — **BIZ-04 Adım 20 (nodeMonitor SPOF + Prometheus) kapatıldı** ✓:
+- `2026-11-12` · commit `214c287a` — **BIZ-04 Adım 20 (nodeMonitor SPOF + Prometheus) kapatıldı** ✓:
   - `prometheus.yml`: `rest-server` (node101:8000) + `clickhouse` (node2:9363) + `minio` (node1:9000/metrics, bearer_token_file) + `redis-replica` (node2:9121) + `stalwart` (node2:8080) eklendi ✓
   - `alert_rules.yml`: `PgReplicationSlotInactive` + `PgReplicationSlotWalRetentionHigh` (>5 GB) + `ActiveSwapHigh` (>50%) eklendi ✓
   - `node2/resources/scripts/nodemonitor_dms_check.sh`: Dead Man's Switch — 3 ardışık başarısızlıkta Telegram uyarısı ✓
