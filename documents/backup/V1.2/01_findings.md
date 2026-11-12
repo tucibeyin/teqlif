@@ -955,7 +955,8 @@ mc mirror --overwrite --quiet "node1minio/${bucket}" "${dest}"  # 30g silme yok 
   - node5: TRUNCATE + `_0` suffix eski tablolar DROP → **3.5 GiB → 8.13 MiB** ✓
   - `node5:/var/recordings` yetimler (15 dosya, 12 Eki–11 Kas) → **194M → 16K** ✓
   - `encoder.py`: `_encode_one` raw + `.log` sil; `_transfer_one` encoded + `.log` sil; `_cleanup_orphans()` günde 1 kez 48h+ eski 0-byte/`.log` yetim temizleme ✓
-  - Tüm 8 node `teqlif-restart` → `0845f6d8` ✓
+  - `node5:/root/.cache/pip` **3.2 GB** silindi → **node5 disk %54 → %40** ✓
+  - Tüm 8 node `teqlif-restart` → `b507c785` ✓
 
 ---
 
