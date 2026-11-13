@@ -518,7 +518,8 @@ async def cleanup_old_user_interactions_task(ctx: dict) -> None:
 
 async def cleanup_old_stream_likes_task(ctx: dict) -> None:
     """
-    Her gün 01:00'da çalışır; 7 günden eski stream_likes kayıtlarını siler.
+    Her gün 01:00'da çalışır; 7 günden eski stream_likes kayıtlarını 5.000'lik
+    batch'ler halinde siler.
 
     stream_likes unique constraint içermez — kalp animasyonu için her tıkta 1 satır.
     Canlı yayın genellikle birkaç saat sürer; 7 gün sonra bu kayıtların
@@ -530,14 +531,23 @@ async def cleanup_old_stream_likes_task(ctx: dict) -> None:
     try:
         from app.database import AsyncSessionLocal
         from sqlalchemy import text
+        total = 0
         async with AsyncSessionLocal() as db:
-            result = await db.execute(
-                text("DELETE FROM stream_likes WHERE created_at < NOW() - INTERVAL '7 days'")
-            )
-            await db.commit()
-            logger.info(
-                "[Worker] Stream likes cleanup tamamlandı | silinen=%d", result.rowcount
-            )
+            while True:
+                result = await db.execute(text("""
+                    DELETE FROM stream_likes
+                    WHERE ctid IN (
+                        SELECT ctid FROM stream_likes
+                        WHERE created_at < NOW() - INTERVAL '7 days'
+                        LIMIT 5000
+                    )
+                """))
+                await db.commit()
+                total += result.rowcount
+                if result.rowcount == 0:
+                    break
+                await asyncio.sleep(0.05)
+        logger.info("[Worker] Stream likes cleanup tamamlandı | silinen=%d", total)
         await _agent_ok(ctx, "cleanup_old_stream_likes_task")
     except Exception as exc:
         logger.error("[Worker] Stream likes cleanup başarısız | %s", str(exc), exc_info=True)
@@ -549,7 +559,8 @@ async def cleanup_old_stream_likes_task(ctx: dict) -> None:
 
 async def cleanup_old_stream_viewers_task(ctx: dict) -> None:
     """
-    Her Perşembe 04:00'da çalışır; 10 yıldan eski tamamlanmış izleyici kayıtlarını siler.
+    Her Perşembe 04:00'da çalışır; 10 yıldan eski tamamlanmış izleyici kayıtlarını
+    5.000'lik batch'ler halinde siler.
 
     left_at IS NOT NULL filtresi zorunlu — aktif izleyicileri silmemek için.
     Retention: 10 yıl (3650 gün) — uzun tutulmasının nedeni fraud/analitik sorguları.
@@ -557,18 +568,24 @@ async def cleanup_old_stream_viewers_task(ctx: dict) -> None:
     try:
         from app.database import AsyncSessionLocal
         from sqlalchemy import text
+        total = 0
         async with AsyncSessionLocal() as db:
-            result = await db.execute(
-                text(
-                    "DELETE FROM live_stream_viewers"
-                    " WHERE left_at IS NOT NULL"
-                    " AND joined_at < NOW() - INTERVAL '3650 days'"
-                )
-            )
-            await db.commit()
-            logger.info(
-                "[Worker] Stream viewer cleanup tamamlandı | silinen=%d", result.rowcount
-            )
+            while True:
+                result = await db.execute(text("""
+                    DELETE FROM live_stream_viewers
+                    WHERE ctid IN (
+                        SELECT ctid FROM live_stream_viewers
+                        WHERE left_at IS NOT NULL
+                          AND joined_at < NOW() - INTERVAL '3650 days'
+                        LIMIT 5000
+                    )
+                """))
+                await db.commit()
+                total += result.rowcount
+                if result.rowcount == 0:
+                    break
+                await asyncio.sleep(0.05)
+        logger.info("[Worker] Stream viewer cleanup tamamlandı | silinen=%d", total)
         await _agent_ok(ctx, "cleanup_old_stream_viewers_task")
     except Exception as exc:
         logger.error("[Worker] Stream viewer cleanup başarısız | %s", str(exc), exc_info=True)
@@ -580,7 +597,8 @@ async def cleanup_old_stream_viewers_task(ctx: dict) -> None:
 
 async def cleanup_old_listing_offers_task(ctx: dict) -> None:
     """
-    Her Cuma 04:00'da çalışır; 1 yıldan eski reddedilmiş/süresi dolmuş teklifleri siler.
+    Her Cuma 04:00'da çalışır; 1 yıldan eski reddedilmiş/süresi dolmuş teklifleri
+    5.000'lik batch'ler halinde siler.
 
     BAĞIMLILIK: listing_offers.status kolonu (TASK-yeni-A) tamamlanmış olmalı.
     status filtresi zorunlu — aktif teklifler korunmalı.
@@ -588,14 +606,24 @@ async def cleanup_old_listing_offers_task(ctx: dict) -> None:
     try:
         from app.database import AsyncSessionLocal
         from sqlalchemy import text
+        total = 0
         async with AsyncSessionLocal() as db:
-            result = await db.execute(text(
-                "DELETE FROM listing_offers "
-                "WHERE status IN ('declined', 'expired') "
-                "AND created_at < NOW() - INTERVAL '365 days'"
-            ))
-            await db.commit()
-            logger.info("[GC3] listing_offers cleanup tamamlandı | silinen=%d", result.rowcount)
+            while True:
+                result = await db.execute(text("""
+                    DELETE FROM listing_offers
+                    WHERE ctid IN (
+                        SELECT ctid FROM listing_offers
+                        WHERE status IN ('declined', 'expired')
+                          AND created_at < NOW() - INTERVAL '365 days'
+                        LIMIT 5000
+                    )
+                """))
+                await db.commit()
+                total += result.rowcount
+                if result.rowcount == 0:
+                    break
+                await asyncio.sleep(0.05)
+        logger.info("[GC3] listing_offers cleanup tamamlandı | silinen=%d", total)
         await _agent_ok(ctx, "cleanup_old_listing_offers_task")
     except Exception as exc:
         logger.error("[GC3] listing_offers cleanup başarısız | %s", str(exc), exc_info=True)
@@ -606,16 +634,27 @@ async def cleanup_old_listing_offers_task(ctx: dict) -> None:
 # ── Task: GC4 — Eski Exchange Rates Temizle ───────────────────────────────────
 
 async def cleanup_old_exchange_rates_task(ctx: dict) -> None:
-    """Ayın 1'i 05:00'de çalışır; 10 yıldan eski kur kayıtlarını siler (R10)."""
+    """Ayın 1'i 05:00'de çalışır; 10 yıldan eski kur kayıtlarını 5.000'lik batch'ler halinde siler (R10)."""
     try:
         from app.database import AsyncSessionLocal
         from sqlalchemy import text
+        total = 0
         async with AsyncSessionLocal() as db:
-            result = await db.execute(text(
-                "DELETE FROM exchange_rates WHERE date < CURRENT_DATE - INTERVAL '3650 days'"
-            ))
-            await db.commit()
-            logger.info("[GC4] exchange_rates cleanup tamamlandı | silinen=%d", result.rowcount)
+            while True:
+                result = await db.execute(text("""
+                    DELETE FROM exchange_rates
+                    WHERE ctid IN (
+                        SELECT ctid FROM exchange_rates
+                        WHERE date < CURRENT_DATE - INTERVAL '3650 days'
+                        LIMIT 5000
+                    )
+                """))
+                await db.commit()
+                total += result.rowcount
+                if result.rowcount == 0:
+                    break
+                await asyncio.sleep(0.05)
+        logger.info("[GC4] exchange_rates cleanup tamamlandı | silinen=%d", total)
         await _agent_ok(ctx, "cleanup_old_exchange_rates_task")
     except Exception as exc:
         logger.error("[GC4] exchange_rates cleanup başarısız | %s", str(exc), exc_info=True)
@@ -627,7 +666,8 @@ async def cleanup_old_exchange_rates_task(ctx: dict) -> None:
 
 async def cleanup_old_stream_chat_messages_task(ctx: dict) -> None:
     """
-    Her gün 04:30 UTC'de çalışır; kayıt available olmayan stream'lerin chat satırlarını siler.
+    Her gün 04:30 UTC'de çalışır; kayıt available olmayan stream'lerin chat satırlarını
+    5.000'lik batch'ler halinde siler.
 
     Video olmadan replay açılamaz; dolayısıyla stream_recordings.status != 'available'
     olan stream'lerin chat mesajlarının DB'de kalmasının işlevsel karşılığı yoktur.
@@ -637,21 +677,31 @@ async def cleanup_old_stream_chat_messages_task(ctx: dict) -> None:
     try:
         from app.database import AsyncSessionLocal
         from sqlalchemy import text
+        total = 0
         async with AsyncSessionLocal() as db:
-            result = await db.execute(text("""
-                DELETE FROM stream_chat_messages
-                WHERE stream_id IN (
-                    SELECT ls.id FROM live_streams ls
-                    WHERE NOT EXISTS (
-                        SELECT 1 FROM stream_recordings sr
-                        WHERE sr.stream_id = ls.id
-                          AND sr.status = 'available'
+            while True:
+                result = await db.execute(text("""
+                    DELETE FROM stream_chat_messages
+                    WHERE ctid IN (
+                        SELECT scm.ctid FROM stream_chat_messages scm
+                        WHERE scm.stream_id IN (
+                            SELECT ls.id FROM live_streams ls
+                            WHERE NOT EXISTS (
+                                SELECT 1 FROM stream_recordings sr
+                                WHERE sr.stream_id = ls.id
+                                  AND sr.status = 'available'
+                            )
+                            AND ls.ended_at < NOW() - INTERVAL '1 day'
+                        )
+                        LIMIT 5000
                     )
-                    AND ls.ended_at < NOW() - INTERVAL '1 day'
-                )
-            """))
-            await db.commit()
-            logger.info("[Worker] Chat cleanup tamamlandı | silinen=%d", result.rowcount)
+                """))
+                await db.commit()
+                total += result.rowcount
+                if result.rowcount == 0:
+                    break
+                await asyncio.sleep(0.05)
+        logger.info("[Worker] Chat cleanup tamamlandı | silinen=%d", total)
         await _agent_ok(ctx, "cleanup_old_stream_chat_messages_task")
     except Exception as exc:
         logger.error("[Worker] Chat cleanup başarısız | %s", str(exc), exc_info=True)
@@ -720,20 +770,31 @@ async def retry_failed_chat_dumps_task(ctx: dict) -> None:
 
 async def cleanup_old_streams_task(ctx: dict) -> None:
     """
-    Ayın 1'i 06:00'da çalışır; 10 yıldan eski bitmiş yayınları siler (R3).
+    Ayın 1'i 06:00'da çalışır; 10 yıldan eski bitmiş yayınları 5.000'lik batch'ler halinde siler (R3).
 
     BAĞIMLILIK: TASK-02 (FK SET NULL) tamamlanmış olmalı.
     """
     try:
         from app.database import AsyncSessionLocal
         from sqlalchemy import text
+        total = 0
         async with AsyncSessionLocal() as db:
-            result = await db.execute(text(
-                "DELETE FROM live_streams WHERE status = 'ended' "
-                "AND ended_at < NOW() - INTERVAL '3650 days'"
-            ))
-            await db.commit()
-            logger.info("[GC5] live_streams cleanup tamamlandı | silinen=%d", result.rowcount)
+            while True:
+                result = await db.execute(text("""
+                    DELETE FROM live_streams
+                    WHERE ctid IN (
+                        SELECT ctid FROM live_streams
+                        WHERE status = 'ended'
+                          AND ended_at < NOW() - INTERVAL '3650 days'
+                        LIMIT 5000
+                    )
+                """))
+                await db.commit()
+                total += result.rowcount
+                if result.rowcount == 0:
+                    break
+                await asyncio.sleep(0.05)
+        logger.info("[GC5] live_streams cleanup tamamlandı | silinen=%d", total)
         await _agent_ok(ctx, "cleanup_old_streams_task")
     except Exception as exc:
         logger.error("[GC5] live_streams cleanup başarısız | %s", str(exc), exc_info=True)
@@ -744,17 +805,28 @@ async def cleanup_old_streams_task(ctx: dict) -> None:
 # ── Task: GC2 — Eski Çağrıları Temizle ───────────────────────────────────────
 
 async def cleanup_old_calls_task(ctx: dict) -> None:
-    """Her Perşembe 04:00'da çalışır; 2 yıldan eski bitmiş/cevapsız çağrıları siler (GC2)."""
+    """Her Perşembe 04:00'da çalışır; 2 yıldan eski bitmiş/cevapsız çağrıları 5.000'lik batch'ler halinde siler (GC2)."""
     try:
         from app.database import AsyncSessionLocal
         from sqlalchemy import text
+        total = 0
         async with AsyncSessionLocal() as db:
-            result = await db.execute(text(
-                "DELETE FROM calls WHERE status IN ('ended', 'missed') "
-                "AND ended_at < NOW() - INTERVAL '730 days'"
-            ))
-            await db.commit()
-            logger.info("[GC2] calls cleanup tamamlandı | silinen=%d", result.rowcount)
+            while True:
+                result = await db.execute(text("""
+                    DELETE FROM calls
+                    WHERE ctid IN (
+                        SELECT ctid FROM calls
+                        WHERE status IN ('ended', 'missed')
+                          AND ended_at < NOW() - INTERVAL '730 days'
+                        LIMIT 5000
+                    )
+                """))
+                await db.commit()
+                total += result.rowcount
+                if result.rowcount == 0:
+                    break
+                await asyncio.sleep(0.05)
+        logger.info("[GC2] calls cleanup tamamlandı | silinen=%d", total)
         await _agent_ok(ctx, "cleanup_old_calls_task")
     except Exception as exc:
         logger.error("[GC2] calls cleanup başarısız | %s", str(exc), exc_info=True)
@@ -765,23 +837,35 @@ async def cleanup_old_calls_task(ctx: dict) -> None:
 # ── Task: GC6 — Mesajsız Boş Thread'leri Temizle ─────────────────────────────
 
 async def cleanup_empty_message_threads_task(ctx: dict) -> None:
-    """Her Pazar 05:00'da çalışır; 30 günden eski, mesajsız ve pending olmayan thread'leri siler (GC6)."""
+    """Her Pazar 05:00'da çalışır; 30 günden eski, mesajsız ve pending olmayan thread'leri
+    5.000'lik batch'ler halinde siler (GC6)."""
     try:
         from app.database import AsyncSessionLocal
         from sqlalchemy import text
+        total = 0
         async with AsyncSessionLocal() as db:
-            result = await db.execute(text(
-                "DELETE FROM message_threads mt "
-                "WHERE mt.status != 'pending' "
-                "AND mt.has_archive = FALSE "
-                "AND NOT EXISTS ("
-                "  SELECT 1 FROM direct_messages dm "
-                "  WHERE (dm.sender_id = mt.user_a_id AND dm.receiver_id = mt.user_b_id) "
-                "     OR (dm.sender_id = mt.user_b_id AND dm.receiver_id = mt.user_a_id)"
-                ") AND mt.created_at < NOW() - INTERVAL '30 days'"
-            ))
-            await db.commit()
-            logger.info("[GC6] message_threads cleanup tamamlandı | silinen=%d", result.rowcount)
+            while True:
+                result = await db.execute(text("""
+                    DELETE FROM message_threads
+                    WHERE ctid IN (
+                        SELECT mt.ctid FROM message_threads mt
+                        WHERE mt.status != 'pending'
+                          AND mt.has_archive = FALSE
+                          AND NOT EXISTS (
+                              SELECT 1 FROM direct_messages dm
+                              WHERE (dm.sender_id = mt.user_a_id AND dm.receiver_id = mt.user_b_id)
+                                 OR (dm.sender_id = mt.user_b_id AND dm.receiver_id = mt.user_a_id)
+                          )
+                          AND mt.created_at < NOW() - INTERVAL '30 days'
+                        LIMIT 5000
+                    )
+                """))
+                await db.commit()
+                total += result.rowcount
+                if result.rowcount == 0:
+                    break
+                await asyncio.sleep(0.05)
+        logger.info("[GC6] message_threads cleanup tamamlandı | silinen=%d", total)
         await _agent_ok(ctx, "cleanup_empty_message_threads_task")
     except Exception as exc:
         logger.error("[GC6] message_threads cleanup başarısız | %s", str(exc), exc_info=True)
@@ -792,16 +876,27 @@ async def cleanup_empty_message_threads_task(ctx: dict) -> None:
 # ── Task: GC7 — Eski Search Alert'leri Temizle ────────────────────────────────
 
 async def cleanup_inactive_search_alerts_task(ctx: dict) -> None:
-    """Her Pazar 06:00'da çalışır; 180 günden eski arama alarmlarını siler (GC7)."""
+    """Her Pazar 06:00'da çalışır; 180 günden eski arama alarmlarını 5.000'lik batch'ler halinde siler (GC7)."""
     try:
         from app.database import AsyncSessionLocal
         from sqlalchemy import text
+        total = 0
         async with AsyncSessionLocal() as db:
-            result = await db.execute(text(
-                "DELETE FROM search_alerts WHERE created_at < NOW() - INTERVAL '180 days'"
-            ))
-            await db.commit()
-            logger.info("[GC7] search_alerts cleanup tamamlandı | silinen=%d", result.rowcount)
+            while True:
+                result = await db.execute(text("""
+                    DELETE FROM search_alerts
+                    WHERE ctid IN (
+                        SELECT ctid FROM search_alerts
+                        WHERE created_at < NOW() - INTERVAL '180 days'
+                        LIMIT 5000
+                    )
+                """))
+                await db.commit()
+                total += result.rowcount
+                if result.rowcount == 0:
+                    break
+                await asyncio.sleep(0.05)
+        logger.info("[GC7] search_alerts cleanup tamamlandı | silinen=%d", total)
         await _agent_ok(ctx, "cleanup_inactive_search_alerts_task")
     except Exception as exc:
         logger.error("[GC7] search_alerts cleanup başarısız | %s", str(exc), exc_info=True)
@@ -813,8 +908,8 @@ async def cleanup_inactive_search_alerts_task(ctx: dict) -> None:
 
 async def cleanup_hidden_messages_task(ctx: dict) -> None:
     """
-    Her gün 02:30'da çalışır; is_hidden=True olan ve 60 günden eski
-    direkt mesajları hard-delete eder.
+    Her gün 02:30'da çalışır; is_hidden=True olan ve 60 günden eski direkt mesajları
+    ve 365 günden eski okunmamış mesajları 5.000'lik batch'ler halinde hard-delete eder.
 
     is_hidden flag'i moderasyon/shadowban için kullanılır; gizlenen mesajlar
     görüntülenmez ama tabloda kalır. 60 gün sonra itiraz penceresi kapanmış
@@ -823,27 +918,44 @@ async def cleanup_hidden_messages_task(ctx: dict) -> None:
     try:
         from app.database import AsyncSessionLocal
         from sqlalchemy import text
+        total_hidden = 0
+        total_abandoned = 0
         async with AsyncSessionLocal() as db:
-            r1 = await db.execute(
-                text("""
+            while True:
+                r = await db.execute(text("""
                     DELETE FROM direct_messages
-                    WHERE is_hidden = TRUE
-                      AND created_at < NOW() - INTERVAL '60 days'
-                """)
-            )
-            r2 = await db.execute(
-                text("""
+                    WHERE ctid IN (
+                        SELECT ctid FROM direct_messages
+                        WHERE is_hidden = TRUE
+                          AND created_at < NOW() - INTERVAL '60 days'
+                        LIMIT 5000
+                    )
+                """))
+                await db.commit()
+                total_hidden += r.rowcount
+                if r.rowcount == 0:
+                    break
+                await asyncio.sleep(0.05)
+            while True:
+                r = await db.execute(text("""
                     DELETE FROM direct_messages
-                    WHERE is_read = FALSE
-                      AND is_hidden = FALSE
-                      AND created_at < NOW() - INTERVAL '365 days'
-                """)
-            )
-            await db.commit()
-            logger.info(
-                "[Worker] DM cleanup tamamlandı | gizli=%d terk_edilmiş=%d",
-                r1.rowcount, r2.rowcount,
-            )
+                    WHERE ctid IN (
+                        SELECT ctid FROM direct_messages
+                        WHERE is_read = FALSE
+                          AND is_hidden = FALSE
+                          AND created_at < NOW() - INTERVAL '365 days'
+                        LIMIT 5000
+                    )
+                """))
+                await db.commit()
+                total_abandoned += r.rowcount
+                if r.rowcount == 0:
+                    break
+                await asyncio.sleep(0.05)
+        logger.info(
+            "[Worker] DM cleanup tamamlandı | gizli=%d terk_edilmiş=%d",
+            total_hidden, total_abandoned,
+        )
         await _agent_ok(ctx, "cleanup_hidden_messages_task")
     except Exception as exc:
         logger.error("[Worker] Gizli mesaj cleanup başarısız | %s", str(exc), exc_info=True)
@@ -851,45 +963,63 @@ async def cleanup_hidden_messages_task(ctx: dict) -> None:
         raise
 
 
-# ── Task: 3 Günden Eski Medya Mesajlarını Sil ────────────────────────────────
+# ── Task: 30 Günden Eski Medya Mesajlarını Sil ───────────────────────────────
 
 async def cleanup_old_media_messages_task(ctx: dict) -> None:
     """
-    Her gün 06:30'da çalışır; 7 günden eski medya mesajlarını (image/video/voice/file)
-    MinIO'dan ve DB'den siler.
+    Her gün 06:30'da çalışır; 30 günden eski medya mesajlarını (image/video/voice/file)
+    500'lük batch'ler halinde MinIO'dan ve DB'den siler.
 
     text dışındaki tüm content_type'lar hedeflenir.
     MinIO nesnesi yoksa (zaten silinmiş) sessizce geçilir.
+
+    Atomiklik: önce DB'de media_url/thumbnail_url NULL'lanır + commit, ardından MinIO'dan
+    silinir. DB commit başarısız olursa MinIO nesneleri korunur (veri kaybı yok).
     """
     from datetime import datetime, timedelta, timezone
     from app.database import AsyncSessionLocal
     from app.models.message import DirectMessage
     from app.services import storage_service as storage
-    from sqlalchemy import select
+    from sqlalchemy import select, or_
 
-    cutoff = datetime.now(timezone.utc) - timedelta(days=60)
+    cutoff = datetime.now(timezone.utc) - timedelta(days=30)
+    total = 0
     try:
-        async with AsyncSessionLocal() as db:
-            result = await db.execute(
-                select(DirectMessage).where(
-                    DirectMessage.content_type != "text",
-                    DirectMessage.created_at < cutoff,
+        while True:
+            async with AsyncSessionLocal() as db:
+                result = await db.execute(
+                    select(DirectMessage).where(
+                        DirectMessage.content_type != "text",
+                        DirectMessage.created_at < cutoff,
+                        or_(
+                            DirectMessage.media_url.is_not(None),
+                            DirectMessage.thumbnail_url.is_not(None),
+                        ),
+                    ).limit(500)
                 )
-            )
-            messages = result.scalars().all()
+                messages = result.scalars().all()
+                if not messages:
+                    break
 
-            deleted_count = 0
-            for msg in messages:
-                if msg.media_url:
-                    await storage.delete_object_dm(storage.url_to_key(msg.media_url))
-                if msg.thumbnail_url:
-                    await storage.delete_object_dm(storage.url_to_key(msg.thumbnail_url))
-                msg.media_url = None
-                msg.thumbnail_url = None
-                deleted_count += 1
+                # Önce DB'de URL'leri NULL'la + commit — atomiklik garantisi
+                minio_keys: list[str] = []
+                for msg in messages:
+                    if msg.media_url:
+                        minio_keys.append(storage.url_to_key(msg.media_url))
+                        msg.media_url = None
+                    if msg.thumbnail_url:
+                        minio_keys.append(storage.url_to_key(msg.thumbnail_url))
+                        msg.thumbnail_url = None
+                await db.commit()
+                total += len(messages)
 
-            await db.commit()
-            logger.info("[Worker] Medya mesaj cleanup tamamlandı | temizlenen=%d", deleted_count)
+            # DB commit başarılı — şimdi MinIO'dan sil
+            for key in minio_keys:
+                await storage.delete_object_dm(key)
+
+            await asyncio.sleep(0.05)
+
+        logger.info("[Worker] Medya mesaj cleanup tamamlandı | temizlenen=%d", total)
         await _agent_ok(ctx, "cleanup_old_media_messages_task")
     except Exception as exc:
         logger.error("[Worker] Medya mesaj cleanup başarısız | %s", str(exc), exc_info=True)
