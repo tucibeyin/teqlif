@@ -94,6 +94,7 @@ async def _i18n_refresh_loop() -> None:
 if settings.sentry_backend_dsn:
     sentry_sdk.init(
         dsn=settings.sentry_backend_dsn,
+        environment=settings.sentry_environment,
         traces_sample_rate=0.05,
         profiles_sample_rate=0.05,
     )

@@ -289,7 +289,7 @@ class SearchViewModel extends AutoDisposeAsyncNotifier<SearchState> {
         state = AsyncValue.data(current.copyWith(exploreStreams: _filterMyStream(streams).take(4).toList()));
       }
       onData();
-    }, onError: (_) => onData());
+    }, onError: (_) => onData(), onDone: onData);
 
     _streamsTimer?.cancel();
     _streamsTimer = Timer.periodic(_kStreamsPollInterval, (_) {
@@ -368,7 +368,7 @@ class SearchViewModel extends AutoDisposeAsyncNotifier<SearchState> {
         state = AsyncValue.data(current.copyWith(exploreNetworkError: true));
       }
       onData();
-    });
+    }, onDone: onData);
   }
 
   void _loadExploreRecent({
@@ -440,7 +440,7 @@ class SearchViewModel extends AutoDisposeAsyncNotifier<SearchState> {
         state = AsyncValue.data(current.copyWith(exploreNetworkError: true));
       }
       onData();
-    });
+    }, onDone: onData);
   }
 
   Future<void> loadMoreRecentListings() async {

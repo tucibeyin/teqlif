@@ -35,6 +35,7 @@ class Settings(BaseSettings):
 
     firebase_service_account: str = ""  # path to service account JSON
     sentry_backend_dsn: str | None = None
+    sentry_environment: str = "production"
     google_client_id: str = ""
     google_play_package_name: str = "com.teqlif.app"
     google_play_service_account_path: str = ""  # path to Google Play service account JSON
