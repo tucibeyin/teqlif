@@ -391,16 +391,16 @@ case "$NODE" in
     sync_timer_overrides "$REPO/deploy/scale/V2.1/nodeMonitor"
     systemctl restart teqlif-prometheus teqlif-loki 2>/dev/null || true
     # sysctl tuning — idempotent
-    local sysctl_src="$REPO/deploy/scale/V2.1/nodeMonitor/resources/sysctl.d/99-teqlif.conf"
-    if [ -f "$sysctl_src" ] && ! diff -q "$sysctl_src" /etc/sysctl.d/99-teqlif.conf >/dev/null 2>&1; then
-      cp "$sysctl_src" /etc/sysctl.d/99-teqlif.conf
+    nm_sysctl_src="$REPO/deploy/scale/V2.1/nodeMonitor/resources/sysctl.d/99-teqlif.conf"
+    if [ -f "$nm_sysctl_src" ] && ! diff -q "$nm_sysctl_src" /etc/sysctl.d/99-teqlif.conf >/dev/null 2>&1; then
+      cp "$nm_sysctl_src" /etc/sysctl.d/99-teqlif.conf
       sysctl --system >/dev/null
       log "sysctl güncellendi (vm.swappiness=$(sysctl -n vm.swappiness))"
     fi
     # MariaDB innodb tuning — idempotent
-    local mariadb_src="$REPO/deploy/scale/V2.1/nodeMonitor/resources/mariadb.conf.d/99-teqlif.cnf"
-    if [ -f "$mariadb_src" ] && ! diff -q "$mariadb_src" /etc/mysql/mariadb.conf.d/99-teqlif.cnf >/dev/null 2>&1; then
-      cp "$mariadb_src" /etc/mysql/mariadb.conf.d/99-teqlif.cnf
+    nm_mariadb_src="$REPO/deploy/scale/V2.1/nodeMonitor/resources/mariadb.conf.d/99-teqlif.cnf"
+    if [ -f "$nm_mariadb_src" ] && ! diff -q "$nm_mariadb_src" /etc/mysql/mariadb.conf.d/99-teqlif.cnf >/dev/null 2>&1; then
+      cp "$nm_mariadb_src" /etc/mysql/mariadb.conf.d/99-teqlif.cnf
       systemctl restart mariadb
       log "MariaDB innodb_buffer_pool_size güncellendi"
     fi
