@@ -257,7 +257,11 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const CreateListingScreen()),
-              );
+              ).then((created) {
+                if (created == true && mounted) {
+                  ref.read(profileViewModelProvider.notifier).load(bypassCache: true);
+                }
+              });
             } else if (val == 'live') {
               showStartStreamDialog(context);
             }

@@ -133,7 +133,11 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const CreateListingScreen()),
-            ),
+            ).then((created) {
+              if (created == true && mounted) {
+                ref.read(homeViewModelProvider.notifier).refresh(bypassCache: true);
+              }
+            }),
             icon: const Icon(Icons.add, size: 18, color: kPrimary),
             label: Text(
               loc.t("btnCreateListing"),
