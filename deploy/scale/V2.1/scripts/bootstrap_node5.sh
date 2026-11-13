@@ -43,6 +43,7 @@ main() {
     setup_apt_timing
     ufw_node5
     install_postgresql_staging
+    systemctl enable postgresql@17-main
     install_redis_staging
     install_minio_staging
     install_livekit_staging
