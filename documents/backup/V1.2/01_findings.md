@@ -77,7 +77,7 @@
 | [`AUDIT-05`](#audit-05) | 🟠 **P1** | `node2`/`node5` ClickHouse, `encoder.py`, `node5:/var/recordings` | TTL'siz CH `system.*_log` (**`node2 2.38 GiB`**, **`node5 5.4 GiB`**) + `3.2G` cache + **`194M` video artığı** | [Adım 23](#adim-23) | ✅ `0845f6d8` |
 | [`AUDIT-06`](#audit-06) | 🟡 **P2** | `_common.sh`, `teqlif-agent`, `journald` | Kırık `**/*.log` glob (`16M` Redis log), **`565 MB` `agent.log`**, kotasız **`journald` (`1.2G`/`1.6G`)** | [Adım 31](#adim-31) | ✅ `7b51107e` |
 | [`AUDIT-07`](#audit-07) | 🟡 **P2** | `teqlif-agent` (`db.py`, `gossip.py`, `janitor.py`) | `cleanup_log` `UNIQUE` eksik + RAM-only `_last_sync` çoğaltma + `janitor.py:149` stale yorum | [Adım 32](#adim-32) | ✅ `589303d4` |
-| [`AUDIT-08`](#audit-08) | 🟡 **P2** | `backend/app/worker.py` (`cleanup_*`) | `media_messages` `.scalars().all()` OOM/`60d→30d`/commit sırası + `11` tablo batch'siz `DELETE` | [Adım 33](#adim-33) | ⬜ Açık |
+| [`AUDIT-08`](#audit-08) | 🟡 **P2** | `backend/app/worker.py` (`cleanup_*`) | `media_messages` `.scalars().all()` OOM/`60d→30d`/commit sırası + `11` tablo batch'siz `DELETE` | [Adım 33](#adim-33) | ✅ `8b6813b2` |
 
 ### D. İş Mantığı, Finans, KVKK/Uyum, SPOF & Ölçek (`BIZ-01` .. `BIZ-05`)
 
@@ -1067,8 +1067,14 @@ await db.commit()
 2. Diğer tüm ARQ temizlik sorguları `ctid IN (SELECT ctid FROM ... WHERE ... LIMIT 5000)` chunk döngüsüne ve aralarında `await asyncio.sleep(0.05)` nefesine bağlanır.
 * **Doğrulama:** Unit test / mock DB + MinIO ile `commit()` hata verdiğinde `delete_object_dm`'in çağrılmadığı, başarıda 500'lük chunklarla çalıştığı doğrulanır.
 
-##### ⬜ Çözüm Damgası
-- *(Henüz uygulanmadı — [Adım 33](#adim-33) bekliyor)*
+##### ✅ Çözüm Damgası
+- **`8b6813b2` — 2026-11-13:**
+  - `cleanup_old_media_messages_task`: `timedelta(days=60)` → `30`; `.scalars().all()` → `LIMIT 500` ORM döngüsü; commit sırası düzeltildi: önce DB NULL+commit, sonra MinIO silme
+  - `cleanup_old_stream_likes/viewers/listing_offers/exchange_rates/streams/calls/inactive_search_alerts`: tek DELETE → `ctid LIMIT 5000` while loop + `asyncio.sleep(0.05)`
+  - `cleanup_old_stream_chat_messages`: subquery `ctid LIMIT 5000` döngüsü
+  - `cleanup_empty_message_threads`: NOT EXISTS sorgusu `ctid LIMIT 5000` döngüsünde
+  - `cleanup_hidden_messages`: iki DELETE her biri ayrı `ctid LIMIT 5000` döngüsünde
+  - 8/8 node `8b6813b2` ✓
 
 ---
 
@@ -1423,7 +1429,7 @@ await redis.set("ch:last_sync_at", now.isoformat())  # Aradakiler kalıcı kaybo
 ~~32. **Adım 32 (`AUDIT-07`):** `teqlif-agent` [`db.py:39-47`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/teqlif-agent/db.py#L39-L47) `cleanup_log` `UNIQUE` kısıtı + 30g budama/`VACUUM`, [`gossip.py:60`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/teqlif-agent/gossip.py#L60) kalıcı SQLite `_last_sync` ve [`janitor.py:149`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/teqlif-agent/modules/janitor.py#L149) docstring düzeltmesi uygula → _Neden:_ Agent restart'ında SQLite çoğaltmasını ve şişmesini önlemek. → ([Detay](#audit-07))~~ ✅ `589303d4`
 
 <a id="adim-33"></a>
-33. **Adım 33 (`AUDIT-08`):** [`worker.py:856-898`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/worker.py#L856-L898) `cleanup_old_media_messages_task` (`30 gün`, `LIMIT 500`, `db.commit()` sonrası MinIO silme — [Karar K5](#kilitli-kararlar)) ve diğer 11 temizlik görevinde `LIMIT 5000` chunk döngülü `DELETE` uygula → _Neden:_ Yüksek veride ARQ OOM, uzun PG tablo kilidi ve dangling MinIO silme riskini önlemek. → ([Detay](#audit-08))
+~~33. **Adım 33 (`AUDIT-08`):** [`worker.py:856-898`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/worker.py#L856-L898) `cleanup_old_media_messages_task` (`30 gün`, `LIMIT 500`, `db.commit()` sonrası MinIO silme — [Karar K5](#kilitli-kararlar)) ve diğer 11 temizlik görevinde `LIMIT 5000` chunk döngülü `DELETE` uygula → _Neden:_ Yüksek veride ARQ OOM, uzun PG tablo kilidi ve dangling MinIO silme riskini önlemek. → ([Detay](#audit-08))~~ ✅ `8b6813b2`
 
 <a id="adim-34"></a>
 34. **Adım 34 (`MAINT-08`):** Canlı `node2 wg show` üzerinde görünmeyen `node3`/`node4` WG peering'ini doğrula/onar ve `TimeoutStartSec` bulunmayan kalan 10 backup/bakım servisine uygun `TimeoutStartSec` (`900`–`3600`) ekle → _Neden:_ Edge düğümler arası bakım/failover erişimini ve askıda kalma korumasını sağlamak. → ([Detay](#maint-08))
