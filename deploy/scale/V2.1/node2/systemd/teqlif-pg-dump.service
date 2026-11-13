@@ -10,5 +10,6 @@ EnvironmentFile=/project/teqlif/config/.env.backup
 ExecStart=/var/www/teqlif.com/deploy/scale/V2.1/node2/resources/scripts/pg_dump.sh
 StandardOutput=journal
 StandardError=journal
+TimeoutStartSec=3600
 IOSchedulingClass=idle
 Nice=19

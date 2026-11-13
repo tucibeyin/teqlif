@@ -8,3 +8,4 @@ EnvironmentFile=/project/teqlif/config/.env.backup
 ExecStart=/var/www/teqlif.com/deploy/scale/V2.1/node2/resources/scripts/notify_backup_failed.sh %i
 StandardOutput=journal
 StandardError=journal
+TimeoutStartSec=60

@@ -9,5 +9,6 @@ User=tucibeyin
 ExecStart=/var/www/teqlif.com/deploy/scale/V2.1/node2/resources/scripts/minio_backup.sh
 StandardOutput=journal
 StandardError=journal
+TimeoutStartSec=7200
 IOSchedulingClass=idle
 Nice=19

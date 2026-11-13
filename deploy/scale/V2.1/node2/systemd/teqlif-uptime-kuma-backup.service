@@ -9,5 +9,6 @@ User=tucibeyin
 ExecStart=/var/www/teqlif.com/deploy/scale/V2.1/node2/resources/scripts/uptime_kuma_backup.sh
 StandardOutput=journal
 StandardError=journal
+TimeoutStartSec=600
 Nice=19
 IOSchedulingClass=idle

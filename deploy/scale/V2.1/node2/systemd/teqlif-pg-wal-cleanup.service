@@ -7,5 +7,6 @@ User=tucibeyin
 ExecStart=/var/www/teqlif.com/deploy/scale/V2.1/node2/resources/scripts/pg_wal_cleanup.sh
 StandardOutput=journal
 StandardError=journal
+TimeoutStartSec=300
 Nice=19
 IOSchedulingClass=idle

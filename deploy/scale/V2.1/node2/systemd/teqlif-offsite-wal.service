@@ -11,3 +11,4 @@ Nice=19
 ExecStart=/var/www/teqlif.com/deploy/scale/V2.1/node2/resources/scripts/offsite_wal_sync.sh
 StandardOutput=journal
 StandardError=journal
+TimeoutStartSec=1800

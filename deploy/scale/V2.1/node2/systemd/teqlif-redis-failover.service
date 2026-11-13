@@ -10,3 +10,4 @@ EnvironmentFile=/project/teqlif/config/.env.backup
 ExecStart=/var/www/teqlif.com/deploy/scale/V2.1/node2/resources/scripts/redis_failover.sh
 StandardOutput=journal
 StandardError=journal
+TimeoutStartSec=300
