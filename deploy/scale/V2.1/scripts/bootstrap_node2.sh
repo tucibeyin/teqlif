@@ -328,7 +328,8 @@ setup_backup_services() {
         teqlif-cluster-secrets-backup.timer \
         teqlif-mail-backup.timer \
         teqlif-offsite-sync.timer \
-        teqlif-offsite-wal.timer
+        teqlif-offsite-wal.timer \
+        teqlif-financial-worm.timer
     # Backup env — sadece yoksa oluştur; mevcut sırları ezmez
     local env_file=/project/teqlif/config/.env.backup
     if [ ! -f "${env_file}" ]; then

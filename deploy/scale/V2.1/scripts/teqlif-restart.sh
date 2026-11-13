@@ -345,6 +345,10 @@ case "$NODE" in
     sync_services "$REPO/deploy/scale/V2.1/node2"
     sync_timer_overrides "$REPO/deploy/scale/V2.1/node2"
     sync_scripts "$REPO/deploy/scale/V2.1/node2"
+    # İlk defa yükleniyorsa etkinleştir
+    if ! systemctl is-enabled teqlif-financial-worm.timer >/dev/null 2>&1; then
+        systemctl enable --now teqlif-financial-worm.timer
+    fi
     log "node2 — backup node, uygulama servisi yok. git pull tamamlandı."
     ;;
 
