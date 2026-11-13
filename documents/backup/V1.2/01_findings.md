@@ -51,7 +51,7 @@
 | [`OFFSITE-10`](#offsite-10) | 🟡 **P2** | `node2/systemd/*.service`, `offsite_sync` | Tüm backup servislerinde `IOSchedulingClass=idle`/`Nice=19` eşitleme ve `.tmp`/`.partial` filtre | [Adım 26](#adim-26) | ✅ `095f7f31` |
 | [`OFFSITE-11`](#offsite-11) | 🟡 **P2** | `runbook.sh`, `node101/resources/` | `node101 → yeni node1/node2` çifte felaket DR runbook'u + periyodik decrypt/PITR tatbikatı | [Adım 36](#adim-36) | ⬜ Açık |
 | [`OFFSITE-12`](#offsite-12) | 🟡 **P2** | `_common.sh`, `bootstrap_node2.sh`, `bootstrap_node101.sh` | Tekrarlanabilir `bootstrap_node101.sh` yok; `node2` bootstrap'ta `rclone`/7 timer `enable` eksik | [Adım 3](#adim-3) | ✅ Çözüldü `1ce09741` |
-| [`OFFSITE-13`](#offsite-13) | 🟢 **P3** | `documents/wallet/V1.0`, `node101` | TTK/MASAK 5–10 yıl `financial_archives` WORM şifreli mühürlü akışı eksik | [Adım 35](#adim-35) | ⬜ Açık |
+| [`OFFSITE-13`](#offsite-13) | 🟢 **P3** | `documents/wallet/V1.0`, `node101` | TTK/MASAK 5–10 yıl `financial_archives` WORM şifreli mühürlü akışı eksik | [Adım 35](#adim-35) | ✅ Çözüldü `0643767b` |
 
 ### B. Sistem Geneli Bakım, Zamanlama & Donanım Anomalileri (`MAINT-01` .. `MAINT-08`)
 
@@ -550,8 +550,8 @@ systemctl enable \
 * Aylık bir job (`archive_financial_worm_task`) 1 yıldan eski kapatılmış finansal satırları deterministik JSONL/Parquet + SHA-256 manifest ile export edip `restic backup --tag financial-worm` ile `node101` `--append-only` repoya yazar (`--keep-yearly 10` ayrı kural).
 * **Doğrulama:** `restic snapshots --tag financial-worm` SHA-256 manifest dosyasıyla birlikte doğrulanır.
 
-##### ⬜ Çözüm Damgası
-- *(Henüz uygulanmadı — [Adım 35](#adim-35) bekliyor)*
+##### ✅ Çözüm Damgası
+- `2026-11-13` · commit `0643767b` — `financial_worm_backup.sh` (JSONL+SHA-256+restic), `teqlif-financial-worm.{service,timer}` (ayın 1'i 07:30 UTC), `node101/teqlif-offsite-prune.service` financial-worm ExecStart (`--keep-yearly 10 --keep-monthly 24`), `schedule.yaml` watchdog girişi
 
 ---
 
@@ -1443,7 +1443,7 @@ await redis.set("ch:last_sync_at", now.isoformat())  # Aradakiler kalıcı kaybo
 ~~34. **Adım 34 (`MAINT-08`):** Canlı `node2 wg show` üzerinde görünmeyen `node3`/`node4` WG peering'ini doğrula/onar ve `TimeoutStartSec` bulunmayan kalan 10 backup/bakım servisine uygun `TimeoutStartSec` (`900`–`3600`) ekle → _Neden:_ Edge düğümler arası bakım/failover erişimini ve askıda kalma korumasını sağlamak. → ([Detay](#maint-08))~~ ✅ `e5096314`
 
 <a id="adim-35"></a>
-35. **Adım 35 (`OFFSITE-13`):** TTK/MASAK uyumlu aylık WORM finansal arşiv job'ını (`wallet_ledger`, `withdrawal_requests`, `purchases`, `audit_logs` 1y+ → SHA-256 manifest + `restic backup --tag financial-worm`, 10y retention) kur → _Neden:_ Yasal finansal defterlerin değiştirilemez soğuk arşivini güvenceye almak. → ([Detay](#offsite-13))
+~~35. **Adım 35 (`OFFSITE-13`):** TTK/MASAK uyumlu aylık WORM finansal arşiv job'ını (`wallet_ledger`, `withdrawal_requests`, `purchases`, `audit_logs` 1y+ → SHA-256 manifest + `restic backup --tag financial-worm`, 10y retention) kur → _Neden:_ Yasal finansal defterlerin değiştirilemez soğuk arşivini güvenceye almak. → ([Detay](#offsite-13))~~ ✅ `0643767b`
 
 <a id="adim-36"></a>
 36. **Adım 36 (`OFFSITE-11`):** `deploy/scale/V2.1/node101/resources/offsite_restore_runbook.md` + `teqlif-offsite-verify.timer` (`restic check --read-data-subset=5%`) dosyasını oluştur ve **İlk Gerçek DR Tatbikatını** (`node2` yerel PITR + `node101` geçici test dizinine/DB'sine Key Escrow ile tam restore) koşup raporla → _Neden:_ Tüm mimarinin kağıt üstünde kalmayıp gerçekten kurtarabildiğini kanıtlamak. → ([Detay](#offsite-11))
