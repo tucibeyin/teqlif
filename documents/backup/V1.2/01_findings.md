@@ -63,7 +63,7 @@
 | [`MAINT-04`](#maint-04) | 🟡 **P2** | `node1..6`, `node2`, `nodeMonitor` OS Timer | `apt-daily-upgrade` (`06:05–06:50 UTC`) + `node2` `mdcheck` (`06:46 UTC`) backup bloğuna biniyor | [Adım 27](#adim-27) | ✅ `5694a626` |
 | [`MAINT-05`](#maint-05) | 🟡 **P2** | `schedule.yaml`, `schedule_loader.py`, `worker.py` | `backup:` YAML anahtarı yok, `chat_messages` çift kayıt, hatalı saat yorumları | [Adım 28](#adim-28) | ✅ `ecc3f71a` |
 | [`MAINT-06`](#maint-06) | 🟡 **P2** | `loki`, `kuma`, `config`, `pg_wal_cleanup`, `node2` | Redis `job_ok` atmayan 4 script + `0B` yetim `.last_mail_backup_ok` + eski `03:45` mail timer | [Adım 29](#adim-29) | ✅ `85954a42` |
-| [`MAINT-07`](#maint-07) | 🟡 **P2** | `nodeMonitor` (`1.9 GiB RAM`) | **`240 MiB` aktif swap**, `165 MiB` free RAM darboğazı — Prometheus/Loki bellek limiti ayarı | [Adım 30](#adim-30) | ⬜ Açık |
+| [`MAINT-07`](#maint-07) | 🟡 **P2** | `nodeMonitor` (`1.9 GiB RAM`) | **`240 MiB` aktif swap**, `165 MiB` free RAM darboğazı — Prometheus/Loki bellek limiti ayarı | [Adım 30](#adim-30) | ✅ `ccd96e7c` |
 | [`MAINT-08`](#maint-08) | 🟢 **P3** | `node2` `wg show`, `systemd` timeout'lar | Canlı `node2` `wg show` `node3`/`node4` peer eksikliği + backup servislerinde `TimeoutStartSec` | [Adım 34](#adim-34) | ⬜ Açık |
 
 ### C. Uçtan Uca Bakım, DR, Birikme & Telemetri (`AUDIT-01` .. `AUDIT-08`)
@@ -727,8 +727,16 @@ sudo wg-quick save wg0
 * Prometheus `--storage.tsdb.retention.size=1GB` (`--storage.tsdb.retention.time=15d` veya `21d`) + Loki chunk cache/ingestion limit sıkılaştırması + Grafana/MariaDB `MemoryMax` koruması eklenir (`innodb_buffer_pool_size=64M`).
 * **Doğrulama:** `ssh nodeMonitor "free -m"` swap kullanımı düşer ve `MemAvailable >= 400 MiB` kalır.
 
-##### ⬜ Çözüm Damgası
-- *(Henüz uygulanmadı — [Adım 30](#adim-30) bekliyor)*
+##### ✅ Çözüm Damgası
+- **Commit:** `ccd96e7c` · **Tarih:** 2026-11-13
+- Prometheus: `30d → 21d` + `--storage.tsdb.retention.size=1GB` (TSDB 1.5G → ≤1G)
+- Loki: `limits_config.max_query_lookback=14d`, `max_entries_limit_per_query=5000`
+- Grafana: `MemoryMax=400M` drop-in (`systemd-overrides/grafana-server.service.d/teqlif-memory.conf`)
+- MariaDB: `MemoryMax=256M` drop-in (`systemd-overrides/mariadb.service.d/teqlif-memory.conf`)
+- `vm.swappiness=10` (`resources/sysctl.d/99-teqlif.conf` — bootstrap kalıcı; manuel `sudo sysctl --system` gerekli)
+- `innodb_buffer_pool_size=64M` (`resources/mariadb.conf.d/99-teqlif.cnf` — bootstrap kalıcı; manuel `sudo systemctl restart mariadb` gerekli)
+- `teqlif-restart.sh` nodeMonitor case: `sync_services` eklendi, `prometheus+loki` restart
+- **Doğrulama:** `free -m` → swap 239 MiB → 109 MiB, MemAvailable 989 MiB (hedef ≥400 MiB ✓)
 
 ---
 
@@ -1389,7 +1397,7 @@ await redis.set("ch:last_sync_at", now.isoformat())  # Aradakiler kalıcı kaybo
 ~~29. **Adım 29 (`MAINT-06`):** `loki_backup.sh`, `uptime_kuma_backup.sh`, `nodemonitor_config_backup.sh`, `pg_wal_cleanup.sh` scriptlerine Redis `HSET teqlif:agent:job_ok` ekle; `/project/teqlif/backups/.last_mail_backup_ok` `0B` yetimini ve eski `node2/resources/systemd/teqlif-mail-backup.timer` (`03:45`) dosyasını temizle → _Neden:_ Tüm 11 yerel yedekleme/temizlik + offsite anahtarını `watchdog`/`health` izlemesinde tek standarda bağlamak. → ([Detay](#maint-06))~~ ✅ `85954a42`
 
 <a id="adim-30"></a>
-30. **Adım 30 (`MAINT-07`):** `nodeMonitor` üzerinde Prometheus (`--storage.tsdb.retention.size=1GB`), Loki/Grafana/MariaDB (`MemoryMax` + `innodb_buffer_pool_size=64M`) bellek optimizasyonu uygula → _Neden:_ `240 MiB` aktif swap kullanımını ve OOM düşüş riskini ortadan kaldırmak. → ([Detay](#maint-07))
+~~30. **Adım 30 (`MAINT-07`):** `nodeMonitor` üzerinde Prometheus (`--storage.tsdb.retention.size=1GB`), Loki/Grafana/MariaDB (`MemoryMax` + `innodb_buffer_pool_size=64M`) bellek optimizasyonu uygula → _Neden:_ `240 MiB` aktif swap kullanımını ve OOM düşüş riskini ortadan kaldırmak. → ([Detay](#maint-07))~~ ✅ `ccd96e7c`
 
 <a id="adim-31"></a>
 31. **Adım 31 (`AUDIT-06`):** [`_common.sh:149-159`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/scripts/_common.sh#L149-L159) kırık `**/*.log` glob'unu `/project/teqlif/logs/*.log /project/teqlif/logs/*/*.log` + `/var/log/teqlif-agent/*.log` olarak düzelt (tüm node'lara ve `nodeMonitor`'a dağıt), tüm node'larda `journald` `SystemMaxUse=200M` ayarla → _Neden:_ `565 MB agent.log` ve `1.2G/1.6G journald` büyümesini tüm kümede durdurmak. → ([Detay](#audit-06))
