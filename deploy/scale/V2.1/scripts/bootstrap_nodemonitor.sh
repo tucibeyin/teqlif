@@ -32,6 +32,7 @@ main() {
     setup_autoupdates
     clone_repo "${REPO_DIR}"
     setup_logrotate
+    setup_journald
     setup_apt_timing
     setup_wg_keygen
     setup_wg_config    "${NODE_DIR}"

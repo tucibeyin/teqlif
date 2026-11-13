@@ -174,6 +174,32 @@ sync_nginx() {
   return 0
 }
 
+# ── sync_logrotate: logrotate conf güncel mi kontrol et ───────────────────────
+sync_logrotate() {
+  local src="$REPO/deploy/scale/V2.1/scripts/resources/logrotate.d/teqlif"
+  local dst="/etc/logrotate.d/teqlif"
+  [ -f "$src" ] || return 0
+  if ! diff -q "$src" "$dst" >/dev/null 2>&1; then
+    cp "$src" "$dst"
+    log "logrotate güncellendi"
+  fi
+}
+
+# ── sync_journald: journald kota conf güncel mi kontrol et ────────────────────
+sync_journald() {
+  local src="$REPO/deploy/scale/V2.1/scripts/resources/journald.conf.d/teqlif.conf"
+  local dst_dir="/etc/systemd/journald.conf.d"
+  local dst="${dst_dir}/teqlif.conf"
+  [ -f "$src" ] || return 0
+  mkdir -p "$dst_dir"
+  if ! diff -q "$src" "$dst" >/dev/null 2>&1; then
+    cp "$src" "$dst"
+    systemctl restart systemd-journald
+    journalctl --vacuum-size=200M >/dev/null 2>&1 || true
+    log "journald kota güncellendi (SystemMaxUse=200M)"
+  fi
+}
+
 # ── sync_services: servis dosyaları değiştiyse /etc/systemd/system/ güncelle ─
 sync_services() {
   local node_dir="$1"
@@ -289,7 +315,11 @@ alembic_and_sync() {
     || warn "sync_main.py hata verdi — devam ediliyor"
 }
 
-# ── 3. node'a göre restart ────────────────────────────────────────────────────
+# ── 3. Tüm node'larda ortak conf sync ────────────────────────────────────────
+sync_logrotate
+sync_journald
+
+# ── 4. node'a göre restart ────────────────────────────────────────────────────
 case "$NODE" in
 
   node1)

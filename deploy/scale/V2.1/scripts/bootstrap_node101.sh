@@ -27,6 +27,7 @@ main() {
     setup_limits
     setup_swap 2
     setup_logrotate
+    setup_journald
     setup_auditd
     setup_thp_disable
     mount_data_disk

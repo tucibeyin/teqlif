@@ -30,6 +30,7 @@ main() {
     setup_swap 4
     clone_repo "${REPO_DIR}"
     setup_logrotate
+    setup_journald
     setup_auditd
     setup_thp_disable
     setup_crowdsec

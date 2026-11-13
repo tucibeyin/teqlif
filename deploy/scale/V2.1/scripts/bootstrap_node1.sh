@@ -32,6 +32,7 @@ main() {
     # NVMe bare metal: swap gerekmiyor (32GB ECC RAM)
     clone_repo "${REPO_DIR}"
     setup_logrotate
+    setup_journald
     setup_auditd
     setup_thp_disable
     setup_crowdsec

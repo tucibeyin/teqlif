@@ -146,18 +146,19 @@ EOF
 # ── Logrotate ─────────────────────────────────────────────────────────────────
 setup_logrotate() {
     log_step "Logrotate"
-    cat > /etc/logrotate.d/teqlif <<'EOF'
-/project/teqlif/logs/**/*.log {
-    daily
-    rotate 14
-    compress
-    delaycompress
-    missingok
-    notifempty
-    copytruncate
-}
-EOF
+    cp "${SCRIPT_DIR}/resources/logrotate.d/teqlif" /etc/logrotate.d/teqlif
     log_ok "Logrotate yapılandırıldı"
+}
+
+# ── journald kota ──────────────────────────────────────────────────────────────
+setup_journald() {
+    log_step "journald kota"
+    local conf_dir="/etc/systemd/journald.conf.d"
+    mkdir -p "${conf_dir}"
+    cp "${SCRIPT_DIR}/resources/journald.conf.d/teqlif.conf" "${conf_dir}/teqlif.conf"
+    systemctl restart systemd-journald
+    journalctl --vacuum-size=200M >/dev/null 2>&1 || true
+    log_ok "journald SystemMaxUse=200M, MaxRetentionSec=14day"
 }
 
 # ── Auditd ────────────────────────────────────────────────────────────────────
