@@ -78,6 +78,12 @@ class MessageThreadViewModel
               ),
             );
           },
+          onDone: () {
+            final current = state.valueOrNull;
+            if (current != null && current.loading) {
+              state = AsyncValue.data(current.copyWith(loading: false));
+            }
+          },
         );
   }
 
