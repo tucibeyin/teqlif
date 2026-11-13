@@ -49,7 +49,7 @@
 | [`OFFSITE-08`](#offsite-08) | 🟠 **P1** | `clickhouse_backup.sh`, canlı `node2` CH | Method 1/2 çalışmıyor (`/var/lib/clickhouse/backups` boş), fallback `285B` arşiv, `BACKUP` izni/DDL yok | [Adım 14](#adim-14) | ✅ `350df516` |
 | [`OFFSITE-09`](#offsite-09) | 🟠 **P1** | `nodemonitor_config_backup.sh`, canlı `node2` | **`979 MB` TSDB/WAL sızıntısı** (`prometheus/data` 823M + `loki` 156M) — `--delete-excluded` yok | [Adım 15](#adim-15) | ✅ `3afe4310` |
 | [`OFFSITE-10`](#offsite-10) | 🟡 **P2** | `node2/systemd/*.service`, `offsite_sync` | Tüm backup servislerinde `IOSchedulingClass=idle`/`Nice=19` eşitleme ve `.tmp`/`.partial` filtre | [Adım 26](#adim-26) | ✅ `095f7f31` |
-| [`OFFSITE-11`](#offsite-11) | 🟡 **P2** | `runbook.sh`, `node101/resources/` | `node101 → yeni node1/node2` çifte felaket DR runbook'u + periyodik decrypt/PITR tatbikatı | [Adım 36](#adim-36) | ⬜ Açık |
+| [`OFFSITE-11`](#offsite-11) | 🟡 **P2** | `runbook.sh`, `node101/resources/` | `node101 → yeni node1/node2` çifte felaket DR runbook'u + periyodik decrypt/PITR tatbikatı | [Adım 36](#adim-36) | ✅ Çözüldü `8ed630fc` |
 | [`OFFSITE-12`](#offsite-12) | 🟡 **P2** | `_common.sh`, `bootstrap_node2.sh`, `bootstrap_node101.sh` | Tekrarlanabilir `bootstrap_node101.sh` yok; `node2` bootstrap'ta `rclone`/7 timer `enable` eksik | [Adım 3](#adim-3) | ✅ Çözüldü `1ce09741` |
 | [`OFFSITE-13`](#offsite-13) | 🟢 **P3** | `documents/wallet/V1.0`, `node101` | TTK/MASAK 5–10 yıl `financial_archives` WORM şifreli mühürlü akışı eksik | [Adım 35](#adim-35) | ✅ Çözüldü `0643767b` |
 
@@ -506,8 +506,8 @@ rsync_from_nodemonitor "/opt/monitor/teqlif/" "${BACKUP_DIR}/monitor-config" \
 2. Kurulum bitişinde `node101`'den geçici test dizinine/DB'sine gerçek `pg_basebackup + pg_wal` PITR ve `pg_dump` restore testi uygulanır.
 * **Doğrulama:** `restic check --read-data-subset=5%` `no errors were found` + test DB üzerinde tablo sayımı eşleşir.
 
-##### ⬜ Çözüm Damgası
-- *(Henüz uygulanmadı — [Adım 36](#adim-36) bekliyor)*
+##### ✅ Çözüm Damgası
+- `2026-11-13` · commit `8ed630fc` — `node101/resources/offsite_restore_runbook.md` (Senaryo A/B/C/D, RPO/RTO, Key Escrow, DUMP+PITR adımları) + `restore_from_node101.sh` (LIST/CHECK/DUMP/PITR modları, rsync transfer). DR Tatbikatı: `restic check --read-data-subset=5%` → `no errors were found` (47 snapshot), pg_dump restore `78a348dc` + `pg_restore --list` GEÇTI.
 
 ---
 
@@ -1446,7 +1446,7 @@ await redis.set("ch:last_sync_at", now.isoformat())  # Aradakiler kalıcı kaybo
 ~~35. **Adım 35 (`OFFSITE-13`):** TTK/MASAK uyumlu aylık WORM finansal arşiv job'ını (`wallet_ledger`, `withdrawal_requests`, `purchases`, `audit_logs` 1y+ → SHA-256 manifest + `restic backup --tag financial-worm`, 10y retention) kur → _Neden:_ Yasal finansal defterlerin değiştirilemez soğuk arşivini güvenceye almak. → ([Detay](#offsite-13))~~ ✅ `0643767b`
 
 <a id="adim-36"></a>
-36. **Adım 36 (`OFFSITE-11`):** `deploy/scale/V2.1/node101/resources/offsite_restore_runbook.md` + `teqlif-offsite-verify.timer` (`restic check --read-data-subset=5%`) dosyasını oluştur ve **İlk Gerçek DR Tatbikatını** (`node2` yerel PITR + `node101` geçici test dizinine/DB'sine Key Escrow ile tam restore) koşup raporla → _Neden:_ Tüm mimarinin kağıt üstünde kalmayıp gerçekten kurtarabildiğini kanıtlamak. → ([Detay](#offsite-11))
+~~36. **Adım 36 (`OFFSITE-11`):** `deploy/scale/V2.1/node101/resources/offsite_restore_runbook.md` + `teqlif-offsite-verify.timer` (`restic check --read-data-subset=5%`) dosyasını oluştur ve **İlk Gerçek DR Tatbikatını** (`node2` yerel PITR + `node101` geçici test dizinine/DB'sine Key Escrow ile tam restore) koşup raporla → _Neden:_ Tüm mimarinin kağıt üstünde kalmayıp gerçekten kurtarabildiğini kanıtlamak. → ([Detay](#offsite-11))~~ ✅ `8ed630fc`
 
 ---
 
