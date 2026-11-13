@@ -373,6 +373,12 @@ backup:
     minute: 0
     watchdog_m: 10080  # 7 gün
 
+  - name: financial_worm
+    day: 1             # her ayın 1'i
+    hour: 7
+    minute: 30
+    watchdog_m: 44640  # ~31 gün — TTK/MASAK finansal WORM arşivi
+
 # ── TTL değerleri ───────────────────────────────────────────────────────────────
 # Değişiklik sonrası sudo teqlif-restart gereklidir.
 ttl:

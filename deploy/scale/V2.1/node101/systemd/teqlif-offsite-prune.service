@@ -25,5 +25,10 @@ ExecStart=/usr/bin/restic forget \
     --tag pg_wal \
     --keep-within 7d \
     --prune
+ExecStart=/usr/bin/restic forget \
+    --tag financial-worm \
+    --keep-yearly  10 \
+    --keep-monthly 24 \
+    --prune
 StandardOutput=journal
 StandardError=journal

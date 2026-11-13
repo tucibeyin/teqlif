@@ -1,0 +1,10 @@
+[Unit]
+Description=teqlif Financial WORM Backup — her ayın 1'i 07:30 UTC
+
+[Timer]
+OnCalendar=*-*-01 07:30:00
+AccuracySec=5m
+Persistent=true
+
+[Install]
+WantedBy=timers.target
