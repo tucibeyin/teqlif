@@ -1265,6 +1265,9 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
   Timer? _recordTimer;
   double _swipeDx = 0.0;
 
+  // WsService — initState'de capture edilir, dispose'da ref gerekmez
+  late WsService _wsService;
+
   // Archive
   bool _archiveLoaded = false;
   bool _archiveLoading = false;
@@ -1282,6 +1285,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
   @override
   void initState() {
     super.initState();
+    _wsService = ref.read(wsServiceProvider);
     WidgetsBinding.instance.addObserver(this);
     _textCtrl.addListener(() {
       final has = _textCtrl.text.trim().isNotEmpty;
@@ -1346,7 +1350,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
   }
 
   void _listenWs() {
-    _wsSub = ref.read(wsServiceProvider).messageStream.stream.listen((data) {
+    _wsSub = _wsService.messageStream.stream.listen((data) {
       final type = data['type'] as String?;
 
       if (type == 'connected') {
@@ -1432,7 +1436,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
   void _sendTypingStopped() {
     _typingDebounce?.cancel();
     _typingThrottle?.cancel();
-    ref.read(wsServiceProvider).sendJson({'type': 'typing_stopped', 'target_user_id': widget.otherUserId});
+    _wsService.sendJson({'type': 'typing_stopped', 'target_user_id': widget.otherUserId});
   }
 
   void _onTextChanged(String text) {
@@ -1449,7 +1453,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
     if (_typingThrottle != null) return;
 
     // İlk harf veya throttle süresi dolduysa hemen gönder
-    ref.read(wsServiceProvider).sendJson({'type': 'typing', 'target_user_id': widget.otherUserId});
+    _wsService.sendJson({'type': 'typing', 'target_user_id': widget.otherUserId});
     _typingThrottle = Timer(const Duration(seconds: 3), () {
       _typingThrottle = null;
     });

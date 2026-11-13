@@ -29,6 +29,7 @@ from app.use_cases.users.queries.get_user_profile import GetUserProfileQuery
 from app.core.uow import SqlAlchemyUnitOfWork
 from app.services.referral_service import apply_referral
 from app.core.read_cache import cache_get, cache_set, invalidate_cache, cache_get_etag, etag_normalize
+from app.core.exceptions import NotFoundException
 from starlette.responses import Response
 
 router = APIRouter(prefix="/api/users", tags=["users"])
@@ -92,7 +93,11 @@ async def apply_referral_code(
 ):
     from app.utils.i18n import get_locale
     lang = get_locale(request=request)
-    return await apply_referral(db, current_user, body.referral_code, lang)
+    # get_current_user → CurrentUserDTO; servis ORM instance bekliyor
+    db_user = await db.get(User, current_user.id)
+    if db_user is None:
+        raise NotFoundException(code="USER_NOT_FOUND")
+    return await apply_referral(db, db_user, body.referral_code, lang)
 
 
 from app.services.referral_service import ensure_valid_referral_code
@@ -103,7 +108,11 @@ async def my_referral(
     db: AsyncSession = Depends(get_db),
 ):
     """Kullanıcının kendi davet kodunu, son kullanma tarihini ve istatistiklerini döner."""
-    ref_data = await ensure_valid_referral_code(db, current_user)
+    # get_current_user → CurrentUserDTO; servis ORM instance bekliyor
+    db_user = await db.get(User, current_user.id)
+    if db_user is None:
+        raise NotFoundException(code="USER_NOT_FOUND")
+    ref_data = await ensure_valid_referral_code(db, db_user)
     
     total_invited = await db.scalar(
         select(func.count()).where(Referral.referrer_id == current_user.id)

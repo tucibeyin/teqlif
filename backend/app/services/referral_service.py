@@ -47,7 +47,6 @@ async def ensure_valid_referral_code(db: AsyncSession, user: User) -> dict:
             "expires_at": user.referral_code_expires_at.isoformat()
         }
 
-    # Yeni kod üret
     for _ in range(10):
         code = generate_referral_code()
         existing = await db.scalar(select(User).where(User.referral_code == code))
@@ -75,7 +74,6 @@ async def apply_referral(db: AsyncSession, current_user: User, referral_code: st
     """
     from app.services.firebase_service import send_push
     t = _get_t(lang)
-    
     code = referral_code.strip().upper()
 
     # Daha önce bu kullanıcı bir kod kullandı mı?
