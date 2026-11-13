@@ -7,7 +7,8 @@ User=tucibeyin
 ExecStart=/usr/local/bin/prometheus \
   --config.file=/var/www/teqlif.com/deploy/scale/V2.1/nodeMonitor/config/teqlif/prometheus.yml \
   --storage.tsdb.path=/opt/monitor/teqlif/prometheus/data \
-  --storage.tsdb.retention.time=30d \
+  --storage.tsdb.retention.time=21d \
+  --storage.tsdb.retention.size=1GB \
   --web.listen-address=10.10.0.99:9090 \
   --web.enable-lifecycle
 Restart=always

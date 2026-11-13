@@ -37,6 +37,8 @@ limits_config:
   retention_period: 30d
   ingestion_rate_mb: 10
   ingestion_burst_size_mb: 20
+  max_query_lookback: 14d
+  max_entries_limit_per_query: 5000
 
 compactor:
   working_directory: /opt/monitor/teqlif/loki/data/compactor

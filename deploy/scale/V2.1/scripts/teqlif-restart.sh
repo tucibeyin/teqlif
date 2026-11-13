@@ -387,8 +387,10 @@ case "$NODE" in
 
   nodeMonitor)
     agent_sync
+    sync_services "$REPO/deploy/scale/V2.1/nodeMonitor"
     sync_timer_overrides "$REPO/deploy/scale/V2.1/nodeMonitor"
-    log "nodeMonitor — izleme node'u, uygulama servisi yok. git pull tamamlandı."
+    systemctl restart teqlif-prometheus teqlif-loki 2>/dev/null || true
+    log "nodeMonitor — izleme node'u. git pull tamamlandı."
     ;;
 
   node101)

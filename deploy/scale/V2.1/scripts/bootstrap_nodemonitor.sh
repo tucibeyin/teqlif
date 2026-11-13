@@ -46,6 +46,7 @@ main() {
     fix_grafana_defaults
     install_node_exporter "${WG_IP}"
     setup_teqlif_agent "${NODE_DIR}"
+    setup_nodemonitor_tuning
     finalize
 }
 
@@ -88,6 +89,21 @@ setup_monitoring_services() {
     systemctl daemon-reload
     systemctl enable --now teqlif-prometheus teqlif-loki teqlif-alertmanager uptime-kuma grafana-server
     log_ok "Monitoring servisleri aktif"
+}
+
+setup_nodemonitor_tuning() {
+    log_step "nodeMonitor kernel/MariaDB tuning"
+    local node_dir="${NODE_DIR}"
+    # swappiness — monitoring node'da swap baskısını azalt
+    cp "${node_dir}/resources/sysctl.d/99-teqlif.conf" /etc/sysctl.d/99-teqlif.conf
+    sysctl --system >/dev/null
+    log_ok "vm.swappiness=10 (kalıcı)"
+    # MariaDB innodb_buffer_pool_size küçült
+    local mariadb_conf_dir="/etc/mysql/mariadb.conf.d"
+    install -d "${mariadb_conf_dir}"
+    cp "${node_dir}/resources/mariadb.conf.d/99-teqlif.cnf" "${mariadb_conf_dir}/99-teqlif.cnf"
+    systemctl restart mariadb
+    log_ok "innodb_buffer_pool_size=64M (kalıcı)"
 }
 
 finalize() {
