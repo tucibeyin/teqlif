@@ -78,14 +78,13 @@ class LiveListViewModel extends AsyncNotifier<LiveListState> {
     List<Map<String, dynamic>> sugg = [];
 
     if (isLoggedIn) {
-      // Arka planda başlasın ama beklesin ki state'i düzgün kurabilelim
-      try {
-        rec = await ref.read(streamServiceProvider).getRecommendedStreams();
-      } catch (_) {}
-
-      try {
-        sugg = await ref.read(streamServiceProvider).getSuggestedStreamers();
-      } catch (_) {}
+      // Paralel çalıştır — sıralı await 20s'e kadar uzayabilir
+      final results = await Future.wait([
+        ref.read(streamServiceProvider).getRecommendedStreams().catchError((_) => <StreamOut>[]),
+        ref.read(streamServiceProvider).getSuggestedStreamers().catchError((_) => <Map<String, dynamic>>[]),
+      ]);
+      rec = results[0] as List<StreamOut>;
+      sugg = (results[1] as List).cast<Map<String, dynamic>>();
     }
 
     final completer = Completer<List<StreamOut>>();
