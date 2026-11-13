@@ -156,7 +156,7 @@ class AuthService {
         Uri.parse('${_api.config.baseUrl}/auth/refresh'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'refresh_token': rt}),
-      );
+      ).timeout(const Duration(seconds: 10));
       if (resp.statusCode == 200) {
         final body = jsonDecode(resp.body) as Map<String, dynamic>;
         await StorageService.saveToken(body['access_token'] as String);

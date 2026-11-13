@@ -71,7 +71,8 @@ class StreamService {
     final headers = await _headers();
     final token = await StorageService.getToken();
     if (token == null) return [];
-    final resp = await http.get(Uri.parse('${_api.config.baseUrl}/streams/recommended'), headers: headers);
+    final resp = await http.get(Uri.parse('${_api.config.baseUrl}/streams/recommended'), headers: headers)
+        .timeout(const Duration(seconds: 10));
     if (resp.statusCode >= 400) return [];
     final list = _tryDecodeList(resp.body);
     final result = <StreamOut>[];
@@ -90,7 +91,7 @@ class StreamService {
     final resp = await http.get(
       Uri.parse('${_api.config.baseUrl}/streams/suggested-streamers'),
       headers: headers,
-    );
+    ).timeout(const Duration(seconds: 10));
     if (resp.statusCode >= 400) return [];
     return _tryDecodeList(resp.body).cast<Map<String, dynamic>>();
   }
