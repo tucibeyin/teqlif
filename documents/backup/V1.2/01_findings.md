@@ -75,7 +75,7 @@
 | [`AUDIT-03`](#audit-03) | 🟠 **P1** | `nodemonitor_config_backup.sh`, `loki_backup.sh`, cluster sırları | Grafana (`521 MB` + `shared/config`) ve `loki/compactor/` yedeksiz; `node1..6` TLS/WG/`.env` yedeksiz | [Adım 16](#adim-16) | ✅ `7ab35bde` |
 | [`AUDIT-04`](#audit-04) | 🟠 **P1** | `minio_backup.sh`, `uptime_kuma_backup.sh` | `node2` `30g` video temizlik eksiği + `confirm_recordings` race + Kuma `20B` boş `.sql.gz`/inline şifre | [Adım 18](#adim-18) | ✅ `8029c16c` |
 | [`AUDIT-05`](#audit-05) | 🟠 **P1** | `node2`/`node5` ClickHouse, `encoder.py`, `node5:/var/recordings` | TTL'siz CH `system.*_log` (**`node2 2.38 GiB`**, **`node5 5.4 GiB`**) + `3.2G` cache + **`194M` video artığı** | [Adım 23](#adim-23) | ✅ `0845f6d8` |
-| [`AUDIT-06`](#audit-06) | 🟡 **P2** | `_common.sh`, `teqlif-agent`, `journald` | Kırık `**/*.log` glob (`16M` Redis log), **`565 MB` `agent.log`**, kotasız **`journald` (`1.2G`/`1.6G`)** | [Adım 31](#adim-31) | ⬜ Açık |
+| [`AUDIT-06`](#audit-06) | 🟡 **P2** | `_common.sh`, `teqlif-agent`, `journald` | Kırık `**/*.log` glob (`16M` Redis log), **`565 MB` `agent.log`**, kotasız **`journald` (`1.2G`/`1.6G`)** | [Adım 31](#adim-31) | ✅ `7b51107e` |
 | [`AUDIT-07`](#audit-07) | 🟡 **P2** | `teqlif-agent` (`db.py`, `gossip.py`, `janitor.py`) | `cleanup_log` `UNIQUE` eksik + RAM-only `_last_sync` çoğaltma + `janitor.py:149` stale yorum | [Adım 32](#adim-32) | ⬜ Açık |
 | [`AUDIT-08`](#audit-08) | 🟡 **P2** | `backend/app/worker.py` (`cleanup_*`) | `media_messages` `.scalars().all()` OOM/`60d→30d`/commit sırası + `11` tablo batch'siz `DELETE` | [Adım 33](#adim-33) | ⬜ Açık |
 
@@ -1007,8 +1007,15 @@ mc mirror --overwrite --quiet "node1minio/${bucket}" "${dest}"  # 30g silme yok 
 * `_common.sh:150`: Açık wildcard yolu kullan: `/project/teqlif/logs/*.log /project/teqlif/logs/*/*.log` ve ayrı blok `/var/log/teqlif-agent/*.log` (`daily`, `rotate 14`, `compress`, `copytruncate`, `maxsize 50M`); tüm node'lara `/etc/systemd/journald.conf.d/size.conf` (`SystemMaxUse=200M`, `MaxRetentionSec=14day`) bas ve canlıda `journalctl --vacuum-size=200M` çalıştır.
 * **Doğrulama:** `logrotate -d /etc/logrotate.d/teqlif` hata vermeden dosyaları listeler; `journalctl --disk-usage` tüm node'larda `≤ 200M` çıkar.
 
-##### ⬜ Çözüm Damgası
-- *(Henüz uygulanmadı — [Adım 31](#adim-31) bekliyor)*
+##### ✅ Çözüm Damgası
+- **Commit:** `7b51107e` · **Tarih:** 2026-11-13
+- `_common.sh` `setup_logrotate()`: `**/*.log` → `*.log` + `*/*.log` (POSIX uyumlu, `logrotate -d` doğrulandı)
+- `/var/log/teqlif-agent/*.log` ayrı bloğu eklendi (`maxsize 50M`, `copytruncate`)
+- `_common.sh` `setup_journald()` eklendi: `SystemMaxUse=200M`, `MaxRetentionSec=14day`
+- `scripts/resources/logrotate.d/teqlif` + `journald.conf.d/teqlif.conf` → repo'dan idempotent sync
+- `teqlif-restart.sh`: `sync_logrotate()` + `sync_journald()` tüm node'larda (case öncesi global)
+- **Tüm bootstrap scriptleri** `setup_journald` çağrısı eklendi (node1-6, nodeMonitor, node101)
+- **Doğrulama:** journald: node1-6 196M..147M, nodeMonitor 1.4G→109M, node101 175M (hepsi ≤200M ✓); agent.log node1-6 0 byte (force rotate ✓); nodeMonitor günlük cron'a bırakıldı
 
 ---
 
@@ -1400,7 +1407,7 @@ await redis.set("ch:last_sync_at", now.isoformat())  # Aradakiler kalıcı kaybo
 ~~30. **Adım 30 (`MAINT-07`):** `nodeMonitor` üzerinde Prometheus (`--storage.tsdb.retention.size=1GB`), Loki/Grafana/MariaDB (`MemoryMax` + `innodb_buffer_pool_size=64M`) bellek optimizasyonu uygula → _Neden:_ `240 MiB` aktif swap kullanımını ve OOM düşüş riskini ortadan kaldırmak. → ([Detay](#maint-07))~~ ✅ `ccd96e7c`
 
 <a id="adim-31"></a>
-31. **Adım 31 (`AUDIT-06`):** [`_common.sh:149-159`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/scripts/_common.sh#L149-L159) kırık `**/*.log` glob'unu `/project/teqlif/logs/*.log /project/teqlif/logs/*/*.log` + `/var/log/teqlif-agent/*.log` olarak düzelt (tüm node'lara ve `nodeMonitor`'a dağıt), tüm node'larda `journald` `SystemMaxUse=200M` ayarla → _Neden:_ `565 MB agent.log` ve `1.2G/1.6G journald` büyümesini tüm kümede durdurmak. → ([Detay](#audit-06))
+~~31. **Adım 31 (`AUDIT-06`):** [`_common.sh:149-159`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/scripts/_common.sh#L149-L159) kırık `**/*.log` glob'unu `/project/teqlif/logs/*.log /project/teqlif/logs/*/*.log` + `/var/log/teqlif-agent/*.log` olarak düzelt (tüm node'lara ve `nodeMonitor`'a dağıt), tüm node'larda `journald` `SystemMaxUse=200M` ayarla → _Neden:_ `565 MB agent.log` ve `1.2G/1.6G journald` büyümesini tüm kümede durdurmak. → ([Detay](#audit-06))~~ ✅ `7b51107e`
 
 <a id="adim-32"></a>
 32. **Adım 32 (`AUDIT-07`):** `teqlif-agent` [`db.py:39-47`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/teqlif-agent/db.py#L39-L47) `cleanup_log` `UNIQUE` kısıtı + 30g budama/`VACUUM`, [`gossip.py:60`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/teqlif-agent/gossip.py#L60) kalıcı SQLite `_last_sync` ve [`janitor.py:149`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/teqlif-agent/modules/janitor.py#L149) docstring düzeltmesi uygula → _Neden:_ Agent restart'ında SQLite çoğaltmasını ve şişmesini önlemek. → ([Detay](#audit-07))
