@@ -76,7 +76,7 @@
 | [`AUDIT-04`](#audit-04) | 🟠 **P1** | `minio_backup.sh`, `uptime_kuma_backup.sh` | `node2` `30g` video temizlik eksiği + `confirm_recordings` race + Kuma `20B` boş `.sql.gz`/inline şifre | [Adım 18](#adim-18) | ✅ `8029c16c` |
 | [`AUDIT-05`](#audit-05) | 🟠 **P1** | `node2`/`node5` ClickHouse, `encoder.py`, `node5:/var/recordings` | TTL'siz CH `system.*_log` (**`node2 2.38 GiB`**, **`node5 5.4 GiB`**) + `3.2G` cache + **`194M` video artığı** | [Adım 23](#adim-23) | ✅ `0845f6d8` |
 | [`AUDIT-06`](#audit-06) | 🟡 **P2** | `_common.sh`, `teqlif-agent`, `journald` | Kırık `**/*.log` glob (`16M` Redis log), **`565 MB` `agent.log`**, kotasız **`journald` (`1.2G`/`1.6G`)** | [Adım 31](#adim-31) | ✅ `7b51107e` |
-| [`AUDIT-07`](#audit-07) | 🟡 **P2** | `teqlif-agent` (`db.py`, `gossip.py`, `janitor.py`) | `cleanup_log` `UNIQUE` eksik + RAM-only `_last_sync` çoğaltma + `janitor.py:149` stale yorum | [Adım 32](#adim-32) | ⬜ Açık |
+| [`AUDIT-07`](#audit-07) | 🟡 **P2** | `teqlif-agent` (`db.py`, `gossip.py`, `janitor.py`) | `cleanup_log` `UNIQUE` eksik + RAM-only `_last_sync` çoğaltma + `janitor.py:149` stale yorum | [Adım 32](#adim-32) | ✅ `589303d4` |
 | [`AUDIT-08`](#audit-08) | 🟡 **P2** | `backend/app/worker.py` (`cleanup_*`) | `media_messages` `.scalars().all()` OOM/`60d→30d`/commit sırası + `11` tablo batch'siz `DELETE` | [Adım 33](#adim-33) | ⬜ Açık |
 
 ### D. İş Mantığı, Finans, KVKK/Uyum, SPOF & Ölçek (`BIZ-01` .. `BIZ-05`)
@@ -1031,8 +1031,18 @@ mc mirror --overwrite --quiet "node1minio/${bucket}" "${dest}"  # 30g silme yok 
 * `db.py`: `UNIQUE(policy_name, target_id, leader_node, created_at)` + `INSERT OR IGNORE` + `gossip_sync_state` tablosu ile `_last_sync`'i kalıcı sakla + haftalık `DELETE WHERE created_at < datetime('now', '-30 days')` & `PRAGMA optimize`; `janitor.py:149` docstring'ini `worker.py` + `schedule.yaml` olarak düzelt.
 * **Doğrulama:** Agent restart sonrası `cleanup_log` satır sayısı ikiye katlanmaz.
 
-##### ⬜ Çözüm Damgası
-- *(Henüz uygulanmadı — [Adım 32](#adim-32) bekliyor)*
+##### ✅ Çözüm Damgası
+- **Commit:** `589303d4` · **Tarih:** 2026-11-13
+- `db.py`: `idx_cleanup_log_uniq` UNIQUE INDEX eklendi (`policy_name, COALESCE(target_id,''), COALESCE(leader_node,''), created_at`)
+- `db.py`: `gossip_sync_state` tablosu (`node_id PK, last_sync_at`) eklendi
+- `db.py`: `log_cleanup()` → `INSERT OR IGNORE`; `get_last_sync()`/`set_last_sync()` metodları eklendi
+- `db.py`: `init()` sonunda `DELETE cleanup_log WHERE created_at < -30 days` + `PRAGMA optimize`
+- `db.py`: `_EPOCH` sabiti tanımlandı; `gossip.py` artık buradan import eder
+- `gossip.py`: `GossipClient.load_sync_state()` — restart sonrası DB'den sync state yükle
+- `gossip.py`: `_sync_peer()` — başarılı sync sonrası `await db.set_last_sync()` ile kalıcılaştır
+- `agent.py`: `await g_cli.load_sync_state()` çağrısı eklendi
+- `janitor.py:149`: stale docstring `cleanup_actions.sh` → `worker.py + schedule.yaml`
+- **Doğrulama:** `gossip_sync_state` + `idx_cleanup_log_uniq` tüm node'larda mevcut, `teqlif-agent` tümü `active`
 
 ---
 
@@ -1410,7 +1420,7 @@ await redis.set("ch:last_sync_at", now.isoformat())  # Aradakiler kalıcı kaybo
 ~~31. **Adım 31 (`AUDIT-06`):** [`_common.sh:149-159`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/scripts/_common.sh#L149-L159) kırık `**/*.log` glob'unu `/project/teqlif/logs/*.log /project/teqlif/logs/*/*.log` + `/var/log/teqlif-agent/*.log` olarak düzelt (tüm node'lara ve `nodeMonitor`'a dağıt), tüm node'larda `journald` `SystemMaxUse=200M` ayarla → _Neden:_ `565 MB agent.log` ve `1.2G/1.6G journald` büyümesini tüm kümede durdurmak. → ([Detay](#audit-06))~~ ✅ `7b51107e`
 
 <a id="adim-32"></a>
-32. **Adım 32 (`AUDIT-07`):** `teqlif-agent` [`db.py:39-47`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/teqlif-agent/db.py#L39-L47) `cleanup_log` `UNIQUE` kısıtı + 30g budama/`VACUUM`, [`gossip.py:60`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/teqlif-agent/gossip.py#L60) kalıcı SQLite `_last_sync` ve [`janitor.py:149`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/teqlif-agent/modules/janitor.py#L149) docstring düzeltmesi uygula → _Neden:_ Agent restart'ında SQLite çoğaltmasını ve şişmesini önlemek. → ([Detay](#audit-07))
+~~32. **Adım 32 (`AUDIT-07`):** `teqlif-agent` [`db.py:39-47`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/teqlif-agent/db.py#L39-L47) `cleanup_log` `UNIQUE` kısıtı + 30g budama/`VACUUM`, [`gossip.py:60`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/teqlif-agent/gossip.py#L60) kalıcı SQLite `_last_sync` ve [`janitor.py:149`](file:///Users/tucibeyin/Desktop/teqlif/deploy/scale/V2.1/teqlif-agent/modules/janitor.py#L149) docstring düzeltmesi uygula → _Neden:_ Agent restart'ında SQLite çoğaltmasını ve şişmesini önlemek. → ([Detay](#audit-07))~~ ✅ `589303d4`
 
 <a id="adim-33"></a>
 33. **Adım 33 (`AUDIT-08`):** [`worker.py:856-898`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/worker.py#L856-L898) `cleanup_old_media_messages_task` (`30 gün`, `LIMIT 500`, `db.commit()` sonrası MinIO silme — [Karar K5](#kilitli-kararlar)) ve diğer 11 temizlik görevinde `LIMIT 5000` chunk döngülü `DELETE` uygula → _Neden:_ Yüksek veride ARQ OOM, uzun PG tablo kilidi ve dangling MinIO silme riskini önlemek. → ([Detay](#audit-08))
