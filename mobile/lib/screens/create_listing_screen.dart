@@ -223,7 +223,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
       _titleCtrl.text.trim().isNotEmpty &&
       _selectedCategory != null &&
       _selectedProvince != null &&
-      _selectedCondition != null;
+      (_selectedCategory == 'real_estate' || _selectedCondition != null);
 
   Map<String, dynamic> _collectExtraFields() {
     final ef = <String, dynamic>{};

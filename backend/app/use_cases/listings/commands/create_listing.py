@@ -59,8 +59,11 @@ class CreateListingCommand:
             cat = "other"
 
         cond = condition.strip().lower() if condition else ""
-        if not cond or cond not in VALID_CONDITIONS:
+        is_real_estate = cat == "real_estate"
+        if not is_real_estate and (not cond or cond not in VALID_CONDITIONS):
             raise BadRequestException(code="INVALID_CONDITION")
+        if is_real_estate:
+            cond = cond if cond in VALID_CONDITIONS else ""
 
         # brand / model_name: extra_fields'den çıkar, arama indexleri için dedicated kolonlara yaz
         ef = extra_fields or {}
@@ -80,7 +83,7 @@ class CreateListingCommand:
                 "price": price,
                 "category": cat,
                 "subcategory": (subcategory or "").strip().lower() or None,
-                "condition": cond,
+                "condition": cond or None,
                 "province": _province,
                 "district": (district or "").strip() or None,
                 "location": (location or "").strip() or _province,  # Flutter'dan gelen location öncelikli; yoksa province
