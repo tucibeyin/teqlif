@@ -68,6 +68,7 @@ async def main() -> None:
     elector = LeaderElector(cfg)
     g_srv   = GossipServer(cfg, db)
     g_cli   = GossipClient(cfg, db)
+    await g_cli.load_sync_state()
 
     modules = [
         HealthMonitor(cfg, db),

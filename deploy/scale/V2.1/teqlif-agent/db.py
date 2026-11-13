@@ -64,7 +64,19 @@ CREATE TABLE IF NOT EXISTS leader_history (
 
 CREATE INDEX IF NOT EXISTS idx_cleanup_log_created ON cleanup_log(created_at);
 CREATE INDEX IF NOT EXISTS idx_cleanup_log_policy  ON cleanup_log(policy_name);
+
+-- G-Set dedup: gossip delta aynı olayı iki kez eklemesin
+CREATE UNIQUE INDEX IF NOT EXISTS idx_cleanup_log_uniq
+    ON cleanup_log(policy_name, COALESCE(target_id,''), COALESCE(leader_node,''), created_at);
+
+CREATE TABLE IF NOT EXISTS gossip_sync_state (
+    node_id      TEXT PRIMARY KEY,
+    last_sync_at TEXT NOT NULL
+);
 """
+
+
+_EPOCH = "1970-01-01T00:00:00+00:00"
 
 
 def _now() -> str:
@@ -86,6 +98,11 @@ class AgentDB:
             await self._db.execute("ALTER TABLE job_health ADD COLUMN fail_reason TEXT")
         except Exception:
             pass  # "duplicate column name" — zaten mevcut
+        # 30 günden eski cleanup_log satırlarını temizle + istatistikleri güncelle
+        await self._db.execute(
+            "DELETE FROM cleanup_log WHERE created_at < datetime('now', '-30 days')"
+        )
+        await self._db.execute("PRAGMA optimize")
         await self._db.commit()
 
     async def close(self) -> None:
@@ -246,9 +263,26 @@ class AgentDB:
         self, policy_name: str, target_id: str, action: str, result: str, leader_node: str
     ) -> None:
         await self._db.execute("""
-            INSERT INTO cleanup_log (policy_name, target_id, action, result, leader_node, created_at)
+            INSERT OR IGNORE INTO cleanup_log
+                (policy_name, target_id, action, result, leader_node, created_at)
             VALUES (?, ?, ?, ?, ?, ?)
         """, (policy_name, target_id, action, result, leader_node, _now()))
+        await self._db.commit()
+
+    # ── Gossip Sync State ─────────────────────────────────────────────────────
+
+    async def get_last_sync(self, node_id: str) -> str:
+        cur = await self._db.execute(
+            "SELECT last_sync_at FROM gossip_sync_state WHERE node_id=?", (node_id,)
+        )
+        row = await cur.fetchone()
+        return row["last_sync_at"] if row else _EPOCH
+
+    async def set_last_sync(self, node_id: str, last_sync_at: str) -> None:
+        await self._db.execute("""
+            INSERT INTO gossip_sync_state (node_id, last_sync_at) VALUES (?, ?)
+            ON CONFLICT(node_id) DO UPDATE SET last_sync_at = excluded.last_sync_at
+        """, (node_id, last_sync_at))
         await self._db.commit()
 
     # ── TTL Policies ──────────────────────────────────────────────────────────

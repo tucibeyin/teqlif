@@ -10,11 +10,9 @@ import aiohttp
 from aiohttp import web
 
 from config import AgentConfig, PeerConfig
-from db import AgentDB
+from db import AgentDB, _EPOCH
 
 logger = logging.getLogger("teqlif-agent.gossip")
-
-_EPOCH = "1970-01-01T00:00:00+00:00"
 
 
 def _auth_middleware(token: str):
@@ -57,7 +55,13 @@ class GossipClient:
     def __init__(self, cfg: AgentConfig, db: AgentDB) -> None:
         self._cfg        = cfg
         self._db         = db
-        self._last_sync: dict[str, str] = {}   # node_id → son sync timestamp
+        self._last_sync: dict[str, str] = {}   # node_id → son sync timestamp (DB destekli)
+
+    async def load_sync_state(self) -> None:
+        """DB'den kalıcı sync state'i yükle — restart sonrası _EPOCH'a dönüşü önler."""
+        for peer in self._cfg.peers:
+            self._last_sync[peer.node_id] = await self._db.get_last_sync(peer.node_id)
+        logger.debug("Gossip sync state yüklendi: %d peer", len(self._last_sync))
 
     async def sync_all(self) -> None:
         """Tüm erişilebilir peer'larla delta exchange yapar."""
@@ -82,5 +86,7 @@ class GossipClient:
                 delta = await resp.json()
 
         await self._db.apply_delta(delta)
-        self._last_sync[peer.node_id] = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(timezone.utc).isoformat()
+        self._last_sync[peer.node_id] = now
+        await self._db.set_last_sync(peer.node_id, now)
         logger.debug("Gossip sync OK | peer=%s", peer.node_id)

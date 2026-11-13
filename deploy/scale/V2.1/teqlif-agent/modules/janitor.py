@@ -146,7 +146,7 @@ class TTLJanitor:
             await self._count_expired(policy)
 
     async def _count_expired(self, policy: dict) -> None:
-        """Süresi dolmuş kayıt sayısını loglar. Gerçek silme cleanup_actions.sh ile."""
+        """Süresi dolmuş kayıt sayısını loglar. Gerçek silme worker.py + schedule.yaml ile."""
         cfg      = policy["config"]
         table    = cfg.get("table")
         col      = cfg.get("expires_col")
