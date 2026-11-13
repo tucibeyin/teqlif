@@ -64,7 +64,7 @@
 | [`MAINT-05`](#maint-05) | 🟡 **P2** | `schedule.yaml`, `schedule_loader.py`, `worker.py` | `backup:` YAML anahtarı yok, `chat_messages` çift kayıt, hatalı saat yorumları | [Adım 28](#adim-28) | ✅ `ecc3f71a` |
 | [`MAINT-06`](#maint-06) | 🟡 **P2** | `loki`, `kuma`, `config`, `pg_wal_cleanup`, `node2` | Redis `job_ok` atmayan 4 script + `0B` yetim `.last_mail_backup_ok` + eski `03:45` mail timer | [Adım 29](#adim-29) | ✅ `85954a42` |
 | [`MAINT-07`](#maint-07) | 🟡 **P2** | `nodeMonitor` (`1.9 GiB RAM`) | **`240 MiB` aktif swap**, `165 MiB` free RAM darboğazı — Prometheus/Loki bellek limiti ayarı | [Adım 30](#adim-30) | ✅ `ccd96e7c` |
-| [`MAINT-08`](#maint-08) | 🟢 **P3** | `node2` `wg show`, `systemd` timeout'lar | Canlı `node2` `wg show` `node3`/`node4` peer eksikliği + backup servislerinde `TimeoutStartSec` | [Adım 34](#adim-34) | ⬜ Açık |
+| [`MAINT-08`](#maint-08) | 🟢 **P3** | `node2` `wg show`, `systemd` timeout'lar | Canlı `node2` `wg show` `node3`/`node4` peer eksikliği + backup servislerinde `TimeoutStartSec` | [Adım 34](#adim-34) | ✅ `e5096314` |
 
 ### C. Uçtan Uca Bakım, DR, Birikme & Telemetri (`AUDIT-01` .. `AUDIT-08`)
 
@@ -752,8 +752,16 @@ sudo wg-quick save wg0
 * `node2` ↔ `node3`/`node4` WG peering durumu denetlenip eksikse `wg_mesh_apply` ile tamamlanır; kalan 10 backup/bakım servisine çalışma süresine orantılı `TimeoutStartSec` (`900`–`3600`) eklenir.
 * **Doğrulama:** `ssh node2 "sudo wg show wg0 peers | wc -l"` beklenen tüm küme + `node101` eş sayısını gösterir.
 
-##### ⬜ Çözüm Damgası
-- *(Henüz uygulanmadı — [Adım 34](#adim-34) bekliyor)*
+##### ✅ Çözüm Damgası
+- **`e5096314` — 2026-11-13:**
+  - WG peering: node3 (10.10.0.3) + node4 (10.10.0.4) OFFSITE-05 (c5cb95a2) ile zaten düzeltilmişti — node2 `wg show` 7 peer aktif ✓
+  - `TimeoutStartSec` eklenen 14 servis (pg_basebackup zaten 1800 vardı):
+    minio-backup=7200, offsite-sync=7200, pg-dump=3600, clickhouse-backup=3600,
+    offsite-wal=1800, loki-backup=1800, cluster-secrets-backup=900, mail-backup=900,
+    nodemonitor-config-backup=900, redis-backup=900, redis-failover=300,
+    uptime-kuma-backup=600, pg-wal-cleanup=300, backup-failed@=60
+  - `systemctl daemon-reload` node2'de otomatik uygulandı (teqlif-restart sync_services)
+  - 8/8 node `e5096314` ✓
 
 ---
 
@@ -1432,7 +1440,7 @@ await redis.set("ch:last_sync_at", now.isoformat())  # Aradakiler kalıcı kaybo
 ~~33. **Adım 33 (`AUDIT-08`):** [`worker.py:856-898`](file:///Users/tucibeyin/Desktop/teqlif/backend/app/worker.py#L856-L898) `cleanup_old_media_messages_task` (`30 gün`, `LIMIT 500`, `db.commit()` sonrası MinIO silme — [Karar K5](#kilitli-kararlar)) ve diğer 11 temizlik görevinde `LIMIT 5000` chunk döngülü `DELETE` uygula → _Neden:_ Yüksek veride ARQ OOM, uzun PG tablo kilidi ve dangling MinIO silme riskini önlemek. → ([Detay](#audit-08))~~ ✅ `8b6813b2`
 
 <a id="adim-34"></a>
-34. **Adım 34 (`MAINT-08`):** Canlı `node2 wg show` üzerinde görünmeyen `node3`/`node4` WG peering'ini doğrula/onar ve `TimeoutStartSec` bulunmayan kalan 10 backup/bakım servisine uygun `TimeoutStartSec` (`900`–`3600`) ekle → _Neden:_ Edge düğümler arası bakım/failover erişimini ve askıda kalma korumasını sağlamak. → ([Detay](#maint-08))
+~~34. **Adım 34 (`MAINT-08`):** Canlı `node2 wg show` üzerinde görünmeyen `node3`/`node4` WG peering'ini doğrula/onar ve `TimeoutStartSec` bulunmayan kalan 10 backup/bakım servisine uygun `TimeoutStartSec` (`900`–`3600`) ekle → _Neden:_ Edge düğümler arası bakım/failover erişimini ve askıda kalma korumasını sağlamak. → ([Detay](#maint-08))~~ ✅ `e5096314`
 
 <a id="adim-35"></a>
 35. **Adım 35 (`OFFSITE-13`):** TTK/MASAK uyumlu aylık WORM finansal arşiv job'ını (`wallet_ledger`, `withdrawal_requests`, `purchases`, `audit_logs` 1y+ → SHA-256 manifest + `restic backup --tag financial-worm`, 10y retention) kur → _Neden:_ Yasal finansal defterlerin değiştirilemez soğuk arşivini güvenceye almak. → ([Detay](#offsite-13))
