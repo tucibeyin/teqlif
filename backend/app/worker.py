@@ -1128,6 +1128,7 @@ async def flush_interactions_to_db(ctx: dict) -> None:
         # olduğunda o batch kalıcı olarak kaybolur.
         raw_items: list[str] = await redis.lrange(QUEUE_KEY, 0, BATCH_LIMIT - 1)
         if not raw_items:
+            await _agent_ok(ctx, "flush_interactions_to_db")
             return
 
         now = datetime.now(timezone.utc)
@@ -1157,6 +1158,7 @@ async def flush_interactions_to_db(ctx: dict) -> None:
                 continue
 
         if not rows:
+            await _agent_ok(ctx, "flush_interactions_to_db")
             return
 
         # ── PostgreSQL insert ──────────────────────────────────────────────────
@@ -1305,6 +1307,7 @@ async def sync_swipelive_interests_task(ctx: dict) -> None:
             rows = result.all()
 
         if not rows:
+            await _agent_ok(ctx, "sync_swipelive_interests_task")
             return
 
         now = datetime.now(timezone.utc)
@@ -2449,6 +2452,7 @@ async def cleanup_stale_streams_task(ctx: dict) -> None:
             )).scalars().all()
 
             if not streams:
+                await _agent_ok(ctx, "cleanup_stale_streams_task")
                 return
 
             try:
@@ -2774,6 +2778,7 @@ async def cleanup_ghost_calls_task(ctx: dict) -> None:
 
             if not ghost_calls:
                 logger.info("[CALL_PROCESS][END] cleanup_ghost_calls_task: no ghost calls found")
+                await _agent_ok(ctx, "cleanup_ghost_calls_task")
                 return
             logger.info("[CALL_PROCESS][END] cleanup_ghost_calls_task: found %d ghost call(s)", len(ghost_calls))
 
@@ -4205,6 +4210,7 @@ async def check_search_alerts_task(ctx: dict) -> None:
             )
         )).scalars().all()
         if not listings:
+            await _agent_ok(ctx, "check_search_alerts_task")
             return
 
         alerts = (await db.execute(
