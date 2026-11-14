@@ -158,12 +158,16 @@ class LiveListViewModel extends AsyncNotifier<LiveListState> {
           );
     }
 
-    // ── Active streams tamamlanmasını bekle (SWR cache = anlık, yoksa 10s) ──
+    // ── Active streams tamamlanmasını bekle (SWR cache = anlık, yoksa 15s) ──
+    // Timeout: completer'ı da tamamla (isCompleted=true) — aksi takdirde HTTP
+    // yanıtı geldiğinde listener'da completer.isCompleted=false olur, complete()
+    // çağrılır ama kimse beklemediğinden state güncellenmez.
     debugPrint('[LiveList] waiting for activeStreams | gen=$gen');
     final activeStreams = await completer.future.timeout(
-      const Duration(seconds: 10),
+      const Duration(seconds: 15),
       onTimeout: () {
-        debugPrint('[LiveList] activeStreams TIMEOUT 10s | gen=$gen');
+        debugPrint('[LiveList] activeStreams TIMEOUT 15s | gen=$gen');
+        if (!completer.isCompleted) completer.complete([]);
         return <StreamOut>[];
       },
     );

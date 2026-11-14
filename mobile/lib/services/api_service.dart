@@ -90,7 +90,9 @@ class ApiService {
     try {
       final headers = await _headers(auth: auth);
       if (extraHeaders != null) headers.addAll(extraHeaders);
-      if (url.contains('/stories/')) debugPrint('[ApiService] story GET start: $url | timeout=${timeout.inSeconds}s');
+      if (url.contains('/stories/') || url.contains('/streams/')) {
+        debugPrint('[ApiService] GET start: $url | timeout=${timeout.inSeconds}s');
+      }
 
       // ETag varsa If-None-Match ekle — sunucu "değişmedi" ise 304 döner
       if (cacheKey != null) {
@@ -102,7 +104,9 @@ class ApiService {
       // CACHE-15: paralel aynı-URL isteklerini tek Future'da birleştirir.
       final resp = await _getRaw(url, headers, timeout);
 
-      if (url.contains('/stories/')) debugPrint('[ApiService] story GET done: ${resp.statusCode} | $url');
+      if (url.contains('/stories/') || url.contains('/streams/')) {
+        debugPrint('[ApiService] GET done: ${resp.statusCode} | $url');
+      }
       if (resp.statusCode == 304 && cacheKey != null) {
         // CACHE-13: veri değişmedi — gövdeyi yeniden encode etme; sadece TTL +
         // sunucudan gelen ETag (varsa) güncelle.  Eski kod saveData yapıyordu:
@@ -135,7 +139,9 @@ class ApiService {
             ).ignore();
           }
         }
-        if (url.contains('/stories/')) debugPrint('[ApiService] story yield: $url');
+        if (url.contains('/stories/') || url.contains('/streams/')) {
+          debugPrint('[ApiService] yield: $url');
+        }
         yield fromJson(data);
       } else if (resp.statusCode == 401) {
         // CACHE-07: 401 — oturum düşmüş; cache+storage temizle ve fırlat.
@@ -175,7 +181,9 @@ class ApiService {
       if (!cacheYielded) throw const NetworkException();
       debugPrint('[ApiService] Ağ hatası — cache korunuyor ($cacheKey)');
     } on TimeoutException {
-      if (url.contains('/stories/')) debugPrint('[ApiService] story TIMEOUT: $url');
+      if (url.contains('/stories/') || url.contains('/streams/')) {
+        debugPrint('[ApiService] TIMEOUT: $url');
+      }
       if (!cacheYielded) throw const NetworkException();
       debugPrint('[ApiService] Timeout — cache korunuyor ($cacheKey)');
     } catch (e) {
