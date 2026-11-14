@@ -48,6 +48,11 @@ class LiveListViewModel extends AsyncNotifier<LiveListState> {
   final _connectSvc = ConnectivityService();
   // fire-and-forget callback'lerin eski nesil state'i kirletmesini önler
   int _gen = 0;
+  // Post-load connectivity debounce: iOS geçiş sırasında 10+ event atar,
+  // debounce bunları tek bir refresh'e indirger.
+  Timer? _refreshDebounce;
+  // Eş zamanlı refresh() çağrılarını engeller.
+  bool _refreshing = false;
 
   @override
   FutureOr<LiveListState> build() async {
@@ -73,7 +78,18 @@ class LiveListViewModel extends AsyncNotifier<LiveListState> {
       } else if (state.value != null) {
         final wasOffline = state.value!.isOffline;
         state = AsyncValue.data(state.value!.copyWith(isOffline: !online));
-        if (online && wasOffline) refresh(bypassCache: true);
+        if (online && wasOffline) {
+          // iOS geçişte 10+ event atar; debounce bunları tek refresh'e indirir.
+          // Her event (online veya offline) zamanlayıcıyı sıfırlar; sadece
+          // online+wasOffline durumunda yeniden başlatır.
+          _refreshDebounce?.cancel();
+          _refreshDebounce = Timer(
+            const Duration(milliseconds: 500),
+            () => refresh(bypassCache: true),
+          );
+        } else {
+          _refreshDebounce?.cancel();
+        }
       }
     });
 
@@ -81,6 +97,7 @@ class LiveListViewModel extends AsyncNotifier<LiveListState> {
       _wsSub?.cancel();
       _wsSub = null;
       connectSub?.cancel();
+      _refreshDebounce?.cancel();
       _swrSub?.cancel();
       if (_pendingCompleter != null && !_pendingCompleter!.isCompleted) {
         _pendingCompleter!.complete([]);
@@ -175,14 +192,14 @@ class LiveListViewModel extends AsyncNotifier<LiveListState> {
     }
 
     // ── Active streams tamamlanmasını bekle ──────────────────────────────────
-    // Birincil mekanizma: connectivity event (clearInFlight + invalidateSelf).
-    // 30s failsafe: network hiç gelmezse sonsuz donmayı önler; completer'ı
-    // açıkça tamamlar ki HTTP yanıtı gelince listener state.copyWith yapabilsin.
+    // SWR mantığı: 3s içinde yanıt gelmezse boş liste döndür, UI hızlı açılır.
+    // _swrSub hâlâ aktif — HTTP yanıtı gelince listener state.copyWith ile günceller.
+    // Birincil retry mekanizması: connectivity event (clearInFlight + invalidateSelf).
     debugPrint('[LiveList] waiting for activeStreams | gen=$gen');
     final activeStreams = await completer.future.timeout(
-      const Duration(seconds: 30),
+      const Duration(seconds: 3),
       onTimeout: () {
-        debugPrint('[LiveList] activeStreams failsafe 30s | gen=$gen');
+        debugPrint('[LiveList] activeStreams timeout 3s — UI hızlı açılıyor | gen=$gen');
         if (!completer.isCompleted) completer.complete([]);
         return <StreamOut>[];
       },
@@ -227,6 +244,10 @@ class LiveListViewModel extends AsyncNotifier<LiveListState> {
   }
 
   Future<void> refresh({bool bypassCache = true}) async {
+    // Eş zamanlı refresh çağrılarını engelle (iOS geçişte debounce sonrası bile
+    // iki çağrı gelebilir; guard bunu önler).
+    if (_refreshing) return;
+    _refreshing = true;
     final hadData = state.value != null;
     if (!hadData) {
       state = const AsyncValue.loading();
@@ -243,6 +264,8 @@ class LiveListViewModel extends AsyncNotifier<LiveListState> {
       if (!hadData) {
         state = AsyncValue.error(e, st);
       }
+    } finally {
+      _refreshing = false;
     }
   }
 }
