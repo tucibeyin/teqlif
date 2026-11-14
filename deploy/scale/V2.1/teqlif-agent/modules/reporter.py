@@ -76,6 +76,12 @@ class MorningReporter:
         now_utc = datetime.now(timezone.utc)
         if now_utc.hour != _REPORT_UTC_HOUR:
             return
+
+        # Telegram config eksikse Redis key'i set etme — her gün tekrar kontrol edilsin.
+        if not self._cfg.telegram_bot_token or not self._cfg.telegram_chat_id:
+            logger.warning("Sabah raporu: telegram_bot_token veya telegram_chat_id eksik, atlanıyor.")
+            return
+
         today     = now_utc.date()
         redis_key = f"teqlif:agent:morning_reported:{today.isoformat()}"
         try:
@@ -170,6 +176,142 @@ class MorningReporter:
         logger.info(
             "Sabah raporu: %d/%d node aktif, %d/%d batch OK",
             online, len(node_states), len(ok_jobs), total_b,
+        )
+
+
+# ── Staging Sabah Raporu ─────────────────────────────────────────────────────
+
+_STAGING_REPORT_UTC_HOUR = 7   # Prod ile aynı saatte, ayrı kanala
+
+# Staging ARQ worker'ın çalıştırdığı günlük job'lar (prod ile aynı WorkerSettings)
+_STAGING_DAILY_BATCH_JOBS: list[str] = [
+    "sync_pg_to_clickhouse_task",
+    "compute_analytics_cache_task",
+    "precompute_premium_user_analytics_task",
+    "cleanup_old_notifications_task",
+    "cleanup_old_stream_likes_task",
+    "compute_seller_badges_task",
+    "calculate_user_budgets_task",
+    "compute_trust_scores_task",
+    "compute_user_interests_task",
+    "compute_trending_categories_task",
+    "deactivate_expired_listings_task",
+    "delete_expired_inactive_listings_task",
+    "cleanup_old_impressions_task",
+    "cleanup_old_media_messages_task",
+    "cleanup_hidden_messages_task",
+    "populate_foryou_feed_task",
+    "compute_trending_listings_task",
+]
+
+# Staging sürekli görevler — interval aşımı kontrolü için (dakika)
+_STAGING_CONTINUOUS: dict[str, int] = {
+    "flush_interactions_to_db":     5,
+    "cleanup_expired_stories_task": 60,
+    "sync_ad_campaigns_task":       10,
+    "cleanup_stale_streams_task":   2,
+    "refresh_i18n_cache_task":      10,
+    "cleanup_ghost_calls_task":     15,
+}
+
+
+class StagingMorningReporter:
+    """
+    Staging ARQ job sağlığını staging Telegram kanalına raporlar.
+
+    Lider seçimine bağlı değildir — staging servisleri çalıştıran node
+    (node5) doğrudan staging Redis'ten okur ve raporu gönderir.
+    staging_redis_url veya staging_telegram_chat_id eksikse sessizce atlar.
+    """
+
+    def __init__(self, cfg: AgentConfig) -> None:
+        self._cfg = cfg
+
+    async def run(self, is_leader: bool) -> None:  # noqa: ARG002
+        if not self._cfg.staging_redis_url or not self._cfg.staging_telegram_chat_id:
+            return
+        if not self._cfg.telegram_bot_token:
+            return
+
+        now_utc = datetime.now(timezone.utc)
+        if now_utc.hour != _STAGING_REPORT_UTC_HOUR:
+            return
+
+        today     = now_utc.date()
+        redis_key = f"teqlif:agent:staging_morning_reported:{today.isoformat()}"
+        try:
+            import redis.asyncio as _aioredis
+            r = await _aioredis.from_url(self._cfg.staging_redis_url, decode_responses=True)
+            already_sent = await r.exists(redis_key)
+            if already_sent:
+                await r.aclose()
+                return
+            set_ok = await r.set(redis_key, "1", nx=True, ex=90000)
+            if not set_ok:
+                await r.aclose()
+                return
+            # Staging Redis'ten job_ok sinyallerini oku
+            job_ok_map: dict[str, str] = await r.hgetall("teqlif:agent:job_ok")
+            await r.aclose()
+        except Exception:
+            logger.warning("Staging Redis okunamadı — staging raporu atlanıyor")
+            return
+
+        try:
+            await self._send_report(now_utc, job_ok_map)
+        except Exception:
+            logger.exception("Staging sabah raporu gönderilemedi")
+
+    async def _send_report(self, now_utc: datetime, job_ok_map: dict[str, str]) -> None:
+        tr_dt   = now_utc.astimezone(_TR_TZ)
+        tr_date = f"{tr_dt.day} {_TR_MONTHS[tr_dt.month - 1]} {tr_dt.year}"
+        lines   = [f"🧪 <b>Staging Sabah Raporu — {tr_date}</b>"]
+
+        # ── Sürekli Görevler ──────────────────────────────────────────────────
+        cont_ok, cont_fail = [], []
+        for jname, max_m in _STAGING_CONTINUOUS.items():
+            ts    = job_ok_map.get(jname)
+            age_m = _age_minutes(ts)
+            if age_m is not None and age_m < max_m * 1.5:
+                cont_ok.append(jname)
+            else:
+                cont_fail.append((jname, ts))
+
+        lines.append(f"\n🔄 <b>Sürekli Görevler ({len(cont_ok)}/{len(_STAGING_CONTINUOUS)} OK)</b>")
+        if cont_fail:
+            for jname, last in cont_fail:
+                last_str = _fmt_ts(last) if last else "hiç çalışmadı"
+                lines.append(f"  ⚠️ <code>{jname}</code> — son OK: {last_str}")
+        else:
+            lines.append("  Tümü aktif ✔")
+
+        # ── Günlük Batch İşleri ───────────────────────────────────────────────
+        ok_jobs, fail_jobs = [], []
+        for jname in _STAGING_DAILY_BATCH_JOBS:
+            ts    = job_ok_map.get(jname)
+            age_m = _age_minutes(ts)
+            if age_m is not None and age_m < 1440:
+                ok_jobs.append(jname)
+            else:
+                fail_jobs.append((jname, ts))
+
+        total_b = len(_STAGING_DAILY_BATCH_JOBS)
+        lines.append(f"\n⚙️ <b>Batch İşleri ({len(ok_jobs)}/{total_b} OK)</b>")
+        if fail_jobs:
+            for jname, last in fail_jobs:
+                last_str = _fmt_ts(last) if last else "hiç çalışmadı"
+                lines.append(f"  ⚠️ <code>{jname}</code> — son OK: {last_str}")
+        else:
+            lines.append("  Tüm batch işler tamamlandı ✔")
+
+        await tg.send(
+            self._cfg.telegram_bot_token,
+            self._cfg.staging_telegram_chat_id,
+            "\n".join(lines),
+        )
+        logger.info(
+            "Staging sabah raporu: %d/%d batch OK, %d/%d sürekli OK",
+            len(ok_jobs), total_b, len(cont_ok), len(_STAGING_CONTINUOUS),
         )
 
 

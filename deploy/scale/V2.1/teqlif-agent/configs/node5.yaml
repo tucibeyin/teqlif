@@ -10,9 +10,13 @@ log_level: INFO
 telegram_bot_token: ""
 telegram_chat_id:   ""
 
-redis_url:      redis://10.10.0.1:6379/0
+redis_url:      ""   # REDIS_URL veya CORE_REDIS_URL env değişkeninden gelir
 cycle_interval: 60
 gossip_timeout: 5
+
+# Staging izleme — değerler /etc/teqlif-agent/env'den yüklenir
+staging_redis_url:        ""
+staging_telegram_chat_id: ""
 
 monitor_services: ["ai-proxy", "redis", "postgresql", "minio", "gossip-agent", "staging", "worker-staging", "worker-critical-staging", "livekit-staging"]
 
