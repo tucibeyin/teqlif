@@ -48,9 +48,6 @@ class LiveListViewModel extends AsyncNotifier<LiveListState> {
   final _connectSvc = ConnectivityService();
   // fire-and-forget callback'lerin eski nesil state'i kirletmesini önler
   int _gen = 0;
-  // Post-load connectivity debounce: iOS geçiş sırasında 10+ event atar,
-  // debounce bunları tek bir refresh'e indirger.
-  Timer? _refreshDebounce;
   // Eş zamanlı refresh() çağrılarını engeller.
   bool _refreshing = false;
 
@@ -78,18 +75,7 @@ class LiveListViewModel extends AsyncNotifier<LiveListState> {
       } else if (state.value != null) {
         final wasOffline = state.value!.isOffline;
         state = AsyncValue.data(state.value!.copyWith(isOffline: !online));
-        if (online && wasOffline) {
-          // iOS geçişte 10+ event atar; debounce bunları tek refresh'e indirir.
-          // Her event (online veya offline) zamanlayıcıyı sıfırlar; sadece
-          // online+wasOffline durumunda yeniden başlatır.
-          _refreshDebounce?.cancel();
-          _refreshDebounce = Timer(
-            const Duration(milliseconds: 500),
-            () => refresh(bypassCache: true),
-          );
-        } else {
-          _refreshDebounce?.cancel();
-        }
+        if (online && wasOffline) refresh(bypassCache: true);
       }
     });
 
@@ -97,7 +83,6 @@ class LiveListViewModel extends AsyncNotifier<LiveListState> {
       _wsSub?.cancel();
       _wsSub = null;
       connectSub?.cancel();
-      _refreshDebounce?.cancel();
       _swrSub?.cancel();
       if (_pendingCompleter != null && !_pendingCompleter!.isCompleted) {
         _pendingCompleter!.complete([]);
