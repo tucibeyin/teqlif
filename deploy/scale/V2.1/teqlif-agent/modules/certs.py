@@ -37,6 +37,7 @@ _STATIC_PORT_MAP = {
     "postgresql": [("127.0.0.1", 5432)],
     "minio":      [("127.0.0.1", 9000)],
     "livekit":    [("127.0.0.1", 7880)],
+    "restic-rest-server": [("10.10.0.101", 8000)],  # node101 WireGuard — append-only offsite
 }
 
 _DOMAINS = [

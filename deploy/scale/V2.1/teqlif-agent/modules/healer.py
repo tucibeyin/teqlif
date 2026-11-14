@@ -42,6 +42,7 @@ _SERVICES_TO_WATCH = [
     "clickhouse-server.service",
     "haproxy.service",
     "stalwart-mail.service",
+    "restic-rest-server.service",        # node101 — offsite backup hedef
 ]
 
 

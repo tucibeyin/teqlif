@@ -34,11 +34,12 @@ logger = logging.getLogger("teqlif-agent.health")
 # ── Eşikler ──────────────────────────────────────────────────────────────────
 
 _HW_THRESHOLDS = {
-    "cpu_percent":  85.0,
-    "ram_percent":  88.0,
-    "disk_percent": 82.0,
-    "net_rx_mbps":  900.0,
-    "net_tx_mbps":  900.0,
+    "cpu_percent":        85.0,
+    "ram_percent":        88.0,
+    "disk_percent":       82.0,
+    "offsite_disk_percent": 85.0,  # node101 /mnt/data (1TB HDD)
+    "net_rx_mbps":        900.0,
+    "net_tx_mbps":        900.0,
 }
 
 _BACKUP_MAX_MIN = {
@@ -80,6 +81,7 @@ _ALL_SERVICES = [
     "clickhouse-server",
     "haproxy",
     "stalwart-mail",
+    "restic-rest-server",               # node101 — offsite backup hedef
 ]
 
 # Cooldown: aynı alert 30 dk içinde tekrar gitmez
@@ -145,11 +147,12 @@ class HealthMonitor:
 
     async def _eval_hw(self, node_id: str, metrics: dict) -> None:
         labels = {
-            "cpu_percent":  ("CPU",      "%"),
-            "ram_percent":  ("RAM",      "%"),
-            "disk_percent": ("Disk",     "%"),
-            "net_rx_mbps":  ("Ağ giriş", "Mbps"),
-            "net_tx_mbps":  ("Ağ çıkış", "Mbps"),
+            "cpu_percent":          ("CPU",              "%"),
+            "ram_percent":          ("RAM",              "%"),
+            "disk_percent":         ("Disk",             "%"),
+            "offsite_disk_percent": ("Offsite Veri Disk", "%"),
+            "net_rx_mbps":          ("Ağ giriş",         "Mbps"),
+            "net_tx_mbps":          ("Ağ çıkış",         "Mbps"),
         }
         for key, threshold in _HW_THRESHOLDS.items():
             val = metrics.get(key)
@@ -209,6 +212,7 @@ class HealthMonitor:
             "clickhouse-server":      "ClickHouse",
             "haproxy":                "HAProxy",
             "stalwart-mail":          "Stalwart Mail",
+            "restic-rest-server":     "Restic REST Server (node101)",
         }
         for svc, data in services.items():
             if not isinstance(data, dict):
@@ -279,13 +283,17 @@ class HealthMonitor:
 
 async def _collect_hw_metrics() -> dict:
     """CPU/RAM/Disk/Net — /proc ve /sys üzerinden, sıfır bağımlılık."""
-    return {
+    metrics = {
         "cpu_percent":  await _cpu_percent(),
         "ram_percent":  _ram_percent(),
         "disk_percent": _disk_percent("/"),
         "ntp_synced":   await _ntp_synced(),
         **_net_mbps(),
     }
+    # node101'de /mnt/data HDD varsa ayrıca izle
+    if Path("/mnt/data").is_mount():
+        metrics["offsite_disk_percent"] = _disk_percent("/mnt/data")
+    return metrics
 
 
 async def _ntp_synced() -> bool:
