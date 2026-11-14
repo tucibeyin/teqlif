@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/app_exception.dart';
 import '../core/network/api_client.dart';
 import '../models/story.dart';
 import '../services/api_service.dart';
@@ -34,6 +35,16 @@ class StoryGroupsNotifier
     final link = ref.keepAlive();
     final timer = Timer(const Duration(minutes: 5), link.close);
     ref.onDispose(timer.cancel);
+
+    // Failsafe: WiFi→mobile geçişinde iOS zaman zaman HTTP timeout'unu tetiklemez.
+    // 25s sonra hâlâ AsyncLoading ise error state'e geçip shimmer döngüsünü kır.
+    final failsafe = Timer(const Duration(seconds: 25), () {
+      if (!_disposed && state.isLoading && !state.hasValue) {
+        debugPrint('[StoryGroups] failsafe — 25s geçti, hâlâ yükleniyor');
+        state = AsyncError(const NetworkException(), StackTrace.empty);
+      }
+    });
+    ref.onDispose(failsafe.cancel);
 
     List<UserStoryGroup>? last;
     try {
@@ -105,6 +116,14 @@ class MyStoriesNotifier extends AutoDisposeAsyncNotifier<List<StoryItem>> {
     final link = ref.keepAlive();
     final timer = Timer(const Duration(minutes: 5), link.close);
     ref.onDispose(timer.cancel);
+
+    final failsafe = Timer(const Duration(seconds: 25), () {
+      if (!_disposed && state.isLoading && !state.hasValue) {
+        debugPrint('[MyStories] failsafe — 25s geçti, hâlâ yükleniyor');
+        state = AsyncError(const NetworkException(), StackTrace.empty);
+      }
+    });
+    ref.onDispose(failsafe.cancel);
 
     List<StoryItem>? last;
     try {

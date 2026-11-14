@@ -82,10 +82,15 @@ class LiveListViewModel extends AsyncNotifier<LiveListState> {
     List<Map<String, dynamic>> sugg = [];
 
     if (isLoggedIn) {
+      // iOS'ta WiFi→mobile geçişinde iç .timeout() bazen tetiklenmiyor; dış timeout
+      // kesinlikle 22s'de completer'ı bitirir ve spinner döngüsünü kırar.
       final results = await Future.wait([
         ref.read(streamServiceProvider).getRecommendedStreams().catchError((_) => <StreamOut>[]),
         ref.read(streamServiceProvider).getSuggestedStreamers().catchError((_) => <Map<String, dynamic>>[]),
-      ]);
+      ]).timeout(
+        const Duration(seconds: 22),
+        onTimeout: () => [<StreamOut>[], <Map<String, dynamic>>[]],
+      );
       rec = results[0] as List<StreamOut>;
       sugg = (results[1] as List).cast<Map<String, dynamic>>();
     }
@@ -127,7 +132,11 @@ class LiveListViewModel extends AsyncNotifier<LiveListState> {
       }
     );
 
-    final activeStreams = await completer.future;
+    // SWR stream da askıda kalabilir (aynı iOS network geçiş sorunu).
+    final activeStreams = await completer.future.timeout(
+      const Duration(seconds: 22),
+      onTimeout: () => [],
+    );
 
     return LiveListState(
       streams: activeStreams,

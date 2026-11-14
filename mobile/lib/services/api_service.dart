@@ -107,11 +107,12 @@ class ApiService {
         // CACHE-13: veri değişmedi — gövdeyi yeniden encode etme; sadece TTL +
         // sunucudan gelen ETag (varsa) güncelle.  Eski kod saveData yapıyordu:
         // getWithStaleness → yeni wrapper Map → jsonEncode(entire body) → Hive write.
-        await _cache.touchData(
+        // FIX: fire-and-forget — Hive write UI'ı bloklamasın.
+        _cache.touchData(
           cacheKey,
           ttl: cacheTtl,
           newEtag: resp.headers['etag'], // null ise mevcut ETag korunur (RFC 7232 §4.1)
-        );
+        ).ignore();
         return;
       }
 
@@ -121,18 +122,20 @@ class ApiService {
           // CACHE-14: Cache-Control direktiflerini dikkate al (RFC 9111).
           // no-store → hiç kaydetme; önceden kayıtlı zombie veriyi de sil.
           // no-cache / max-age=0 → ttl=0 (SWR her zaman revalidate eder).
+          // FIX: fire-and-forget — Hive write yield'i bloklamasın.
           final cc = resp.headers['cache-control'];
           if (_noStore(cc)) {
-            await _cache.clearData(cacheKey);
+            _cache.clearData(cacheKey).ignore();
           } else {
-            await _cache.saveData(
+            _cache.saveData(
               cacheKey,
               data,
               ttl: _effectiveTtl(cc, cacheTtl),
               etag: resp.headers['etag'],
-            );
+            ).ignore();
           }
         }
+        if (url.contains('/stories/')) debugPrint('[ApiService] story yield: $url');
         yield fromJson(data);
       } else if (resp.statusCode == 401) {
         // CACHE-07: 401 — oturum düşmüş; cache+storage temizle ve fırlat.
