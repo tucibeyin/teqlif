@@ -86,6 +86,17 @@ _ALL_SERVICES = [
 _COOLDOWN_SEC = 30 * 60
 _FIRING_TTL   = 4 * 60 * 60   # 4 saat — recovery tespiti için
 
+# Staging servis uyarıları → staging Telegram kanalına yönlendirilir
+_STAGING_SERVICES: frozenset[str] = frozenset({
+    "teqlif-staging",
+    "teqlif-worker-staging",
+    "teqlif-worker-critical-staging",
+    "teqlif-worker-video-staging",
+    "teqlif-ai-proxy-staging",
+    "teqlif-redis-staging",
+    "teqlif-livekit-staging",
+})
+
 
 class HealthMonitor:
     def __init__(self, cfg: AgentConfig, db: AgentDB) -> None:
@@ -205,14 +216,19 @@ class HealthMonitor:
             label   = svc_labels.get(svc, svc)
             healthy = data.get("healthy", True)
             fkey    = f"{node_id}:svc:{svc}"
+            chat_id = (
+                self._cfg.staging_telegram_chat_id
+                if svc in _STAGING_SERVICES and self._cfg.staging_telegram_chat_id
+                else None
+            )
             if not healthy:
                 err = data.get("error", "")
                 msg = f"🔴 <b>{node_id}</b> — {label} çöktü"
                 if err:
                     msg += f"\n<code>{err[:120]}</code>"
-                await self._fire(fkey, msg)
+                await self._fire(fkey, msg, chat_id=chat_id)
             else:
-                await self._recover(fkey, f"✅ <b>{node_id}</b> — {label} kurtardı")
+                await self._recover(fkey, f"✅ <b>{node_id}</b> — {label} kurtardı", chat_id=chat_id)
 
         # Yedek eskimesi
         for bkey, max_min in _BACKUP_MAX_MIN.items():
@@ -241,21 +257,21 @@ class HealthMonitor:
 
     # ── Fire / Recover ────────────────────────────────────────────────────────
 
-    async def _fire(self, key: str, message: str) -> None:
+    async def _fire(self, key: str, message: str, chat_id: str | None = None) -> None:
         now = time.monotonic()
         if now - self._cooldown.get(key, 0) < _COOLDOWN_SEC:
             return
         self._cooldown[key] = now
         self._firing[key]   = now
-        await tg.send(self._cfg.telegram_bot_token, self._cfg.telegram_chat_id, message)
+        await tg.send(self._cfg.telegram_bot_token, chat_id or self._cfg.telegram_chat_id, message)
         logger.warning("ALERT: %s", message.replace("\n", " "))
 
-    async def _recover(self, key: str, message: str) -> None:
+    async def _recover(self, key: str, message: str, chat_id: str | None = None) -> None:
         if key not in self._firing:
             return
         del self._firing[key]
         self._cooldown.pop(key, None)
-        await tg.send(self._cfg.telegram_bot_token, self._cfg.telegram_chat_id, message)
+        await tg.send(self._cfg.telegram_bot_token, chat_id or self._cfg.telegram_chat_id, message)
         logger.info("RECOVER: %s", message)
 
 
