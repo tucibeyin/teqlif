@@ -128,12 +128,33 @@ class HealthMonitor:
             all_states = await self._db.get_all_node_states()
             for state in all_states:
                 nid = state["node_id"]
+                await self._eval_node_seen(nid, state.get("seen_at", ""))
                 await self._eval_hw(nid, state["metrics"])
                 await self._eval_services(nid, state["services"])
                 await self._eval_recording_disk(nid, state["metrics"])
                 await self._eval_ntp(nid, state["metrics"])
 
     # ── Değerlendirme ─────────────────────────────────────────────────────────
+
+    async def _eval_node_seen(self, node_id: str, seen_at: str) -> None:
+        """Node'un son gossip sinyali 5 dakikadan eskiyse 'offline' alert atar."""
+        if not seen_at:
+            return
+        try:
+            from datetime import datetime, timezone
+            last = datetime.fromisoformat(seen_at.replace("Z", "+00:00"))
+            age_min = (datetime.now(timezone.utc) - last).total_seconds() / 60
+        except Exception:
+            return
+        fkey = f"{node_id}:gossip_seen"
+        if age_min > 5:
+            await self._fire(
+                fkey,
+                f"🔴 <b>{node_id}</b> — gossip sinyali kesildi ({int(age_min)} dk önce)\n"
+                f"Node çevrimdışı olabilir.",
+            )
+        else:
+            await self._recover(fkey, f"✅ <b>{node_id}</b> — gossip bağlantısı normale döndü")
 
     async def _eval_ntp(self, node_id: str, metrics: dict) -> None:
         synced = metrics.get("ntp_synced")
