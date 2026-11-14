@@ -13,6 +13,7 @@
 | node5 | 10.10.0.5 | 45.146.252.165 | KVM VPS | ZAP Münster DE | Staging + AI Secondary |
 | node6 | 10.10.0.6 | 5.249.165.10 | KVM VPS | ZAP Virginia US | AI Primary (Gemini) |
 | nodeMonitor | 10.10.0.99 | 94.16.105.135 | KVM VPS | Netcup Karlsruhe DE | Merkezi İzleme (Prometheus + Loki + Grafana + Uptime Kuma) |
+| node101 | 10.10.0.101 | 195.206.234.142 | KVM VPS | DELUXHOST Kerkrade NL | Offsite Felaket Kurtarma (Restic REST Server, 1 TB HDD) |
 | streaming-N | 10.10.0.20+ | - | KVM VPS | herhangi | LiveKit Streaming #N (plug-and-play) |
 
 ---

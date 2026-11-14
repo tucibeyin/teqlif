@@ -4,7 +4,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Kasım 2026 — §44 Satılmış ilanları profilde göster + satış detayı navigasyonu (commit 3a350bd8)
+**Son güncelleme:** Kasım 2026 — §45 node101 Offsite Felaket Kurtarma; §13 node listesi güncellendi
 
 ---
 
@@ -1166,6 +1166,26 @@ sudo teqlif-restart --livekit  # node3/node4: LiveKit'i de yeniden başlatır
 
 `teqlif-restart` sırası: git pull (tucibeyin kullanıcısıyla) → requirements değişmişse pip install → alembic upgrade head (ExecStartPre) → sync_main.py (ExecStartPre) → servis restart → son loglar.
 
+### Tüm Node'larda Toplu Güncelleme
+
+```bash
+for node in node1 node3 node4 node5 node6 node101 nodeMonitor; do
+  ssh $node "sudo -n teqlif-restart 2>&1 | tail -5" &
+done
+wait
+```
+
+| Node | WG IP | Rol | Servis |
+|------|-------|-----|--------|
+| node1 | 10.10.0.1 | Core — PG, Redis, MinIO, App | `teqlif.service` |
+| node2 | 10.10.0.2 | Backup + ClickHouse + Mail | `teqlif-agent` |
+| node3 | 10.10.0.3 | LiveKit Streaming #1 | `teqlif-agent`, `livekit` |
+| node4 | 10.10.0.4 | LiveKit Streaming #2 | `teqlif-agent`, `livekit` |
+| node5 | 10.10.0.5 | Staging + AI Secondary | `teqlif-staging.service`, `teqlif-ai-proxy.service` |
+| node6 | 10.10.0.6 | AI Primary | `teqlif-ai-proxy.service` |
+| nodeMonitor | 10.10.0.99 | Merkezi İzleme | `teqlif-agent` |
+| node101 | 10.10.0.101 | Offsite Felaket Kurtarma | `teqlif-agent` (restic-rest-server izler) |
+
 ### Staging vs Prod
 
 | | Prod (node1) | Staging (node5) |
@@ -2216,8 +2236,8 @@ Mimari analizi 3 kritik risk ortaya çıkardı:
 
 ### Açık Görevler
 
-- [ ] Off-site hedef seç (Hetzner/B2) ve `RCLONE_REMOTE`, `RCLONE_BUCKET` `.env.backup`'a ekle
-- [ ] `teqlif-offsite-sync.timer`'ı enable et
+- [x] Off-site hedef seç → **node101** (DELUXHOST Kerkrade NL, `restic-rest-server`) ✅ — §45'te belgelendi
+- [x] `teqlif-offsite-sync.timer`'ı enable et → **Restic** ile değiştirildi; rclone yaklaşımı bırakıldı ✅
 - [ ] >50K kullanıcıda ML task süre izleme: `max_duration_m` + Redis key'ler
 
 ---
@@ -3015,3 +3035,53 @@ Satılmış ilanlar için `DirectSale` tablosundan `sale_id` batch lookup yapıl
 | `mobile/lib/screens/public_profile_screen.dart` | Satıldı banner overlay |
 | `mobile/lib/screens/listing_detail_screen.dart` | sold UI, _openSaleDetail, bottom bar butonu |
 | `documents/language/app_{tr,en,de,ar,ru}.arb` | 3 yeni key |
+
+---
+
+## §45 — Offsite Felaket Kurtarma: node101 (Restic REST Server)
+
+**Tarih:** Kasım 2026
+
+### Problem
+
+§31'de belgelenen off-site backup eksikliği: tüm yedekler OVH Saarbrücken'deki node2'de tutuluyordu. node1 + node2'nin aynı anda çökmesi halinde veri kurtarma imkansızdı.
+
+### Karar
+
+**node101** (DELUXHOST, Kerkrade NL) — farklı sağlayıcı, farklı lokasyon — `restic-rest-server` ile offsite backup hedefi olarak devreye alındı. rclone yaklaşımı bırakıldı; Restic şifreli pack blokları (32 MiB) HDD'ye yazar (senkron `fdatasync` yavaş ama kabul edilebilir).
+
+### Teknik Özellikler
+
+| Özellik | Değer |
+|---------|-------|
+| Public IP | 195.206.234.142 |
+| WG IP | 10.10.0.101 |
+| Sağlayıcı | DELUXHOST, Kerkrade NL |
+| Depolama | 10 GB SSD (sistem) + 1 TB HDD `/mnt/data` (backup hedef) |
+| RAM | 2.9 GiB |
+| Gossip peerleri | nodeMonitor, node2 |
+| İzlenen servis | `restic-rest-server` |
+| Redis | Yok (gossip-only) |
+
+### RPO/RTO Senaryoları
+
+| Senaryo | Kayıp | RTO | Yöntem |
+|---------|-------|-----|--------|
+| A — yalnız node2 | 0 (node1 canlı) | ~2 saat | bootstrap_node2 + offsite restore |
+| B — yalnız node1 | ~1 dk | ~1 saat | `runbook.sh` (node2 → node1) |
+| C — node1 + node2 | ~1 saat | ~4 saat | Bu runbook: node101 → yeni node1 |
+| D — node1 + node2 + node101 | Offline hazırlık | — | Manuel gpg decrypt + pg_restore |
+
+### Dosyalar
+
+| Dosya | Açıklama |
+|-------|----------|
+| `deploy/scale/V2.1/node101/specs.md` | Donanım benchmark (YABS + fio) |
+| `deploy/scale/V2.1/node101/resources/offsite_restore_runbook.md` | Felaket kurtarma adımları |
+| `deploy/scale/V2.1/teqlif-agent/configs/node101.yaml` | Agent config (gossip-only, restic-rest-server izleme) |
+
+### Kurallar
+
+- node101 teqlif-restart döngüsüne dahildir: `for node in node1 node3 node4 node5 node6 node101 nodeMonitor`
+- node101'de Redis yok; `job_ok` gossip ile nodeMonitor/node2'ye iletilir
+- Restic reposu şifreli tutulur — şifresi `secrets.env`'de saklanır, repoya girmez

@@ -14,6 +14,7 @@ Bu dizin, V2.1 (6-node, gateway'siz, tam WireGuard mesh) mimarisine ait tüm sun
 | node4 | LiveKit Streaming #2 | OVH Frankfurt DE | 135.125.175.223 | 10.10.0.4 |
 | node5 | Staging + AI Secondary | ZAP Münster DE | 45.146.252.165 | 10.10.0.5 |
 | node6 | AI Primary | ZAP Virginia US | 5.249.165.10 | 10.10.0.6 |
+| node101 | Offsite Felaket Kurtarma (Restic REST Server) | DELUXHOST Kerkrade NL | 195.206.234.142 | 10.10.0.101 |
 
 ---
 
@@ -94,6 +95,7 @@ Her node için değerler:
 | node4 | node4 | LiveKit Streaming #2 | OVH Frankfurt DE | 135.125.175.223 | 10.10.0.4 |
 | node5 | node5 | Staging + AI Secondary | ZAP Münster DE | 45.146.252.165 | 10.10.0.5 |
 | node6 | node6 | AI Primary | ZAP Virginia US | 5.249.165.10 | 10.10.0.6 |
+| node101 | node101 | Offsite Felaket Kurtarma (Restic REST Server) | DELUXHOST Kerkrade NL | 195.206.234.142 | 10.10.0.101 |
 
 ---
 
