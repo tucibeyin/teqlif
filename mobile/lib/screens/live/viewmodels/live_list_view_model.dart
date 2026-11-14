@@ -43,7 +43,6 @@ class LiveListState {
 
 class LiveListViewModel extends AsyncNotifier<LiveListState> {
   StreamSubscription<Map<String, dynamic>>? _wsSub;
-  StreamSubscription<bool>? _connectSub;
   StreamSubscription<List<StreamOut>>? _swrSub;
   Completer<List<StreamOut>>? _pendingCompleter;
   final _connectSvc = ConnectivityService();
@@ -52,18 +51,24 @@ class LiveListViewModel extends AsyncNotifier<LiveListState> {
 
   @override
   FutureOr<LiveListState> build() async {
-    _wsSub ??= ref.read(wsServiceProvider).messageStream.stream.listen(_onWsMessage);
+    // WS bağlantısı: her build'de yenile (invalidateSelf sonrası onDispose null'ladı).
+    _wsSub?.cancel();
+    _wsSub = ref.read(wsServiceProvider).messageStream.stream.listen(_onWsMessage);
 
-    // Connectivity listener: story provider'larla aynı pattern.
-    // Initial load takılınca (iOS WiFi→mobile) zombie'yi temizle + invalidateSelf.
-    // Yükleme bittikten sonra gelen event'ler offline flag'ini ve refresh'i yönetir.
-    _connectSub ??= _connectSvc.onConnectivityChanged.listen((online) {
+    // Connectivity listener: her build'de taze lokal subscription (story provider'larla aynı pattern).
+    // ??= KULLANILMAZ — onDispose cancel eder ama null yapmaz; bir sonraki build
+    // cancel edilmiş subscription'ı görür ve yeni listener oluşturmaz (sessiz ölür).
+    StreamSubscription<bool>? connectSub;
+    connectSub = _connectSvc.onConnectivityChanged.listen((online) {
       if (online && state.isLoading && !state.hasValue) {
+        // Initial load takılmış (iOS WiFi→mobile): zombie temizle, yeniden yükle.
+        // cancel() önce: bu build'in listener'ı bitti, invalidateSelf yeni build'de taze listener açar.
         debugPrint('[LiveList] network online during load — zombie temizleniyor, yenileniyor');
         ApiService.clearInFlight('/streams/');
         if (_pendingCompleter != null && !_pendingCompleter!.isCompleted) {
           _pendingCompleter!.complete([]);
         }
+        connectSub?.cancel();
         ref.invalidateSelf();
       } else if (state.value != null) {
         final wasOffline = state.value!.isOffline;
@@ -74,7 +79,8 @@ class LiveListViewModel extends AsyncNotifier<LiveListState> {
 
     ref.onDispose(() {
       _wsSub?.cancel();
-      _connectSub?.cancel();
+      _wsSub = null;
+      connectSub?.cancel();
       _swrSub?.cancel();
       if (_pendingCompleter != null && !_pendingCompleter!.isCompleted) {
         _pendingCompleter!.complete([]);
