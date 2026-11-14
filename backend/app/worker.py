@@ -4812,6 +4812,7 @@ _SCHEDULE_FUNCTIONS = {
     "reset_monthly_withdrawal_quota_task":        reset_monthly_withdrawal_quota_task,
     "release_pending_earnings_task":              release_pending_earnings_task,
     "check_expired_pro_users_task":               check_expired_pro_users_task,
+    "cleanup_old_stream_chat_messages_task":      cleanup_old_stream_chat_messages_task,
 }
 
 
