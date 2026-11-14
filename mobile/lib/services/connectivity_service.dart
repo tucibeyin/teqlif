@@ -1,4 +1,4 @@
-import 'dart:async';
+import 'dart:async' show Stream, StreamController;
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -11,26 +11,13 @@ class ConnectivityService {
     _connectivity.checkConnectivity().then((res) => isDeviceOnline = _isOnline(res));
   }
 
-  // iOS, WiFi→mobile geçişinde aynı saniyede 10+ connectivity event atar.
-  // Debounce bu platform davranışını servis katmanında soyutlar; dinleyiciler
-  // platform quirk'inden habersiz, sadece nihai durumu alır.
-  Stream<bool>? _debounced;
-
   /// Her bağlantı değişikliğinde bool yayınlar: true = çevrimiçi.
-  /// Debounced (300ms): iOS geçiş sırasında gelen rapid event'ler birleştirilir.
-  Stream<bool> get onConnectivityChanged => _debounced ??= _buildDebounced();
-
-  Stream<bool> _buildDebounced() {
-    final controller = StreamController<bool>.broadcast();
-    Timer? timer;
-    _connectivity.onConnectivityChanged.listen((results) {
-      final online = _isOnline(results);
-      isDeviceOnline = online;
-      timer?.cancel();
-      timer = Timer(const Duration(milliseconds: 300), () => controller.add(online));
-    });
-    return controller.stream;
-  }
+  Stream<bool> get onConnectivityChanged => _connectivity.onConnectivityChanged
+      .map((results) {
+        final online = _isOnline(results);
+        isDeviceOnline = online;
+        return online;
+      });
 
   /// Anlık bağlantı durumunu döner.
   Future<bool> get isConnected async {
