@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../models/stream.dart';
+import '../../../services/api_service.dart';
 import '../../../services/stream_service.dart';
 import '../../../services/ws_service.dart';
 import '../../../services/connectivity_service.dart';
@@ -46,25 +47,31 @@ class LiveListViewModel extends AsyncNotifier<LiveListState> {
   StreamSubscription<List<StreamOut>>? _swrSub;
   Completer<List<StreamOut>>? _pendingCompleter;
   final _connectSvc = ConnectivityService();
-  // Her _loadInitial çağrısına benzersiz nesil — eski fire-and-forget callback'lerin
-  // yeni state'i kirletmesini önler.
+  // fire-and-forget callback'lerin eski nesil state'i kirletmesini önler
   int _gen = 0;
 
   @override
   FutureOr<LiveListState> build() async {
-    // WebSocket dinleyicisi
     _wsSub ??= ref.read(wsServiceProvider).messageStream.stream.listen(_onWsMessage);
-    
-    // Connectivity dinleyicisi
+
+    // Connectivity listener: story provider'larla aynı pattern.
+    // Initial load takılınca (iOS WiFi→mobile) zombie'yi temizle + invalidateSelf.
+    // Yükleme bittikten sonra gelen event'ler offline flag'ini ve refresh'i yönetir.
     _connectSub ??= _connectSvc.onConnectivityChanged.listen((online) {
-      if (state.value == null) return;
-      final wasOffline = state.value!.isOffline;
-      state = AsyncValue.data(state.value!.copyWith(isOffline: !online));
-      if (online && wasOffline) {
-        refresh(bypassCache: true);
+      if (online && state.isLoading && !state.hasValue) {
+        debugPrint('[LiveList] network online during load — zombie temizleniyor, yenileniyor');
+        ApiService.clearInFlight('/streams/');
+        if (_pendingCompleter != null && !_pendingCompleter!.isCompleted) {
+          _pendingCompleter!.complete([]);
+        }
+        ref.invalidateSelf();
+      } else if (state.value != null) {
+        final wasOffline = state.value!.isOffline;
+        state = AsyncValue.data(state.value!.copyWith(isOffline: !online));
+        if (online && wasOffline) refresh(bypassCache: true);
       }
     });
-    
+
     ref.onDispose(() {
       _wsSub?.cancel();
       _connectSub?.cancel();
@@ -98,7 +105,9 @@ class LiveListViewModel extends AsyncNotifier<LiveListState> {
     _pendingCompleter = completer;
     debugPrint('[LiveList] getActiveStreamsStream starting | gen=$gen');
 
-    _swrSub = ref.read(streamServiceProvider).getActiveStreamsStream(bypassCache: bypassCache).listen(
+    _swrSub = ref.read(streamServiceProvider)
+        .getActiveStreamsStream(bypassCache: bypassCache)
+        .listen(
       (streams) {
         debugPrint('[LiveList] activeStreams yield: ${streams.length} | gen=$gen done=${completer.isCompleted}');
         _pendingCompleter = null;
@@ -125,10 +134,11 @@ class LiveListViewModel extends AsyncNotifier<LiveListState> {
     );
 
     // ── Recommended + suggested: paralel + fire-and-forget ──────────────────
-    // getActiveStreamsStream'i BEKLETMİYOR. Tamamlanınca state'i sessizce günceller.
+    // Active streams'i BEKLETMİYOR. Tamamlanınca state'i sessizce günceller.
     // _gen == gen guard: eski neslin callback'leri yeni state'i kirletmez.
     if (isLoggedIn) {
       debugPrint('[LiveList] rec+sugg starting (paralel, fire-and-forget) | gen=$gen');
+
       ref.read(streamServiceProvider)
           .getRecommendedStreams()
           .timeout(const Duration(seconds: 20))
@@ -158,15 +168,15 @@ class LiveListViewModel extends AsyncNotifier<LiveListState> {
           );
     }
 
-    // ── Active streams tamamlanmasını bekle (SWR cache = anlık, yoksa 15s) ──
-    // Timeout: completer'ı da tamamla (isCompleted=true) — aksi takdirde HTTP
-    // yanıtı geldiğinde listener'da completer.isCompleted=false olur, complete()
-    // çağrılır ama kimse beklemediğinden state güncellenmez.
+    // ── Active streams tamamlanmasını bekle ──────────────────────────────────
+    // Birincil mekanizma: connectivity event (clearInFlight + invalidateSelf).
+    // 30s failsafe: network hiç gelmezse sonsuz donmayı önler; completer'ı
+    // açıkça tamamlar ki HTTP yanıtı gelince listener state.copyWith yapabilsin.
     debugPrint('[LiveList] waiting for activeStreams | gen=$gen');
     final activeStreams = await completer.future.timeout(
-      const Duration(seconds: 15),
+      const Duration(seconds: 30),
       onTimeout: () {
-        debugPrint('[LiveList] activeStreams TIMEOUT 15s | gen=$gen');
+        debugPrint('[LiveList] activeStreams failsafe 30s | gen=$gen');
         if (!completer.isCompleted) completer.complete([]);
         return <StreamOut>[];
       },
