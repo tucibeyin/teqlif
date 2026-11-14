@@ -31,6 +31,7 @@ class StoryGroupsNotifier
 
   @override
   Future<List<UserStoryGroup>> build() async {
+    _disposed = false; // AutoDisposeAsyncNotifier instance'ı yeniden kullanır — reset zorunlu
     debugPrint('[StoryGroups] build start | _disposed=$_disposed');
     ref.onDispose(() { _disposed = true; debugPrint('[StoryGroups] disposed'); });
     final link = ref.keepAlive();
@@ -125,6 +126,7 @@ class MyStoriesNotifier extends AutoDisposeAsyncNotifier<List<StoryItem>> {
 
   @override
   Future<List<StoryItem>> build() async {
+    _disposed = false; // AutoDisposeAsyncNotifier instance'ı yeniden kullanır — reset zorunlu
     debugPrint('[MyStories] build start | _disposed=$_disposed');
     ref.onDispose(() { _disposed = true; debugPrint('[MyStories] disposed'); });
     final link = ref.keepAlive();
