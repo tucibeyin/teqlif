@@ -31,7 +31,8 @@ _REDIS_MEM_WARN  = 3.8       # GB — maxmemory=4GB, %95
 # Sabit servis → port eşlemesi (gossip-agent WireGuard IP'sini dinamik alır)
 _STATIC_PORT_MAP = {
     "teqlif-app": [("127.0.0.1", 8000)],
-    "ai-proxy":   [("127.0.0.1", 8001)],
+    "ai-proxy":         [("127.0.0.1", 8001)],
+    "ai-proxy-staging": [("127.0.0.1", 8001)],  # node5 lokal — WireGuard override yok
     "redis":      [("127.0.0.1", 6379)],
     "postgresql": [("127.0.0.1", 5432)],
     "minio":      [("127.0.0.1", 9000)],

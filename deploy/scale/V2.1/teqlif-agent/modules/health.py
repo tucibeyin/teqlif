@@ -65,6 +65,7 @@ _ALL_SERVICES = [
     "teqlif-worker-critical",
     "teqlif-worker-video",             # node1 — CPU-yoğun concat bulkhead
     "teqlif-ai-proxy",
+    "teqlif-ai-proxy-staging",           # node5 — staging izole
     "teqlif-agent",
     "teqlif-livekit",                  # node3/node4 — paket adı "livekit" değil
     "postgresql",
@@ -181,7 +182,8 @@ class HealthMonitor:
             "teqlif-worker":          "ARQ Worker (default)",
             "teqlif-worker-critical": "ARQ Worker (critical)",
             "teqlif-worker-video":    "ARQ Worker (video)",
-            "teqlif-ai-proxy":        "AI Proxy",
+            "teqlif-ai-proxy":         "AI Proxy",
+            "teqlif-ai-proxy-staging": "AI Proxy Staging",
             "teqlif-agent":           "teqlif Agent",
             "teqlif-livekit":         "LiveKit",
             "postgresql":             "PostgreSQL",

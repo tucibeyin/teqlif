@@ -29,6 +29,7 @@ _SERVICES_TO_WATCH = [
     "teqlif-worker-critical.service",
     "teqlif-worker-video.service",
     "teqlif-ai-proxy.service",
+    "teqlif-ai-proxy-staging.service",
     "teqlif-livekit.service",
     "teqlif-staging.service",
     "teqlif-worker-staging.service",
