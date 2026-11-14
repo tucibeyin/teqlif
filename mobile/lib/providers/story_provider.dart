@@ -14,6 +14,10 @@ import '../services/storage_service.dart';
 class StoryGroupsNotifier
     extends AutoDisposeAsyncNotifier<List<UserStoryGroup>> {
   bool _disposed = false;
+  // iOS geçişte rapid event'ler: her yeni build yeni listener → sonsuz döngü.
+  // Bu flag build'ler arası kalıcıdır (AutoDisposeAsyncNotifier instance'ı
+  // watcher varsa yeniden kullanılır). Data/error gelince sıfırlanır.
+  bool _connectivityRetrying = false;
 
   String get _url => '${ref.read(apiClientProvider).config.baseUrl}/stories/following';
 
@@ -43,16 +47,20 @@ class StoryGroupsNotifier
     final failsafe = Timer(const Duration(seconds: 25), () {
       if (!_disposed && state.isLoading && !state.hasValue) {
         debugPrint('[StoryGroups] failsafe — 25s geçti, hâlâ yükleniyor');
+        _connectivityRetrying = false; // sonraki manual refresh için sıfırla
         state = AsyncError(const NetworkException(), StackTrace.empty);
       }
     });
     ref.onDispose(failsafe.cancel);
 
     // Network geçişi (WiFi→mobile) tamamlanınca zombie _inFlight'ı temizle ve
-    // provider'ı yenile — yeni instance mobile üzerinde taze istek yapar.
+    // provider'ı yenile — yeni build mobile üzerinde taze istek yapar.
+    // _connectivityRetrying: build'ler arası cascadeyi önler — iOS'un rapid
+    // event'leri nedeniyle her yeni build tekrar invalidateSelf yapmasın.
     StreamSubscription<bool>? connectSub;
     connectSub = ConnectivityService().onConnectivityChanged.listen((online) {
-      if (online && !_disposed && state.isLoading && !state.hasValue) {
+      if (online && !_disposed && state.isLoading && !state.hasValue && !_connectivityRetrying) {
+        _connectivityRetrying = true;
         debugPrint('[StoryGroups] network online — zombie temizleniyor, provider yenileniyor');
         ApiService.clearInFlight('/stories/');
         connectSub?.cancel();
@@ -71,12 +79,17 @@ class StoryGroupsNotifier
       )) {
         debugPrint('[StoryGroups] data: ${groups.length} groups | disposed=$_disposed');
         last = groups;
-        if (!_disposed) state = AsyncData(groups);
+        if (!_disposed) {
+          _connectivityRetrying = false; // başarı → sonraki geçiş için sıfırla
+          state = AsyncData(groups);
+        }
       }
     } catch (e) {
       debugPrint('[StoryGroups] build error: $e');
+      _connectivityRetrying = false;
       rethrow;
     }
+    _connectivityRetrying = false;
     debugPrint('[StoryGroups] build done | last=${last?.length}');
     return last ?? [];
   }
@@ -115,6 +128,7 @@ final storyGroupsProvider = AsyncNotifierProvider.autoDispose<
 
 class MyStoriesNotifier extends AutoDisposeAsyncNotifier<List<StoryItem>> {
   bool _disposed = false;
+  bool _connectivityRetrying = false;
 
   String get _url => '${ref.read(apiClientProvider).config.baseUrl}/stories/mine';
 
@@ -136,6 +150,7 @@ class MyStoriesNotifier extends AutoDisposeAsyncNotifier<List<StoryItem>> {
     final failsafe = Timer(const Duration(seconds: 25), () {
       if (!_disposed && state.isLoading && !state.hasValue) {
         debugPrint('[MyStories] failsafe — 25s geçti, hâlâ yükleniyor');
+        _connectivityRetrying = false;
         state = AsyncError(const NetworkException(), StackTrace.empty);
       }
     });
@@ -143,7 +158,8 @@ class MyStoriesNotifier extends AutoDisposeAsyncNotifier<List<StoryItem>> {
 
     StreamSubscription<bool>? connectSub;
     connectSub = ConnectivityService().onConnectivityChanged.listen((online) {
-      if (online && !_disposed && state.isLoading && !state.hasValue) {
+      if (online && !_disposed && state.isLoading && !state.hasValue && !_connectivityRetrying) {
+        _connectivityRetrying = true;
         debugPrint('[MyStories] network online — zombie temizleniyor, provider yenileniyor');
         ApiService.clearInFlight('/stories/');
         connectSub?.cancel();
@@ -162,12 +178,17 @@ class MyStoriesNotifier extends AutoDisposeAsyncNotifier<List<StoryItem>> {
       )) {
         debugPrint('[MyStories] data: ${items.length} items | disposed=$_disposed');
         last = items;
-        if (!_disposed) state = AsyncData(items);
+        if (!_disposed) {
+          _connectivityRetrying = false;
+          state = AsyncData(items);
+        }
       }
     } catch (e) {
       debugPrint('[MyStories] build error: $e');
+      _connectivityRetrying = false;
       rethrow;
     }
+    _connectivityRetrying = false;
     debugPrint('[MyStories] build done | last=${last?.length}');
     return last ?? [];
   }
