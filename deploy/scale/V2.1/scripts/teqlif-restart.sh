@@ -111,6 +111,42 @@ agent_sync() {
     log "teqlif-agent config güncellendi → $config_dst"
   fi
 
+  # teqlif-agent Redis env — REDIS_URL yoksa yerel secrets'tan otomatik doldur.
+  # Şifreler repoya girmez; her node kendi yapılandırma dosyasından okur.
+  local env_dst="/etc/teqlif-agent/env"
+  if ! grep -qE "^(REDIS_URL|CORE_REDIS_URL)=redis://:.+@" "$env_dst" 2>/dev/null; then
+    local _redis_url=""
+    # node1: .env.production (REDIS_URL=redis://:pass@127.0.0.1:6379/0)
+    if [ -f /project/teqlif/config/.env.production ]; then
+      _redis_url=$(grep "^REDIS_URL=" /project/teqlif/config/.env.production 2>/dev/null \
+                    | head -1 | cut -d= -f2-)
+    fi
+    # node2: cluster_secrets backup → CORE_REDIS_PASS → 10.10.0.1
+    if [ -z "$_redis_url" ]; then
+      local _bp="/project/teqlif/backups/cluster_secrets/node2/env/.env.backup"
+      if [ -f "$_bp" ]; then
+        local _pass
+        _pass=$(grep "^CORE_REDIS_PASS=" "$_bp" 2>/dev/null | head -1 | cut -d= -f2-)
+        [ -n "$_pass" ] && _redis_url="redis://:${_pass}@10.10.0.1:6379/0"
+      fi
+    fi
+    # node3-6, nodeMonitor: .env.metrics-agent (CORE_REDIS_URL=redis://:pass@10.10.0.1:6379/0)
+    if [ -z "$_redis_url" ] && [ -f /project/teqlif/config/.env.metrics-agent ]; then
+      _redis_url=$(grep "^CORE_REDIS_URL=" /project/teqlif/config/.env.metrics-agent 2>/dev/null \
+                    | head -1 | cut -d= -f2-)
+    fi
+    if [ -n "$_redis_url" ]; then
+      mkdir -p /etc/teqlif-agent
+      printf 'REDIS_URL=%s\n' "$_redis_url" > "$env_dst"
+      chown teqlif-agent:teqlif-agent "$env_dst" 2>/dev/null || true
+      chmod 640 "$env_dst"
+      changed=true
+      log "teqlif-agent Redis env yapılandırıldı → $env_dst"
+    else
+      log "teqlif-agent Redis env kaynağı bulunamadı ($NODE) — gossip-only devam"
+    fi
+  fi
+
   if $changed; then
     log "teqlif-agent kodu güncellendi — /opt/teqlif-agent sync ediliyor..."
     rsync -a --exclude '__pycache__' --exclude '*.pyc' \
