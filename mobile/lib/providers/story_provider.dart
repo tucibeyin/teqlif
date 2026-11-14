@@ -5,6 +5,7 @@ import '../core/app_exception.dart';
 import '../core/network/api_client.dart';
 import '../models/story.dart';
 import '../services/api_service.dart';
+import '../services/connectivity_service.dart';
 import '../services/storage_service.dart';
 
 // ── Takip edilen kullanıcıların hikayeleri ────────────────────────────────────
@@ -45,6 +46,19 @@ class StoryGroupsNotifier
       }
     });
     ref.onDispose(failsafe.cancel);
+
+    // Network geçişi (WiFi→mobile) tamamlanınca zombie _inFlight'ı temizle ve
+    // provider'ı yenile — yeni instance mobile üzerinde taze istek yapar.
+    StreamSubscription<bool>? connectSub;
+    connectSub = ConnectivityService().onConnectivityChanged.listen((online) {
+      if (online && !_disposed && state.isLoading && !state.hasValue) {
+        debugPrint('[StoryGroups] network online — zombie temizleniyor, provider yenileniyor');
+        ApiService.clearInFlight('/stories/');
+        connectSub?.cancel();
+        ref.invalidateSelf();
+      }
+    });
+    ref.onDispose(() => connectSub?.cancel());
 
     List<UserStoryGroup>? last;
     try {
@@ -124,6 +138,17 @@ class MyStoriesNotifier extends AutoDisposeAsyncNotifier<List<StoryItem>> {
       }
     });
     ref.onDispose(failsafe.cancel);
+
+    StreamSubscription<bool>? connectSub;
+    connectSub = ConnectivityService().onConnectivityChanged.listen((online) {
+      if (online && !_disposed && state.isLoading && !state.hasValue) {
+        debugPrint('[MyStories] network online — zombie temizleniyor, provider yenileniyor');
+        ApiService.clearInFlight('/stories/');
+        connectSub?.cancel();
+        ref.invalidateSelf();
+      }
+    });
+    ref.onDispose(() => connectSub?.cancel());
 
     List<StoryItem>? last;
     try {

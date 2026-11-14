@@ -186,6 +186,13 @@ class ApiService {
     }
   }
 
+  /// Network geçişinde (WiFi→mobile) askıda kalan zombie Future'ları temizler.
+  /// [urlSubstring] ile başlayan tüm _inFlight key'lerini kaldırır.
+  /// story_provider gibi connectivity listener'lar ref.invalidateSelf() öncesi çağırır.
+  static void clearInFlight(String urlSubstring) {
+    _inFlight.removeWhere((key, _) => key.contains(urlSubstring));
+  }
+
   /// Aynı URL + auth token için eş zamanlı gelen istekleri tek bir `getRaw`
   /// çağrısında birleştirir.  Anahtar `url|token` şeklinde oluşturulur:
   /// farklı oturumlardaki istekler asla aynı Future'ı paylaşmaz.

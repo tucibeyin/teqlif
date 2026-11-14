@@ -176,12 +176,20 @@ class LiveListViewModel extends AsyncNotifier<LiveListState> {
   }
 
   Future<void> refresh({bool bypassCache = true}) async {
-    state = const AsyncValue.loading();
+    final hadData = state.value != null;
+    if (!hadData) {
+      // İlk yükleme ya da hata sonrası: spinner göster
+      state = const AsyncValue.loading();
+    }
+    // Mevcut veri varsa: sessiz arka plan güncellemesi (spinner yok)
     try {
       final newState = await _loadInitial(bypassCache: bypassCache);
       state = AsyncValue.data(newState);
     } catch (e, st) {
-      state = AsyncValue.error(e, st);
+      if (!hadData) {
+        state = AsyncValue.error(e, st);
+      }
+      // Mevcut veri varsa: hata sessizce yutulur, eski veri korunur
     }
   }
 }
