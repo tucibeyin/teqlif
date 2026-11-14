@@ -56,9 +56,10 @@ class StoryGroupsNotifier
   }
 
   Future<void> refresh() async {
+    debugPrint('[StoryGroups] refresh | isLoading=${state.isLoading} hasValue=${state.hasValue}');
+    // build() hâlâ çalışıyorsa (pure AsyncLoading) refresh gereksiz — atla.
+    if (state.isLoading && !state.hasValue) return;
     // Mevcut veri varsa shimmer gösterme — sadece sessizce güncelle.
-    // İlk yüklemede (veri yoksa) normal loading davranışı korunur.
-    debugPrint('[StoryGroups] refresh | hasValue=${state.hasValue}');
     if (!state.hasValue) state = const AsyncLoading();
     try {
       await for (final groups in ref.read(apiServiceProvider).get<List<UserStoryGroup>>(
@@ -126,6 +127,8 @@ class MyStoriesNotifier extends AutoDisposeAsyncNotifier<List<StoryItem>> {
   }
 
   Future<void> refresh() async {
+    debugPrint('[MyStories] refresh | isLoading=${state.isLoading} hasValue=${state.hasValue}');
+    if (state.isLoading && !state.hasValue) return;
     if (!state.hasValue) state = const AsyncLoading();
     try {
       await for (final items in ref.read(apiServiceProvider).get<List<StoryItem>>(
