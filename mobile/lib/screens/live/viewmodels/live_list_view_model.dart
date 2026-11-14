@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../models/stream.dart';
@@ -45,6 +46,9 @@ class LiveListViewModel extends AsyncNotifier<LiveListState> {
   StreamSubscription<List<StreamOut>>? _swrSub;
   Completer<List<StreamOut>>? _pendingCompleter;
   final _connectSvc = ConnectivityService();
+  // Her _loadInitial çağrısına benzersiz nesil — eski fire-and-forget callback'lerin
+  // yeni state'i kirletmesini önler.
+  int _gen = 0;
 
   @override
   FutureOr<LiveListState> build() async {
@@ -74,29 +78,15 @@ class LiveListViewModel extends AsyncNotifier<LiveListState> {
   }
 
   Future<LiveListState> _loadInitial({required bool bypassCache}) async {
+    final gen = ++_gen;
+    debugPrint('[LiveList] _loadInitial start | gen=$gen bypassCache=$bypassCache');
+
     final token = await StorageService.getToken();
     final isLoggedIn = token != null;
     final isOnline = await _connectSvc.isConnected;
+    debugPrint('[LiveList] token+conn done | isLoggedIn=$isLoggedIn isOnline=$isOnline gen=$gen');
 
-    List<StreamOut> rec = [];
-    List<Map<String, dynamic>> sugg = [];
-
-    if (isLoggedIn) {
-      // iOS'ta WiFi→mobile geçişinde iç .timeout() bazen tetiklenmiyor; dış timeout
-      // kesinlikle 22s'de completer'ı bitirir ve spinner döngüsünü kırar.
-      final results = await Future.wait([
-        ref.read(streamServiceProvider).getRecommendedStreams().catchError((_) => <StreamOut>[]),
-        ref.read(streamServiceProvider).getSuggestedStreamers().catchError((_) => <Map<String, dynamic>>[]),
-      ]).timeout(
-        const Duration(seconds: 22),
-        onTimeout: () => [<StreamOut>[], <Map<String, dynamic>>[]],
-      );
-      rec = results[0] as List<StreamOut>;
-      sugg = (results[1] as List).cast<Map<String, dynamic>>();
-    }
-
-    // Önceki subscription'ı iptal et, sonra orphaned completer'ı tamamla.
-    // Dart'ta cancel() onDone'u tetiklemez — önceki _loadInitial sonsuza beklemesin.
+    // ── Active streams: hemen başlat — SWR cache varsa ilk yield anlık olur ──
     _swrSub?.cancel();
     _swrSub = null;
     if (_pendingCompleter != null && !_pendingCompleter!.isCompleted) {
@@ -106,9 +96,11 @@ class LiveListViewModel extends AsyncNotifier<LiveListState> {
 
     final completer = Completer<List<StreamOut>>();
     _pendingCompleter = completer;
+    debugPrint('[LiveList] getActiveStreamsStream starting | gen=$gen');
 
     _swrSub = ref.read(streamServiceProvider).getActiveStreamsStream(bypassCache: bypassCache).listen(
       (streams) {
+        debugPrint('[LiveList] activeStreams yield: ${streams.length} | gen=$gen done=${completer.isCompleted}');
         _pendingCompleter = null;
         if (!completer.isCompleted) {
           completer.complete(streams);
@@ -117,6 +109,7 @@ class LiveListViewModel extends AsyncNotifier<LiveListState> {
         }
       },
       onError: (e, st) {
+        debugPrint('[LiveList] activeStreams error: $e | gen=$gen');
         _pendingCompleter = null;
         if (!completer.isCompleted) {
           completer.completeError(e, st);
@@ -125,23 +118,61 @@ class LiveListViewModel extends AsyncNotifier<LiveListState> {
         }
       },
       onDone: () {
+        debugPrint('[LiveList] activeStreams done | gen=$gen');
         _pendingCompleter = null;
-        if (!completer.isCompleted) {
-          completer.complete([]);
-        }
-      }
+        if (!completer.isCompleted) completer.complete([]);
+      },
     );
 
-    // SWR stream da askıda kalabilir (aynı iOS network geçiş sorunu).
+    // ── Recommended + suggested: paralel + fire-and-forget ──────────────────
+    // getActiveStreamsStream'i BEKLETMİYOR. Tamamlanınca state'i sessizce günceller.
+    // _gen == gen guard: eski neslin callback'leri yeni state'i kirletmez.
+    if (isLoggedIn) {
+      debugPrint('[LiveList] rec+sugg starting (paralel, fire-and-forget) | gen=$gen');
+      ref.read(streamServiceProvider)
+          .getRecommendedStreams()
+          .timeout(const Duration(seconds: 20))
+          .then(
+            (rec) {
+              debugPrint('[LiveList] rec done: ${rec.length} | gen=$gen cur=$_gen');
+              if (_gen == gen && state.value != null) {
+                state = AsyncValue.data(state.value!.copyWith(recommended: rec));
+              }
+            },
+            onError: (e) => debugPrint('[LiveList] rec error: $e | gen=$gen'),
+          );
+
+      ref.read(streamServiceProvider)
+          .getSuggestedStreamers()
+          .timeout(const Duration(seconds: 20))
+          .then(
+            (sugg) {
+              debugPrint('[LiveList] sugg done: ${sugg.length} | gen=$gen cur=$_gen');
+              if (_gen == gen && state.value != null) {
+                state = AsyncValue.data(state.value!.copyWith(
+                  suggestedStreamers: sugg.cast<Map<String, dynamic>>(),
+                ));
+              }
+            },
+            onError: (e) => debugPrint('[LiveList] sugg error: $e | gen=$gen'),
+          );
+    }
+
+    // ── Active streams tamamlanmasını bekle (SWR cache = anlık, yoksa 10s) ──
+    debugPrint('[LiveList] waiting for activeStreams | gen=$gen');
     final activeStreams = await completer.future.timeout(
-      const Duration(seconds: 22),
-      onTimeout: () => [],
+      const Duration(seconds: 10),
+      onTimeout: () {
+        debugPrint('[LiveList] activeStreams TIMEOUT 10s | gen=$gen');
+        return <StreamOut>[];
+      },
     );
+    debugPrint('[LiveList] _loadInitial done: ${activeStreams.length} streams | gen=$gen');
 
     return LiveListState(
       streams: activeStreams,
-      recommended: rec,
-      suggestedStreamers: sugg,
+      recommended: const [],   // fire-and-forget yukarıda state.copyWith ile günceller
+      suggestedStreamers: const [],
       isLoggedIn: isLoggedIn,
       isOffline: !isOnline,
     );
@@ -178,18 +209,20 @@ class LiveListViewModel extends AsyncNotifier<LiveListState> {
   Future<void> refresh({bool bypassCache = true}) async {
     final hadData = state.value != null;
     if (!hadData) {
-      // İlk yükleme ya da hata sonrası: spinner göster
       state = const AsyncValue.loading();
     }
-    // Mevcut veri varsa: sessiz arka plan güncellemesi (spinner yok)
     try {
+      final prev = state.value;
       final newState = await _loadInitial(bypassCache: bypassCache);
-      state = AsyncValue.data(newState);
+      // rec/sugg fire-and-forget henüz tamamlanmadıysa eski veriyi koru.
+      state = AsyncValue.data(newState.copyWith(
+        recommended: prev?.recommended ?? const [],
+        suggestedStreamers: prev?.suggestedStreamers ?? const [],
+      ));
     } catch (e, st) {
       if (!hadData) {
         state = AsyncValue.error(e, st);
       }
-      // Mevcut veri varsa: hata sessizce yutulur, eski veri korunur
     }
   }
 }
