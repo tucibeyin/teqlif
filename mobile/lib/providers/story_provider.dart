@@ -29,27 +29,36 @@ class StoryGroupsNotifier
 
   @override
   Future<List<UserStoryGroup>> build() async {
-    ref.onDispose(() => _disposed = true);
+    debugPrint('[StoryGroups] build start | _disposed=$_disposed');
+    ref.onDispose(() { _disposed = true; debugPrint('[StoryGroups] disposed'); });
     final link = ref.keepAlive();
     final timer = Timer(const Duration(minutes: 5), link.close);
     ref.onDispose(timer.cancel);
 
     List<UserStoryGroup>? last;
-    await for (final groups in ref.read(apiServiceProvider).get<List<UserStoryGroup>>(
-      url: _url,
-      cacheKey: StorageService.cacheStories,
-      cacheTtl: const Duration(minutes: 5),
-      fromJson: _parse,
-    )) {
-      last = groups;
-      if (!_disposed) state = AsyncData(groups);
+    try {
+      await for (final groups in ref.read(apiServiceProvider).get<List<UserStoryGroup>>(
+        url: _url,
+        cacheKey: StorageService.cacheStories,
+        cacheTtl: const Duration(minutes: 5),
+        fromJson: _parse,
+      )) {
+        debugPrint('[StoryGroups] data: ${groups.length} groups | disposed=$_disposed');
+        last = groups;
+        if (!_disposed) state = AsyncData(groups);
+      }
+    } catch (e) {
+      debugPrint('[StoryGroups] build error: $e');
+      rethrow;
     }
+    debugPrint('[StoryGroups] build done | last=${last?.length}');
     return last ?? [];
   }
 
   Future<void> refresh() async {
     // Mevcut veri varsa shimmer gösterme — sadece sessizce güncelle.
     // İlk yüklemede (veri yoksa) normal loading davranışı korunur.
+    debugPrint('[StoryGroups] refresh | hasValue=${state.hasValue}');
     if (!state.hasValue) state = const AsyncLoading();
     try {
       await for (final groups in ref.read(apiServiceProvider).get<List<UserStoryGroup>>(
@@ -90,21 +99,29 @@ class MyStoriesNotifier extends AutoDisposeAsyncNotifier<List<StoryItem>> {
 
   @override
   Future<List<StoryItem>> build() async {
-    ref.onDispose(() => _disposed = true);
+    debugPrint('[MyStories] build start | _disposed=$_disposed');
+    ref.onDispose(() { _disposed = true; debugPrint('[MyStories] disposed'); });
     final link = ref.keepAlive();
     final timer = Timer(const Duration(minutes: 5), link.close);
     ref.onDispose(timer.cancel);
 
     List<StoryItem>? last;
-    await for (final items in ref.read(apiServiceProvider).get<List<StoryItem>>(
-      url: _url,
-      cacheKey: StorageService.cacheMyStories,
-      cacheTtl: const Duration(minutes: 5),
-      fromJson: _parse,
-    )) {
-      last = items;
-      if (!_disposed) state = AsyncData(items);
+    try {
+      await for (final items in ref.read(apiServiceProvider).get<List<StoryItem>>(
+        url: _url,
+        cacheKey: StorageService.cacheMyStories,
+        cacheTtl: const Duration(minutes: 5),
+        fromJson: _parse,
+      )) {
+        debugPrint('[MyStories] data: ${items.length} items | disposed=$_disposed');
+        last = items;
+        if (!_disposed) state = AsyncData(items);
+      }
+    } catch (e) {
+      debugPrint('[MyStories] build error: $e');
+      rethrow;
     }
+    debugPrint('[MyStories] build done | last=${last?.length}');
     return last ?? [];
   }
 

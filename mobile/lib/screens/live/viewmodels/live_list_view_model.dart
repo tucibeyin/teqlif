@@ -43,6 +43,7 @@ class LiveListViewModel extends AsyncNotifier<LiveListState> {
   StreamSubscription<Map<String, dynamic>>? _wsSub;
   StreamSubscription<bool>? _connectSub;
   StreamSubscription<List<StreamOut>>? _swrSub;
+  Completer<List<StreamOut>>? _pendingCompleter;
   final _connectSvc = ConnectivityService();
 
   @override
@@ -64,6 +65,9 @@ class LiveListViewModel extends AsyncNotifier<LiveListState> {
       _wsSub?.cancel();
       _connectSub?.cancel();
       _swrSub?.cancel();
+      if (_pendingCompleter != null && !_pendingCompleter!.isCompleted) {
+        _pendingCompleter!.complete([]);
+      }
     });
 
     return _loadInitial(bypassCache: false);
@@ -78,7 +82,6 @@ class LiveListViewModel extends AsyncNotifier<LiveListState> {
     List<Map<String, dynamic>> sugg = [];
 
     if (isLoggedIn) {
-      // Paralel çalıştır — sıralı await 20s'e kadar uzayabilir
       final results = await Future.wait([
         ref.read(streamServiceProvider).getRecommendedStreams().catchError((_) => <StreamOut>[]),
         ref.read(streamServiceProvider).getSuggestedStreamers().catchError((_) => <Map<String, dynamic>>[]),
@@ -87,11 +90,21 @@ class LiveListViewModel extends AsyncNotifier<LiveListState> {
       sugg = (results[1] as List).cast<Map<String, dynamic>>();
     }
 
-    final completer = Completer<List<StreamOut>>();
-
+    // Önceki subscription'ı iptal et, sonra orphaned completer'ı tamamla.
+    // Dart'ta cancel() onDone'u tetiklemez — önceki _loadInitial sonsuza beklemesin.
     _swrSub?.cancel();
+    _swrSub = null;
+    if (_pendingCompleter != null && !_pendingCompleter!.isCompleted) {
+      _pendingCompleter!.complete([]);
+    }
+    _pendingCompleter = null;
+
+    final completer = Completer<List<StreamOut>>();
+    _pendingCompleter = completer;
+
     _swrSub = ref.read(streamServiceProvider).getActiveStreamsStream(bypassCache: bypassCache).listen(
       (streams) {
+        _pendingCompleter = null;
         if (!completer.isCompleted) {
           completer.complete(streams);
         } else if (state.value != null) {
@@ -99,6 +112,7 @@ class LiveListViewModel extends AsyncNotifier<LiveListState> {
         }
       },
       onError: (e, st) {
+        _pendingCompleter = null;
         if (!completer.isCompleted) {
           completer.completeError(e, st);
         } else if (state.value == null || state.value!.streams.isEmpty) {
@@ -106,6 +120,7 @@ class LiveListViewModel extends AsyncNotifier<LiveListState> {
         }
       },
       onDone: () {
+        _pendingCompleter = null;
         if (!completer.isCompleted) {
           completer.complete([]);
         }
