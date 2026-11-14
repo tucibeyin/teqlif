@@ -32,13 +32,14 @@ _SCHEDULE_PATH = Path(__file__).parents[1] / "schedule.yaml"
 
 
 def _load_batch_registry() -> dict[str, int]:
-    """schedule.yaml batch bölümünden {job_name: watchdog_m} okur."""
+    """schedule.yaml batch + backup bölümlerinden {job_name: watchdog_m} okur."""
     try:
         with open(_SCHEDULE_PATH) as f:
             cfg = yaml.safe_load(f)
+        entries = cfg.get("batch", []) + cfg.get("backup", [])
         return {
             entry["name"]: int(entry["watchdog_m"])
-            for entry in cfg.get("batch", [])
+            for entry in entries
             if "watchdog_m" in entry
         }
     except Exception as exc:
