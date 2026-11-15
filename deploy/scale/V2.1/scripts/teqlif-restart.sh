@@ -237,6 +237,7 @@ EOF
   fi
 
   mkdir -p /var/lib/promtail /etc/promtail
+  chown -R tucibeyin:tucibeyin /var/lib/promtail
   if ! diff -q "$cfg_src" "$cfg_dst" >/dev/null 2>&1; then
     cp "$cfg_src" "$cfg_dst"
     log "Promtail config güncellendi"
