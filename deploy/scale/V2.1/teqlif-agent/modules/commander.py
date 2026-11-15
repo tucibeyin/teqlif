@@ -181,9 +181,16 @@ class TelegramCommander:
     def _make_context(
         self, chat_id: str, bot: TelegramBot, is_staging: bool
     ) -> CommandContext | None:
-        """Gelen update'in bağlamını oluşturur; yetkisiz chat ise None döner."""
+        """Gelen update'in bağlamını oluşturur; yetkisiz chat ise None döner.
+
+        Yetki kontrolü: sadece yapılandırılmış chat_id kabul edilir.
+        Bot kullanıcı adını keşfeden yabancı kişiler komut veremez.
+        """
         alerter = self._staging_alerter if is_staging else self._alerter
         if not alerter or not alerter.chat_id:
+            return None
+        if chat_id != alerter.chat_id:
+            logger.warning("Yetkisiz erişim denemesi | chat_id=%s", chat_id)
             return None
         return CommandContext(
             chat_id=chat_id, alerter=alerter, is_staging=is_staging, bot=bot,
