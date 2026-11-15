@@ -12,7 +12,7 @@ Environment=DATA_SOURCE_NAME=postgresql:///postgres?host=/var/run/postgresql&use
 ExecStart=/usr/local/bin/postgres_exporter \
   --web.listen-address=10.10.0.1:9187 \
   --log.level=warn \
-  --auto-discover-databases
+  --no-collector.stat_bgwriter
 Restart=on-failure
 RestartSec=15
 NoNewPrivileges=true
