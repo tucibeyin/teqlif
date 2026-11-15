@@ -59,6 +59,36 @@ async def answer_callback(
         logger.debug("answerCallback gönderilemedi: %s", exc)
 
 
+async def set_commands(
+    bot_token: str,
+    commands: list[dict],
+    scope: dict | None = None,
+) -> bool:
+    """setMyCommands — Telegram "/" menüsünü ayarlar.
+
+    commands: [{"command": "durum", "description": "Cluster özeti"}, ...]
+    scope:    {"type": "chat", "chat_id": "..."}  — None = global
+    """
+    if not bot_token:
+        return False
+    url = f"https://api.telegram.org/bot{bot_token}/setMyCommands"
+    payload: dict = {"commands": commands}
+    if scope:
+        payload["scope"] = scope
+    try:
+        async with aiohttp.ClientSession() as s:
+            async with s.post(url, json=payload, timeout=_TIMEOUT) as resp:
+                if resp.status != 200:
+                    body = await resp.text()
+                    logger.warning("setMyCommands hata %d: %s", resp.status, body[:200])
+                    return False
+                data = await resp.json()
+                return bool(data.get("ok"))
+    except Exception as exc:
+        logger.warning("setMyCommands gönderilemedi: %s", exc)
+        return False
+
+
 async def get_updates(
     bot_token: str,
     offset: int,

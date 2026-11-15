@@ -52,3 +52,8 @@ class TelegramBot:
         show_alert: bool = False,
     ) -> None:
         await tg.answer_callback(self.bot_token, cb_id, text, show_alert)
+
+    async def set_commands(self, chat_id: str, commands: list[dict]) -> bool:
+        """Belirli bir chat için Telegram '/' menüsünü ayarlar."""
+        scope = {"type": "chat", "chat_id": int(chat_id)} if chat_id else None
+        return await tg.set_commands(self.bot_token, commands, scope=scope)

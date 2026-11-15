@@ -37,6 +37,23 @@ logger = logging.getLogger("teqlif-agent.commander")
 
 _STAGING_NODE = "node5"
 
+_PROD_COMMANDS = [
+    {"command": "durum",    "description": "📊 Cluster özeti — node'lar + job'lar"},
+    {"command": "node",     "description": "📡 Node detay  (/node node1)"},
+    {"command": "portlar",  "description": "🔌 Tüm servis sağlığı"},
+    {"command": "joblar",   "description": "⚙️ Stale + hatalı job'lar"},
+    {"command": "yedekler", "description": "💾 Yedek zamanları"},
+    {"command": "yardim",   "description": "🤖 Komut listesi"},
+]
+
+_STAGING_COMMANDS = [
+    {"command": "durum",   "description": "🧪 Staging özeti (node5)"},
+    {"command": "node",    "description": "📡 node5 detay"},
+    {"command": "portlar", "description": "🔌 Staging servis sağlığı"},
+    {"command": "joblar",  "description": "⚙️ Staging job durumu"},
+    {"command": "yardim",  "description": "🤖 Komut listesi"},
+]
+
 
 @dataclass
 class CommandContext:
@@ -59,9 +76,10 @@ class TelegramCommander:
         self._alerter         = alerter
         self._staging_alerter = staging_alerter
         self._restart_gw      = restart_gw
-        self._offset: int     = 0
+        self._offset: int          = 0
         self._task:   asyncio.Task | None = None
-        self._polling = False
+        self._polling              = False
+        self._menus_registered     = False
 
     # ── Lider Kontrolü ───────────────────────────────────────────────────────
 
@@ -70,12 +88,38 @@ class TelegramCommander:
             self._polling = True
             self._task    = asyncio.create_task(self._poll_loop(), name="tg-commander")
             logger.info("Telegram commander başlatıldı (lider)")
+            await self._register_menus()
         elif not is_leader and self._polling:
             self._polling = False
             if self._task:
                 self._task.cancel()
                 self._task = None
             logger.info("Telegram commander durduruldu (lider değil)")
+
+    # ── Menü Kaydı ───────────────────────────────────────────────────────────
+
+    async def _register_menus(self) -> None:
+        """PROD ve STAGING kanalları için Telegram '/' menüsünü ayarlar.
+        Lider ilk sefer seçildiğinde bir kez çalışır."""
+        if self._menus_registered:
+            return
+        self._menus_registered = True
+        try:
+            ok = await self._bot.set_commands(
+                self._alerter.chat_id, _PROD_COMMANDS,
+            )
+            logger.info("PROD Telegram menüsü %s", "ayarlandı" if ok else "ayarlanamadı")
+        except Exception as exc:
+            logger.warning("PROD menü kaydı başarısız: %s", exc)
+
+        if self._staging_alerter and self._staging_alerter.chat_id:
+            try:
+                ok = await self._bot.set_commands(
+                    self._staging_alerter.chat_id, _STAGING_COMMANDS,
+                )
+                logger.info("STAGING Telegram menüsü %s", "ayarlandı" if ok else "ayarlanamadı")
+            except Exception as exc:
+                logger.warning("STAGING menü kaydı başarısız: %s", exc)
 
     # ── Polling ───────────────────────────────────────────────────────────────
 
