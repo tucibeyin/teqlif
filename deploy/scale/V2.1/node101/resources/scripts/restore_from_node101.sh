@@ -34,9 +34,13 @@ RESTIC_ENV=/etc/teqlif-offsite/restic.env
 # shellcheck source=/dev/null
 . "${RESTIC_ENV}"
 export RESTIC_REPOSITORY RESTIC_PASSWORD
-export RESTIC_CACHE_DIR=/mnt/data/cache/restic
+# Root olarak çalıştığı için prune/verify'ın teqlif-backup sahipli
+# /mnt/data/cache/restic dizinine dokunmuyoruz — izole geçici cache.
 export TMPDIR=/mnt/data/tmp
-mkdir -p "${RESTIC_CACHE_DIR}" "${TMPDIR}"
+mkdir -p "${TMPDIR}"
+_DR_CACHE=$(mktemp -d /mnt/data/tmp/restic-dr-cache-XXXXXX)
+export RESTIC_CACHE_DIR="${_DR_CACHE}"
+trap 'rm -rf "${_DR_CACHE}"' EXIT
 
 LOG=/mnt/data/tmp/restore_$(date +%Y%m%d_%H%M%S).log
 exec > >(tee -a "${LOG}") 2>&1
