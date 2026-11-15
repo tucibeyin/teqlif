@@ -72,11 +72,14 @@ async def main() -> None:
     g_cli   = GossipClient(cfg, db)
     await g_cli.load_sync_state()
 
-    bot             = TelegramBot(cfg.telegram_bot_token)
-    prod_alerter    = bot.alerter(cfg.telegram_chat_id)
+    prod_bot     = TelegramBot(cfg.telegram_bot_token)
+    prod_alerter = prod_bot.alerter(cfg.telegram_chat_id)
+
+    _staging_token  = cfg.staging_telegram_bot_token or cfg.telegram_bot_token
+    staging_bot     = TelegramBot(_staging_token)
     staging_alerter = (
-        bot.alerter(cfg.staging_telegram_chat_id)
-        if getattr(cfg, "staging_telegram_chat_id", None)
+        staging_bot.alerter(cfg.staging_telegram_chat_id)
+        if cfg.staging_telegram_chat_id
         else None
     )
 
@@ -89,7 +92,7 @@ async def main() -> None:
         CertWatcher(cfg, db, prod_alerter),
         MorningReporter(cfg, db, prod_alerter),
         StagingMorningReporter(cfg, staging_alerter or prod_alerter),
-        TelegramCommander(db, bot, prod_alerter, staging_alerter, restart_gw=g_cli),
+        TelegramCommander(db, prod_bot, prod_alerter, staging_bot, staging_alerter, restart_gw=g_cli),
     ]
 
     # Servis bazlı recording + relay modülü keşfi

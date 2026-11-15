@@ -59,8 +59,9 @@ class AgentConfig:
     monitor_services: list[str] = field(default_factory=list)
 
     # Staging izleme (opsiyonel — sadece staging çalıştıran node'larda set edilir)
-    staging_redis_url:          str = ""
-    staging_telegram_chat_id:   str = ""
+    staging_redis_url:           str = ""
+    staging_telegram_bot_token:  str = ""   # boşsa telegram_bot_token kullanılır
+    staging_telegram_chat_id:    str = ""
 
     @property
     def all_nodes(self) -> list[PeerConfig]:
@@ -122,6 +123,7 @@ def load_config(path: str | None = None) -> AgentConfig:
         cycle_interval  = raw.get("cycle_interval", 60),
         gossip_timeout  = raw.get("gossip_timeout", 5),
         monitor_services = raw.get("monitor_services", []),
-        staging_redis_url        = raw.get("staging_redis_url", "") or os.getenv("STAGING_REDIS_URL", ""),
-        staging_telegram_chat_id = raw.get("staging_telegram_chat_id", "") or os.getenv("STAGING_TELEGRAM_CHAT_ID", ""),
+        staging_redis_url           = raw.get("staging_redis_url", "") or os.getenv("STAGING_REDIS_URL", ""),
+        staging_telegram_bot_token  = raw.get("staging_telegram_bot_token", "") or os.getenv("STAGING_TELEGRAM_BOT_TOKEN", ""),
+        staging_telegram_chat_id    = raw.get("staging_telegram_chat_id", "") or os.getenv("STAGING_TELEGRAM_CHAT_ID", ""),
     )

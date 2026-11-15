@@ -111,9 +111,39 @@ agent_sync() {
     log "teqlif-agent config güncellendi → $config_dst"
   fi
 
-  # teqlif-agent Redis env — REDIS_URL yoksa yerel secrets'tan otomatik doldur.
-  # Şifreler repoya girmez; her node kendi yapılandırma dosyasından okur.
+  # teqlif-agent env — secrets repoya girmez; her node kendi kaynağından okur.
   local env_dst="/etc/teqlif-agent/env"
+
+  # Telegram tokens — .env.monitor'dan senkronize et (nodeMonitor)
+  # Her node bu bloğu çalıştırır ama dosya yalnızca nodeMonitor'da mevcut olur.
+  local _monitor_env="/project/teqlif/config/.env.monitor"
+  if [ -f "$_monitor_env" ]; then
+    mkdir -p /etc/teqlif-agent
+    touch "$env_dst" 2>/dev/null || true
+    for _var in TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_ID \
+                STAGING_TELEGRAM_BOT_TOKEN STAGING_TELEGRAM_CHAT_ID; do
+      local _val
+      _val=$(grep "^${_var}=" "$_monitor_env" 2>/dev/null | head -1 | cut -d= -f2-)
+      [ -z "$_val" ] && continue
+      if grep -q "^${_var}=" "$env_dst" 2>/dev/null; then
+        local _cur
+        _cur=$(grep "^${_var}=" "$env_dst" | head -1 | cut -d= -f2-)
+        if [ "$_cur" != "$_val" ]; then
+          sed -i "s|^${_var}=.*|${_var}=${_val}|" "$env_dst"
+          changed=true
+          log "teqlif-agent env güncellendi: ${_var}"
+        fi
+      else
+        echo "${_var}=${_val}" >> "$env_dst"
+        changed=true
+        log "teqlif-agent env eklendi: ${_var}"
+      fi
+    done
+    chown teqlif-agent:teqlif-agent "$env_dst" 2>/dev/null || true
+    chmod 640 "$env_dst"
+  fi
+
+  # Redis env — REDIS_URL yoksa yerel secrets'tan otomatik doldur.
   if ! grep -qE "^(REDIS_URL|CORE_REDIS_URL)=redis://:.+@" "$env_dst" 2>/dev/null; then
     local _redis_url=""
     # node1: .env.production (REDIS_URL=redis://:pass@127.0.0.1:6379/0)

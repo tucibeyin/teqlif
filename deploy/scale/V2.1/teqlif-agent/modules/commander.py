@@ -59,89 +59,110 @@ _STAGING_COMMANDS = [
 
 @dataclass
 class CommandContext:
-    chat_id:   str
-    alerter:   TelegramAlerter
+    """Bir komut isteğinin tüm bağlamı — alerter + hangi bot + staging mı."""
+    chat_id:    str
+    alerter:    TelegramAlerter
     is_staging: bool
+    bot:        TelegramBot  # callback yanıtları bu bot üzerinden gider
 
 
 class TelegramCommander:
     def __init__(
         self,
         db:              AgentDB,
-        bot:             TelegramBot,
-        alerter:         TelegramAlerter,
+        prod_bot:        TelegramBot,
+        prod_alerter:    TelegramAlerter,
+        staging_bot:     TelegramBot,       # token aynıysa prod_bot ile aynı instance olabilir
         staging_alerter: TelegramAlerter | None,
-        restart_gw,  # GossipClient — circular import önlemi, runtime duck-typed
+        restart_gw,                         # GossipClient — circular import önlemi
     ) -> None:
         self._db              = db
-        self._bot             = bot
-        self._alerter         = alerter
+        self._prod_bot        = prod_bot
+        self._staging_bot     = staging_bot
+        self._alerter         = prod_alerter
         self._staging_alerter = staging_alerter
         self._restart_gw      = restart_gw
-        self._offset: int          = 0
-        self._task:   asyncio.Task | None = None
-        self._polling              = False
+        self._tasks:  list[asyncio.Task] = []
+        self._polling = False
 
     # ── Lider Kontrolü ───────────────────────────────────────────────────────
 
     async def run(self, is_leader: bool) -> None:
         if is_leader and not self._polling:
             self._polling = True
-            self._task    = asyncio.create_task(self._poll_loop(), name="tg-commander")
+            self._tasks = [
+                asyncio.create_task(
+                    self._poll_loop(self._prod_bot, is_staging=False),
+                    name="tg-prod",
+                ),
+            ]
+            # Staging bot yalnızca token farklıysa ayrı poll loop çalıştırır
+            if self._staging_alerter and self._staging_bot is not self._prod_bot:
+                self._tasks.append(
+                    asyncio.create_task(
+                        self._poll_loop(self._staging_bot, is_staging=True),
+                        name="tg-staging",
+                    )
+                )
             logger.info("Telegram commander başlatıldı (lider)")
             await self._register_menus()
         elif not is_leader and self._polling:
             self._polling = False
-            if self._task:
-                self._task.cancel()
-                self._task = None
+            for t in self._tasks:
+                t.cancel()
+            self._tasks = []
             logger.info("Telegram commander durduruldu (lider değil)")
 
     # ── Menü Kaydı ───────────────────────────────────────────────────────────
 
     async def _register_menus(self) -> tuple[bool, bool]:
-        """PROD ve STAGING kanalları için Telegram '/' menüsünü ayarlar.
+        """PROD ve STAGING botları için Telegram '/' menüsünü ayarlar.
         Her lider seçiminde çalışır. (ok_prod, ok_staging) döner."""
-        # Default scope: botla PM açıldığında "/" menüsü görünür
-        try:
-            await self._bot.set_commands("", _PROD_COMMANDS)
-        except Exception:
-            pass
-
         prod_ok    = False
         staging_ok = False
+
+        # PROD: default scope (PM'de görünür) + per-chat scope
         try:
-            prod_ok = await self._bot.set_commands(
+            await self._prod_bot.set_commands("", _PROD_COMMANDS)
+        except Exception:
+            pass
+        try:
+            prod_ok = await self._prod_bot.set_commands(
                 self._alerter.chat_id, _PROD_COMMANDS,
             )
             logger.info("PROD Telegram menüsü %s", "ayarlandı" if prod_ok else "AYARLANAMADI")
         except Exception as exc:
             logger.warning("PROD menü kaydı başarısız: %s", exc)
 
+        # STAGING: ayrı bot varsa onun default scope'unu da ayarla
         if self._staging_alerter and self._staging_alerter.chat_id:
             try:
-                staging_ok = await self._bot.set_commands(
+                if self._staging_bot is not self._prod_bot:
+                    await self._staging_bot.set_commands("", _STAGING_COMMANDS)
+                staging_ok = await self._staging_bot.set_commands(
                     self._staging_alerter.chat_id, _STAGING_COMMANDS,
                 )
                 logger.info("STAGING Telegram menüsü %s", "ayarlandı" if staging_ok else "AYARLANAMADI")
             except Exception as exc:
                 logger.warning("STAGING menü kaydı başarısız: %s", exc)
         else:
-            staging_ok = True  # staging yoksa sorun değil
+            staging_ok = True
 
         return prod_ok, staging_ok
 
     # ── Polling ───────────────────────────────────────────────────────────────
 
-    async def _poll_loop(self) -> None:
+    async def _poll_loop(self, bot: TelegramBot, *, is_staging: bool) -> None:
+        """Belirli bir bot'un update stream'ini dinler; is_staging routing'i belirler."""
+        offset = 0
         while self._polling:
             try:
-                updates = await self._bot.get_updates(self._offset)
+                updates = await bot.get_updates(offset)
                 if updates:
-                    self._offset = updates[-1]["update_id"] + 1
+                    offset = updates[-1]["update_id"] + 1
                 for upd in updates:
                     try:
-                        await self._handle_update(upd)
+                        await self._handle_update(upd, bot=bot, is_staging=is_staging)
                     except Exception as exc:
                         logger.warning("Update işlenemedi: %s", exc)
             except asyncio.CancelledError:
@@ -152,27 +173,26 @@ class TelegramCommander:
 
     # ── Context Fabrikası ─────────────────────────────────────────────────────
 
-    def _make_context(self, chat_id: str) -> CommandContext | None:
-        """chat_id'den hangi kanal olduğunu çözer; yetkisizse None döner."""
-        if self._alerter.chat_id and str(self._alerter.chat_id) == chat_id:
-            return CommandContext(chat_id=chat_id, alerter=self._alerter, is_staging=False)
-        if (
-            self._staging_alerter
-            and self._staging_alerter.chat_id
-            and str(self._staging_alerter.chat_id) == chat_id
-        ):
-            return CommandContext(
-                chat_id=chat_id, alerter=self._staging_alerter, is_staging=True,
-            )
-        return None
+    def _make_context(
+        self, chat_id: str, bot: TelegramBot, is_staging: bool
+    ) -> CommandContext | None:
+        """Gelen update'in bağlamını oluşturur; yetkisiz chat ise None döner."""
+        alerter = self._staging_alerter if is_staging else self._alerter
+        if not alerter or not alerter.chat_id:
+            return None
+        return CommandContext(
+            chat_id=chat_id, alerter=alerter, is_staging=is_staging, bot=bot,
+        )
 
     # ── Update Yönlendirme ────────────────────────────────────────────────────
 
-    async def _handle_update(self, upd: dict) -> None:
+    async def _handle_update(
+        self, upd: dict, *, bot: TelegramBot, is_staging: bool
+    ) -> None:
         if "message" in upd:
             msg     = upd["message"]
             chat_id = str(msg.get("chat", {}).get("id", ""))
-            ctx     = self._make_context(chat_id)
+            ctx     = self._make_context(chat_id, bot, is_staging)
             if not ctx:
                 return
             text = msg.get("text", "").strip()
@@ -182,9 +202,9 @@ class TelegramCommander:
         elif "callback_query" in upd:
             cq      = upd["callback_query"]
             chat_id = str(cq.get("message", {}).get("chat", {}).get("id", ""))
-            ctx     = self._make_context(chat_id)
+            ctx     = self._make_context(chat_id, bot, is_staging)
             if not ctx:
-                await self._bot.answer_callback(cq["id"], "⛔ Yetkisiz")
+                await bot.answer_callback(cq["id"], "⛔ Yetkisiz")
                 return
             await self._handle_callback(ctx, cq)
 
@@ -227,35 +247,35 @@ class TelegramCommander:
         action = parts[0]
 
         if action == "ref":
-            await self._bot.answer_callback(cb_id)
+            await ctx.bot.answer_callback(cb_id)
             await self._cmd_durum(ctx, [])
         elif action == "yv":
-            await self._bot.answer_callback(cb_id)
+            await ctx.bot.answer_callback(cb_id)
             await self._cmd_yedekler(ctx, [])
         elif action == "dn":
             node_id = parts[1] if len(parts) > 1 else ""
-            await self._bot.answer_callback(cb_id)
+            await ctx.bot.answer_callback(cb_id)
             await self._cmd_node(ctx, [node_id])
         elif action == "dj":
             job = parts[1] if len(parts) > 1 else ""
-            await self._bot.answer_callback(cb_id)
+            await ctx.bot.answer_callback(cb_id)
             if job == "__list":
                 await self._cmd_joblar(ctx, [])
             else:
                 await self._cmd_job(ctx, [job])
         elif action == "nl":
-            await self._bot.answer_callback(cb_id)
+            await ctx.bot.answer_callback(cb_id)
             await self._cmd_node(ctx, [])
         elif action == "er":
             node_id = parts[1] if len(parts) > 1 else ""
-            await self._bot.answer_callback(cb_id)
+            await ctx.bot.answer_callback(cb_id)
             await self._cmd_node_errors(ctx, node_id)
         elif action == "rs":
             node_id = parts[1] if len(parts) > 1 else ""
             svc     = parts[2] if len(parts) > 2 else ""
             await self._do_restart(ctx, cb_id, node_id, svc)
         else:
-            await self._bot.answer_callback(cb_id, "Bilinmeyen aksiyon")
+            await ctx.bot.answer_callback(cb_id, "Bilinmeyen aksiyon")
 
     # ── Restart ───────────────────────────────────────────────────────────────
 
@@ -269,7 +289,7 @@ class TelegramCommander:
         if ctx.is_staging and svc not in STAGING_SERVICES:
             await self._bot.answer_callback(cb_id, "⛔ Bu servis staging kanalından yönetilemez")
             return
-        await self._bot.answer_callback(
+        await ctx.bot.answer_callback(
             cb_id,
             f"🔄 {node_id} → {svc} restart başlatılıyor...",
             show_alert=True,
