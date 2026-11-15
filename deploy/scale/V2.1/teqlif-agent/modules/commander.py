@@ -16,11 +16,14 @@ Desteklenen komutlar (iki kanalda da):
   /yardim       Komut listesi
 
 Callback formatları:
-  ref           /durum yenile
-  dn:<node>     /node <node>
-  dj:<job>      /job <job>  (__list → /joblar)
-  rs:<nd>:<svc> <node>'da <svc> restart
-  yv            /yedekler
+  ref            /durum yenile
+  dn:<node>      /node <node>
+  dj:<job>       /job <job>  (__list → /joblar)
+  rs:<nd>:<svc>  <node>'da <svc> restart
+  yv             /yedekler
+  lm:<node>      /log <node> servis seçici
+  lg:<node>:<sv> log getir
+  lg_list        log node listesine dön
 """
 from __future__ import annotations
 
@@ -46,7 +49,7 @@ _PROD_COMMANDS = [
     {"command": "portlar",  "description": "🔌 Tüm servis sağlığı"},
     {"command": "joblar",   "description": "⚙️ Stale + hatalı job'lar"},
     {"command": "yedekler", "description": "💾 Yedek zamanları"},
-    {"command": "log",      "description": "📋 Servis log'u  (/log node1 teqlif)"},
+    {"command": "log",      "description": "📋 Servis log'u — node + servis seç"},
     {"command": "yardim",   "description": "🤖 Komut listesi"},
     {"command": "menu",     "description": "🔄 Telegram menüsünü yenile"},
 ]
@@ -56,7 +59,7 @@ _STAGING_COMMANDS = [
     {"command": "node",    "description": "📡 node5 detay, restart, log"},
     {"command": "portlar", "description": "🔌 Staging servis sağlığı"},
     {"command": "joblar",  "description": "⚙️ Staging job durumu"},
-    {"command": "log",     "description": "📋 Servis log'u  (/log node5 teqlif-staging)"},
+    {"command": "log",     "description": "📋 Servis log'u — node + servis seç"},
     {"command": "yardim",  "description": "🤖 Komut listesi"},
     {"command": "menu",    "description": "🔄 Telegram menüsünü yenile"},
 ]
@@ -288,6 +291,13 @@ class TelegramCommander:
             node_id = parts[1] if len(parts) > 1 else ""
             svc     = parts[2] if len(parts) > 2 else ""
             await self._do_restart(ctx, cb_id, node_id, svc)
+        elif action == "lm":
+            node_id = parts[1] if len(parts) > 1 else ""
+            await ctx.bot.answer_callback(cb_id)
+            await self._cmd_log(ctx, [node_id] if node_id else [])
+        elif action == "lg_list":
+            await ctx.bot.answer_callback(cb_id)
+            await self._cmd_log(ctx, [])
         elif action == "lg":
             node_id = parts[1] if len(parts) > 1 else ""
             svc     = parts[2] if len(parts) > 2 else ""
@@ -782,14 +792,71 @@ class TelegramCommander:
         await ctx.alerter.send("\n".join(lines), markup=markup)
 
     async def _cmd_log(self, ctx: CommandContext, args: list[str]) -> None:
-        """Belirli node + servis için son 20 satır journal logu gösterir."""
-        if len(args) < 2:
+        """Node + servis seçtirip son 20 satır journal logu gösterir."""
+
+        # 0 arg → node seçici
+        if not args:
+            states = await self._db.get_all_node_states()
+            if ctx.is_staging:
+                rows = [[{
+                    "text": f"📋 {_STAGING_NODE}",
+                    "callback_data": f"lm:{_STAGING_NODE}",
+                }]]
+            else:
+                rows = []
+                for s in sorted(states, key=lambda x: _node_sort_key(x["node_id"])):
+                    nid = s["node_id"]
+                    cb  = f"lm:{nid}"
+                    if len(cb.encode()) <= 64:
+                        rows.append([{"text": f"📋 {nid}", "callback_data": cb}])
             await ctx.alerter.send(
-                "❓ Kullanım: <code>/log &lt;node&gt; &lt;servis&gt;</code>\n"
-                "Örnek: <code>/log node1 teqlif</code>"
+                "<b>📋 Log — Node Seç</b>",
+                markup={"inline_keyboard": rows},
             )
             return
 
+        # 1 arg → servis seçici
+        if len(args) == 1:
+            node_id = args[0]
+            if ctx.is_staging and node_id != _STAGING_NODE:
+                await ctx.alerter.send(
+                    f"⛔ Staging kanalından sadece <code>{_STAGING_NODE}</code> görülebilir."
+                )
+                return
+
+            states     = await self._db.get_all_node_states()
+            state      = next((s for s in states if s["node_id"] == node_id), None)
+            svcs_known = {
+                name for name, data in (state.get("services") or {}).items()
+                if isinstance(data, dict) and "healthy" in data
+            } if state else set()
+
+            candidates = (svcs_known & RESTARTABLE_SVCS) if svcs_known else RESTARTABLE_SVCS
+            if ctx.is_staging:
+                candidates = candidates & STAGING_SERVICES
+
+            rows = []
+            for svc in sorted(candidates):
+                cb = f"lg:{node_id}:{svc}"
+                if len(cb.encode()) <= 64:
+                    label = svc.replace("teqlif-", "").replace("-", " ").title()
+                    rows.append([{"text": f"📋 {label}", "callback_data": cb}])
+
+            rows.append([{"text": "◀ Node Listesi", "callback_data": "lg_list"}])
+
+            if len(rows) == 1:  # sadece geri butonu var
+                await ctx.alerter.send(
+                    f"❓ <b>{node_id}</b> için log alınabilecek servis bulunamadı."
+                )
+                return
+
+            await ctx.alerter.send(
+                f"<b>📋 Log — {node_id}</b>\nServis seç:",
+                markup={"inline_keyboard": rows},
+            )
+            return
+
+        # 2 arg → log getir
         node_id, svc = args[0], args[1]
         if ctx.is_staging and node_id != _STAGING_NODE:
             await ctx.alerter.send(
@@ -811,16 +878,15 @@ class TelegramCommander:
         raw = result.get("lines", "").strip()
         if not raw:
             await ctx.alerter.send(
-                f"📋 <b>{node_id}</b> → <code>{svc}</code>\n<i>Log boş veya servis yeni başlatıldı.</i>"
+                f"📋 <b>{node_id}</b> → <code>{svc}</code>\n"
+                "<i>Log boş veya servis yeni başlatıldı.</i>"
             )
             return
 
-        # Telegram 4096 char limiti — kırp
         header  = f"📋 <b>{node_id}</b> → <code>{svc}</code>\n<pre>"
         footer  = "</pre>"
         max_log = 4096 - len(header) - len(footer) - 10
         body    = raw[-max_log:] if len(raw) > max_log else raw
-
         await ctx.alerter.send(f"{header}{body}{footer}")
 
     async def _cmd_portlar(self, ctx: CommandContext, args: list[str]) -> None:
@@ -906,7 +972,8 @@ class TelegramCommander:
                 "<b>Yedekler:</b>\n"
                 "  /yedekler — Yedek zamanları  <i>(▶ Başlat butonu)</i>\n\n"
                 "<b>Log:</b>\n"
-                "  /log &lt;node&gt; &lt;servis&gt; — Son 20 satır  <i>(/log node1 teqlif)</i>\n\n"
+                "  /log — Node + servis seçtikten sonra son 20 satır\n"
+                "  /log &lt;node&gt; &lt;servis&gt; — Direkt log  <i>(/log node1 teqlif)</i>\n\n"
                 "/yardim — Bu mesaj\n\n"
                 "<i>Node'lar: node1 node2 node3 node4 "
                 "node5 node6 node101 nodeMonitor</i>"
