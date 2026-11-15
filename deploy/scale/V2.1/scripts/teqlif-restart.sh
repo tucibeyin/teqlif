@@ -98,6 +98,14 @@ agent_sync() {
     log "teqlif-agent → systemd-journal grubuna eklendi"
   fi
 
+  # CrowdSec sshd-logs parser: yeni Ubuntu'da process adı sshd-session, eski parser sadece sshd'ye bakar
+  local cs_parser="/etc/crowdsec/parsers/s01-parse/sshd-logs.yaml"
+  if [ -f "$cs_parser" ] && grep -q "program == 'sshd'" "$cs_parser"; then
+    sed -i "s/evt.Parsed.program == 'sshd'/evt.Parsed.program in ['sshd', 'sshd-session']/" "$cs_parser"
+    systemctl restart crowdsec 2>/dev/null || true
+    log "CrowdSec sshd parser güncellendi (sshd-session desteği eklendi)"
+  fi
+
   # schedule.yaml her zaman sync et — code değişikliğinden bağımsız
   local sched_src="$REPO/deploy/scale/V2.1/schedule.yaml"
   if ! diff -q "$sched_src" "$agent_dst/schedule.yaml" >/dev/null 2>&1; then
