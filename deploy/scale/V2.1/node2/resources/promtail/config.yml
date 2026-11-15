@@ -1,0 +1,52 @@
+server:
+  http_listen_address: 127.0.0.1
+  http_listen_port: 9080
+  grpc_listen_address: 127.0.0.1
+  grpc_listen_port: 0
+
+positions:
+  filename: /var/lib/promtail/positions.yaml
+
+clients:
+  - url: http://10.10.0.99:3100/loki/api/v1/push
+    tenant_id: teqlif
+
+scrape_configs:
+  # Systemd journal — tüm backup + DB + agent servislerini kapsar
+  # (teqlif-pg-dump, teqlif-redis-backup, teqlif-clickhouse-backup,
+  #  teqlif-minio-backup, teqlif-offsite-sync, teqlif-financial-worm,
+  #  teqlif-agent, teqlif-redis-replica, teqlif-redis-failover vb.)
+  - job_name: journal
+    journal:
+      labels:
+        job: systemd-journal
+        node: node2
+    relabel_configs:
+      - source_labels: [__journal__systemd_unit]
+        target_label: unit
+
+  # ClickHouse server logları
+  - job_name: clickhouse-server
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: clickhouse-server
+          node: node2
+          __path__: /var/log/clickhouse-server/clickhouse-server.log
+
+  - job_name: clickhouse-error
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: clickhouse-error
+          node: node2
+          __path__: /var/log/clickhouse-server/clickhouse-server.err.log
+
+  # Nginx DR logları
+  - job_name: nginx-dr
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: nginx-dr
+          node: node2
+          __path__: /var/log/nginx/*.log

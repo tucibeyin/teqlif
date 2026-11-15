@@ -475,7 +475,7 @@ User=tucibeyin
 EOF
     systemctl daemon-reload
     systemctl enable --now promtail
-    log_ok "Promtail aktif (node=${node_id}, tenant=${tenant} → Loki 10.10.0.2:3100)"
+    log_ok "Promtail aktif (node=${node_id}, tenant=${tenant} → Loki 10.10.0.99:3100)"
 }
 
 # ── Python venv + requirements ────────────────────────────────────────────────

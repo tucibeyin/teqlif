@@ -204,6 +204,51 @@ agent_sync() {
   fi
 }
 
+# ── sync_promtail: config değiştiyse güncelle, kurulu değilse kur ────────────
+sync_promtail() {
+  local node_dir="$1"
+  local cfg_src="$node_dir/resources/promtail/config.yml"
+  local cfg_dst="/etc/promtail/config.yml"
+
+  [ -f "$cfg_src" ] || return 0
+
+  # Promtail kurulu değilse Grafana apt repo'dan kur
+  if ! command -v promtail >/dev/null 2>&1; then
+    log "Promtail kuruluyor..."
+    if [ ! -f /etc/apt/sources.list.d/grafana.list ]; then
+      apt-get install -y -qq gnupg
+      curl -fsSL https://apt.grafana.com/gpg.key \
+        | gpg --dearmor | tee /usr/share/keyrings/grafana.gpg > /dev/null
+      echo "deb [signed-by=/usr/share/keyrings/grafana.gpg] https://apt.grafana.com stable main" \
+        | tee /etc/apt/sources.list.d/grafana.list
+      apt-get update -qq
+    fi
+    apt-get install -y -qq promtail
+    usermod -aG systemd-journal promtail 2>/dev/null || true
+    usermod -aG adm            promtail 2>/dev/null || true
+    mkdir -p /etc/systemd/system/promtail.service.d
+    cat > /etc/systemd/system/promtail.service.d/override.conf <<'EOF'
+[Service]
+SupplementaryGroups=systemd-journal adm
+User=tucibeyin
+EOF
+    systemctl daemon-reload
+    log "Promtail kuruldu"
+  fi
+
+  mkdir -p /var/lib/promtail /etc/promtail
+  if ! diff -q "$cfg_src" "$cfg_dst" >/dev/null 2>&1; then
+    cp "$cfg_src" "$cfg_dst"
+    log "Promtail config güncellendi"
+    systemctl enable promtail
+    systemctl restart promtail
+    log "promtail yeniden başlatıldı"
+  elif ! systemctl is-active promtail >/dev/null 2>&1; then
+    systemctl enable --now promtail
+    log "promtail başlatıldı"
+  fi
+}
+
 # ── sync_nginx: nginx conf.d dosyaları değiştiyse /etc/nginx/conf.d/ güncelle ─
 # nginx -t başarısız olursa backup'tan geri döner, restart iptal edilir.
 sync_nginx() {
@@ -397,6 +442,7 @@ case "$NODE" in
   node1)
     pip_sync
     agent_sync
+    sync_promtail "$REPO/deploy/scale/V2.1/node1"
     sync_services "$REPO/deploy/scale/V2.1/node1"
     sync_timer_overrides "$REPO/deploy/scale/V2.1/node1"
     sync_nginx "$REPO/deploy/scale/V2.1/node1"
@@ -414,6 +460,7 @@ case "$NODE" in
 
   node2)
     agent_sync
+    sync_promtail "$REPO/deploy/scale/V2.1/node2"
     sync_services "$REPO/deploy/scale/V2.1/node2"
     sync_timer_overrides "$REPO/deploy/scale/V2.1/node2"
     sync_scripts "$REPO/deploy/scale/V2.1/node2"
@@ -426,6 +473,7 @@ case "$NODE" in
 
   node3|node4)
     agent_sync
+    sync_promtail "$REPO/deploy/scale/V2.1/$NODE"
     sync_services "$REPO/deploy/scale/V2.1/$NODE"
     sync_timer_overrides "$REPO/deploy/scale/V2.1/$NODE"
     # VIP timer — ilk defa yükleniyorsa etkinleştir
@@ -450,6 +498,7 @@ case "$NODE" in
   node5)
     pip_sync
     agent_sync
+    sync_promtail "$REPO/deploy/scale/V2.1/node5"
     sync_services "$REPO/deploy/scale/V2.1/node5"
     sync_timer_overrides "$REPO/deploy/scale/V2.1/node5"
     sync_nginx "$REPO/deploy/scale/V2.1/node5"
@@ -476,6 +525,7 @@ case "$NODE" in
 
   node6)
     agent_sync
+    sync_promtail "$REPO/deploy/scale/V2.1/node6"
     sync_services "$REPO/deploy/scale/V2.1/node6"
     sync_timer_overrides "$REPO/deploy/scale/V2.1/node6"
     if ! systemctl is-enabled teqlif-redis-vip.timer >/dev/null 2>&1; then
@@ -493,6 +543,7 @@ case "$NODE" in
 
   nodeMonitor)
     agent_sync
+    sync_promtail "$REPO/deploy/scale/V2.1/nodeMonitor"
     sync_services "$REPO/deploy/scale/V2.1/nodeMonitor"
     sync_timer_overrides "$REPO/deploy/scale/V2.1/nodeMonitor"
     systemctl restart teqlif-prometheus teqlif-loki 2>/dev/null || true
@@ -515,6 +566,7 @@ case "$NODE" in
 
   node101)
     agent_sync
+    sync_promtail "$REPO/deploy/scale/V2.1/node101"
     sync_services "$REPO/deploy/scale/V2.1/node101"
     sync_scripts  "$REPO/deploy/scale/V2.1/node101"
     log "node101 — offsite-backup node, restic-rest-server ve teqlif-agent güncellendi."

@@ -1,0 +1,33 @@
+server:
+  http_listen_address: 127.0.0.1
+  http_listen_port: 9080
+  grpc_listen_address: 127.0.0.1
+  grpc_listen_port: 0
+
+positions:
+  filename: /var/lib/promtail/positions.yaml
+
+clients:
+  - url: http://10.10.0.99:3100/loki/api/v1/push
+    tenant_id: teqlif
+
+scrape_configs:
+  # Systemd journal — prometheus, loki, grafana, alertmanager,
+  # uptime-kuma, mariadb, teqlif-agent, crowdsec vb.
+  - job_name: journal
+    journal:
+      labels:
+        job: systemd-journal
+        node: nodeMonitor
+    relabel_configs:
+      - source_labels: [__journal__systemd_unit]
+        target_label: unit
+
+  # Grafana dosya logları
+  - job_name: grafana
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: grafana
+          node: nodeMonitor
+          __path__: /opt/monitor/shared/grafana/data/logs/grafana.log

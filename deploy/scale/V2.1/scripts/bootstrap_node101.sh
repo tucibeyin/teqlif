@@ -42,6 +42,8 @@ main() {
     setup_offsite_dirs
     setup_offsite_services "${NODE_DIR}"
     install_teqlif_agent   "${NODE_DIR}"
+    install_promtail
+    setup_promtail         "${NODE_DIR}" "${NODE_ID}"
     install_node_exporter "10.10.0.101"
     setup_wg_sudoers
     install_teqlif_restart_node101
