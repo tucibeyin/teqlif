@@ -102,6 +102,12 @@ class TelegramCommander:
     async def _register_menus(self) -> tuple[bool, bool]:
         """PROD ve STAGING kanalları için Telegram '/' menüsünü ayarlar.
         Her lider seçiminde çalışır. (ok_prod, ok_staging) döner."""
+        # Default scope: botla PM açıldığında "/" menüsü görünür
+        try:
+            await self._bot.set_commands("", _PROD_COMMANDS)
+        except Exception:
+            pass
+
         prod_ok    = False
         staging_ok = False
         try:
