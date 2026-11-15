@@ -232,6 +232,13 @@ class TelegramCommander:
                 await self._cmd_joblar(ctx, [])
             else:
                 await self._cmd_job(ctx, [job])
+        elif action == "nl":
+            await self._bot.answer_callback(cb_id)
+            await self._cmd_node(ctx, [])
+        elif action == "er":
+            node_id = parts[1] if len(parts) > 1 else ""
+            await self._bot.answer_callback(cb_id)
+            await self._cmd_node_errors(ctx, node_id)
         elif action == "rs":
             node_id = parts[1] if len(parts) > 1 else ""
             svc     = parts[2] if len(parts) > 2 else ""
@@ -324,9 +331,10 @@ class TelegramCommander:
                 lines.append("✅ <b>Staging job'lar normal</b>")
 
             markup = {"inline_keyboard": [
-                [{"text": "🔄 Yenile",               "callback_data": "ref"}],
-                [{"text": f"📋 {_STAGING_NODE}",     "callback_data": f"dn:{_STAGING_NODE}"}],
-                [{"text": "⚙️ Joblar",              "callback_data": "dj:__list"}],
+                [{"text": "🔄 Yenile",                  "callback_data": "ref"}],
+                [{"text": f"📡 {_STAGING_NODE}",        "callback_data": f"dn:{_STAGING_NODE}"}],
+                [{"text": f"🔍 Son Hatalar",            "callback_data": f"er:{_STAGING_NODE}"}],
+                [{"text": "⚙️ Joblar",                 "callback_data": "dj:__list"}],
             ]}
         else:
             # PROD: tüm cluster
@@ -358,9 +366,9 @@ class TelegramCommander:
             else:
                 lines.append("✅ <b>Tüm job'lar normal</b>")
 
-            lines.append("\n<i>/node &lt;id&gt; · /joblar · /yedekler · /portlar</i>")
             markup = {"inline_keyboard": [
                 [{"text": "🔄 Yenile",    "callback_data": "ref"}],
+                [{"text": "📡 Node Seç",  "callback_data": "nl"}],
                 [{"text": "⚙️ Joblar",   "callback_data": "dj:__list"}],
                 [{"text": "💾 Yedekler", "callback_data": "yv"}],
             ]}
@@ -368,33 +376,35 @@ class TelegramCommander:
         await ctx.alerter.send("\n".join(lines), markup=markup)
 
     async def _cmd_node(self, ctx: CommandContext, args: list[str]) -> None:
+        states = await self._db.get_all_node_states()
+
         if not args:
-            states = await self._db.get_all_node_states()
+            # Node listesi — inline keyboard butonlar
             if ctx.is_staging:
-                # Staging kanalından sadece node5'e link göster
-                lines = [f"<b>📡 Staging Node</b>"]
-                s = next((x for x in states if x["node_id"] == _STAGING_NODE), None)
+                s    = next((x for x in states if x["node_id"] == _STAGING_NODE), None)
                 icon = "✅" if s and _seen_ok(s.get("seen_at", "")) else "🔴"
-                lines.append(f"  {icon} <code>/node {_STAGING_NODE}</code>")
+                markup = {"inline_keyboard": [
+                    [{"text": f"{icon} {_STAGING_NODE}", "callback_data": f"dn:{_STAGING_NODE}"}],
+                ]}
+                await ctx.alerter.send("<b>📡 Staging Node</b>", markup=markup)
             else:
-                lines = ["<b>📡 Node Listesi</b>"]
+                rows = []
                 for s in sorted(states, key=lambda x: x["node_id"]):
                     nid  = s["node_id"]
                     icon = "✅" if _seen_ok(s.get("seen_at", "")) else "🔴"
-                    lines.append(f"  {icon} <code>/node {nid}</code>")
-            await ctx.alerter.send("\n".join(lines))
+                    rows.append([{"text": f"{icon} {nid}", "callback_data": f"dn:{nid}"}])
+                markup = {"inline_keyboard": rows}
+                await ctx.alerter.send("<b>📡 Node Seç</b>", markup=markup)
             return
 
         target = args[0]
-        # Staging kanalından sadece node5 görülebilir
         if ctx.is_staging and target != _STAGING_NODE:
             await ctx.alerter.send(
                 f"⛔ Staging kanalından sadece <code>{_STAGING_NODE}</code> görülebilir."
             )
             return
 
-        states = await self._db.get_all_node_states()
-        state  = next((s for s in states if s["node_id"] == target), None)
+        state = next((s for s in states if s["node_id"] == target), None)
         if not state:
             await ctx.alerter.send(f"❓ Node bulunamadı: <code>{target}</code>")
             return
@@ -413,11 +423,8 @@ class TelegramCommander:
         if m.get("offsite_disk_percent") is not None:
             lines.append(f"Offsite Disk {m['offsite_disk_percent']}%")
 
-        # Staging kanalında sadece staging servislerini göster
         def _svc_visible(svc_name: str) -> bool:
-            if ctx.is_staging:
-                return svc_name in STAGING_SERVICES
-            return True
+            return svc_name in STAGING_SERVICES if ctx.is_staging else True
 
         svc_lines: list[str] = []
         restart_btns: list[dict] = []
@@ -439,11 +446,94 @@ class TelegramCommander:
             lines.append("\n<b>🔧 Servisler:</b>")
             lines.extend(svc_lines[:18])
 
-        markup = None
-        if restart_btns:
-            markup = {"inline_keyboard": [[btn] for btn in restart_btns]}
+        # Aksiyon butonları: restart (sadece down servisler) + Son Hatalar + geri
+        action_rows: list[list[dict]] = [[btn] for btn in restart_btns]
+        er_cb = f"er:{target}"
+        if len(er_cb.encode()) <= 64:
+            action_rows.append([{"text": "🔍 Son Hatalar", "callback_data": er_cb}])
+        action_rows.append([{"text": "◀ Node Listesi", "callback_data": "nl"}])
 
-        await ctx.alerter.send("\n".join(lines), markup=markup)
+        await ctx.alerter.send("\n".join(lines), markup={"inline_keyboard": action_rows})
+
+    async def _cmd_node_errors(self, ctx: CommandContext, node_id: str) -> None:
+        """Belirli node için son hataları gösterir: down servisler + stale/fail job'lar."""
+        if not node_id:
+            return
+        if ctx.is_staging and node_id != _STAGING_NODE:
+            await ctx.alerter.send(
+                f"⛔ Staging kanalından sadece <code>{_STAGING_NODE}</code> görülebilir."
+            )
+            return
+
+        states = await self._db.get_all_node_states()
+        state  = next((s for s in states if s["node_id"] == node_id), None)
+        stale  = await self._db.get_stale_jobs()
+        failed = await self._db.get_failed_jobs()
+
+        lines = [f"<b>🔍 {node_id} — Son Hatalar</b>"]
+
+        # Down servisler
+        down_svcs: list[str] = []
+        if state:
+            svcs = state.get("services") or {}
+            for svc_name, svc_data in sorted(svcs.items()):
+                if not isinstance(svc_data, dict) or "healthy" not in svc_data:
+                    continue
+                if ctx.is_staging and svc_name not in STAGING_SERVICES:
+                    continue
+                if not svc_data.get("healthy", True):
+                    down_svcs.append(svc_name)
+        else:
+            lines.append("\n⚠️ Node gossip'ten yanıt vermiyor")
+
+        if down_svcs:
+            lines.append(f"\n<b>🔴 Down Servisler ({len(down_svcs)})</b>")
+            for s in down_svcs:
+                cb    = f"rs:{node_id}:{s}"
+                label = s.replace("teqlif-", "").replace("-", " ").title()
+                lines.append(f"  • {s}")
+        else:
+            lines.append("\n✅ Tüm servisler aktif")
+
+        # Stale job'lar (staging filtresi)
+        if ctx.is_staging:
+            stale  = [r for r in stale  if _is_staging_job(r["job_name"])]
+            failed = [r for r in failed if _is_staging_job(r["job_name"])]
+        else:
+            stale  = [r for r in stale  if not _is_staging_job(r["job_name"])]
+            failed = [r for r in failed if not _is_staging_job(r["job_name"])]
+
+        if stale:
+            lines.append(f"\n<b>⏰ Stale Job'lar ({len(stale)})</b>")
+            for row in stale[:5]:
+                job  = row["job_name"]
+                last = _short_dt(str(row.get("last_ok_at") or "hiç"))
+                lines.append(f"  • <code>{job}</code>\n    Son: {last}")
+
+        if failed:
+            lines.append(f"\n<b>🚨 Hatalı Job'lar ({len(failed)})</b>")
+            for row in failed[:5]:
+                job    = row["job_name"]
+                cnt    = row.get("fail_count", 1)
+                reason = str(row.get("fail_reason") or "")
+                lines.append(f"  • <code>{job}</code> ({cnt}× hata)")
+                if reason:
+                    lines.append(f"    <code>{reason[:80]}</code>")
+
+        if not stale and not failed and not down_svcs:
+            lines.append("\n✅ Son 24 saatte hata yok")
+
+        # Restart butonları (down servisler için)
+        restart_rows: list[list[dict]] = []
+        for s in down_svcs:
+            if s in RESTARTABLE_SVCS:
+                cb = f"rs:{node_id}:{s}"
+                if len(cb.encode()) <= 64:
+                    label = s.replace("teqlif-", "").replace("-", " ").title()
+                    restart_rows.append([{"text": f"🔄 {label}", "callback_data": cb}])
+
+        restart_rows.append([{"text": f"◀ {node_id} Detay", "callback_data": f"dn:{node_id}"}])
+        await ctx.alerter.send("\n".join(lines), markup={"inline_keyboard": restart_rows})
 
     async def _cmd_joblar(self, ctx: CommandContext, args: list[str]) -> None:
         stale  = await self._db.get_stale_jobs()
