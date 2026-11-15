@@ -18,7 +18,23 @@ scrape_configs:
         labels:
           job: teqlif-staging
           node: node5
-          __path__: /project/teqlif/logs/api/*.log
+          __path__: /var/www/teqlif.com/backend/logs/node-app.log
+
+  - job_name: teqlif-staging-errors
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: teqlif-staging-errors
+          node: node5
+          __path__: /var/www/teqlif.com/backend/logs/node-error.log
+
+  - job_name: teqlif-staging-worker
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: teqlif-staging-worker
+          node: node5
+          __path__: /var/www/teqlif.com/backend/logs/node-worker.log
 
   - job_name: nginx
     static_configs:
