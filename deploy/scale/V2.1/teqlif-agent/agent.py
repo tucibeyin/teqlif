@@ -21,6 +21,7 @@ from modules.healer import SelfHealer
 from modules.certs import CertWatcher
 from modules.cleaner import ScheduledCleaner
 from modules.reporter import MorningReporter, StagingMorningReporter
+from modules.commander import TelegramCommander
 
 __version__ = "1.1.0"
 
@@ -79,6 +80,7 @@ async def main() -> None:
         CertWatcher(cfg, db),
         MorningReporter(cfg, db),
         StagingMorningReporter(cfg),
+        TelegramCommander(cfg, db),
     ]
 
     # Servis bazlı recording + relay modülü keşfi

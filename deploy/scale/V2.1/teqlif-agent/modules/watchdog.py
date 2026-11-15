@@ -167,7 +167,13 @@ class JobWatchdog:
             f"<code>{job}</code>\n"
             f"Beklenen: her {mins} dk · Son OK: {last}"
         )
-        await tg.send(self._cfg.telegram_bot_token, self._cfg.telegram_chat_id, msg)
+        cb = f"dj:{job}"
+        markup = None
+        if len(cb.encode()) <= 64:
+            markup = {"inline_keyboard": [[
+                {"text": "📋 Job Detay", "callback_data": cb},
+            ]]}
+        await tg.send(self._cfg.telegram_bot_token, self._cfg.telegram_chat_id, msg, reply_markup=markup)
         logger.warning("Job stale: %s", job)
 
     async def _alert_fail(self, row: dict) -> None:

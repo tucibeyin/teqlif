@@ -1,21 +1,33 @@
-// teqlif-agent self-healer: belirli systemd servislerini yönetme yetkisi
+// teqlif-agent servis restart izinleri
+//
+// teqlif-agent.service'de NoNewPrivileges=true olduğu için sudo çalışmaz.
+// Bu polkit kuralı, teqlif-agent kullanıcısının busctl aracılığıyla
+// systemd üzerinden yalnızca onaylı servisleri yeniden başlatabilmesini sağlar.
+//
+// Dağıtım: teqlif-restart.sh → /etc/polkit-1/rules.d/50-teqlif-agent.rules
+// (teqlif-restart.sh agent_sync() bölümünde otomatik güncellenir)
+
 polkit.addRule(function(action, subject) {
-    var MANAGE = [
-        "org.freedesktop.systemd1.manage-units",
-        "org.freedesktop.systemd1.reload-or-restart-unit",
+    if (action.id !== "org.freedesktop.systemd1.manage-units") return;
+    if (subject.user !== "teqlif-agent") return;
+
+    var allowed = [
+        "teqlif.service",
+        "teqlif-worker.service",
+        "teqlif-worker-critical.service",
+        "teqlif-worker-video.service",
+        "teqlif-ai-proxy.service",
+        "teqlif-livekit.service",
+        "teqlif-agent.service",
+        "teqlif-staging.service",
+        "teqlif-worker-staging.service",
+        "teqlif-worker-critical-staging.service",
     ];
-    var UNITS = [
-        /^teqlif([-.]|$)/,
-        /^postgresql@17-main\.service$/,
-        /^clickhouse-server\.service$/,
-        /^haproxy\.service$/,
-        /^stalwart-mail\.service$/,
-        /^livekit([-.]|$)/,
-    ];
-    if (MANAGE.indexOf(action.id) === -1) return;
-    if (subject.user !== "teqlif-agent")  return;
+
     var unit = action.lookup("unit") || "";
-    for (var i = 0; i < UNITS.length; i++) {
-        if (UNITS[i].test(unit)) return polkit.Result.YES;
+    var verb = action.lookup("verb") || "";
+
+    if ((verb === "restart" || verb === "start") && allowed.indexOf(unit) >= 0) {
+        return polkit.Result.YES;
     }
 });

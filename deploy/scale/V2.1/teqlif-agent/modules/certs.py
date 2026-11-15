@@ -121,9 +121,13 @@ class CertWatcher:
                         f"✅ <b>{self._cfg.node_id}</b> — port {port} ({svc}) yeniden açıldı",
                     )
                 except Exception:
+                    markup = {"inline_keyboard": [[
+                        {"text": "📋 Node Detay", "callback_data": f"dn:{self._cfg.node_id}"},
+                    ]]}
                     await self._fire(
                         key,
                         f"🔴 <b>{self._cfg.node_id}</b> — port {port} ({svc}) kapalı",
+                        reply_markup=markup,
                     )
 
     # ── i18n Pack Tazeliği ────────────────────────────────────────────────────
@@ -219,14 +223,17 @@ class CertWatcher:
         await tg.send(self._cfg.telegram_bot_token, self._cfg.telegram_chat_id, message)
         logger.warning("CERT alert: %s", key)
 
-    async def _fire(self, key: str, message: str) -> None:
+    async def _fire(self, key: str, message: str, reply_markup: dict | None = None) -> None:
         """Alert gönderir ve recovery tespiti için _firing'e kaydeder."""
         now = time.monotonic()
         if now - self._cooldown.get(key, 0) < _COOLDOWN:
             return
         self._cooldown[key] = now
         self._firing[key]   = now
-        await tg.send(self._cfg.telegram_bot_token, self._cfg.telegram_chat_id, message)
+        await tg.send(
+            self._cfg.telegram_bot_token, self._cfg.telegram_chat_id, message,
+            reply_markup=reply_markup,
+        )
         logger.warning("ALERT: %s", key)
 
     async def _recover(self, key: str, message: str) -> None:

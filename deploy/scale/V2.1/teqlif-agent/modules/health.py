@@ -99,6 +99,20 @@ _STAGING_SERVICES: frozenset[str] = frozenset({
     "teqlif-livekit-staging",
 })
 
+# Gossip /cmd + polkit üzerinden yeniden başlatılabilecek servisler
+_RESTARTABLE_SVCS: frozenset[str] = frozenset({
+    "teqlif",
+    "teqlif-worker",
+    "teqlif-worker-critical",
+    "teqlif-worker-video",
+    "teqlif-ai-proxy",
+    "teqlif-livekit",
+    "teqlif-agent",
+    "teqlif-staging",
+    "teqlif-worker-staging",
+    "teqlif-worker-critical-staging",
+})
+
 
 class HealthMonitor:
     def __init__(self, cfg: AgentConfig, db: AgentDB) -> None:
@@ -251,7 +265,15 @@ class HealthMonitor:
                 msg = f"🔴 <b>{node_id}</b> — {label} çöktü"
                 if err:
                     msg += f"\n<code>{err[:120]}</code>"
-                await self._fire(fkey, msg, chat_id=chat_id)
+                markup = None
+                if svc in _RESTARTABLE_SVCS:
+                    cb = f"rs:{node_id}:{svc}"
+                    if len(cb.encode()) <= 64:
+                        markup = {"inline_keyboard": [[
+                            {"text": "📋 Node Detay", "callback_data": f"dn:{node_id}"},
+                            {"text": "🔄 Restart",    "callback_data": cb},
+                        ]]}
+                await self._fire(fkey, msg, chat_id=chat_id, reply_markup=markup)
             else:
                 await self._recover(fkey, f"✅ <b>{node_id}</b> — {label} kurtardı", chat_id=chat_id)
 
@@ -282,13 +304,24 @@ class HealthMonitor:
 
     # ── Fire / Recover ────────────────────────────────────────────────────────
 
-    async def _fire(self, key: str, message: str, chat_id: str | None = None) -> None:
+    async def _fire(
+        self,
+        key: str,
+        message: str,
+        chat_id: str | None = None,
+        reply_markup: dict | None = None,
+    ) -> None:
         now = time.monotonic()
         if now - self._cooldown.get(key, 0) < _COOLDOWN_SEC:
             return
         self._cooldown[key] = now
         self._firing[key]   = now
-        await tg.send(self._cfg.telegram_bot_token, chat_id or self._cfg.telegram_chat_id, message)
+        await tg.send(
+            self._cfg.telegram_bot_token,
+            chat_id or self._cfg.telegram_chat_id,
+            message,
+            reply_markup=reply_markup,
+        )
         logger.warning("ALERT: %s", message.replace("\n", " "))
 
     async def _recover(self, key: str, message: str, chat_id: str | None = None) -> None:

@@ -5,6 +5,7 @@ import asyncio
 import json
 import logging
 from datetime import datetime, timezone, timedelta
+from pathlib import Path
 
 import aiohttp
 from aiohttp import web
@@ -13,6 +14,21 @@ from config import AgentConfig, PeerConfig
 from db import AgentDB, _EPOCH
 
 logger = logging.getLogger("teqlif-agent.gossip")
+
+# Gossip /cmd üzerinden yeniden başlatılabilecek servisler (teqlif-agent kullanıcısı,
+# polkit 50-teqlif-agent.rules → busctl üzerinden izin verilen liste)
+_RESTARTABLE_SERVICES = frozenset({
+    "teqlif",
+    "teqlif-worker",
+    "teqlif-worker-critical",
+    "teqlif-worker-video",
+    "teqlif-ai-proxy",
+    "teqlif-livekit",
+    "teqlif-agent",
+    "teqlif-staging",
+    "teqlif-worker-staging",
+    "teqlif-worker-critical-staging",
+})
 
 
 def _auth_middleware(token: str):
@@ -32,8 +48,9 @@ class GossipServer:
 
     async def serve(self, stop: asyncio.Event) -> None:
         app = web.Application(middlewares=[_auth_middleware(self._cfg.gossip_token)])
-        app.router.add_get("/ping",  self._handle_ping)
-        app.router.add_get("/delta", self._handle_delta)
+        app.router.add_get("/ping",   self._handle_ping)
+        app.router.add_get("/delta",  self._handle_delta)
+        app.router.add_post("/cmd",   self._handle_cmd)
         runner = web.AppRunner(app)
         await runner.setup()
         site = web.TCPSite(runner, self._cfg.wg_ip, self._cfg.gossip_port)
@@ -49,6 +66,48 @@ class GossipServer:
         since = request.query.get("since", _EPOCH)
         delta = await self._db.get_delta(since)
         return web.json_response(delta)
+
+    async def _handle_cmd(self, request: web.Request) -> web.Response:
+        """Uzak restart komutu — sadece WireGuard mesh içinden erişilebilir."""
+        try:
+            data = await request.json()
+        except Exception:
+            return web.json_response({"ok": False, "error": "invalid JSON"}, status=400)
+
+        cmd = data.get("cmd")
+        if cmd != "restart_service":
+            return web.json_response({"ok": False, "error": f"unknown cmd: {cmd}"}, status=400)
+
+        svc = str(data.get("service", "")).strip()
+        if svc not in _RESTARTABLE_SERVICES:
+            logger.warning("Reddedilen restart isteği: %s", svc)
+            return web.json_response({"ok": False, "error": f"not allowed: {svc}"}, status=403)
+
+        unit_path = Path(f"/etc/systemd/system/{svc}.service")
+        if not unit_path.exists():
+            return web.json_response({"ok": False, "error": f"not on this node: {svc}"}, status=404)
+
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                "busctl", "--system", "call",
+                "org.freedesktop.systemd1", "/org/freedesktop/systemd1",
+                "org.freedesktop.systemd1.Manager", "RestartUnit",
+                "ss", f"{svc}.service", "fail",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            _, stderr = await asyncio.wait_for(proc.communicate(), timeout=10)
+            if proc.returncode != 0:
+                err = stderr.decode(errors="replace")[:200]
+                logger.error("busctl restart başarısız: %s | %s", svc, err)
+                return web.json_response({"ok": False, "error": err}, status=500)
+        except asyncio.TimeoutError:
+            return web.json_response({"ok": False, "error": "busctl timeout"}, status=500)
+        except Exception as exc:
+            return web.json_response({"ok": False, "error": str(exc)[:100]}, status=500)
+
+        logger.info("Uzak restart: %s", svc)
+        return web.json_response({"ok": True, "restarted": svc})
 
 
 class GossipClient:
