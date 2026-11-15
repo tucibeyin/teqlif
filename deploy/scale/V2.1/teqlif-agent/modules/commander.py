@@ -372,7 +372,7 @@ class TelegramCommander:
             lines = [f"<b>📊 Anlık Durum</b> — {now_str} UTC\n"]
             active = sum(1 for s in states if _seen_ok(s.get("seen_at", "")))
             lines.append(f"<b>📡 Node'lar ({active}/{len(states)} aktif)</b>")
-            for s in sorted(states, key=lambda x: x["node_id"]):
+            for s in sorted(states, key=lambda x: _node_sort_key(x["node_id"])):
                 nid  = s["node_id"]
                 icon = "✅" if _seen_ok(s.get("seen_at", "")) else "🔴"
                 m    = s.get("metrics") or {}
@@ -420,7 +420,7 @@ class TelegramCommander:
                 await ctx.alerter.send("<b>📡 Staging Node</b>", markup=markup)
             else:
                 rows = []
-                for s in sorted(states, key=lambda x: x["node_id"]):
+                for s in sorted(states, key=lambda x: _node_sort_key(x["node_id"])):
                     nid  = s["node_id"]
                     icon = "✅" if _seen_ok(s.get("seen_at", "")) else "🔴"
                     rows.append([{"text": f"{icon} {nid}", "callback_data": f"dn:{nid}"}])
@@ -769,6 +769,15 @@ class TelegramCommander:
 
 
 # ── Yardımcı Fonksiyonlar ─────────────────────────────────────────────────────
+
+def _node_sort_key(node_id: str) -> tuple:
+    """node1..node6, node101, nodeMonitor sırasıyla sıralar."""
+    if node_id.startswith("node"):
+        suffix = node_id[4:]
+        if suffix.isdigit():
+            return (0, int(suffix))
+    return (1, node_id)
+
 
 def _is_staging_job(job_name: str) -> bool:
     return "staging" in job_name.lower()
