@@ -137,6 +137,9 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
   // CACHE-23: WS invalidasyon aboneliği — açıkken anlık re-fetch tetikler.
   StreamSubscription<int>? _invalidationSub;
 
+  // dispose() içinde ref geçersiz olduğundan önceden kaydedilir.
+  late AnalyticsService _analyticsService;
+
   // Galeri + video analytics
   int _maxPhotoReached = 0;
 
@@ -145,6 +148,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
   @override
   void initState() {
     super.initState();
+    _analyticsService = ref.read(analyticsServiceProvider);
     _enteredAt = DateTime.now();
     _pageCtrl = PageController();
     final imgs = widget.listing['image_urls'] as List? ?? [];
@@ -481,7 +485,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     final rawPrice = widget.listing['price'];
     final pricePoint = rawPrice != null ? (rawPrice as num).toDouble() : null;
     if (listingId != null && durationSec >= 2) {
-      ref.read(analyticsServiceProvider).logInteraction(
+      _analyticsService.logInteraction(
         itemId: listingId,
         itemType: 'listing',
         interactionType: 'view',
@@ -492,7 +496,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     }
     // Detail dwell: kullanıcı 30+ saniye harcadıysa güçlü ilgi sinyali
     if (listingId != null && durationSec >= 30) {
-      ref.read(analyticsServiceProvider).logInteraction(
+      _analyticsService.logInteraction(
         itemId: listingId,
         itemType: 'listing',
         interactionType: 'detail_dwell',
@@ -503,7 +507,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     }
     // Photo swipe depth
     if (listingId != null && _maxPhotoReached > 0) {
-      ref.read(analyticsServiceProvider).logInteraction(
+      _analyticsService.logInteraction(
         itemId: listingId,
         itemType: 'listing',
         interactionType: 'listing_photo_swipe',
@@ -513,7 +517,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     }
     // Scroll depth
     if (listingId != null && _maxScrollDepth > 0.1) {
-      ref.read(analyticsServiceProvider).logInteraction(
+      _analyticsService.logInteraction(
         itemId: listingId,
         itemType: 'listing',
         interactionType: 'listing_scroll_depth',
@@ -529,7 +533,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
         final pos = _videoCtrl!.value.position.inMilliseconds;
         final pct = (pos / dur).clamp(0.0, 1.0);
         if (pct > 0.01) {
-          ref.read(analyticsServiceProvider).logInteraction(
+          _analyticsService.logInteraction(
             itemId: listingId,
             itemType: 'listing',
             interactionType: 'listing_video_watch',
@@ -548,7 +552,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     if (_offerFieldTouched) {
       final id = widget.listing['id'] as int?;
       if (id != null) {
-        ref.read(analyticsServiceProvider).logInteraction(
+        _analyticsService.logInteraction(
           itemId: id,
           itemType: 'listing',
           interactionType: 'bid_hesitation',

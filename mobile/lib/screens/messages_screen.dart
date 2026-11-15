@@ -108,7 +108,8 @@ class MessagesScreenState extends ConsumerState<MessagesScreen>
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
     final stateAsync = ref.watch(messagesScreenViewModelProvider);
-    final state = stateAsync.value ?? const MessagesUiState();
+    // .value → AsyncError state'de throw eder; .valueOrNull güvenli.
+    final state = stateAsync.valueOrNull ?? const MessagesUiState();
 
     return Scaffold(
       appBar: AppBar(

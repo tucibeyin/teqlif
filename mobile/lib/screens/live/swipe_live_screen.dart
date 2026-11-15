@@ -134,7 +134,9 @@ class _SwipeLiveScreenState extends ConsumerState<SwipeLiveScreen> {
   @override
   void initState() {
     super.initState();
-    ref.read(callServiceProvider).preventCallScreenAutoOpen.value = true;
+    _callService = ref.read(callServiceProvider);
+    _streamService = ref.read(streamServiceProvider);
+    _callService.preventCallScreenAutoOpen.value = true;
     activeScreenCount++;
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     WakelockPlus.enable();
@@ -180,11 +182,11 @@ class _SwipeLiveScreenState extends ConsumerState<SwipeLiveScreen> {
     });
 
     globalIsLiveTabVisible.addListener(_onVisibilityChanged);
-    ref.read(callServiceProvider).state.addListener(_onCallStateChanged);
+    _callService.state.addListener(_onCallStateChanged);
   }
 
   void _onCallStateChanged() {
-    final status = ref.read(callServiceProvider).state.value.status;
+    final status = _callService.state.value.status;
     final isCallActive = status != CallStatus.idle &&
                          status != CallStatus.ended;
     
@@ -231,6 +233,10 @@ class _SwipeLiveScreenState extends ConsumerState<SwipeLiveScreen> {
     });
   }
 
+  // dispose()'da ref geçersiz olduğundan önceden kaydedilir.
+  late CallService _callService;
+  late StreamService _streamService;
+
   ProviderContainer? _container;
 
   @override
@@ -241,9 +247,9 @@ class _SwipeLiveScreenState extends ConsumerState<SwipeLiveScreen> {
 
   @override
   void dispose() {
-    ref.read(callServiceProvider).preventCallScreenAutoOpen.value = false;
+    _callService.preventCallScreenAutoOpen.value = false;
     globalIsLiveTabVisible.removeListener(_onVisibilityChanged);
-    ref.read(callServiceProvider).state.removeListener(_onCallStateChanged);
+    _callService.state.removeListener(_onCallStateChanged);
     activeScreenCount--;
     _notifSub?.cancel();
     _streamCheckTimer?.cancel();
@@ -272,7 +278,7 @@ class _SwipeLiveScreenState extends ConsumerState<SwipeLiveScreen> {
     if (_pendingEvents.isEmpty) return;
     final toSend = List<Map<String, dynamic>>.from(_pendingEvents);
     _pendingEvents.clear();
-    ref.read(streamServiceProvider).sendSwipeLiveEvents(toSend);
+    _streamService.sendSwipeLiveEvents(toSend);
   }
 
   void _trackStreamDwell(int dwellMs) {

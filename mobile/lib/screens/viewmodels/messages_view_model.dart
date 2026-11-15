@@ -29,10 +29,12 @@ class MessagesScreenViewModel extends AutoDisposeAsyncNotifier<MessagesUiState> 
 
   @override
   FutureOr<MessagesUiState> build() async {
-    _badgeSub = PushNotificationService.badgeRefreshNeeded.stream.listen((_) => _loadCounts());
-    _fcmSub = PushNotificationService.notificationStream.stream.listen((_) => _loadCounts());
+    // .ignore(): fire-and-forget Future'lar unhandled error olarak Riverpod
+    // zone'una gitmez → AsyncError state set edilmez.
+    _badgeSub = PushNotificationService.badgeRefreshNeeded.stream.listen((_) => _loadCounts().ignore());
+    _fcmSub = PushNotificationService.notificationStream.stream.listen((_) => _loadCounts().ignore());
     _wsSub = ref.read(wsServiceProvider).messageStream.stream.listen((data) {
-      if (data['type'] == 'message') _loadCounts();
+      if (data['type'] == 'message') _loadCounts().ignore();
     });
 
     ref.onDispose(() {
@@ -52,16 +54,18 @@ class MessagesScreenViewModel extends AutoDisposeAsyncNotifier<MessagesUiState> 
   }
 
   Future<void> _loadCounts() async {
-    final results = await Future.wait([
-      ref.read(notificationServiceProvider).getUnreadNotifCount(),
-      ref.read(notificationServiceProvider).getMessageRequests(),
-    ]);
-    if (state.hasValue) {
-      state = AsyncValue.data(state.value!.copyWith(
-        unreadNotifs: results[0] as int,
-        requestCount: (results[1] as List).length,
-      ));
-    }
+    try {
+      final results = await Future.wait([
+        ref.read(notificationServiceProvider).getUnreadNotifCount(),
+        ref.read(notificationServiceProvider).getMessageRequests(),
+      ]);
+      if (state.hasValue) {
+        state = AsyncValue.data(state.value!.copyWith(
+          unreadNotifs: results[0] as int,
+          requestCount: (results[1] as List).length,
+        ));
+      }
+    } catch (_) {}
   }
 
   Future<void> markAllRead() async {
@@ -115,7 +119,7 @@ class MessagesTabViewModel extends AutoDisposeAsyncNotifier<ConversationsUiState
 
   @override
   FutureOr<ConversationsUiState> build() {
-    _fcmSub = PushNotificationService.notificationStream.stream.listen((_) => load(silent: true));
+    _fcmSub = PushNotificationService.notificationStream.stream.listen((_) => load(silent: true).ignore());
     _wsSub = ref.read(wsServiceProvider).messageStream.stream.listen((data) {
       if (data['type'] == 'message') {
         _updateConversationInMemory(data);
@@ -258,7 +262,7 @@ class NotificationsTabViewModel extends AutoDisposeAsyncNotifier<NotificationsUi
 
   @override
   FutureOr<NotificationsUiState> build() {
-    _sub = PushNotificationService.notificationStream.stream.listen((_) => load(silent: true));
+    _sub = PushNotificationService.notificationStream.stream.listen((_) => load(silent: true).ignore());
     ref.onDispose(() => _sub?.cancel());
 
     final result = _cache.getWithStaleness(StorageService.cacheNotifications);
@@ -323,9 +327,9 @@ class RequestsTabViewModel extends AutoDisposeAsyncNotifier<ConversationsUiState
 
   @override
   FutureOr<ConversationsUiState> build() {
-    _fcmSub = PushNotificationService.notificationStream.stream.listen((_) => load(silent: true));
+    _fcmSub = PushNotificationService.notificationStream.stream.listen((_) => load(silent: true).ignore());
     _wsSub = ref.read(wsServiceProvider).messageStream.stream.listen((data) {
-      if (data['type'] == 'message') load(silent: true);
+      if (data['type'] == 'message') load(silent: true).ignore();
     });
     ref.onDispose(() {
       _fcmSub?.cancel();

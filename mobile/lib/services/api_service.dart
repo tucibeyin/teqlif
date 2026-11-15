@@ -213,9 +213,13 @@ class ApiService {
     final key = '$url|${headers['Authorization'] ?? ''}';
     final existing = _inFlight[key];
     if (existing != null) return existing;
-    final future = _api
-        .getRaw(url, headers, timeout: timeout)
-        .whenComplete(() => _inFlight.remove(key));
+    // `late` ile closure, future atanmadan önce oluşturulur ama
+    // whenComplete asenkron ateşlenir — atama her zaman önceden tamamlanmış olur.
+    late final Future<http.Response> future;
+    future = _api.getRaw(url, headers, timeout: timeout).whenComplete(() {
+      // identical(): clearInFlight sonrası yeni build'in future'ını silme.
+      if (identical(_inFlight[key], future)) _inFlight.remove(key);
+    });
     _inFlight[key] = future;
     return future;
   }

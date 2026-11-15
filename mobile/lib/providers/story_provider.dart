@@ -18,6 +18,8 @@ class StoryGroupsNotifier
   // Bu flag build'ler arası kalıcıdır (AutoDisposeAsyncNotifier instance'ı
   // watcher varsa yeniden kullanılır). Data/error gelince sıfırlanır.
   bool _connectivityRetrying = false;
+  // Failsafe'den sonra tek otomatik yeniden deneme. Dispose edilince iptal edilir.
+  Timer? _retryTimer;
 
   String get _url => '${ref.read(apiClientProvider).config.baseUrl}/stories/following';
 
@@ -37,18 +39,28 @@ class StoryGroupsNotifier
   Future<List<UserStoryGroup>> build() async {
     _disposed = false; // AutoDisposeAsyncNotifier instance'ı yeniden kullanır — reset zorunlu
     debugPrint('[StoryGroups] build start | _disposed=$_disposed');
-    ref.onDispose(() { _disposed = true; debugPrint('[StoryGroups] disposed'); });
+    ref.onDispose(() { _disposed = true; _retryTimer?.cancel(); debugPrint('[StoryGroups] disposed'); });
     final link = ref.keepAlive();
     final timer = Timer(const Duration(minutes: 5), link.close);
     ref.onDispose(timer.cancel);
 
     // Failsafe: WiFi→mobile geçişinde iOS zaman zaman HTTP timeout'unu tetiklemez.
     // 25s sonra hâlâ AsyncLoading ise error state'e geçip shimmer döngüsünü kır.
+    // Ardından 10s bekleyip tek otomatik deneme yapar — iOS bağlantı geçişi
+    // bu sürede tamamlanır ve yeni istek mobile üzerinden çıkar.
     final failsafe = Timer(const Duration(seconds: 25), () {
       if (!_disposed && state.isLoading && !state.hasValue) {
         debugPrint('[StoryGroups] failsafe — 25s geçti, hâlâ yükleniyor');
-        _connectivityRetrying = false; // sonraki manual refresh için sıfırla
+        _connectivityRetrying = false;
         state = AsyncError(const NetworkException(), StackTrace.empty);
+        _retryTimer = Timer(const Duration(seconds: 10), () {
+          if (!_disposed && state.hasError && !_connectivityRetrying) {
+            debugPrint('[StoryGroups] failsafe sonrası otomatik yeniden deneme');
+            _connectivityRetrying = true;
+            ApiService.clearInFlight('/stories/');
+            ref.invalidateSelf();
+          }
+        });
       }
     });
     ref.onDispose(failsafe.cancel);
@@ -57,11 +69,14 @@ class StoryGroupsNotifier
     // provider'ı yenile — yeni build mobile üzerinde taze istek yapar.
     // _connectivityRetrying: build'ler arası cascadeyi önler — iOS'un rapid
     // event'leri nedeniyle her yeni build tekrar invalidateSelf yapmasın.
+    // hasError durumu: failsafe ateşlenmiş ama bağlantı geri geldi → retry.
     StreamSubscription<bool>? connectSub;
     connectSub = ConnectivityService().onConnectivityChanged.listen((online) {
-      if (online && !_disposed && state.isLoading && !state.hasValue && !_connectivityRetrying) {
+      if (!online || _disposed || _connectivityRetrying) return;
+      final shouldRetry = (state.isLoading && !state.hasValue) || state.hasError;
+      if (shouldRetry) {
         _connectivityRetrying = true;
-        debugPrint('[StoryGroups] network online — zombie temizleniyor, provider yenileniyor');
+        debugPrint('[StoryGroups] network online — provider yenileniyor (state: ${state.runtimeType})');
         ApiService.clearInFlight('/stories/');
         connectSub?.cancel();
         ref.invalidateSelf();
@@ -81,6 +96,7 @@ class StoryGroupsNotifier
         last = groups;
         if (!_disposed) {
           _connectivityRetrying = false; // başarı → sonraki geçiş için sıfırla
+          _retryTimer?.cancel();
           state = AsyncData(groups);
         }
       }
@@ -129,6 +145,7 @@ final storyGroupsProvider = AsyncNotifierProvider.autoDispose<
 class MyStoriesNotifier extends AutoDisposeAsyncNotifier<List<StoryItem>> {
   bool _disposed = false;
   bool _connectivityRetrying = false;
+  Timer? _retryTimer;
 
   String get _url => '${ref.read(apiClientProvider).config.baseUrl}/stories/mine';
 
@@ -142,7 +159,7 @@ class MyStoriesNotifier extends AutoDisposeAsyncNotifier<List<StoryItem>> {
   Future<List<StoryItem>> build() async {
     _disposed = false; // AutoDisposeAsyncNotifier instance'ı yeniden kullanır — reset zorunlu
     debugPrint('[MyStories] build start | _disposed=$_disposed');
-    ref.onDispose(() { _disposed = true; debugPrint('[MyStories] disposed'); });
+    ref.onDispose(() { _disposed = true; _retryTimer?.cancel(); debugPrint('[MyStories] disposed'); });
     final link = ref.keepAlive();
     final timer = Timer(const Duration(minutes: 5), link.close);
     ref.onDispose(timer.cancel);
@@ -152,15 +169,25 @@ class MyStoriesNotifier extends AutoDisposeAsyncNotifier<List<StoryItem>> {
         debugPrint('[MyStories] failsafe — 25s geçti, hâlâ yükleniyor');
         _connectivityRetrying = false;
         state = AsyncError(const NetworkException(), StackTrace.empty);
+        _retryTimer = Timer(const Duration(seconds: 10), () {
+          if (!_disposed && state.hasError && !_connectivityRetrying) {
+            debugPrint('[MyStories] failsafe sonrası otomatik yeniden deneme');
+            _connectivityRetrying = true;
+            ApiService.clearInFlight('/stories/');
+            ref.invalidateSelf();
+          }
+        });
       }
     });
     ref.onDispose(failsafe.cancel);
 
     StreamSubscription<bool>? connectSub;
     connectSub = ConnectivityService().onConnectivityChanged.listen((online) {
-      if (online && !_disposed && state.isLoading && !state.hasValue && !_connectivityRetrying) {
+      if (!online || _disposed || _connectivityRetrying) return;
+      final shouldRetry = (state.isLoading && !state.hasValue) || state.hasError;
+      if (shouldRetry) {
         _connectivityRetrying = true;
-        debugPrint('[MyStories] network online — zombie temizleniyor, provider yenileniyor');
+        debugPrint('[MyStories] network online — provider yenileniyor (state: ${state.runtimeType})');
         ApiService.clearInFlight('/stories/');
         connectSub?.cancel();
         ref.invalidateSelf();
@@ -180,6 +207,7 @@ class MyStoriesNotifier extends AutoDisposeAsyncNotifier<List<StoryItem>> {
         last = items;
         if (!_disposed) {
           _connectivityRetrying = false;
+          _retryTimer?.cancel();
           state = AsyncData(items);
         }
       }
