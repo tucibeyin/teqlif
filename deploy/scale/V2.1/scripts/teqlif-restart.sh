@@ -92,6 +92,12 @@ agent_sync() {
     log "Polkit kuralı güncellendi → $polkit_dst"
   fi
 
+  # teqlif-agent kullanıcısı systemd-journal grubunda değilse ekle (journalctl okuma için)
+  if id teqlif-agent &>/dev/null && ! id -nG teqlif-agent | grep -qw systemd-journal; then
+    usermod -aG systemd-journal teqlif-agent || true
+    log "teqlif-agent → systemd-journal grubuna eklendi"
+  fi
+
   # schedule.yaml her zaman sync et — code değişikliğinden bağımsız
   local sched_src="$REPO/deploy/scale/V2.1/schedule.yaml"
   if ! diff -q "$sched_src" "$agent_dst/schedule.yaml" >/dev/null 2>&1; then
