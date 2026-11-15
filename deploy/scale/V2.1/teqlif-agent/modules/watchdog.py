@@ -86,9 +86,10 @@ def _job_registry() -> dict[str, int]:
 
 class JobWatchdog:
     def __init__(self, cfg: AgentConfig, db: AgentDB) -> None:
-        self._cfg     = cfg
-        self._db      = db
-        self._alerted: dict[str, float] = {}  # job_name → last_alert monotonic
+        self._cfg            = cfg
+        self._db             = db
+        self._alerted: dict[str, float] = {}  # cooldown_key → last_alert monotonic
+        self._stale_alerted: set[str]   = set()  # stale alert gönderilmiş job'lar
 
     async def run(self, is_leader: bool) -> None:
         registry = _job_registry()
@@ -100,8 +101,21 @@ class JobWatchdog:
         # Sadece lider değerlendirir ve Telegram gönderir
         if is_leader:
             stale = await self._db.get_stale_jobs()
+            stale_names = {row["job_name"] for row in stale}
             for row in stale:
                 await self._alert_stale(row, registry)
+
+            # Recovery: daha önce uyarılan ama artık stale olmayan job'lar
+            for job in list(self._stale_alerted - stale_names):
+                self._stale_alerted.discard(job)
+                self._alerted.pop(f"stale:{job}", None)
+                await tg.send(
+                    self._cfg.telegram_bot_token,
+                    self._cfg.telegram_chat_id,
+                    f"✅ <b>{self._cfg.node_id}</b> — Job tekrar yanıt veriyor\n"
+                    f"<code>{job}</code>",
+                )
+                logger.info("Job recovered: %s", job)
 
             failed = await self._db.get_failed_jobs()
             for row in failed:
@@ -146,6 +160,7 @@ class JobWatchdog:
         if now - self._alerted.get(cooldown_key, 0) < _COOLDOWN_SEC:
             return
         self._alerted[cooldown_key] = now
+        self._stale_alerted.add(job)
         await self._db.set_job_alert_sent(job)
         msg = (
             f"⚠️ <b>{self._cfg.node_id}</b> — Job yanıt vermiyor\n"

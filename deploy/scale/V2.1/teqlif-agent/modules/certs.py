@@ -53,9 +53,10 @@ _COOLDOWN = 6 * 60 * 60   # 6 saatte bir tekrar uyar
 
 class CertWatcher:
     def __init__(self, cfg: AgentConfig, db: AgentDB) -> None:
-        self._cfg     = cfg
-        self._db      = db
-        self._alerted: dict[str, float] = {}
+        self._cfg      = cfg
+        self._db       = db
+        self._cooldown: dict[str, float] = {}  # key → son fire zamanı
+        self._firing:   dict[str, float] = {}  # key → fire zamanı (recovery tespiti)
 
     async def run(self, is_leader: bool) -> None:
         tasks = [
@@ -88,7 +89,7 @@ class CertWatcher:
                         )
                         break
                 else:
-                    self._alerted.pop(f"cert:{domain}", None)
+                    self._cooldown.pop(f"cert:{domain}", None)
             except Exception as exc:
                 logger.debug("Cert check başarısız | %s | %s", domain, exc)
 
@@ -109,16 +110,20 @@ class CertWatcher:
     async def _check_ports(self) -> None:
         for svc, addrs in self._port_map().items():
             for host, port in addrs:
+                key = f"port:{svc}:{port}"
                 try:
                     conn = asyncio.open_connection(host, port)
                     reader, writer = await asyncio.wait_for(conn, timeout=2)
                     writer.close()
                     await writer.wait_closed()
-                except Exception:
-                    key = f"port:{svc}:{port}"
-                    await self._alert(
+                    await self._recover(
                         key,
-                        f"🔴 <b>{self._cfg.node_id}</b> — port {port} ({svc}) kapalı"
+                        f"✅ <b>{self._cfg.node_id}</b> — port {port} ({svc}) yeniden açıldı",
+                    )
+                except Exception:
+                    await self._fire(
+                        key,
+                        f"🔴 <b>{self._cfg.node_id}</b> — port {port} ({svc}) kapalı",
                     )
 
     # ── i18n Pack Tazeliği ────────────────────────────────────────────────────
@@ -131,13 +136,13 @@ class CertWatcher:
                 pack = await r.get(f"i18n:{lang}")
                 key  = f"i18n:{lang}"
                 if not pack:
-                    await self._alert(
+                    await self._fire(
                         key,
                         f"⚠️ <b>i18n</b> — i18n:{lang} Redis'te eksik\n"
-                        f"<code>sync_main.py</code> çalıştırılmalı"
+                        f"<code>sync_main.py</code> çalıştırılmalı",
                     )
                 else:
-                    self._alerted.pop(key, None)
+                    await self._recover(key, f"✅ <b>i18n</b> — i18n:{lang} Redis'te tekrar mevcut")
             await r.aclose()
         except Exception as exc:
             logger.debug("i18n check başarısız: %s", exc)
@@ -153,13 +158,13 @@ class CertWatcher:
             used_gb = info.get("used_memory", 0) / 1e9
             key = "redis:mem"
             if used_gb > _REDIS_MEM_WARN:
-                await self._alert(
+                await self._fire(
                     key,
                     f"⚠️ <b>Redis bellek</b> — {used_gb:.1f} GB kullanımda "
-                    f"(maxmemory 4 GB)"
+                    f"(maxmemory 4 GB)",
                 )
             else:
-                self._alerted.pop(key, None)
+                await self._recover(key, f"✅ <b>Redis bellek</b> — bellek normale döndü ({used_gb:.1f} GB)")
         except Exception as exc:
             logger.debug("Redis mem check başarısız: %s", exc)
 
@@ -193,13 +198,12 @@ class CertWatcher:
             for row in rows:
                 lag = row["lag_sec"] or 0
                 if lag > 120:
-                    await self._alert(
+                    await self._fire(
                         key,
-                        f"⚠️ <b>PG Replikasyon</b> — {row['client_addr']} "
-                        f"lag {lag}s"
+                        f"⚠️ <b>PG Replikasyon</b> — {row['client_addr']} lag {lag}s",
                     )
                 else:
-                    self._alerted.pop(key, None)
+                    await self._recover(key, f"✅ <b>PG Replikasyon</b> — lag normale döndü")
             await conn.close()
         except Exception as exc:
             logger.debug("PG replication check başarısız: %s", exc)
@@ -207,12 +211,32 @@ class CertWatcher:
     # ── Alert Helper ──────────────────────────────────────────────────────────
 
     async def _alert(self, key: str, message: str) -> None:
+        """Sadece sertifika uyarıları için — recovery olmayan tek yönlü alert."""
         now = time.monotonic()
-        if now - self._alerted.get(key, 0) < _COOLDOWN:
+        if now - self._cooldown.get(key, 0) < _COOLDOWN:
             return
-        self._alerted[key] = now
+        self._cooldown[key] = now
         await tg.send(self._cfg.telegram_bot_token, self._cfg.telegram_chat_id, message)
-        logger.warning("CERT/PORT/i18n alert: %s", key)
+        logger.warning("CERT alert: %s", key)
+
+    async def _fire(self, key: str, message: str) -> None:
+        """Alert gönderir ve recovery tespiti için _firing'e kaydeder."""
+        now = time.monotonic()
+        if now - self._cooldown.get(key, 0) < _COOLDOWN:
+            return
+        self._cooldown[key] = now
+        self._firing[key]   = now
+        await tg.send(self._cfg.telegram_bot_token, self._cfg.telegram_chat_id, message)
+        logger.warning("ALERT: %s", key)
+
+    async def _recover(self, key: str, message: str) -> None:
+        """_firing'de kayıtlıysa recovery mesajı gönderir ve durumu temizler."""
+        if key not in self._firing:
+            return
+        del self._firing[key]
+        self._cooldown.pop(key, None)
+        await tg.send(self._cfg.telegram_bot_token, self._cfg.telegram_chat_id, message)
+        logger.info("RECOVER: %s", key)
 
 
 def _cert_days_remaining(hostname: str, port: int = 443) -> int:
