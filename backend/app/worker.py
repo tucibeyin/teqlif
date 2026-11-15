@@ -5026,7 +5026,7 @@ class WorkerSettings:
         cron(cleanup_stale_streams_task, minute=set(range(0, 60, 2))),
         # Her 30 dakikada — stream kayıt yaşam döngüsü
         cron(expire_recordings_task,        minute={0, 30}),
-        cron(archive_recordings_task,       minute={15}),
+        cron(archive_recordings_task,       minute={15, 45}),
         # minio_backup (05:30) biter, 05:45'te bildirim gönder — günde 1 kez
         cron(notify_new_recordings_task, hour=5, minute=45),
         # Her 30 dakikada — finalize sırasında başarısız olan chat dump'larını yeniden dene
