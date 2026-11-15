@@ -39,19 +39,21 @@ _STAGING_NODE = "node5"
 
 _PROD_COMMANDS = [
     {"command": "durum",    "description": "📊 Cluster özeti — node'lar + job'lar"},
-    {"command": "node",     "description": "📡 Node detay  (/node node1)"},
+    {"command": "node",     "description": "📡 Node seç ve yönet"},
     {"command": "portlar",  "description": "🔌 Tüm servis sağlığı"},
     {"command": "joblar",   "description": "⚙️ Stale + hatalı job'lar"},
     {"command": "yedekler", "description": "💾 Yedek zamanları"},
     {"command": "yardim",   "description": "🤖 Komut listesi"},
+    {"command": "menu",     "description": "🔄 Telegram menüsünü yenile"},
 ]
 
 _STAGING_COMMANDS = [
     {"command": "durum",   "description": "🧪 Staging özeti (node5)"},
-    {"command": "node",    "description": "📡 node5 detay"},
+    {"command": "node",    "description": "📡 node5 detay ve yönet"},
     {"command": "portlar", "description": "🔌 Staging servis sağlığı"},
     {"command": "joblar",  "description": "⚙️ Staging job durumu"},
     {"command": "yardim",  "description": "🤖 Komut listesi"},
+    {"command": "menu",    "description": "🔄 Telegram menüsünü yenile"},
 ]
 
 
@@ -79,7 +81,6 @@ class TelegramCommander:
         self._offset: int          = 0
         self._task:   asyncio.Task | None = None
         self._polling              = False
-        self._menus_registered     = False
 
     # ── Lider Kontrolü ───────────────────────────────────────────────────────
 
@@ -98,28 +99,31 @@ class TelegramCommander:
 
     # ── Menü Kaydı ───────────────────────────────────────────────────────────
 
-    async def _register_menus(self) -> None:
+    async def _register_menus(self) -> tuple[bool, bool]:
         """PROD ve STAGING kanalları için Telegram '/' menüsünü ayarlar.
-        Lider ilk sefer seçildiğinde bir kez çalışır."""
-        if self._menus_registered:
-            return
-        self._menus_registered = True
+        Her lider seçiminde çalışır. (ok_prod, ok_staging) döner."""
+        prod_ok    = False
+        staging_ok = False
         try:
-            ok = await self._bot.set_commands(
+            prod_ok = await self._bot.set_commands(
                 self._alerter.chat_id, _PROD_COMMANDS,
             )
-            logger.info("PROD Telegram menüsü %s", "ayarlandı" if ok else "ayarlanamadı")
+            logger.info("PROD Telegram menüsü %s", "ayarlandı" if prod_ok else "AYARLANAMADI")
         except Exception as exc:
             logger.warning("PROD menü kaydı başarısız: %s", exc)
 
         if self._staging_alerter and self._staging_alerter.chat_id:
             try:
-                ok = await self._bot.set_commands(
+                staging_ok = await self._bot.set_commands(
                     self._staging_alerter.chat_id, _STAGING_COMMANDS,
                 )
-                logger.info("STAGING Telegram menüsü %s", "ayarlandı" if ok else "ayarlanamadı")
+                logger.info("STAGING Telegram menüsü %s", "ayarlandı" if staging_ok else "AYARLANAMADI")
             except Exception as exc:
                 logger.warning("STAGING menü kaydı başarısız: %s", exc)
+        else:
+            staging_ok = True  # staging yoksa sorun değil
+
+        return prod_ok, staging_ok
 
     # ── Polling ───────────────────────────────────────────────────────────────
 
@@ -198,6 +202,7 @@ class TelegramCommander:
             "yardim":   self._cmd_yardim,
             "start":    self._cmd_yardim,
             "help":     self._cmd_yardim,
+            "menu":     self._cmd_menu,
         }
         fn = handlers.get(cmd)
         if fn:
@@ -692,6 +697,17 @@ class TelegramCommander:
             {"text": "🔄 Yenile", "callback_data": "ref"},
         ]]}
         await ctx.alerter.send("\n".join(lines), markup=markup)
+
+    async def _cmd_menu(self, ctx: CommandContext, args: list[str]) -> None:
+        """Telegram '/' menüsünü yeniden kaydet ve sonucu bildir."""
+        await ctx.alerter.send("⏳ Menü kayıt ediliyor...")
+        prod_ok, staging_ok = await self._register_menus()
+        lines = ["<b>📋 Menü Kayıt Sonucu</b>"]
+        lines.append(f"PROD:    {'✅ başarılı' if prod_ok else '❌ başarısız'}")
+        if self._staging_alerter and self._staging_alerter.chat_id:
+            lines.append(f"STAGING: {'✅ başarılı' if staging_ok else '❌ başarısız'}")
+        lines.append("\n<i>Telegram uygulamasını yeniden başlatmanız gerekebilir.</i>")
+        await ctx.alerter.send("\n".join(lines))
 
     async def _cmd_yardim(self, ctx: CommandContext, args: list[str]) -> None:
         if ctx.is_staging:
