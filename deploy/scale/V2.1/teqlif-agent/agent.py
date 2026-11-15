@@ -10,6 +10,7 @@ import logging
 import signal
 import sys
 
+from alerter import TelegramBot
 from config import load_config
 from db import AgentDB
 from leader import LeaderElector
@@ -71,16 +72,24 @@ async def main() -> None:
     g_cli   = GossipClient(cfg, db)
     await g_cli.load_sync_state()
 
+    bot             = TelegramBot(cfg.telegram_bot_token)
+    prod_alerter    = bot.alerter(cfg.telegram_chat_id)
+    staging_alerter = (
+        bot.alerter(cfg.staging_telegram_chat_id)
+        if getattr(cfg, "staging_telegram_chat_id", None)
+        else None
+    )
+
     modules = [
-        HealthMonitor(cfg, db),
-        JobWatchdog(cfg, db),
+        HealthMonitor(cfg, db, prod_alerter, staging_alerter),
+        JobWatchdog(cfg, db, prod_alerter),
         TTLJanitor(cfg, db),
-        ScheduledCleaner(cfg, db),
-        SelfHealer(cfg, db),
-        CertWatcher(cfg, db),
-        MorningReporter(cfg, db),
-        StagingMorningReporter(cfg),
-        TelegramCommander(cfg, db),
+        ScheduledCleaner(cfg, db, prod_alerter),
+        SelfHealer(cfg, db, prod_alerter),
+        CertWatcher(cfg, db, prod_alerter),
+        MorningReporter(cfg, db, prod_alerter),
+        StagingMorningReporter(cfg, staging_alerter or prod_alerter),
+        TelegramCommander(db, bot, prod_alerter, staging_alerter, restart_gw=g_cli),
     ]
 
     # Servis bazlı recording + relay modülü keşfi

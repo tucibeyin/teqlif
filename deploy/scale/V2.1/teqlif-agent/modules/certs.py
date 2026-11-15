@@ -19,7 +19,7 @@ from datetime import datetime, timezone, timedelta
 
 from config import AgentConfig
 from db import AgentDB
-import telegram as tg
+from alerter import TelegramAlerter
 
 logger = logging.getLogger("teqlif-agent.certs")
 
@@ -52,9 +52,10 @@ _COOLDOWN = 6 * 60 * 60   # 6 saatte bir tekrar uyar
 
 
 class CertWatcher:
-    def __init__(self, cfg: AgentConfig, db: AgentDB) -> None:
+    def __init__(self, cfg: AgentConfig, db: AgentDB, alerter: TelegramAlerter) -> None:
         self._cfg      = cfg
         self._db       = db
+        self._alerter  = alerter
         self._cooldown: dict[str, float] = {}  # key → son fire zamanı
         self._firing:   dict[str, float] = {}  # key → fire zamanı (recovery tespiti)
 
@@ -220,7 +221,7 @@ class CertWatcher:
         if now - self._cooldown.get(key, 0) < _COOLDOWN:
             return
         self._cooldown[key] = now
-        await tg.send(self._cfg.telegram_bot_token, self._cfg.telegram_chat_id, message)
+        await self._alerter.send(message)
         logger.warning("CERT alert: %s", key)
 
     async def _fire(self, key: str, message: str, reply_markup: dict | None = None) -> None:
@@ -230,10 +231,7 @@ class CertWatcher:
             return
         self._cooldown[key] = now
         self._firing[key]   = now
-        await tg.send(
-            self._cfg.telegram_bot_token, self._cfg.telegram_chat_id, message,
-            reply_markup=reply_markup,
-        )
+        await self._alerter.send(message, markup=reply_markup)
         logger.warning("ALERT: %s", key)
 
     async def _recover(self, key: str, message: str) -> None:
@@ -242,7 +240,7 @@ class CertWatcher:
             return
         del self._firing[key]
         self._cooldown.pop(key, None)
-        await tg.send(self._cfg.telegram_bot_token, self._cfg.telegram_chat_id, message)
+        await self._alerter.send(message)
         logger.info("RECOVER: %s", key)
 
 

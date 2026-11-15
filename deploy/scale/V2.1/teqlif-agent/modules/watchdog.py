@@ -22,7 +22,7 @@ import yaml
 
 from config import AgentConfig
 from db import AgentDB
-import telegram as tg
+from alerter import TelegramAlerter
 
 logger = logging.getLogger("teqlif-agent.watchdog")
 
@@ -85,9 +85,10 @@ def _job_registry() -> dict[str, int]:
 
 
 class JobWatchdog:
-    def __init__(self, cfg: AgentConfig, db: AgentDB) -> None:
+    def __init__(self, cfg: AgentConfig, db: AgentDB, alerter: TelegramAlerter) -> None:
         self._cfg            = cfg
         self._db             = db
+        self._alerter        = alerter
         self._alerted: dict[str, float] = {}  # cooldown_key → last_alert monotonic
         self._stale_alerted: set[str]   = set()  # stale alert gönderilmiş job'lar
 
@@ -109,11 +110,9 @@ class JobWatchdog:
             for job in list(self._stale_alerted - stale_names):
                 self._stale_alerted.discard(job)
                 self._alerted.pop(f"stale:{job}", None)
-                await tg.send(
-                    self._cfg.telegram_bot_token,
-                    self._cfg.telegram_chat_id,
+                await self._alerter.send(
                     f"✅ <b>{self._cfg.node_id}</b> — Job tekrar yanıt veriyor\n"
-                    f"<code>{job}</code>",
+                    f"<code>{job}</code>"
                 )
                 logger.info("Job recovered: %s", job)
 
@@ -173,7 +172,7 @@ class JobWatchdog:
             markup = {"inline_keyboard": [[
                 {"text": "📋 Job Detay", "callback_data": cb},
             ]]}
-        await tg.send(self._cfg.telegram_bot_token, self._cfg.telegram_chat_id, msg, reply_markup=markup)
+        await self._alerter.send(msg, markup=markup)
         logger.warning("Job stale: %s", job)
 
     async def _alert_fail(self, row: dict) -> None:
@@ -194,5 +193,5 @@ class JobWatchdog:
             f"Hata sayısı: {fail_count} · Son hata: {last_fail}"
             f"{reason_line}"
         )
-        await tg.send(self._cfg.telegram_bot_token, self._cfg.telegram_chat_id, msg)
+        await self._alerter.send(msg)
         logger.warning("Job fail aktif: %s (count=%s)", job, fail_count)

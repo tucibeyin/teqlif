@@ -10,7 +10,7 @@ from datetime import datetime, timedelta, timezone
 
 from config import AgentConfig
 from db import AgentDB
-import telegram as tg
+from alerter import TelegramAlerter
 
 logger = logging.getLogger("teqlif-agent.reporter")
 
@@ -66,9 +66,10 @@ _TR_TZ = timezone(timedelta(hours=3))
 
 
 class MorningReporter:
-    def __init__(self, cfg: AgentConfig, db: AgentDB) -> None:
-        self._cfg = cfg
-        self._db  = db
+    def __init__(self, cfg: AgentConfig, db: AgentDB, alerter: TelegramAlerter) -> None:
+        self._cfg     = cfg
+        self._db      = db
+        self._alerter = alerter
 
     async def run(self, is_leader: bool) -> None:
         if not is_leader:
@@ -168,11 +169,7 @@ class MorningReporter:
             else:
                 lines.append(f"  ❓ {label} — kayıt yok")
 
-        await tg.send(
-            self._cfg.telegram_bot_token,
-            self._cfg.telegram_chat_id,
-            "\n".join(lines),
-        )
+        await self._alerter.send("\n".join(lines))
         logger.info(
             "Sabah raporu: %d/%d node aktif, %d/%d batch OK",
             online, len(node_states), len(ok_jobs), total_b,
@@ -221,16 +218,15 @@ class StagingMorningReporter:
 
     Lider seçimine bağlı değildir — staging servisleri çalıştıran node
     (node5) doğrudan staging Redis'ten okur ve raporu gönderir.
-    staging_redis_url veya staging_telegram_chat_id eksikse sessizce atlar.
+    staging_redis_url eksikse sessizce atlar.
     """
 
-    def __init__(self, cfg: AgentConfig) -> None:
-        self._cfg = cfg
+    def __init__(self, cfg: AgentConfig, alerter: TelegramAlerter) -> None:
+        self._cfg     = cfg
+        self._alerter = alerter
 
     async def run(self, is_leader: bool) -> None:  # noqa: ARG002
-        if not self._cfg.staging_redis_url or not self._cfg.staging_telegram_chat_id:
-            return
-        if not self._cfg.telegram_bot_token:
+        if not self._cfg.staging_redis_url:
             return
 
         now_utc = datetime.now(timezone.utc)
@@ -304,11 +300,7 @@ class StagingMorningReporter:
         else:
             lines.append("  Tüm batch işler tamamlandı ✔")
 
-        await tg.send(
-            self._cfg.telegram_bot_token,
-            self._cfg.staging_telegram_chat_id,
-            "\n".join(lines),
-        )
+        await self._alerter.send("\n".join(lines))
         logger.info(
             "Staging sabah raporu: %d/%d batch OK, %d/%d sürekli OK",
             len(ok_jobs), total_b, len(cont_ok), len(_STAGING_CONTINUOUS),

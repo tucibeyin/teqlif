@@ -12,23 +12,9 @@ from aiohttp import web
 
 from config import AgentConfig, PeerConfig
 from db import AgentDB, _EPOCH
+from constants import RESTARTABLE_SVCS
 
 logger = logging.getLogger("teqlif-agent.gossip")
-
-# Gossip /cmd üzerinden yeniden başlatılabilecek servisler (teqlif-agent kullanıcısı,
-# polkit 50-teqlif-agent.rules → busctl üzerinden izin verilen liste)
-_RESTARTABLE_SERVICES = frozenset({
-    "teqlif",
-    "teqlif-worker",
-    "teqlif-worker-critical",
-    "teqlif-worker-video",
-    "teqlif-ai-proxy",
-    "teqlif-livekit",
-    "teqlif-agent",
-    "teqlif-staging",
-    "teqlif-worker-staging",
-    "teqlif-worker-critical-staging",
-})
 
 
 def _auth_middleware(token: str):
@@ -79,7 +65,7 @@ class GossipServer:
             return web.json_response({"ok": False, "error": f"unknown cmd: {cmd}"}, status=400)
 
         svc = str(data.get("service", "")).strip()
-        if svc not in _RESTARTABLE_SERVICES:
+        if svc not in RESTARTABLE_SVCS:
             logger.warning("Reddedilen restart isteği: %s", svc)
             return web.json_response({"ok": False, "error": f"not allowed: {svc}"}, status=403)
 
@@ -121,6 +107,32 @@ class GossipClient:
         for peer in self._cfg.peers:
             self._last_sync[peer.node_id] = await self._db.get_last_sync(peer.node_id)
         logger.debug("Gossip sync state yüklendi: %d peer", len(self._last_sync))
+
+    async def restart_service(self, node_id: str, service: str) -> dict:
+        """Hedef node'da servis restart isteği gönderir (gossip /cmd)."""
+        wg_ip: str | None = None
+        for peer in self._cfg.peers:
+            if peer.node_id == node_id:
+                wg_ip = peer.wg_ip
+                break
+        if wg_ip is None and node_id == self._cfg.node_id:
+            wg_ip = self._cfg.wg_ip
+        if not wg_ip:
+            return {"ok": False, "error": f"node bulunamadı: {node_id}"}
+
+        url     = f"http://{wg_ip}:{self._cfg.gossip_port}/cmd"
+        headers = {"Authorization": f"Bearer {self._cfg.gossip_token}"}
+        try:
+            async with aiohttp.ClientSession() as s:
+                async with s.post(
+                    url,
+                    json={"cmd": "restart_service", "service": service},
+                    headers=headers,
+                    timeout=aiohttp.ClientTimeout(total=10),
+                ) as r:
+                    return await r.json()
+        except Exception as exc:
+            return {"ok": False, "error": str(exc)[:100]}
 
     async def sync_all(self) -> None:
         """Tüm erişilebilir peer'larla delta exchange yapar."""

@@ -3,78 +3,72 @@
 Sadece lider node'da çalışır (nodeMonitor). getUpdates polling ile
 gelen komutları ve inline klavye callback'lerini işler.
 
-Desteklenen komutlar:
-  /durum        Cluster özeti (node'lar + job'lar + yedekler)
-  /node <id>    Belirli node detayı + servis restart butonları
+PROD kanalı:  Cluster geneli — tüm node'lar, tüm servisler, yedekler
+STAGING kanalı: node5'e özel — sadece staging servis + job'ları
+
+Desteklenen komutlar (iki kanalda da):
+  /durum        Cluster özeti (PROD) / staging özeti (STAGING)
+  /node <id>    Node detay + servis restart butonları
   /joblar       Stale + hatalı job listesi
   /job <ad>     Tek job detay
-  /yedekler     Yedek zamanları
-  /portlar      Node servis sağlığı özeti
+  /yedekler     Yedek zamanları (sadece PROD)
+  /portlar      Servis sağlığı özeti
   /yardim       Komut listesi
 
 Callback formatları:
   ref           /durum yenile
   dn:<node>     /node <node>
   dj:<job>      /job <job>  (__list → /joblar)
-  rs:<nd>:<svc> <node>'da <svc> restart (gossip /cmd endpoint)
+  rs:<nd>:<svc> <node>'da <svc> restart
   yv            /yedekler
 """
 from __future__ import annotations
 
 import asyncio
 import logging
+from dataclasses import dataclass
 from datetime import datetime, timezone
 
-import aiohttp
-
-from config import AgentConfig
+from alerter import TelegramAlerter, TelegramBot
+from constants import BACKUP_LABELS, BACKUP_MAX_MIN, RESTARTABLE_SVCS, STAGING_SERVICES
 from db import AgentDB
-import telegram as tg
 
 logger = logging.getLogger("teqlif-agent.commander")
 
-_RESTARTABLE = frozenset({
-    "teqlif",
-    "teqlif-worker",
-    "teqlif-worker-critical",
-    "teqlif-worker-video",
-    "teqlif-ai-proxy",
-    "teqlif-livekit",
-    "teqlif-agent",
-    "teqlif-staging",
-    "teqlif-worker-staging",
-    "teqlif-worker-critical-staging",
-})
+_STAGING_NODE = "node5"
 
-_BACKUP_LABELS: dict[str, str] = {
-    "pg_backup":                "PG dump",
-    "minio_backup":             "MinIO",
-    "redis_backup":             "Redis",
-    "clickhouse_backup":        "ClickHouse",
-    "loki_backup":              "Loki",
-    "uptime_kuma_backup":       "Uptime Kuma",
-    "nodemonitor_config_backup":"nodeMonitor config",
-    "mail_backup":              "Stalwart Mail",
-    "cluster_secrets_backup":   "Cluster sırlar",
-    "pg_basebackup":            "PG base backup",
-    "offsite_sync":             "Offsite sync",
-    "offsite_wal_sync":         "WAL sync",
-    "pg_wal_cleanup":           "WAL temizliği",
-}
+
+@dataclass
+class CommandContext:
+    chat_id:   str
+    alerter:   TelegramAlerter
+    is_staging: bool
 
 
 class TelegramCommander:
-    def __init__(self, cfg: AgentConfig, db: AgentDB) -> None:
-        self._cfg  = cfg
-        self._db   = db
-        self._offset: int = 0
-        self._task: asyncio.Task | None = None
+    def __init__(
+        self,
+        db:              AgentDB,
+        bot:             TelegramBot,
+        alerter:         TelegramAlerter,
+        staging_alerter: TelegramAlerter | None,
+        restart_gw,  # GossipClient — circular import önlemi, runtime duck-typed
+    ) -> None:
+        self._db              = db
+        self._bot             = bot
+        self._alerter         = alerter
+        self._staging_alerter = staging_alerter
+        self._restart_gw      = restart_gw
+        self._offset: int     = 0
+        self._task:   asyncio.Task | None = None
         self._polling = False
+
+    # ── Lider Kontrolü ───────────────────────────────────────────────────────
 
     async def run(self, is_leader: bool) -> None:
         if is_leader and not self._polling:
             self._polling = True
-            self._task = asyncio.create_task(self._poll_loop(), name="tg-commander")
+            self._task    = asyncio.create_task(self._poll_loop(), name="tg-commander")
             logger.info("Telegram commander başlatıldı (lider)")
         elif not is_leader and self._polling:
             self._polling = False
@@ -88,9 +82,7 @@ class TelegramCommander:
     async def _poll_loop(self) -> None:
         while self._polling:
             try:
-                updates = await tg.get_updates(
-                    self._cfg.telegram_bot_token, self._offset, timeout=1
-                )
+                updates = await self._bot.get_updates(self._offset)
                 if updates:
                     self._offset = updates[-1]["update_id"] + 1
                 for upd in updates:
@@ -104,207 +96,263 @@ class TelegramCommander:
                 logger.debug("Commander polling hatası: %s", exc)
             await asyncio.sleep(2)
 
-    # ── Update Yönlendirme ────────────────────────────────────────────────────
+    # ── Context Fabrikası ─────────────────────────────────────────────────────
 
-    def _auth_chats(self) -> set[str]:
-        chats: set[str] = set()
-        if self._cfg.telegram_chat_id:
-            chats.add(str(self._cfg.telegram_chat_id))
-        if getattr(self._cfg, "staging_telegram_chat_id", None):
-            chats.add(str(self._cfg.staging_telegram_chat_id))
-        return chats
+    def _make_context(self, chat_id: str) -> CommandContext | None:
+        """chat_id'den hangi kanal olduğunu çözer; yetkisizse None döner."""
+        if self._alerter.chat_id and str(self._alerter.chat_id) == chat_id:
+            return CommandContext(chat_id=chat_id, alerter=self._alerter, is_staging=False)
+        if (
+            self._staging_alerter
+            and self._staging_alerter.chat_id
+            and str(self._staging_alerter.chat_id) == chat_id
+        ):
+            return CommandContext(
+                chat_id=chat_id, alerter=self._staging_alerter, is_staging=True,
+            )
+        return None
+
+    # ── Update Yönlendirme ────────────────────────────────────────────────────
 
     async def _handle_update(self, upd: dict) -> None:
         if "message" in upd:
             msg     = upd["message"]
             chat_id = str(msg.get("chat", {}).get("id", ""))
-            if chat_id not in self._auth_chats():
+            ctx     = self._make_context(chat_id)
+            if not ctx:
                 return
             text = msg.get("text", "").strip()
             if text.startswith("/"):
-                await self._dispatch(chat_id, text)
+                await self._dispatch(ctx, text)
 
         elif "callback_query" in upd:
             cq      = upd["callback_query"]
             chat_id = str(cq.get("message", {}).get("chat", {}).get("id", ""))
-            if chat_id not in self._auth_chats():
-                await tg.answer_callback(self._cfg.telegram_bot_token, cq["id"], "⛔ Yetkisiz")
+            ctx     = self._make_context(chat_id)
+            if not ctx:
+                await self._bot.answer_callback(cq["id"], "⛔ Yetkisiz")
                 return
-            await self._handle_callback(cq)
+            await self._handle_callback(ctx, cq)
 
-    async def _dispatch(self, chat_id: str, text: str) -> None:
+    async def _dispatch(self, ctx: CommandContext, text: str) -> None:
         parts = text.lstrip("/").split()
         cmd   = parts[0].split("@")[0].lower() if parts else ""
         args  = parts[1:]
 
         handlers = {
-            "durum":   self._cmd_durum,
-            "d":       self._cmd_durum,
-            "node":    self._cmd_node,
-            "n":       self._cmd_node,
-            "joblar":  self._cmd_joblar,
-            "j":       self._cmd_joblar,
-            "job":     self._cmd_job,
-            "yedekler":self._cmd_yedekler,
-            "y":       self._cmd_yedekler,
-            "portlar": self._cmd_portlar,
-            "p":       self._cmd_portlar,
-            "yardim":  self._cmd_yardim,
-            "start":   self._cmd_yardim,
-            "help":    self._cmd_yardim,
+            "durum":    self._cmd_durum,
+            "d":        self._cmd_durum,
+            "node":     self._cmd_node,
+            "n":        self._cmd_node,
+            "joblar":   self._cmd_joblar,
+            "j":        self._cmd_joblar,
+            "job":      self._cmd_job,
+            "yedekler": self._cmd_yedekler,
+            "y":        self._cmd_yedekler,
+            "portlar":  self._cmd_portlar,
+            "p":        self._cmd_portlar,
+            "yardim":   self._cmd_yardim,
+            "start":    self._cmd_yardim,
+            "help":     self._cmd_yardim,
         }
         fn = handlers.get(cmd)
         if fn:
-            await fn(chat_id, args)
+            await fn(ctx, args)
         else:
-            await tg.send(
-                self._cfg.telegram_bot_token, chat_id,
+            await ctx.alerter.send(
                 f"❓ Bilinmeyen komut: <code>/{cmd}</code>\n/yardim ile komutları gör."
             )
 
     # ── Callback İşleyici ─────────────────────────────────────────────────────
 
-    async def _handle_callback(self, cq: dict) -> None:
-        cb_id   = cq["id"]
-        data    = cq.get("data", "")
-        chat_id = str(cq.get("message", {}).get("chat", {}).get("id", ""))
-        parts   = data.split(":", 2)
-        action  = parts[0]
+    async def _handle_callback(self, ctx: CommandContext, cq: dict) -> None:
+        cb_id  = cq["id"]
+        data   = cq.get("data", "")
+        parts  = data.split(":", 2)
+        action = parts[0]
 
         if action == "ref":
-            await tg.answer_callback(self._cfg.telegram_bot_token, cb_id, "")
-            await self._cmd_durum(chat_id, [])
+            await self._bot.answer_callback(cb_id)
+            await self._cmd_durum(ctx, [])
         elif action == "yv":
-            await tg.answer_callback(self._cfg.telegram_bot_token, cb_id, "")
-            await self._cmd_yedekler(chat_id, [])
+            await self._bot.answer_callback(cb_id)
+            await self._cmd_yedekler(ctx, [])
         elif action == "dn":
             node_id = parts[1] if len(parts) > 1 else ""
-            await tg.answer_callback(self._cfg.telegram_bot_token, cb_id, "")
-            await self._cmd_node(chat_id, [node_id])
+            await self._bot.answer_callback(cb_id)
+            await self._cmd_node(ctx, [node_id])
         elif action == "dj":
             job = parts[1] if len(parts) > 1 else ""
-            await tg.answer_callback(self._cfg.telegram_bot_token, cb_id, "")
+            await self._bot.answer_callback(cb_id)
             if job == "__list":
-                await self._cmd_joblar(chat_id, [])
+                await self._cmd_joblar(ctx, [])
             else:
-                await self._cmd_job(chat_id, [job])
+                await self._cmd_job(ctx, [job])
         elif action == "rs":
             node_id = parts[1] if len(parts) > 1 else ""
             svc     = parts[2] if len(parts) > 2 else ""
-            await self._do_restart(cb_id, chat_id, node_id, svc)
+            await self._do_restart(ctx, cb_id, node_id, svc)
         else:
-            await tg.answer_callback(self._cfg.telegram_bot_token, cb_id, "Bilinmeyen aksiyon")
+            await self._bot.answer_callback(cb_id, "Bilinmeyen aksiyon")
 
     # ── Restart ───────────────────────────────────────────────────────────────
 
-    async def _do_restart(self, cb_id: str, chat_id: str, node_id: str, svc: str) -> None:
+    async def _do_restart(
+        self, ctx: CommandContext, cb_id: str, node_id: str, svc: str,
+    ) -> None:
         if not node_id or not svc:
-            await tg.answer_callback(self._cfg.telegram_bot_token, cb_id, "⛔ Eksik parametre")
+            await self._bot.answer_callback(cb_id, "⛔ Eksik parametre")
             return
-        await tg.answer_callback(
-            self._cfg.telegram_bot_token, cb_id,
-            f"🔄 {node_id} → {svc} restart başlatılıyor...", show_alert=True,
+        # Staging kanalından sadece staging servisler restart edilebilir
+        if ctx.is_staging and svc not in STAGING_SERVICES:
+            await self._bot.answer_callback(cb_id, "⛔ Bu servis staging kanalından yönetilemez")
+            return
+        await self._bot.answer_callback(
+            cb_id,
+            f"🔄 {node_id} → {svc} restart başlatılıyor...",
+            show_alert=True,
         )
-        result = await self._send_cmd(node_id, {"cmd": "restart_service", "service": svc})
+        result = await self._restart_gw.restart_service(node_id, svc)
         if result.get("ok"):
-            await tg.send(
-                self._cfg.telegram_bot_token, chat_id,
+            await ctx.alerter.send(
                 f"✅ <b>{node_id}</b> — <code>{svc}</code> restart başlatıldı"
             )
         else:
             err = result.get("error", "bilinmeyen hata")
-            await tg.send(
-                self._cfg.telegram_bot_token, chat_id,
+            await ctx.alerter.send(
                 f"⛔ <b>{node_id}</b> — <code>{svc}</code> restart başarısız\n"
                 f"<code>{err[:150]}</code>"
             )
 
-    async def _send_cmd(self, node_id: str, payload: dict) -> dict:
-        """Hedef node'un gossip /cmd endpoint'ine komut gönderir."""
-        wg_ip: str | None = None
-        for peer in self._cfg.peers:
-            if peer.node_id == node_id:
-                wg_ip = peer.wg_ip
-                break
-        if wg_ip is None and node_id == self._cfg.node_id:
-            wg_ip = self._cfg.wg_ip
-        if not wg_ip:
-            return {"ok": False, "error": f"node bulunamadı: {node_id}"}
-
-        url     = f"http://{wg_ip}:{self._cfg.gossip_port}/cmd"
-        headers = {"Authorization": f"Bearer {self._cfg.gossip_token}"}
-        try:
-            async with aiohttp.ClientSession() as s:
-                async with s.post(
-                    url, json=payload, headers=headers,
-                    timeout=aiohttp.ClientTimeout(total=10),
-                ) as r:
-                    return await r.json()
-        except Exception as exc:
-            return {"ok": False, "error": str(exc)[:100]}
-
     # ── Komutlar ──────────────────────────────────────────────────────────────
 
-    async def _cmd_durum(self, chat_id: str, args: list[str]) -> None:
+    async def _cmd_durum(self, ctx: CommandContext, args: list[str]) -> None:
         states = await self._db.get_all_node_states()
         stale  = await self._db.get_stale_jobs()
         failed = await self._db.get_failed_jobs()
 
         now_str = datetime.now(timezone.utc).strftime("%d %b %H:%M")
-        lines   = [f"<b>📊 Anlık Durum</b> — {now_str} UTC\n"]
 
-        active = sum(1 for s in states if _seen_ok(s.get("seen_at", "")))
-        lines.append(f"<b>📡 Node'lar ({active}/{len(states)} aktif)</b>")
-        for s in sorted(states, key=lambda x: x["node_id"]):
-            nid  = s["node_id"]
-            icon = "✅" if _seen_ok(s.get("seen_at", "")) else "🔴"
-            m    = s.get("metrics") or {}
-            cpu  = m.get("cpu_percent", "?")
-            ram  = m.get("ram_percent", "?")
-            dsk  = m.get("disk_percent", "?")
-            lines.append(f"  {icon} <b>{nid}</b>  CPU {cpu}%  RAM {ram}%  Disk {dsk}%")
+        if ctx.is_staging:
+            # Staging: sadece node5
+            staging_states = [s for s in states if s["node_id"] == _STAGING_NODE]
+            lines = [f"<b>🧪 Staging Durumu</b> — {now_str} UTC\n"]
+            if not staging_states:
+                lines.append(f"🔴 {_STAGING_NODE} bulunamadı")
+            else:
+                s    = staging_states[0]
+                icon = "✅" if _seen_ok(s.get("seen_at", "")) else "🔴"
+                m    = s.get("metrics") or {}
+                svcs = s.get("services") or {}
+                lines.append(
+                    f"{icon} <b>{_STAGING_NODE}</b>  "
+                    f"CPU {m.get('cpu_percent','?')}%  "
+                    f"RAM {m.get('ram_percent','?')}%"
+                )
+                staging_svcs = {
+                    k: v for k, v in svcs.items()
+                    if isinstance(v, dict) and "healthy" in v
+                    and any(k.startswith(p) for p in ("teqlif-staging", "teqlif-worker-staging",
+                                                       "teqlif-worker-critical-staging",
+                                                       "teqlif-worker-video-staging",
+                                                       "teqlif-ai-proxy-staging",
+                                                       "teqlif-redis-staging",
+                                                       "teqlif-livekit-staging"))
+                }
+                if staging_svcs:
+                    lines.append("")
+                    for sn, sd in sorted(staging_svcs.items()):
+                        ok = sd.get("healthy", True)
+                        lines.append(f"  {'✅' if ok else '🔴'} {sn}")
 
-        lines.append("")
-        issue_cnt = len(stale) + len(failed)
-        if issue_cnt:
-            lines.append(f"<b>⚠️ Job Sorunları ({issue_cnt})</b>")
-            for row in stale[:4]:
-                lines.append(f"  • <code>{row['job_name']}</code> stale")
-            for row in failed[:4]:
-                lines.append(f"  • <code>{row['job_name']}</code> hata")
-            if issue_cnt > 8:
-                lines.append(f"  … ve {issue_cnt - 8} tane daha")
+            # Job'lar — staging prefix filtreleme
+            staging_stale  = [r for r in stale  if _is_staging_job(r["job_name"])]
+            staging_failed = [r for r in failed if _is_staging_job(r["job_name"])]
+            issue_cnt = len(staging_stale) + len(staging_failed)
+            lines.append("")
+            if issue_cnt:
+                lines.append(f"<b>⚠️ Staging Job Sorunları ({issue_cnt})</b>")
+                for row in staging_stale[:3]:
+                    lines.append(f"  • <code>{row['job_name']}</code> stale")
+                for row in staging_failed[:3]:
+                    lines.append(f"  • <code>{row['job_name']}</code> hata")
+            else:
+                lines.append("✅ <b>Staging job'lar normal</b>")
+
+            markup = {"inline_keyboard": [[
+                {"text": "🔄 Yenile",    "callback_data": "ref"},
+                {"text": f"📋 {_STAGING_NODE}", "callback_data": f"dn:{_STAGING_NODE}"},
+                {"text": "⚙️ Joblar",   "callback_data": "dj:__list"},
+            ]]}
         else:
-            lines.append("✅ <b>Tüm job'lar normal</b>")
-
-        lines.append("\n<i>/node &lt;id&gt; · /joblar · /yedekler · /portlar</i>")
-
-        markup = {"inline_keyboard": [[
-            {"text": "🔄 Yenile",    "callback_data": "ref"},
-            {"text": "⚙️ Joblar",   "callback_data": "dj:__list"},
-            {"text": "💾 Yedekler", "callback_data": "yv"},
-        ]]}
-        await tg.send(self._cfg.telegram_bot_token, chat_id, "\n".join(lines), reply_markup=markup)
-
-    async def _cmd_node(self, chat_id: str, args: list[str]) -> None:
-        if not args:
-            states = await self._db.get_all_node_states()
-            lines  = ["<b>📡 Node Listesi</b>"]
+            # PROD: tüm cluster
+            lines = [f"<b>📊 Anlık Durum</b> — {now_str} UTC\n"]
+            active = sum(1 for s in states if _seen_ok(s.get("seen_at", "")))
+            lines.append(f"<b>📡 Node'lar ({active}/{len(states)} aktif)</b>")
             for s in sorted(states, key=lambda x: x["node_id"]):
                 nid  = s["node_id"]
                 icon = "✅" if _seen_ok(s.get("seen_at", "")) else "🔴"
-                lines.append(f"  {icon} <code>/node {nid}</code>")
-            await tg.send(self._cfg.telegram_bot_token, chat_id, "\n".join(lines))
+                m    = s.get("metrics") or {}
+                cpu  = m.get("cpu_percent", "?")
+                ram  = m.get("ram_percent", "?")
+                dsk  = m.get("disk_percent", "?")
+                lines.append(f"  {icon} <b>{nid}</b>  CPU {cpu}%  RAM {ram}%  Disk {dsk}%")
+
+            lines.append("")
+            # Prod job'lar — staging job'larını hariç tut
+            prod_stale  = [r for r in stale  if not _is_staging_job(r["job_name"])]
+            prod_failed = [r for r in failed if not _is_staging_job(r["job_name"])]
+            issue_cnt   = len(prod_stale) + len(prod_failed)
+            if issue_cnt:
+                lines.append(f"<b>⚠️ Job Sorunları ({issue_cnt})</b>")
+                for row in prod_stale[:4]:
+                    lines.append(f"  • <code>{row['job_name']}</code> stale")
+                for row in prod_failed[:4]:
+                    lines.append(f"  • <code>{row['job_name']}</code> hata")
+                if issue_cnt > 8:
+                    lines.append(f"  … ve {issue_cnt - 8} tane daha")
+            else:
+                lines.append("✅ <b>Tüm job'lar normal</b>")
+
+            lines.append("\n<i>/node &lt;id&gt; · /joblar · /yedekler · /portlar</i>")
+            markup = {"inline_keyboard": [[
+                {"text": "🔄 Yenile",    "callback_data": "ref"},
+                {"text": "⚙️ Joblar",   "callback_data": "dj:__list"},
+                {"text": "💾 Yedekler", "callback_data": "yv"},
+            ]]}
+
+        await ctx.alerter.send("\n".join(lines), markup=markup)
+
+    async def _cmd_node(self, ctx: CommandContext, args: list[str]) -> None:
+        if not args:
+            states = await self._db.get_all_node_states()
+            if ctx.is_staging:
+                # Staging kanalından sadece node5'e link göster
+                lines = [f"<b>📡 Staging Node</b>"]
+                s = next((x for x in states if x["node_id"] == _STAGING_NODE), None)
+                icon = "✅" if s and _seen_ok(s.get("seen_at", "")) else "🔴"
+                lines.append(f"  {icon} <code>/node {_STAGING_NODE}</code>")
+            else:
+                lines = ["<b>📡 Node Listesi</b>"]
+                for s in sorted(states, key=lambda x: x["node_id"]):
+                    nid  = s["node_id"]
+                    icon = "✅" if _seen_ok(s.get("seen_at", "")) else "🔴"
+                    lines.append(f"  {icon} <code>/node {nid}</code>")
+            await ctx.alerter.send("\n".join(lines))
             return
 
         target = args[0]
+        # Staging kanalından sadece node5 görülebilir
+        if ctx.is_staging and target != _STAGING_NODE:
+            await ctx.alerter.send(
+                f"⛔ Staging kanalından sadece <code>{_STAGING_NODE}</code> görülebilir."
+            )
+            return
+
         states = await self._db.get_all_node_states()
         state  = next((s for s in states if s["node_id"] == target), None)
         if not state:
-            await tg.send(
-                self._cfg.telegram_bot_token, chat_id,
-                f"❓ Node bulunamadı: <code>{target}</code>"
-            )
+            await ctx.alerter.send(f"❓ Node bulunamadı: <code>{target}</code>")
             return
 
         m    = state.get("metrics") or {}
@@ -321,16 +369,23 @@ class TelegramCommander:
         if m.get("offsite_disk_percent") is not None:
             lines.append(f"Offsite Disk {m['offsite_disk_percent']}%")
 
-        # Services
+        # Staging kanalında sadece staging servislerini göster
+        def _svc_visible(svc_name: str) -> bool:
+            if ctx.is_staging:
+                return svc_name in STAGING_SERVICES
+            return True
+
         svc_lines: list[str] = []
         restart_btns: list[dict] = []
         for svc_name, svc_data in sorted(svcs.items()):
             if not isinstance(svc_data, dict) or "healthy" not in svc_data:
                 continue
+            if not _svc_visible(svc_name):
+                continue
             ok       = svc_data.get("healthy", True)
             svc_icon = "✅" if ok else "🔴"
             svc_lines.append(f"  {svc_icon} {svc_name}")
-            if not ok and svc_name in _RESTARTABLE:
+            if not ok and svc_name in RESTARTABLE_SVCS:
                 label = svc_name.replace("teqlif-", "").replace("-", " ").title()
                 cb    = f"rs:{target}:{svc_name}"
                 if len(cb.encode()) <= 64:
@@ -345,13 +400,20 @@ class TelegramCommander:
             rows   = [restart_btns[i:i+2] for i in range(0, len(restart_btns), 2)]
             markup = {"inline_keyboard": rows}
 
-        await tg.send(self._cfg.telegram_bot_token, chat_id, "\n".join(lines), reply_markup=markup)
+        await ctx.alerter.send("\n".join(lines), markup=markup)
 
-    async def _cmd_joblar(self, chat_id: str, args: list[str]) -> None:
+    async def _cmd_joblar(self, ctx: CommandContext, args: list[str]) -> None:
         stale  = await self._db.get_stale_jobs()
         failed = await self._db.get_failed_jobs()
 
-        lines = ["<b>⚙️ Job Durumu</b>"]
+        if ctx.is_staging:
+            stale  = [r for r in stale  if _is_staging_job(r["job_name"])]
+            failed = [r for r in failed if _is_staging_job(r["job_name"])]
+            lines  = ["<b>⚙️ Staging Job Durumu</b>"]
+        else:
+            stale  = [r for r in stale  if not _is_staging_job(r["job_name"])]
+            failed = [r for r in failed if not _is_staging_job(r["job_name"])]
+            lines  = ["<b>⚙️ Job Durumu</b>"]
 
         if stale:
             lines.append(f"\n<b>⏰ Stale ({len(stale)})</b>")
@@ -375,11 +437,11 @@ class TelegramCommander:
         if not stale and not failed:
             lines.append("\n✅ Tüm job'lar normal çalışıyor")
 
-        await tg.send(self._cfg.telegram_bot_token, chat_id, "\n".join(lines))
+        await ctx.alerter.send("\n".join(lines))
 
-    async def _cmd_job(self, chat_id: str, args: list[str]) -> None:
+    async def _cmd_job(self, ctx: CommandContext, args: list[str]) -> None:
         if not args:
-            await self._cmd_joblar(chat_id, [])
+            await self._cmd_joblar(ctx, [])
             return
 
         job_name   = args[0]
@@ -389,10 +451,7 @@ class TelegramCommander:
 
         job_data = next((r for r in all_health if r["job_name"] == job_name), None)
         if not job_data:
-            await tg.send(
-                self._cfg.telegram_bot_token, chat_id,
-                f"❓ Job bulunamadı: <code>{job_name}</code>"
-            )
+            await ctx.alerter.send(f"❓ Job bulunamadı: <code>{job_name}</code>")
             return
 
         if job_name in stale:
@@ -412,22 +471,25 @@ class TelegramCommander:
         if job_data.get("fail_reason"):
             lines.append(f"Neden: <code>{str(job_data['fail_reason'])[:100]}</code>")
 
-        await tg.send(self._cfg.telegram_bot_token, chat_id, "\n".join(lines))
+        await ctx.alerter.send("\n".join(lines))
 
-    async def _cmd_yedekler(self, chat_id: str, args: list[str]) -> None:
-        from modules.health import _BACKUP_MAX_MIN as _BMM
+    async def _cmd_yedekler(self, ctx: CommandContext, args: list[str]) -> None:
+        if ctx.is_staging:
+            await ctx.alerter.send(
+                "💾 Yedek bilgisi PROD kanalından görüntülenebilir."
+            )
+            return
 
         states      = await self._db.get_all_node_states()
         backup_data: dict[str, int] = {}
         for s in states:
             svcs = s.get("services") or {}
-            for key in _BACKUP_LABELS:
+            for key in BACKUP_LABELS:
                 if key in svcs and isinstance(svcs[key], dict) and "age_min" in svcs[key]:
                     backup_data[key] = svcs[key]["age_min"]
 
         if not backup_data:
-            await tg.send(
-                self._cfg.telegram_bot_token, chat_id,
+            await ctx.alerter.send(
                 "💾 Yedek verisi henüz toplanmadı.\nnode2 gossip bağlantısını kontrol edin."
             )
             return
@@ -435,11 +497,11 @@ class TelegramCommander:
         lines   = ["<b>💾 Yedek Durumu</b>\n"]
         ok_cnt  = 0
         err_cnt = 0
-        for key, label in _BACKUP_LABELS.items():
+        for key, label in BACKUP_LABELS.items():
             age = backup_data.get(key)
             if age is None:
                 continue
-            max_min = _BMM.get(key, 25 * 60)
+            max_min = BACKUP_MAX_MIN.get(key, 25 * 60)
             if age <= max_min:
                 ok_cnt += 1
                 lines.append(f"  ✅ <b>{label}</b> — {_fmt_mins(age)}")
@@ -451,54 +513,91 @@ class TelegramCommander:
         if err_cnt:
             summary += f", {err_cnt} eski"
         lines.append(summary)
-        await tg.send(self._cfg.telegram_bot_token, chat_id, "\n".join(lines))
+        await ctx.alerter.send("\n".join(lines))
 
-    async def _cmd_portlar(self, chat_id: str, args: list[str]) -> None:
+    async def _cmd_portlar(self, ctx: CommandContext, args: list[str]) -> None:
         states = await self._db.get_all_node_states()
-        lines  = ["<b>🔌 Servis Sağlığı</b>"]
 
-        for s in sorted(states, key=lambda x: x["node_id"]):
-            nid   = s["node_id"]
-            svcs  = s.get("services") or {}
-            items = [
-                (name, data) for name, data in svcs.items()
-                if isinstance(data, dict) and "healthy" in data
-            ]
-            if not items:
-                continue
-            down = [name for name, data in items if not data.get("healthy")]
-            if down:
-                lines.append(f"\n🔴 <b>{nid}</b> — {len(down)} sorun")
-                for svc in down:
-                    lines.append(f"  • {svc}")
-            else:
-                lines.append(f"  ✅ <b>{nid}</b> — {len(items)} servis")
+        if ctx.is_staging:
+            # Staging: sadece node5 staging servisleri
+            lines = ["<b>🔌 Staging Servis Sağlığı</b>"]
+            s = next((x for x in states if x["node_id"] == _STAGING_NODE), None)
+            if s:
+                svcs = s.get("services") or {}
+                items = [
+                    (name, data) for name, data in svcs.items()
+                    if isinstance(data, dict) and "healthy" in data
+                    and name in STAGING_SERVICES
+                ]
+                down = [name for name, data in items if not data.get("healthy")]
+                if down:
+                    lines.append(f"\n🔴 <b>{_STAGING_NODE}</b> — {len(down)} sorun")
+                    for svc in down:
+                        lines.append(f"  • {svc}")
+                else:
+                    lines.append(f"  ✅ <b>{_STAGING_NODE}</b> — {len(items)} staging servis")
+        else:
+            lines = ["<b>🔌 Servis Sağlığı</b>"]
+            for s in sorted(states, key=lambda x: x["node_id"]):
+                nid   = s["node_id"]
+                svcs  = s.get("services") or {}
+                items = [
+                    (name, data) for name, data in svcs.items()
+                    if isinstance(data, dict) and "healthy" in data
+                ]
+                if not items:
+                    continue
+                down = [name for name, data in items if not data.get("healthy")]
+                if down:
+                    lines.append(f"\n🔴 <b>{nid}</b> — {len(down)} sorun")
+                    for svc in down:
+                        lines.append(f"  • {svc}")
+                else:
+                    lines.append(f"  ✅ <b>{nid}</b> — {len(items)} servis")
 
         markup = {"inline_keyboard": [[
             {"text": "🔄 Yenile", "callback_data": "ref"},
         ]]}
-        await tg.send(self._cfg.telegram_bot_token, chat_id, "\n".join(lines), reply_markup=markup)
+        await ctx.alerter.send("\n".join(lines), markup=markup)
 
-    async def _cmd_yardim(self, chat_id: str, args: list[str]) -> None:
-        text = (
-            "<b>🤖 teqlif-agent Komutları</b>\n\n"
-            "<b>Durum:</b>\n"
-            "  /durum — Cluster özeti\n"
-            "  /node &lt;id&gt; — Node detay  <i>(/node node6)</i>\n"
-            "  /portlar — Tüm servis sağlığı\n\n"
-            "<b>Job'lar:</b>\n"
-            "  /joblar — Stale + hatalı job'lar\n"
-            "  /job &lt;ad&gt; — Tek job detay\n\n"
-            "<b>Yedekler:</b>\n"
-            "  /yedekler — Yedek zamanları\n\n"
-            "/yardim — Bu mesaj\n\n"
-            "<i>Node'lar: node1 node2 node3 node4 "
-            "node5 node6 node101 nodeMonitor</i>"
-        )
-        await tg.send(self._cfg.telegram_bot_token, chat_id, text)
+    async def _cmd_yardim(self, ctx: CommandContext, args: list[str]) -> None:
+        if ctx.is_staging:
+            text = (
+                "<b>🧪 teqlif-agent Staging Komutları</b>\n\n"
+                "<b>Durum:</b>\n"
+                f"  /durum — Staging özeti ({_STAGING_NODE})\n"
+                f"  /node {_STAGING_NODE} — Staging node detay\n"
+                "  /portlar — Staging servis sağlığı\n\n"
+                "<b>Job'lar:</b>\n"
+                "  /joblar — Stale + hatalı staging job'lar\n"
+                "  /job &lt;ad&gt; — Tek job detay\n\n"
+                "/yardim — Bu mesaj\n\n"
+                f"<i>Staging node: {_STAGING_NODE}</i>"
+            )
+        else:
+            text = (
+                "<b>🤖 teqlif-agent Komutları</b>\n\n"
+                "<b>Durum:</b>\n"
+                "  /durum — Cluster özeti\n"
+                "  /node &lt;id&gt; — Node detay  <i>(/node node6)</i>\n"
+                "  /portlar — Tüm servis sağlığı\n\n"
+                "<b>Job'lar:</b>\n"
+                "  /joblar — Stale + hatalı job'lar\n"
+                "  /job &lt;ad&gt; — Tek job detay\n\n"
+                "<b>Yedekler:</b>\n"
+                "  /yedekler — Yedek zamanları\n\n"
+                "/yardim — Bu mesaj\n\n"
+                "<i>Node'lar: node1 node2 node3 node4 "
+                "node5 node6 node101 nodeMonitor</i>"
+            )
+        await ctx.alerter.send(text)
 
 
 # ── Yardımcı Fonksiyonlar ─────────────────────────────────────────────────────
+
+def _is_staging_job(job_name: str) -> bool:
+    return "staging" in job_name.lower()
+
 
 def _seen_ok(ts: str) -> bool:
     if not ts:

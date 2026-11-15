@@ -27,7 +27,8 @@ import aiohttp
 
 from config import AgentConfig
 from db import AgentDB
-import telegram as tg
+from alerter import TelegramAlerter
+from constants import RESTARTABLE_SVCS, STAGING_SERVICES, BACKUP_MAX_MIN
 
 logger = logging.getLogger("teqlif-agent.health")
 
@@ -88,36 +89,19 @@ _ALL_SERVICES = [
 _COOLDOWN_SEC = 30 * 60
 _FIRING_TTL   = 4 * 60 * 60   # 4 saat — recovery tespiti için
 
-# Staging servis uyarıları → staging Telegram kanalına yönlendirilir
-_STAGING_SERVICES: frozenset[str] = frozenset({
-    "teqlif-staging",
-    "teqlif-worker-staging",
-    "teqlif-worker-critical-staging",
-    "teqlif-worker-video-staging",
-    "teqlif-ai-proxy-staging",
-    "teqlif-redis-staging",
-    "teqlif-livekit-staging",
-})
-
-# Gossip /cmd + polkit üzerinden yeniden başlatılabilecek servisler
-_RESTARTABLE_SVCS: frozenset[str] = frozenset({
-    "teqlif",
-    "teqlif-worker",
-    "teqlif-worker-critical",
-    "teqlif-worker-video",
-    "teqlif-ai-proxy",
-    "teqlif-livekit",
-    "teqlif-agent",
-    "teqlif-staging",
-    "teqlif-worker-staging",
-    "teqlif-worker-critical-staging",
-})
-
 
 class HealthMonitor:
-    def __init__(self, cfg: AgentConfig, db: AgentDB) -> None:
-        self._cfg     = cfg
-        self._db      = db
+    def __init__(
+        self,
+        cfg: AgentConfig,
+        db: AgentDB,
+        alerter: TelegramAlerter,
+        staging_alerter: TelegramAlerter | None = None,
+    ) -> None:
+        self._cfg             = cfg
+        self._db              = db
+        self._alerter         = alerter
+        self._staging_alerter = staging_alerter or alerter
         self._firing:  dict[str, float] = {}   # key → fired_at
         self._cooldown: dict[str, float] = {}  # key → last_alert_at
 
@@ -147,6 +131,8 @@ class HealthMonitor:
                 await self._eval_services(nid, state["services"])
                 await self._eval_recording_disk(nid, state["metrics"])
                 await self._eval_ntp(nid, state["metrics"])
+
+
 
     # ── Değerlendirme ─────────────────────────────────────────────────────────
 
@@ -255,10 +241,10 @@ class HealthMonitor:
             label   = svc_labels.get(svc, svc)
             healthy = data.get("healthy", True)
             fkey    = f"{node_id}:svc:{svc}"
-            chat_id = (
-                self._cfg.staging_telegram_chat_id
-                if svc in _STAGING_SERVICES and self._cfg.staging_telegram_chat_id
-                else None
+            ch_alerter = (
+                self._staging_alerter
+                if svc in STAGING_SERVICES
+                else self._alerter
             )
             if not healthy:
                 err = data.get("error", "")
@@ -266,19 +252,19 @@ class HealthMonitor:
                 if err:
                     msg += f"\n<code>{err[:120]}</code>"
                 markup = None
-                if svc in _RESTARTABLE_SVCS:
+                if svc in RESTARTABLE_SVCS:
                     cb = f"rs:{node_id}:{svc}"
                     if len(cb.encode()) <= 64:
                         markup = {"inline_keyboard": [[
                             {"text": "📋 Node Detay", "callback_data": f"dn:{node_id}"},
                             {"text": "🔄 Restart",    "callback_data": cb},
                         ]]}
-                await self._fire(fkey, msg, chat_id=chat_id, reply_markup=markup)
+                await self._fire(fkey, msg, alerter=ch_alerter, reply_markup=markup)
             else:
-                await self._recover(fkey, f"✅ <b>{node_id}</b> — {label} kurtardı", chat_id=chat_id)
+                await self._recover(fkey, f"✅ <b>{node_id}</b> — {label} kurtardı", alerter=ch_alerter)
 
         # Yedek eskimesi
-        for bkey, max_min in _BACKUP_MAX_MIN.items():
+        for bkey, max_min in BACKUP_MAX_MIN.items():
             bdata = services.get(bkey, {})
             mins  = bdata.get("age_min")
             fkey  = f"{node_id}:backup:{bkey}"
@@ -308,7 +294,7 @@ class HealthMonitor:
         self,
         key: str,
         message: str,
-        chat_id: str | None = None,
+        alerter: TelegramAlerter | None = None,
         reply_markup: dict | None = None,
     ) -> None:
         now = time.monotonic()
@@ -316,20 +302,20 @@ class HealthMonitor:
             return
         self._cooldown[key] = now
         self._firing[key]   = now
-        await tg.send(
-            self._cfg.telegram_bot_token,
-            chat_id or self._cfg.telegram_chat_id,
-            message,
-            reply_markup=reply_markup,
-        )
+        await (alerter or self._alerter).send(message, markup=reply_markup)
         logger.warning("ALERT: %s", message.replace("\n", " "))
 
-    async def _recover(self, key: str, message: str, chat_id: str | None = None) -> None:
+    async def _recover(
+        self,
+        key: str,
+        message: str,
+        alerter: TelegramAlerter | None = None,
+    ) -> None:
         if key not in self._firing:
             return
         del self._firing[key]
         self._cooldown.pop(key, None)
-        await tg.send(self._cfg.telegram_bot_token, chat_id or self._cfg.telegram_chat_id, message)
+        await (alerter or self._alerter).send(message)
         logger.info("RECOVER: %s", message)
 
 

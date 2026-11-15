@@ -16,7 +16,6 @@ from datetime import datetime, timezone
 
 from config import AgentConfig
 from db import AgentDB
-import telegram as tg
 
 logger = logging.getLogger("teqlif-agent.janitor")
 

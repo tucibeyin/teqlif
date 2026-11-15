@@ -14,7 +14,7 @@ import time
 
 from config import AgentConfig
 from db import AgentDB
-import telegram as tg
+from alerter import TelegramAlerter
 
 logger = logging.getLogger("teqlif-agent.healer")
 
@@ -47,9 +47,10 @@ _SERVICES_TO_WATCH = [
 
 
 class SelfHealer:
-    def __init__(self, cfg: AgentConfig, db: AgentDB) -> None:
+    def __init__(self, cfg: AgentConfig, db: AgentDB, alerter: TelegramAlerter) -> None:
         self._cfg      = cfg
         self._db       = db
+        self._alerter  = alerter
         self._healed: dict[str, float] = {}  # svc → last_heal monotonic
 
     async def run(self, is_leader: bool) -> None:
@@ -83,7 +84,7 @@ class SelfHealer:
             f"🔄 <b>{self._cfg.node_id}</b> — {svc} otomatik {status}\n"
             f"<code>reset-failed={'evet' if burst_exceeded else 'hayır'}</code>"
         )
-        await tg.send(self._cfg.telegram_bot_token, self._cfg.telegram_chat_id, msg)
+        await self._alerter.send(msg)
         logger.warning("SelfHealer: %s — %s", svc, status)
 
         await self._db.log_cleanup(

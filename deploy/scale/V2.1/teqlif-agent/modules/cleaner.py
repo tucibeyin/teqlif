@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 
 from config import AgentConfig
 from db import AgentDB
-import telegram as tg
+from alerter import TelegramAlerter
 
 logger = logging.getLogger("teqlif-agent.cleaner")
 
@@ -39,9 +39,10 @@ _LARGE_BATCH = 5_000   # bu sayıyı geçen temizliklerde Telegram bildirir
 
 
 class ScheduledCleaner:
-    def __init__(self, cfg: AgentConfig, db: AgentDB) -> None:
-        self._cfg  = cfg
-        self._db   = db
+    def __init__(self, cfg: AgentConfig, db: AgentDB, alerter: TelegramAlerter) -> None:
+        self._cfg     = cfg
+        self._db      = db
+        self._alerter = alerter
         self._done: set[tuple[int, int]] = set()
         self._last_day: int = -1
 
@@ -88,16 +89,12 @@ class ScheduledCleaner:
             logger.info("Cleaner: %s → %d satır silindi", label, count)
 
             if count >= _LARGE_BATCH:
-                await tg.send(
-                    self._cfg.telegram_bot_token,
-                    self._cfg.telegram_chat_id,
+                await self._alerter.send(
                     f"🧹 <b>{self._cfg.node_id}</b> — {label}: {count:,} satır temizlendi",
                 )
 
         except Exception as exc:
             logger.error("Cleaner hata | %s | %s", label, exc)
-            await tg.send(
-                self._cfg.telegram_bot_token,
-                self._cfg.telegram_chat_id,
+            await self._alerter.send(
                 f"❌ <b>{self._cfg.node_id}</b> — Cleaner hatası: {label}\n<code>{str(exc)[:120]}</code>",
             )
