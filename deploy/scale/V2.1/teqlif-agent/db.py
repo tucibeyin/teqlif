@@ -222,6 +222,22 @@ class AgentDB:
         )
         await self._db.commit()
 
+    async def clear_job_health(self, job_name: str) -> bool:
+        """Stale/hatalı job'u sıfırlar: last_ok_at=şimdi, fail_count=0.
+
+        Dönüş değeri: kayıt bulundu mu (True/False).
+        """
+        now = _now()
+        cur = await self._db.execute(
+            """UPDATE job_health
+               SET last_ok_at=?, fail_count=0, fail_reason=NULL,
+                   last_alert_at=NULL, updated_at=?
+               WHERE job_name=?""",
+            (now, now, job_name),
+        )
+        await self._db.commit()
+        return (cur.rowcount or 0) > 0
+
     # ── Node State ────────────────────────────────────────────────────────────
 
     async def upsert_node_state(

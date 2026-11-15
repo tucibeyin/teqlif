@@ -6,6 +6,9 @@ bağımlılığı kaldırır.
 """
 from __future__ import annotations
 
+# Yedek servislerini çalıştıran node
+BACKUP_NODE = "node2"
+
 # Gossip /cmd + polkit (50-teqlif-agent.rules) üzerinden
 # yeniden başlatılabilecek servisler — tek kaynak.
 RESTARTABLE_SVCS: frozenset[str] = frozenset({
@@ -48,6 +51,26 @@ BACKUP_MAX_MIN: dict[str, int] = {
     "offsite_wal_sync":           90,
     "pg_wal_cleanup":             25 * 60,
 }
+
+# Yedek türü → node2'deki systemd servis adı (Telegram "▶ Başlat" için)
+BACKUP_TRIGGER_SVCS: dict[str, str] = {
+    "pg_backup":                "teqlif-pg-dump",
+    "redis_backup":             "teqlif-redis-backup",
+    "clickhouse_backup":        "teqlif-clickhouse-backup",
+    "minio_backup":             "teqlif-minio-backup",
+    "loki_backup":              "teqlif-loki-backup",
+    "uptime_kuma_backup":       "teqlif-uptime-kuma-backup",
+    "nodemonitor_config_backup":"teqlif-nodemonitor-config-backup",
+    "mail_backup":              "teqlif-mail-backup",
+    "cluster_secrets_backup":   "teqlif-cluster-secrets-backup",
+    "pg_basebackup":            "teqlif-pg-basebackup",
+    "offsite_sync":             "teqlif-offsite-sync",
+    "offsite_wal_sync":         "teqlif-offsite-wal",
+    "pg_wal_cleanup":           "teqlif-pg-wal-cleanup",
+}
+
+# Gossip /cmd start_unit üzerinden başlatılabilecek one-shot servisler
+STARTABLE_SVCS: frozenset[str] = frozenset(BACKUP_TRIGGER_SVCS.values())
 
 # Yedek türü → insan okunabilir etiket
 BACKUP_LABELS: dict[str, str] = {
