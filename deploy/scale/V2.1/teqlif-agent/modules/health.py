@@ -255,10 +255,10 @@ class HealthMonitor:
                 if svc in RESTARTABLE_SVCS:
                     cb = f"rs:{node_id}:{svc}"
                     if len(cb.encode()) <= 64:
-                        markup = {"inline_keyboard": [[
-                            {"text": "📋 Node Detay", "callback_data": f"dn:{node_id}"},
-                            {"text": "🔄 Restart",    "callback_data": cb},
-                        ]]}
+                        markup = {"inline_keyboard": [
+                            [{"text": "📋 Node Detay", "callback_data": f"dn:{node_id}"}],
+                            [{"text": "🔄 Restart",    "callback_data": cb}],
+                        ]}
                 await self._fire(fkey, msg, alerter=ch_alerter, reply_markup=markup)
             else:
                 await self._recover(fkey, f"✅ <b>{node_id}</b> — {label} kurtardı", alerter=ch_alerter)

@@ -323,11 +323,11 @@ class TelegramCommander:
             else:
                 lines.append("✅ <b>Staging job'lar normal</b>")
 
-            markup = {"inline_keyboard": [[
-                {"text": "🔄 Yenile",    "callback_data": "ref"},
-                {"text": f"📋 {_STAGING_NODE}", "callback_data": f"dn:{_STAGING_NODE}"},
-                {"text": "⚙️ Joblar",   "callback_data": "dj:__list"},
-            ]]}
+            markup = {"inline_keyboard": [
+                [{"text": "🔄 Yenile",               "callback_data": "ref"}],
+                [{"text": f"📋 {_STAGING_NODE}",     "callback_data": f"dn:{_STAGING_NODE}"}],
+                [{"text": "⚙️ Joblar",              "callback_data": "dj:__list"}],
+            ]}
         else:
             # PROD: tüm cluster
             lines = [f"<b>📊 Anlık Durum</b> — {now_str} UTC\n"]
@@ -359,11 +359,11 @@ class TelegramCommander:
                 lines.append("✅ <b>Tüm job'lar normal</b>")
 
             lines.append("\n<i>/node &lt;id&gt; · /joblar · /yedekler · /portlar</i>")
-            markup = {"inline_keyboard": [[
-                {"text": "🔄 Yenile",    "callback_data": "ref"},
-                {"text": "⚙️ Joblar",   "callback_data": "dj:__list"},
-                {"text": "💾 Yedekler", "callback_data": "yv"},
-            ]]}
+            markup = {"inline_keyboard": [
+                [{"text": "🔄 Yenile",    "callback_data": "ref"}],
+                [{"text": "⚙️ Joblar",   "callback_data": "dj:__list"}],
+                [{"text": "💾 Yedekler", "callback_data": "yv"}],
+            ]}
 
         await ctx.alerter.send("\n".join(lines), markup=markup)
 
@@ -441,8 +441,7 @@ class TelegramCommander:
 
         markup = None
         if restart_btns:
-            rows   = [restart_btns[i:i+2] for i in range(0, len(restart_btns), 2)]
-            markup = {"inline_keyboard": rows}
+            markup = {"inline_keyboard": [[btn] for btn in restart_btns]}
 
         await ctx.alerter.send("\n".join(lines), markup=markup)
 
