@@ -4,7 +4,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Kasım 2026 — §45 node101 Offsite Felaket Kurtarma; §13 node listesi güncellendi
+**Son güncelleme:** Kasım 2026 — §46 Redis Core & MinIO Yaşam Döngüsü İzolasyonu ve Edge Metrics Alarm Histerisisi; §45 node101 Offsite Felaket Kurtarma; §13 node listesi güncellendi
 
 ---
 
@@ -37,6 +37,8 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 42. [teqlif-agent İzleme Düzeltmeleri — i18n Key Format + Watchdog Registry Guard](#42-teqlif-agent-i̇zleme-düzeltmeleri--i18n-key-format--watchdog-registry-guard-commit-7e15262a)
 43. [Hediye Bildirimleri + Toplu Bildirim Butonu Düzeltmeleri](#43-hediye-bildirimleri--toplu-bildirim-butonu-düzeltmeleri-commit-234e4183-9b999cd9)
 44. [Satılmış İlanları Profilde Göster + Satış Detayı Navigasyonu](#44-satılmış-i̇lanları-profilde-göster--satış-detayı-navigasyonu-commit-3a350bd8)
+45. [Offsite Felaket Kurtarma: node101](#45--offsite-felaket-kurtarma-node101-restic-rest-server)
+46. [Redis Core & MinIO Yaşam Döngüsü İzolasyonu ve Edge Metrics Alarm Histerisisi](#46--redis-core--minio-yaşam-döngüsü-i̇zolasyonu-ve-edge-metrics-alarm-histerisisi)
 
 ---
 
@@ -3085,3 +3087,45 @@ Satılmış ilanlar için `DirectSale` tablosundan `sale_id` batch lookup yapıl
 - node101 teqlif-restart döngüsüne dahildir: `for node in node1 node3 node4 node5 node6 node101 nodeMonitor`
 - node101'de Redis yok; `job_ok` gossip ile nodeMonitor/node2'ye iletilir
 - Restic reposu şifreli tutulur — şifresi `secrets.env`'de saklanır, repoya girmez
+
+---
+
+## §46 — Redis Core & MinIO Yaşam Döngüsü İzolasyonu ve Edge Metrics Alarm Histerisisi
+
+**Tarih:** Kasım 2026
+
+### Problem
+
+1. **Stateful Servislerin Uygulama Bağımlılığı (Systemd Propagated Restarts):**  
+   `teqlif-redis-core.service` ve `teqlif-minio.service` systemd unit dosyalarında `PartOf=teqlif.service` tanımlanmıştı. Bu sebeple rutin kod dağıtımlarında (`teqlif-restart` veya `systemctl restart teqlif.service`) FastAPI uygulamasıyla birlikte Core Redis ve MinIO da zorla yeniden başlatılıyordu.
+   - **`Connection closed by server`:** Redis aniden kapatıldığında `node1`, `node3`, `node4`, `node6` ve worker havuzlarındaki tüm istemci TCP soketleri koptu.
+   - **`BusyLoadingError: Redis is loading the dataset in memory`:** Redis yeniden açılırken RDB dump dosyasını belleğe yüklediği 1-3 saniyelik aralıkta tüm sorgular reddedildi.
+   - **`redis-vip-check` Failover Riski:** Edge sunuculardaki VIP kontrolü (`redis_vip_check.sh`), `10.10.0.1:6379` portuna erişemeyince failover sayaçlarını artırdı ve gereksiz failover tetikleme riski oluştu.
+2. **AlertManager Aşırı Hassasiyeti (False-Positive Alarmlar):**  
+   `edge_metrics_agent.py` içindeki `AlertManager`, servis kontrollerinde en ufak bir kesintide (örneğin Uvicorn'un 1-2 saniyelik reload/restart süresi) anında `🔴 DOWN` ve ardından hemen `✅ kurtarıldı` bildirimleri gönderiyor, Loki ve Telegram'ı gürültüye boğuyordu.
+3. **Core Redis Kesintilerinde Log Spam'i:**  
+   Metrik ajanının `r.set` döngüsü Redis kesintilerinde her 5 saniyede bir tam traceback fırlatarak Loki'yi dolduruyordu.
+
+### Karar
+
+1. **Systemd Yaşam Döngüsü İzolasyonu (Decoupling):**
+   - `deploy/scale/V2.1/node1/systemd/teqlif-redis-core.service` ve `teqlif-minio.service` dosyalarından `PartOf=teqlif.service` kaldırıldı.
+   - `deploy/scale/V2.1/node1/systemd/teqlif.service` içindeki katı `Requires=teqlif-redis-core.service` yerine `Wants=postgresql.service teqlif-redis-core.service teqlif-minio.service` kullanılarak bağımlılık yumuşatıldı.
+   - Artık kod dağıtımlarında ve `teqlif.service` yeniden başlatıldığında Redis Core ve MinIO kesinlikle etkilenmez; kesintisiz çalışmaya devam eder.
+2. **AlertManager Histerisis ve Ardışık Başarısızlık Eşiği:**
+   - `edge_metrics_agent.py` içindeki `AlertManager` sınıfına ardışık hata eşiği (`fail_threshold`, varsayılan 3 döngü = ~15 saniye) eklendi.
+   - Servisler yeniden başlatılırken ilk 1-2 kontroldeki geçici bağlantı reddedilmeleri (`Connection refused`) sadece `INFO` düzeyinde loglanır; `🔴 DOWN` alarmı yalnızca sorun 3 kontrol boyunca sürerse üretilir.
+   - Kurtarıldı alarmı (`✅ kurtarıldı`), cooldown engeline takılmadan garantili ve tek seferlik iletilir.
+3. **Core Redis Dayanıklılığı (Transient Exception Resilience):**
+   - Metrik ajanındaki Redis istemcisine `retry_on_timeout=True`, `health_check_interval=30`, `socket_connect_timeout=3` eklendi.
+   - `r.set(...)` çağrısı `(ConnectionError, BusyLoadingError, TimeoutError)` istisnalarını tek satırlık uyarı ile yakalar, Loki'ye kontrolsüz traceback dökmez. Bağlantı tekrar kurulduğunda tek satır bilgi logu basar.
+
+### Dosyalar
+
+| Dosya | Değişiklik |
+|-------|------------|
+| `deploy/scale/V2.1/node1/systemd/teqlif-redis-core.service` | `PartOf=teqlif.service` kaldırıldı |
+| `deploy/scale/V2.1/node1/systemd/teqlif-minio.service` | `PartOf=teqlif.service` kaldırıldı |
+| `deploy/scale/V2.1/node1/systemd/teqlif.service` | `Requires=` kaldırıldı, `Wants=` standardize edildi |
+| `backend/scripts/edge_metrics_agent.py` | Histerisis alarm eşiği (`fail_threshold=3`) + Redis hata toleransı |
+| `backend/scripts/test_alert_manager.py` | AlertManager histerisis, cooldown ve kurtarma birim testleri |

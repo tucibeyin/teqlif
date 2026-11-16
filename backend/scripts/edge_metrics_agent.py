@@ -55,20 +55,26 @@ class AlertManager:
     """
     Servis sağlık değişikliklerini ve kaynak eşiklerini izler.
     Durum geçişlerinde Telegram bildirimi gönderir.
+    Geçici servis reload/restart kesintilerinde false-positive üretmemek için
+    belirli sayıda ardışık başarısızlıktan (fail_threshold) sonra alarm üretir.
     """
 
-    _SVC_COOLDOWN_SEC      = 300   # Aynı servis için tekrar uyarı aralığı (5 dk)
-    _RESOURCE_COOLDOWN_SEC = 1800  # Kaynak uyarısı tekrar aralığı (30 dk)
-    _CPU_THRESHOLD         = 90.0
-    _RAM_THRESHOLD         = 90.0
-    _DISK_THRESHOLD        = 85.0
+    _SVC_COOLDOWN_SEC       = 300   # Aynı servis için tekrar uyarı aralığı (5 dk)
+    _RESOURCE_COOLDOWN_SEC  = 1800  # Kaynak uyarısı tekrar aralığı (30 dk)
+    _CPU_THRESHOLD          = 90.0
+    _RAM_THRESHOLD          = 90.0
+    _DISK_THRESHOLD         = 85.0
+    _FAIL_THRESHOLD_DEFAULT = 3     # 3 ardışık döngü (~15 sn) başarısız olmadan DOWN alarmı verme
 
-    def __init__(self, node_id: str, token: str, chat_id: str) -> None:
+    def __init__(self, node_id: str, token: str, chat_id: str, fail_threshold: int = _FAIL_THRESHOLD_DEFAULT) -> None:
         self._node_id        = node_id
         self._token          = token
         self._chat_id        = chat_id
         self._enabled        = bool(token and chat_id)
-        self._prev_health:  dict[str, bool]  = {}
+        self._fail_threshold = max(1, fail_threshold)
+        self._prev_health:   dict[str, bool]  = {}
+        self._fail_counts:   dict[str, int]   = {}
+        self._alerted_down:  dict[str, bool]  = {}
         self._last_alert_ts: dict[str, float] = {}
         self._initialized    = False  # İlk döngüde baseline al, alert gönderme
 
@@ -101,29 +107,51 @@ class AlertManager:
     # ── Servis health ──────────────────────────────────────────────────────
 
     def check_services(self, svc_results: dict[str, Any]) -> None:
-        """Servis sonuçlarını önceki döngüyle karşılaştırır, geçişlerde alert atar."""
+        """
+        Servis sonuçlarını izler; geçici reload/restart süreçlerinde false-positive
+        üretmemek için fail_threshold kadar ardışık başarısızlıktan sonra DOWN uyarısı atar.
+        """
         for svc, result in svc_results.items():
             healthy = result.get("healthy", False)
-            prev    = self._prev_health.get(svc)
+            error   = result.get("error", "")
 
-            if not self._initialized or prev is None:
+            if not self._initialized:
                 # İlk döngü: sadece baseline yaz
                 self._prev_health[svc] = healthy
+                self._fail_counts[svc] = 0 if healthy else 1
+                self._alerted_down[svc] = False
                 continue
 
-            if healthy == prev:
-                continue  # Durum değişmedi
+            if healthy:
+                # Servis sağlıklı
+                if self._alerted_down.get(svc, False):
+                    # Önceden DOWN bildirimi gönderilmişti — kurtarıldı alarmı ver (cooldown'a takılmadan ilet)
+                    msg = f"✅ <b>{self._node_id}</b> | <code>{svc}</code> — kurtarıldı"
+                    logger.warning(f"ALERT: {msg.replace('<b>', '').replace('</b>', '').replace('<code>', '').replace('</code>', '')}")
+                    self._send(msg)
+                    self._alerted_down[svc] = False
+                    self._last_alert_ts.pop(f"svc:{svc}", None)
 
-            error = result.get("error", "")
-            if not healthy:
-                msg = f"🔴 <b>{self._node_id}</b> | <code>{svc}</code> — DOWN"
-                if error:
-                    msg += f"\n<code>{error[:200]}</code>"
+                self._fail_counts[svc] = 0
+                self._prev_health[svc] = True
             else:
-                msg = f"✅ <b>{self._node_id}</b> | <code>{svc}</code> — kurtarıldı"
+                # Servis sağlıksız
+                count = self._fail_counts.get(svc, 0) + 1
+                self._fail_counts[svc] = count
+                self._prev_health[svc] = False
 
-            self._alert(f"svc:{svc}", msg, self._SVC_COOLDOWN_SEC)
-            self._prev_health[svc] = healthy
+                if count >= self._fail_threshold:
+                    if not self._alerted_down.get(svc, False):
+                        msg = f"🔴 <b>{self._node_id}</b> | <code>{svc}</code> — DOWN ({count} ardışık başarısız kontrol)"
+                        if error:
+                            msg += f"\n<code>{error[:200]}</code>"
+                        self._alert(f"svc:{svc}", msg, self._SVC_COOLDOWN_SEC)
+                        self._alerted_down[svc] = True
+                else:
+                    logger.info(
+                        f"Servis geçici yanıt veremedi (eşik bekleniyor): {self._node_id} | {svc} "
+                        f"({count}/{self._fail_threshold}) - {error[:80]}"
+                    )
 
         self._initialized = True
 
@@ -336,6 +364,8 @@ def main() -> None:
     ai_proxy_priority = int(_env("EDGE_AI_PROXY_PRIORITY", "100"))
     region           = _env("EDGE_NODE_REGION")
 
+    fail_threshold   = int(_env("EDGE_METRICS_FAIL_THRESHOLD", "3"))
+
     svc_cfg = {
         "livekit_api_key":    _env("LIVEKIT_API_KEY"),
         "livekit_api_secret": _env("LIVEKIT_API_SECRET"),
@@ -348,14 +378,25 @@ def main() -> None:
     }
 
     alerter = AlertManager(
-        node_id    = node_id,
-        token      = _env("TELEGRAM_BOT_TOKEN"),
-        chat_id    = _env("TELEGRAM_CHAT_ID"),
+        node_id        = node_id,
+        token          = _env("TELEGRAM_BOT_TOKEN"),
+        chat_id        = _env("TELEGRAM_CHAT_ID"),
+        fail_threshold = fail_threshold,
     )
 
-    logger.info(f"Node={node_id}  Type={node_type}  Services={services}  Interval={interval}s")
+    logger.info(
+        f"Node={node_id}  Type={node_type}  Services={services}  "
+        f"Interval={interval}s  FailThreshold={fail_threshold}"
+    )
 
-    r = redis_lib.Redis.from_url(core_redis_url, decode_responses=True)
+    r = redis_lib.Redis.from_url(
+        core_redis_url,
+        decode_responses=True,
+        socket_connect_timeout=3,
+        socket_timeout=3,
+        retry_on_timeout=True,
+        health_check_interval=30,
+    )
     try:
         r.ping()
         logger.info("Core Redis: connected.")
@@ -366,6 +407,7 @@ def main() -> None:
     redis_key = f"edge:metrics:{node_id}"
     ttl       = interval * 4  # ajan ölürse 4 döngü sonra expire
     net       = NetRate()
+    redis_reconnect_warned = False
 
     while True:
         loop_start = time.monotonic()
@@ -429,7 +471,22 @@ def main() -> None:
                 "timestamp": int(time.time()),
             }
 
-            r.set(redis_key, json.dumps(metrics), ex=ttl)
+            try:
+                r.set(redis_key, json.dumps(metrics), ex=ttl)
+                if redis_reconnect_warned:
+                    logger.info("Core Redis bağlantısı yeniden kuruldu.")
+                    redis_reconnect_warned = False
+            except (redis_lib.exceptions.ConnectionError,
+                    redis_lib.exceptions.BusyLoadingError,
+                    redis_lib.exceptions.TimeoutError) as r_err:
+                if not redis_reconnect_warned:
+                    logger.warning(
+                        f"Core Redis geçici olarak erişilemez ({r_err}) — sonraki döngüde tekrar denenecek"
+                    )
+                    redis_reconnect_warned = True
+            except Exception as r_err:
+                logger.error(f"Core Redis set hatası: {r_err}")
+
             logger.debug(
                 f"{node_id}  CPU={cpu:.1f}%  RAM={mem.percent:.1f}%  "
                 f"DISK={disk_pct:.1f}%  RX={rx_mbps}Mbps  TX={tx_mbps}Mbps"

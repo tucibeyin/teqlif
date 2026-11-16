@@ -1,8 +1,7 @@
 [Unit]
 Description=teqlif FastAPI Application
 After=network.target postgresql.service teqlif-redis-core.service teqlif-minio.service
-Requires=teqlif-redis-core.service
-Wants=teqlif-redis-core.service teqlif-minio.service
+Wants=postgresql.service teqlif-redis-core.service teqlif-minio.service
 
 [Service]
 Type=simple

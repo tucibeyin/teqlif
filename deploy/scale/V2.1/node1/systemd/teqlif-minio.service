@@ -1,7 +1,6 @@
 [Unit]
 Description=teqlif MinIO Object Storage
 After=network.target
-PartOf=teqlif.service
 
 [Service]
 Type=simple
