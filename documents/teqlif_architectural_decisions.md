@@ -3105,6 +3105,8 @@ Satılmış ilanlar için `DirectSale` tablosundan `sale_id` batch lookup yapıl
    `edge_metrics_agent.py` içindeki `AlertManager`, servis kontrollerinde en ufak bir kesintide (örneğin Uvicorn'un 1-2 saniyelik reload/restart süresi) anında `🔴 DOWN` ve ardından hemen `✅ kurtarıldı` bildirimleri gönderiyor, Loki ve Telegram'ı gürültüye boğuyordu.
 3. **Core Redis Kesintilerinde Log Spam'i:**  
    Metrik ajanının `r.set` döngüsü Redis kesintilerinde her 5 saniyede bir tam traceback fırlatarak Loki'yi dolduruyordu.
+4. **Nginx .well-known Bloklaması (RFC 8615 & Mobil Deep Linking):**  
+   Nginx genel dotfile kuralı (`location ~ /\. { deny all; }`), `.git` ve `.env` dosyalarını korumak isterken kaza ile `frontend/.well-known/` dizinini de `.` ile başladığı için engelliyordu (`403 Forbidden`). Bu durum Android App Links (`assetlinks.json`) ve iOS Universal Links (`apple-app-site-association`) doğrulamasının yapılamamasına sebep oluyordu.
 
 ### Karar
 
@@ -3119,6 +3121,8 @@ Satılmış ilanlar için `DirectSale` tablosundan `sale_id` batch lookup yapıl
 3. **Core Redis Dayanıklılığı (Transient Exception Resilience):**
    - Metrik ajanındaki Redis istemcisine `retry_on_timeout=True`, `health_check_interval=30`, `socket_connect_timeout=3` eklendi.
    - `r.set(...)` çağrısı `(ConnectionError, BusyLoadingError, TimeoutError)` istisnalarını tek satırlık uyarı ile yakalar, Loki'ye kontrolsüz traceback dökmez. Bağlantı tekrar kurulduğunda tek satır bilgi logu basar.
+4. **RFC 8615 .well-known Desteği (Nginx):**
+   - `location ^~ /.well-known/ { allow all; }` kuralı eklenerek genel dotfile regex'inin önüne geçirildi. `.git`, `.env` gibi hassas dosyalar `403` ile korunmaya devam ederken Android App Links ve iOS Universal Links doğrudan ve en yüksek hızda (zero-copy) sunulur hale getirildi.
 
 ### Dosyalar
 
@@ -3129,3 +3133,4 @@ Satılmış ilanlar için `DirectSale` tablosundan `sale_id` batch lookup yapıl
 | `deploy/scale/V2.1/node1/systemd/teqlif.service` | `Requires=` kaldırıldı, `Wants=` standardize edildi |
 | `backend/scripts/edge_metrics_agent.py` | Histerisis alarm eşiği (`fail_threshold=3`) + Redis hata toleransı |
 | `backend/scripts/test_alert_manager.py` | AlertManager histerisis, cooldown ve kurtarma birim testleri |
+| `deploy/scale/V2.1/node1/resources/nginx/conf.d/teqlif.conf` | RFC 8615 `location ^~ /.well-known/` izni eklendi |
