@@ -73,7 +73,7 @@ _CONTINUOUS_REGISTRY: dict[str, int] = {
     "stream_concat_task":               5,
     "expire_recordings_task":          60,
     "archive_recordings_task":         30,
-    "notify_new_recordings_task":     720,   # 2× günlük, maks boşluk ~12 saat
+    "notify_new_recordings_task":    1500,   # günde 1×, 05:45 UTC — 25 saat buffer
 }
 
 _COOLDOWN_SEC = 2 * 60 * 60   # aynı job için 2 saatte bir uyarı
