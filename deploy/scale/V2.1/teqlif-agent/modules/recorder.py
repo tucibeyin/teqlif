@@ -161,6 +161,14 @@ class RecordingManager:
                 logger.warning("Geçersiz kayıt eventi atlandı: %s", data)
                 continue
 
+            # Bu event başka bir node'a ait stream için ise atla
+            if source_node_id and source_node_id != self._cfg.node_id:
+                logger.debug(
+                    "Kayıt eventi bu node için değil, atlanıyor | stream_id=%d source_node=%s this_node=%s",
+                    stream_id, source_node_id, self._cfg.node_id,
+                )
+                continue
+
             # Zaten kayıt varsa atla
             try:
                 import asyncpg
@@ -223,6 +231,7 @@ class RecordingManager:
                 SELECT ls.id, ls.room_name, ls.host_id, ls.source_node_id
                 FROM live_streams ls
                 WHERE ls.status = 'live'
+                  AND (ls.source_node_id = $1 OR ls.source_node_id IS NULL)
                   AND NOT EXISTS (
                       SELECT 1 FROM stream_recordings sr
                       WHERE sr.stream_id = ls.id
