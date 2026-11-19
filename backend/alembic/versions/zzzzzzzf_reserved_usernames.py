@@ -7,7 +7,7 @@ Create Date: 2026-11-19
 from alembic import op
 
 revision = "zzzzzzzf_reserved_usernames"
-down_revision = "zzzzzze_user_devices"
+down_revision = "zzzzzfi_txns_try_amount"
 branch_labels = None
 depends_on = None
 
