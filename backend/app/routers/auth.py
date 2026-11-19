@@ -156,7 +156,7 @@ async def verify(request: Request, data: VerifyEmail, response: Response, db: As
     await db.refresh(user)
     await redis.delete(f"verify:{data.email}")
 
-    if user.pending_referred_by and user.email_verified:
+    if user.pending_referred_by and user.is_verified:
         try:
             from app.services.referral_service import apply_referral
             await apply_referral(db, user, user.pending_referred_by)

@@ -382,6 +382,57 @@ async def process_store_notification_task(
         raise
 
 
+async def notify_pending_referral_bonuses_task(ctx: dict) -> None:
+    """Bekleyen referral bonusu olan kullanıcılara günlük push bildirimi gönderir.
+
+    Hedef: e-posta doğrulanmış, telefon henüz eklenmemiş, pending_referred_by dolu kullanıcılar.
+    Bildirim: i18n anahtarlarıyla çekici bir hatırlatma — kullanıcıyı telefon eklemeye yönlendirir.
+    """
+    sent = 0
+    try:
+        async with AsyncSessionLocal() as session:
+            rows = await session.execute(
+                text(
+                    "SELECT id, fcm_token, locale "
+                    "FROM users "
+                    "WHERE pending_referred_by IS NOT NULL "
+                    "  AND email_verified = TRUE "
+                    "  AND phone_verified = FALSE "
+                    "  AND fcm_token IS NOT NULL "
+                    "  AND status = 'active'"
+                )
+            )
+            users = rows.fetchall()
+
+        from app.services.firebase_service import send_push
+        from app.utils.i18n import _get_t
+
+        for user_id, fcm_token, locale in users:
+            try:
+                t = _get_t(locale or "tr")
+                title = t.get("notifPendingReferralTitle", "🎁 150 teqlik seni bekliyor!")
+                body  = t.get("notifPendingReferralBody",  "Telefon numaranı doğrula, davet bonusunu hemen al.")
+                await send_push(
+                    token=fcm_token,
+                    title=title,
+                    body=body,
+                    notif_type="pending_referral_bonus",
+                    extra_data={"pending_referral_bonus": "150"},
+                )
+                sent += 1
+            except Exception as exc:
+                logger.debug("[WalletTask] pending_referral push başarısız | user=%s | %s", user_id, exc)
+
+        logger.info("[WalletTask] notify_pending_referral_bonuses: %d bildirim gönderildi", sent)
+        await _agent_ok(ctx, "notify_pending_referral_bonuses_task")
+
+    except Exception as exc:
+        logger.error("[WalletTask] notify_pending_referral_bonuses başarısız | %s", exc, exc_info=True)
+        capture_exception(exc)
+        await _agent_fail(ctx, "notify_pending_referral_bonuses_task", str(exc))
+        raise
+
+
 async def _agent_ok(ctx: dict, job_name: str) -> None:
     """teqlif-agent watchdog'a 'job çalıştı' sinyali gönderir; önceki fail kaydını temizler."""
     try:

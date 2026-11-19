@@ -31,7 +31,8 @@ class GetWalletSummaryQuery:
         # ── kullanıcı temel alanları ───────────────────────────────────────────
         user_row = await self._session.execute(
             text(
-                "SELECT teqlik_balance, user_type, pro_expires_at, plan_type "
+                "SELECT teqlik_balance, user_type, pro_expires_at, plan_type, "
+                "       pending_referred_by, email_verified, phone_verified "
                 "FROM users WHERE id = :uid"
             ),
             {"uid": user_id},
@@ -41,6 +42,11 @@ class GetWalletSummaryQuery:
         is_pro           = (u[1] == "pro") if u else False
         pro_expires_at   = u[2].isoformat() if u and u[2] else None
         plan_type        = _PLAN_TYPE_TO_IAP.get(u[3]) if u and u[3] else None
+        pending_referred_by  = u[4] if u else None
+        email_verified       = bool(u[5]) if u else False
+        phone_verified       = bool(u[6]) if u else False
+        # Referral bonusu beklemede: kod var, e-posta doğrulanmış ama telefon henüz eklenmemiş
+        pending_referral_bonus = 150 if (pending_referred_by and email_verified and not phone_verified) else 0
 
         # ── aktif çekim talebi ────────────────────────────────────────────────
         wr_row = await self._session.execute(
@@ -108,4 +114,5 @@ class GetWalletSummaryQuery:
             "pro_expires_at": pro_expires_at,
             "plan_type": plan_type,
             "active_withdrawal_id": active_withdrawal_id,
+            "pending_referral_bonus": pending_referral_bonus,
         }

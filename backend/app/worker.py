@@ -35,6 +35,7 @@ from app.tasks.wallet_tasks import (
     reset_monthly_withdrawal_quota_task,
     check_expired_pro_users_task,
     process_store_notification_task,
+    notify_pending_referral_bonuses_task,
 )
 from app.services.edge_orchestrator import orchestrator, ServiceType
 logger = get_logger(__name__)
@@ -4812,6 +4813,7 @@ _SCHEDULE_FUNCTIONS = {
     "reset_monthly_withdrawal_quota_task":        reset_monthly_withdrawal_quota_task,
     "release_pending_earnings_task":              release_pending_earnings_task,
     "check_expired_pro_users_task":               check_expired_pro_users_task,
+    "notify_pending_referral_bonuses_task":       notify_pending_referral_bonuses_task,
     "cleanup_old_stream_chat_messages_task":      cleanup_old_stream_chat_messages_task,
 }
 
@@ -4986,6 +4988,7 @@ class WorkerSettings:
         reset_monthly_withdrawal_quota_task,
         check_expired_pro_users_task,
         process_store_notification_task,
+        notify_pending_referral_bonuses_task,
 
         # ── i18n bellek yenileme ──────────────────────────────────────
         refresh_i18n_cache_task,

@@ -84,6 +84,12 @@ batch:
     minute: 10
     watchdog_m: 1440
 
+  # Bekleyen referral bonusu olan kullanıcılara günlük push bildirimi (telefon doğrulaması teşviki)
+  - name: notify_pending_referral_bonuses_task
+    hour: 11
+    minute: 0
+    watchdog_m: 1440
+
   # ── 03:20 — Hafif hesaplama ─────────────────────────────────────────────────
 
   - name: compute_seller_badges_task

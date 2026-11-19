@@ -25,8 +25,8 @@ logger = get_logger(__name__)
 _SAFE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 _CODE_LEN = 7
 
-REFERRER_BONUS = 50   # davet eden
-REFERRED_BONUS = 50   # davet edilen
+REFERRER_BONUS = 150   # davet eden
+REFERRED_BONUS = 150   # davet edilen
 
 
 from datetime import datetime, timedelta, timezone
@@ -96,8 +96,8 @@ async def apply_referral(db: AsyncSession, current_user: User, referral_code: st
     if not referrer.referral_code_expires_at or referrer.referral_code_expires_at < now:
         raise BadRequestException(code="REFERRAL_EXPIRED")
 
-    # E-posta onaylı değilse: kodu pending olarak kaydet ve çık (telefon opsiyonel)
-    if not current_user.email_verified:
+    # Tam doğrulanmamışsa (e-posta + telefon): kodu pending olarak kaydet ve çık
+    if not current_user.is_verified:
         current_user.pending_referred_by = code
         db.add(current_user)
         await db.commit()
