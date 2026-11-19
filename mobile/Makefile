@@ -1,19 +1,59 @@
 # Teqlif Mobile — Build Komutları
 #
-# Kullanım:
-#   make android-release   → Play Store APK/AAB
+# Geliştirme:
+#   make run-debugMode-in-stagingEnv            → debug mode + staging env
+#   make run-debugMode-in-stagingEnv DEVICE=ios → aynısı, iPhone'a zorla
+#   make run-debugMode-in-prodEnv               → debug mode + prod env
+#   make run-releaseMode-in-stagingEnv          → release mode + staging env
+#   make run-releaseMode-in-prodEnv             → release mode + prod env
+#
+#   DEVICE seçenekleri: ios | android | <cihaz-id>
+#   Boş bırakılırsa Flutter bağlı cihazı sorar.
+#
+# Dağıtım:
+#   make android-release   → Play Store AAB
+#   make android-apk       → Play Store APK
 #   make ios-release       → App Store IPA
 #   make clean             → Build cache temizle
-#
-# Obfuscation hakkında:
-#   --obfuscate              : Dart sembol isimlerini karıştırır (reverse engineering önler)
-#   --split-debug-info=PATH  : Debug sembollerini ayrı dosyaya yazar (Sentry crash symbolication için gerekli)
-#   Debug sembol dosyalarını (*.symbols) güvenli bir yerde saklayın — Sentry'e yüklenecek.
 
 DEBUG_INFO_ANDROID := build/debug-info/android
 DEBUG_INFO_IOS     := build/debug-info/ios
 
-.PHONY: android-release ios-release android-apk clean
+# Hedef cihaz — boş bırakılırsa Flutter sorar
+DEVICE ?=
+_D = $(if $(DEVICE),-d $(DEVICE),)
+
+.PHONY: android-release ios-release android-apk clean \
+        run-debugMode-in-stagingEnv run-debugMode-in-prodEnv \
+        run-releaseMode-in-stagingEnv run-releaseMode-in-prodEnv
+
+# Android logcat gürültüsünü bastır (iOS'ta sessizce atlanır)
+define SUPPRESS
+	@adb shell setprop log.tag.IMGMapper SUPPRESS 2>/dev/null || true
+endef
+define PREP
+	flutter clean && flutter pub get
+endef
+
+## debug mode + staging env  (hot reload, staging API)
+run-debugMode-in-stagingEnv:
+	$(SUPPRESS)
+	$(PREP) && flutter run $(_D) --dart-define-from-file=dart_defines/staging.json
+
+## debug mode + prod env  (hot reload, production API)
+run-debugMode-in-prodEnv:
+	$(SUPPRESS)
+	$(PREP) && flutter run $(_D) --dart-define-from-file=dart_defines/release.json
+
+## release mode + staging env
+run-releaseMode-in-stagingEnv:
+	$(SUPPRESS)
+	$(PREP) && flutter run $(_D) --release --dart-define-from-file=dart_defines/staging.json
+
+## release mode + prod env
+run-releaseMode-in-prodEnv:
+	$(SUPPRESS)
+	$(PREP) && flutter run $(_D) --release --dart-define-from-file=dart_defines/release.json
 
 ## Play Store — App Bundle (önerilen)
 android-release:

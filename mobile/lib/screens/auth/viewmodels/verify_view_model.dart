@@ -35,7 +35,8 @@ class VerifyViewModel extends AutoDisposeAsyncNotifier<void> {
         email: email,
         code: code,
       );
-      await PushNotificationService.initialize();
+      // Push token kaydı navigation'ı bloklamasın — arka planda çalışsın
+      PushNotificationService.initialize().ignore();
       state = const AsyncValue.data(null);
       return true;
     } catch (e, st) {

@@ -148,21 +148,32 @@ class _ProSubscriptionSheetState extends ConsumerState<ProSubscriptionSheet> {
     final visiblePlans = _plans.where((p) => p.tierIndex > currentTier).toList();
     final isVip = isUpgradeMode && visiblePlans.isEmpty;
 
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.9,
+      minChildSize: 0.0,
+      maxChildSize: 0.95,
+      snap: true,
+      snapSizes: const [0.9],
+      shouldCloseOnMinExtent: true,
+      builder: (context, scrollController) => Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Başlık
-          Row(
+        child: SingleChildScrollView(
+          controller: scrollController,
+          physics: const ClampingScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+            // Başlık
+            Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
@@ -286,6 +297,8 @@ class _ProSubscriptionSheetState extends ConsumerState<ProSubscriptionSheet> {
             _LegalLinks(loc: loc),
           ],
         ],
+          ),
+        ),
       ),
     );
   }

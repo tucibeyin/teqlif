@@ -55,12 +55,15 @@ class AndroidCallHardwareAdapter extends CallHardwareAdapter {
       log('SOUND', 'ringing.wav PRE-LOADED | ready for instant resume()');
 
       // Android MediaPlayer cold-start (~780ms): force-decode by playing 50ms then pausing.
+      // Volume set to 0 so the pre-warm is silent; restored to 1.0 for actual calls.
       // After this, resume() starts in ~15ms instead of ~780ms.
       try {
+        await _ringbackPlayer.setVolume(0);
         await _ringbackPlayer.resume();
         await Future.delayed(const Duration(milliseconds: 50));
         await _ringbackPlayer.pause();
         await _ringbackPlayer.seek(Duration.zero);
+        await _ringbackPlayer.setVolume(1.0);
         log('SOUND', 'ringing.wav FORCE-BUFFERED (Android) | cold-start latency eliminated');
       } catch (e) {
         log('SOUND', 'Android buffer-force FAILED | $e');
