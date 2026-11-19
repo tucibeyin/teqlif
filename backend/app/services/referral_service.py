@@ -125,11 +125,18 @@ async def apply_referral(db: AsyncSession, current_user: User, referral_code: st
     )
     db.add(referral)
 
-    # Referrer +50 teqlik
-    await db.execute(
-        sql_text("UPDATE users SET teqlik_balance = teqlik_balance + :amt WHERE id = :uid"),
-        {"amt": REFERRER_BONUS, "uid": referrer.id},
-    )
+    # Referrer +150 teqlik (doğrulanmamışsa locked)
+    referrer_verified = referrer.email_verified and referrer.phone_verified
+    if referrer_verified:
+        await db.execute(
+            sql_text("UPDATE users SET teqlik_balance = teqlik_balance + :amt WHERE id = :uid"),
+            {"amt": REFERRER_BONUS, "uid": referrer.id},
+        )
+    else:
+        await db.execute(
+            sql_text("UPDATE users SET teqlik_locked_balance = teqlik_locked_balance + :amt WHERE id = :uid"),
+            {"amt": REFERRER_BONUS, "uid": referrer.id},
+        )
     db.add(TeqlikTransaction(
         user_id=referrer.id,
         amount=REFERRER_BONUS,

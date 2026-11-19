@@ -617,11 +617,17 @@ async def admin_teqlik_airdrop(data: TeqlikAirdropRequest, db: AsyncSession = De
     user = result.scalar_one_or_none()
     if not user:
         raise NotFoundException(code="USER_NOT_FOUND")
-    # Atomic UPDATE — race condition'a karşı güvenli
-    await db.execute(
-        text("UPDATE users SET teqlik_balance = teqlik_balance + :amount WHERE id = :uid"),
-        {"amount": data.amount, "uid": user.id},
-    )
+    # Doğrulanmamış kullanıcılara locked — verified olana kadar bekler
+    if user.email_verified and user.phone_verified:
+        await db.execute(
+            text("UPDATE users SET teqlik_balance = teqlik_balance + :amount WHERE id = :uid"),
+            {"amount": data.amount, "uid": user.id},
+        )
+    else:
+        await db.execute(
+            text("UPDATE users SET teqlik_locked_balance = teqlik_locked_balance + :amount WHERE id = :uid"),
+            {"amount": data.amount, "uid": user.id},
+        )
     db.add(TeqlikTransaction(user_id=user.id, amount=data.amount, transaction_type="airdrop"))
     await db.commit()
     await db.refresh(user)

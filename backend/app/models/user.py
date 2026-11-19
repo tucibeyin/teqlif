@@ -43,6 +43,7 @@ class User(Base):
     plan_type: Mapped[str | None] = mapped_column(String(20), nullable=True, default=None)
     premium_since: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
     teqlik_balance: Mapped[int] = mapped_column(Integer, default=500, nullable=False, server_default="500")
+    teqlik_locked_balance: Mapped[int] = mapped_column(Integer, default=0, nullable=False, server_default="0")
     bio: Mapped[str | None] = mapped_column(String(150), nullable=True)
     follower_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False, server_default="0")
     website_url: Mapped[str | None] = mapped_column(String(500), nullable=True)

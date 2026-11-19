@@ -162,6 +162,26 @@ async def verify(request: Request, data: VerifyEmail, response: Response, db: As
             await apply_referral(db, user, user.pending_referred_by)
         except Exception:
             pass  # Geçersiz/süresi dolmuş kod — doğrulamayı engelleme
+    # E-posta + telefon zaten doğrulanmışsa locked teqlikleri ana bakiyeye taşı
+    if user.is_verified and user.teqlik_locked_balance > 0:
+        try:
+            from app.models.teqlik_transaction import TeqlikTransaction
+            locked = user.teqlik_locked_balance
+            await db.execute(
+                sa_text(
+                    "UPDATE users "
+                    "SET teqlik_balance = teqlik_balance + :locked, "
+                    "    teqlik_locked_balance = 0 "
+                    "WHERE id = :uid"
+                ),
+                {"locked": locked, "uid": user.id},
+            )
+            db.add(TeqlikTransaction(user_id=user.id, amount=locked, transaction_type="verification_release"))
+            await db.commit()
+            await db.refresh(user)
+            await invalidate_user_session_cache(user.id)
+        except Exception as _le:
+            logger.warning("[Auth] locked balance release başarısız | user=%s | %s", user.id, _le)
 
     lang = get_locale(request=request)
     try:
@@ -1464,6 +1484,26 @@ async def confirm_phone_verification(
                 await apply_referral(db, user, user.pending_referred_by)
             except Exception:
                 pass
+        # Daha önce locked olan teqlikler (promo/airdrop/referral bonus) ana bakiyeye taşı
+        if user.teqlik_locked_balance > 0:
+            try:
+                from app.models.teqlik_transaction import TeqlikTransaction
+                locked = user.teqlik_locked_balance
+                await db.execute(
+                    sa_text(
+                        "UPDATE users "
+                        "SET teqlik_balance = teqlik_balance + :locked, "
+                        "    teqlik_locked_balance = 0 "
+                        "WHERE id = :uid"
+                    ),
+                    {"locked": locked, "uid": user.id},
+                )
+                db.add(TeqlikTransaction(user_id=user.id, amount=locked, transaction_type="verification_release"))
+                await db.commit()
+                await db.refresh(user)
+                await invalidate_user_session_cache(user.id)
+            except Exception as _le:
+                logger.warning("[Auth] locked balance release başarısız | user=%s | %s", user.id, _le)
         await redis.delete(f"phone_verify:{token}")
         return HTMLResponse(_phone_verify_html(
             "Telefon Doğrulandı ✓",

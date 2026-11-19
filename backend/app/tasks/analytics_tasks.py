@@ -227,12 +227,22 @@ async def _apply_airdrops(user_ids: set[int]) -> list[dict]:
         for i in range(0, len(uid_list), _AIRDROP_CHUNK):
             chunk = uid_list[i : i + _AIRDROP_CHUNK]
 
-            # Bakiye güncelle
+            # Bakiye güncelle — doğrulanmamışlara locked
             await db.execute(
                 text("""
                     UPDATE users
                     SET teqlik_balance = teqlik_balance + :amount
                     WHERE id = ANY(:uids) AND status = 'active'
+                      AND email_verified = TRUE AND phone_verified = TRUE
+                """),
+                {"amount": _AIRDROP_AMOUNT, "uids": chunk},
+            )
+            await db.execute(
+                text("""
+                    UPDATE users
+                    SET teqlik_locked_balance = teqlik_locked_balance + :amount
+                    WHERE id = ANY(:uids) AND status = 'active'
+                      AND (email_verified = FALSE OR phone_verified = FALSE)
                 """),
                 {"amount": _AIRDROP_AMOUNT, "uids": chunk},
             )

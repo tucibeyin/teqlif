@@ -40,13 +40,16 @@ async def release_pending_earnings_task(ctx: dict) -> None:
             result = await session.execute(
                 text("""
                     WITH amounts AS (
-                        SELECT receiver_id,
-                               SUM(earned_teqlik)::bigint AS total
-                        FROM   gift_events
-                        WHERE  payout_status = 'pending'
-                          AND  sent_at <= :cutoff
-                        GROUP  BY receiver_id
-                        HAVING SUM(earned_teqlik) > 0
+                        SELECT ge.receiver_id,
+                               SUM(ge.earned_teqlik)::bigint AS total
+                        FROM   gift_events ge
+                        JOIN   users u ON u.id = ge.receiver_id
+                        WHERE  ge.payout_status = 'pending'
+                          AND  ge.sent_at <= :cutoff
+                          AND  u.email_verified = TRUE
+                          AND  u.phone_verified = TRUE
+                        GROUP  BY ge.receiver_id
+                        HAVING SUM(ge.earned_teqlik) > 0
                     ),
                     wallet_update AS (
                         UPDATE user_wallet_earnings uwe
@@ -383,51 +386,85 @@ async def process_store_notification_task(
 
 
 async def notify_pending_referral_bonuses_task(ctx: dict) -> None:
-    """Bekleyen referral bonusu olan kullanıcılara günlük push bildirimi gönderir.
+    """Bekleyen teqlik kazancı olan doğrulanmamış kullanıcılara günlük push bildirimi gönderir.
 
-    Hedef: e-posta doğrulanmış, telefon henüz eklenmemiş, pending_referred_by dolu kullanıcılar.
-    Bildirim: i18n anahtarlarıyla çekici bir hatırlatma — kullanıcıyı telefon eklemeye yönlendirir.
+    Hedef kitle (OR koşullar):
+      - teqlik_locked_balance > 0  (referral/promo bonus locked)
+      - pending_referred_by IS NOT NULL AND email_verified = TRUE AND phone_verified = FALSE
+      - T+14 dolmuş gift_events pending AND phone_verified = FALSE
+    Bildirim: toplam bekleyen miktar + deeplink teqlif://wallet
     """
     sent = 0
     try:
         async with AsyncSessionLocal() as session:
             rows = await session.execute(
-                text(
-                    "SELECT id, fcm_token, locale "
-                    "FROM users "
-                    "WHERE pending_referred_by IS NOT NULL "
-                    "  AND email_verified = TRUE "
-                    "  AND phone_verified = FALSE "
-                    "  AND fcm_token IS NOT NULL "
-                    "  AND status = 'active'"
-                )
+                text("""
+                    SELECT
+                        u.id,
+                        u.fcm_token,
+                        u.locale,
+                        u.teqlik_locked_balance
+                            + CASE WHEN u.pending_referred_by IS NOT NULL
+                                        AND u.email_verified = TRUE
+                                        AND u.phone_verified = FALSE
+                                   THEN 150 ELSE 0 END
+                            + COALESCE((
+                                SELECT SUM(ge.earned_teqlik)
+                                FROM   gift_events ge
+                                WHERE  ge.receiver_id = u.id
+                                  AND  ge.payout_status = 'pending'
+                                  AND  ge.sent_at <= NOW() - INTERVAL '14 days'
+                              ), 0) AS total_pending
+                    FROM users u
+                    WHERE u.status = 'active'
+                      AND u.fcm_token IS NOT NULL
+                      AND (u.email_verified = FALSE OR u.phone_verified = FALSE)
+                      AND (
+                          u.teqlik_locked_balance > 0
+                          OR (u.pending_referred_by IS NOT NULL AND u.email_verified = TRUE)
+                          OR EXISTS (
+                              SELECT 1 FROM gift_events ge2
+                              WHERE  ge2.receiver_id = u.id
+                                AND  ge2.payout_status = 'pending'
+                                AND  ge2.sent_at <= NOW() - INTERVAL '14 days'
+                          )
+                      )
+                """)
             )
             users = rows.fetchall()
 
         from app.services.firebase_service import send_push
         from app.utils.i18n import _get_t
 
-        for user_id, fcm_token, locale in users:
+        for user_id, fcm_token, locale, total_pending in users:
+            if not fcm_token or total_pending <= 0:
+                continue
             try:
                 t = _get_t(locale or "tr")
-                title = t.get("notifPendingReferralTitle", "🎁 150 teqlik seni bekliyor!")
-                body  = t.get("notifPendingReferralBody",  "Telefon numaranı doğrula, davet bonusunu hemen al.")
+                title = t.get("notifPendingEarningsTitle", "Teqliklerini al!")
+                body  = t.get(
+                    "notifPendingEarningsBody",
+                    f"{total_pending} teqlik seni bekliyor. Hesabını doğrula ve teqliqleri hemen al.",
+                ).replace("{amount}", str(total_pending))
                 await send_push(
                     token=fcm_token,
                     title=title,
                     body=body,
-                    notif_type="pending_referral_bonus",
-                    extra_data={"pending_referral_bonus": "150"},
+                    notif_type="pending_earnings",
+                    extra_data={
+                        "pending_teqlik": str(total_pending),
+                        "deeplink": "teqlif://wallet",
+                    },
                 )
                 sent += 1
             except Exception as exc:
-                logger.debug("[WalletTask] pending_referral push başarısız | user=%s | %s", user_id, exc)
+                logger.debug("[WalletTask] pending_earnings push başarısız | user=%s | %s", user_id, exc)
 
-        logger.info("[WalletTask] notify_pending_referral_bonuses: %d bildirim gönderildi", sent)
+        logger.info("[WalletTask] notify_pending_earnings: %d bildirim gönderildi", sent)
         await _agent_ok(ctx, "notify_pending_referral_bonuses_task")
 
     except Exception as exc:
-        logger.error("[WalletTask] notify_pending_referral_bonuses başarısız | %s", exc, exc_info=True)
+        logger.error("[WalletTask] notify_pending_earnings başarısız | %s", exc, exc_info=True)
         capture_exception(exc)
         await _agent_fail(ctx, "notify_pending_referral_bonuses_task", str(exc))
         raise
