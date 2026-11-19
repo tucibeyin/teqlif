@@ -97,6 +97,7 @@ ufw_streaming() {
     ufw default allow outgoing
     ufw allow 22/tcp
     ufw allow 51820/udp
+    ufw allow 80/tcp
     ufw allow 443/tcp
     ufw allow 443/udp
     ufw allow 3478/udp
