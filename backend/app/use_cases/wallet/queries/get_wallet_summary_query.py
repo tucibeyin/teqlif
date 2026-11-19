@@ -119,4 +119,6 @@ class GetWalletSummaryQuery:
             "active_withdrawal_id": active_withdrawal_id,
             "pending_referral_bonus": pending_referral_bonus,
             "teqlik_locked": teqlik_locked,
+            "email_verified": email_verified,
+            "phone_verified": phone_verified,
         }

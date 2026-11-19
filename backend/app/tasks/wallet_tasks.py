@@ -20,7 +20,7 @@ from app.utils.telegram import send_telegram_alert
 
 logger = get_logger(__name__)
 
-_PENDING_HOLD_DAYS = 14
+_PENDING_HOLD_DAYS = 7
 
 
 async def release_pending_earnings_task(ctx: dict) -> None:
