@@ -427,5 +427,4 @@ async def send_gift(
         logger.warning("[WALLET] Gift log Redis yazılamadı | stream_id=%s | %s", body.stream_id, _redis_exc)
 
     await invalidate_user_session_cache(current_user.id)
-    await db.refresh(current_user)
-    return {"ok": True, "new_balance": current_user.teqlik_balance}
+    return {"ok": True, "new_balance": result["sender_balance_after"]}

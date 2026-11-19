@@ -231,6 +231,7 @@ class SendGiftCommand:
             "host_share_pct": host_share_pct,
             "receiver_id": receiver_id,
             "stream_id": stream_id,
+            "sender_balance_after": sender_balance_after,
         }
 
     async def _check_rate_limit(self, sender_id: int) -> None:
