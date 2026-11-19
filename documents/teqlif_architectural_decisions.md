@@ -4,7 +4,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Kasım 2026 — §46 Redis Core & MinIO Yaşam Döngüsü İzolasyonu ve Edge Metrics Alarm Histerisisi; §45 node101 Offsite Felaket Kurtarma; §13 node listesi güncellendi
+**Son güncelleme:** Kasım 2026 — §47 Reserved Usernames; §46 Redis Core & MinIO Yaşam Döngüsü İzolasyonu ve Edge Metrics Alarm Histerisisi; §45 node101 Offsite Felaket Kurtarma; §13 node listesi güncellendi
 
 ---
 
@@ -39,6 +39,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 44. [Satılmış İlanları Profilde Göster + Satış Detayı Navigasyonu](#44-satılmış-i̇lanları-profilde-göster--satış-detayı-navigasyonu-commit-3a350bd8)
 45. [Offsite Felaket Kurtarma: node101](#45--offsite-felaket-kurtarma-node101-restic-rest-server)
 46. [Redis Core & MinIO Yaşam Döngüsü İzolasyonu ve Edge Metrics Alarm Histerisisi](#46--redis-core--minio-yaşam-döngüsü-i̇zolasyonu-ve-edge-metrics-alarm-histerisisi)
+47. [Reserved Usernames — Kayıtlı Kullanıcı Adı Koruması](#47-reserved-usernames--kayıtlı-kullanıcı-adı-koruması-commit-6ddfc8a0-dd33099b)
 
 ---
 
@@ -3134,3 +3135,51 @@ Satılmış ilanlar için `DirectSale` tablosundan `sale_id` batch lookup yapıl
 | `backend/scripts/edge_metrics_agent.py` | Histerisis alarm eşiği (`fail_threshold=3`) + Redis hata toleransı |
 | `backend/scripts/test_alert_manager.py` | AlertManager histerisis, cooldown ve kurtarma birim testleri |
 | `deploy/scale/V2.1/node1/resources/nginx/conf.d/teqlif.conf` | RFC 8615 `location ^~ /.well-known/` izni eklendi |
+
+
+## §47 Reserved Usernames — Kayıtlı Kullanıcı Adı Koruması (commit 6ddfc8a0 dd33099b)
+
+**Tarih:** Kasım 2026
+
+### Problem
+
+Belirli kullanıcı adlarının (`admin`, `teqlif`, `mert` vb.) sıradan kullanıcılar tarafından kaydedilmesini engelleyen bir mekanizma yoktu. Bu durum:
+- Marka adlarının (`teqlif`, `destek`, `support`) başkası tarafından alınma riskini doğuruyordu.
+- Sistem hesaplarını taklit eden adların (`admin`, `root`, `api`) oluşturulabilmesine izin veriyordu.
+- Belirli kişilere ileride atanmak üzere önceden rezerve edilecek adlar için altyapı bulunmuyordu.
+
+### Karar
+
+`users` tablosunda placeholder kullanıcı oluşturma yaklaşımı yerine `reserved_usernames` adında bağımsız bir tablo tercih edildi.
+
+**Neden placeholder user değil?**
+- Kullanıcı tablosunda anlamsız fake kayıtlar bırakmaz.
+- `reason` ve `note` ile rezervasyon amacı açıkça belgelenebilir.
+- İleride ACL, audit log veya lisans mantığına genişletilebilir.
+
+### Mimari
+
+```
+reserved_usernames (id, username UNIQUE, reason, note, reserved_at)
+       │
+       ├── auth.py: _create_user_and_send_code() → kayıt akışında kontrol
+       └── auth.py: check_username endpoint → müsaitlik sorgusunda kontrol
+```
+
+İki kontrol noktası da aynı hata mesajı döndürür (`apiErrUsernameTaken`) — hangi adın rezerve olduğu dışarıya sızdırılmaz.
+
+### Seed Listesi (22 isim)
+
+| reason | isimler |
+|--------|---------|
+| brand  | teqlif, support, destek, help, yardim, info, iletisim, moderator, mod, official, resmi |
+| system | admin, administrator, root, api, app, www, mail, bot, server |
+| person | mert (ilerisi için rezerve) |
+
+### Dosyalar
+
+| Dosya | Değişiklik |
+|-------|------------|
+| `backend/alembic/versions/zzzzzzzf_reserved_usernames.py` | Tablo oluştur + 22 seed |
+| `backend/app/routers/auth.py` | `_create_user_and_send_code` + `check_username` → reserved kontrol |
+
