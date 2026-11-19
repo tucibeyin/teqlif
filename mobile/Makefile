@@ -30,6 +30,7 @@ _D = $(if $(DEVICE),-d $(DEVICE),)
 # Android logcat gürültüsünü bastır (iOS'ta sessizce atlanır)
 define SUPPRESS
 	@adb shell setprop log.tag.IMGMapper SUPPRESS 2>/dev/null || true
+	@adb shell setprop log.tag.FlutterJNI SUPPRESS 2>/dev/null || true
 endef
 define PREP
 	flutter clean && flutter pub get

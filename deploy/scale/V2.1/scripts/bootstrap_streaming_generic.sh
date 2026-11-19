@@ -46,6 +46,7 @@ main() {
     install_livekit
     setup_livekit_generic
     install_certbot
+    install_nginx
     install_promtail
     setup_promtail_generic
     install_node_exporter_generic
@@ -144,6 +145,17 @@ EOF
 
 install_certbot() {
     apt-get install -y -qq certbot
+}
+
+install_nginx() {
+    log_step "nginx"
+    apt-get install -y -qq nginx
+    systemctl stop nginx   # certbot --standalone için portu boşalt
+    # nginx config: manuel adım — bootstrap sonrası:
+    #   certbot certonly --standalone -d <live-domain>.teqlif.com
+    #   cp nginx.conf + conf.d/livekit.conf → /etc/nginx/
+    #   systemctl start nginx
+    log_ok "nginx kuruldu (config manuel adım — bootstrap tamamlandı bölümüne bak)"
 }
 
 setup_promtail_generic() {

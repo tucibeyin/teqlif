@@ -82,7 +82,7 @@ main() {
         "Credential JSON kopyala: scp google-play-service-account.json node1:/var/www/teqlif.com/backend/" \
         "chmod 600 /var/www/teqlif.com/backend/{firebase,google-play}-service-account.json" \
         "systemctl start teqlif-redis-core" \
-        "systemctl start teqlif-minio && mc alias set + bucket oluştur" \
+        "systemctl start teqlif-minio && mc alias set + bucket oluştur + bash deploy/scale/V2.1/scripts/setup_minio_policy.sh" \
         "systemctl start teqlif teqlif-worker teqlif-worker-critical"
 }
 

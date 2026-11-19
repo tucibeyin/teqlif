@@ -44,6 +44,8 @@ main() {
     install_livekit
     setup_livekit      "${NODE_DIR}"
     install_certbot
+    install_nginx
+    setup_nginx        "${NODE_DIR}"
     install_promtail
     setup_promtail "${NODE_DIR}" "${NODE_ID}"
     install_node_exporter
@@ -55,8 +57,10 @@ main() {
     print_summary "${NODE_ID}" "${WG_IP}" \
         "wg_mesh_apply.sh çalıştır" \
         "wg-quick up wg0 && systemctl enable wg-quick@wg0" \
-        "certbot certonly --standalone -d stream3.teqlif.com (LE cert)" \
+        "certbot certonly --standalone -d stream3.teqlif.com (TURN cert)" \
+        "certbot certonly --standalone -d live2.teqlif.com (LiveKit TLS cert)" \
         "systemctl start haproxy" \
+        "systemctl start nginx" \
         "systemctl start teqlif-livekit"
 }
 
@@ -101,6 +105,24 @@ install_certbot() {
     log_step "Certbot"
     apt-get install -y -qq certbot
     log_ok "Certbot kuruldu"
+}
+
+install_nginx() {
+    log_step "nginx"
+    apt-get install -y -qq nginx
+    systemctl stop nginx   # certbot --standalone için portu boşalt
+    log_ok "nginx kuruldu"
+}
+
+setup_nginx() {
+    local node_dir="$1"
+    log_step "nginx config (live2.teqlif.com)"
+    cp "${node_dir}/resources/nginx/nginx.conf" /etc/nginx/nginx.conf
+    mkdir -p /etc/nginx/conf.d
+    cp "${node_dir}/resources/nginx/conf.d/livekit.conf" /etc/nginx/conf.d/livekit.conf
+    mkdir -p /var/www/html
+    systemctl enable nginx
+    log_ok "nginx config yazıldı (LE cert sonrası: systemctl start nginx)"
 }
 
 install_node_exporter() {
