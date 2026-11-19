@@ -96,8 +96,8 @@ async def apply_referral(db: AsyncSession, current_user: User, referral_code: st
     if not referrer.referral_code_expires_at or referrer.referral_code_expires_at < now:
         raise BadRequestException(code="REFERRAL_EXPIRED")
 
-    # Eğer e-posta veya telefon onaylı değilse: kodu pending olarak kaydet ve çık
-    if not current_user.is_verified:
+    # E-posta onaylı değilse: kodu pending olarak kaydet ve çık (telefon opsiyonel)
+    if not current_user.email_verified:
         current_user.pending_referred_by = code
         db.add(current_user)
         await db.commit()
