@@ -84,6 +84,10 @@ async def _create_user_and_send_code(
     if result.scalar_one_or_none():
         raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrUsernameTaken", "Bu kullanıcı adı zaten alınmış"))
 
+    reserved = await db.execute(sa_text("SELECT 1 FROM reserved_usernames WHERE username = :u LIMIT 1"), {"u": data.username})
+    if reserved.scalar():
+        raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrUsernameTaken", "Bu kullanıcı adı zaten alınmış"))
+
     if data.phone:
         result = await db.execute(select(User).where(User.phone == data.phone))
         if result.scalar_one_or_none():
@@ -335,6 +339,9 @@ async def check_username(
         q = q.where(User.id != exclude_id)
     result = await db.execute(q)
     taken = result.scalar_one_or_none() is not None
+    if not taken:
+        reserved = await db.execute(sa_text("SELECT 1 FROM reserved_usernames WHERE username = :u LIMIT 1"), {"u": username})
+        taken = reserved.scalar() is not None
     return {"available": not taken}
 
 
