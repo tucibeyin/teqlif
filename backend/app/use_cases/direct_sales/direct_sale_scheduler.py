@@ -109,7 +109,7 @@ async def _process_overdue_sales() -> None:
                 host_id=sale.host_id,
                 user_id=0,  # sistem otomatik geçiş
                 listing_id=sale.listing_id,
-                category=sale.category,
+                category=sale.category or "",
                 unit_price=float(sale.price),
                 remaining_stock_after=0,
                 end_reason=end_reason,
