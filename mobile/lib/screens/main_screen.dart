@@ -358,6 +358,12 @@ class _MainScreenState extends ConsumerState<MainScreen> with WidgetsBindingObse
                 );
               });
               break;
+            case MainNavigationEvent.toWallet:
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const WalletScreen()),
+              );
+              break;
             case MainNavigationEvent.none:
               break;
           }

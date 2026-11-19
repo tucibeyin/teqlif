@@ -27,6 +27,7 @@ enum MainNavigationEvent {
   toRecordingDetail,
   toProHub,
   toMyRecordings,
+  toWallet,
 }
 
 class MainNavigationData {
@@ -344,6 +345,10 @@ class MainViewModel extends AutoDisposeAsyncNotifier<MainState> {
 
       case 'recording_upsell':
         _navigate(MainNavigationEvent.toProHub, null);
+        break;
+
+      case 'pending_earnings':
+        _navigate(MainNavigationEvent.toWallet, null);
         break;
 
       case 'direct_sale_purchased':

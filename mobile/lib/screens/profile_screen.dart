@@ -4062,9 +4062,12 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
   // Kart 2 — kazanç özeti
   int _pendingTeqlik = 0;
   int _availableTeqlik = 0;
+  int _teqlikLocked = 0;
   bool _cashoutEnabled = false;
   double _tryRate = 0.0;
   int? _activeWithdrawalId;
+  bool _emailVerified = false;
+  bool _phoneVerified = false;
 
   late TabController _tabController;
   bool _iapLoading = false;
@@ -4153,6 +4156,9 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
         _proExpiresAt   = summaryData['pro_expires_at'] as String?;
         final rawPlan   = summaryData['plan_type'] as String?;
         _activePlanType = _kDbToIapPlan[rawPlan] ?? rawPlan;
+        _teqlikLocked   = summaryData['teqlik_locked'] as int? ?? 0;
+        _emailVerified  = summaryData['email_verified'] as bool? ?? false;
+        _phoneVerified  = summaryData['phone_verified'] as bool? ?? false;
       }
     });
 
@@ -4160,6 +4166,70 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
     if (isPro) {
       _syncSubscriptionSilently();
     }
+  }
+
+  void _openEarningsModal(BuildContext context) {
+    final loc = ref.read(localizationProvider);
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: BoxDecoration(
+          color: AppColors.surface(context),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              margin: const EdgeInsets.only(top: 10, bottom: 8),
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.border(context),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+              child: _EarningsCard(
+                pendingTeqlik: _pendingTeqlik,
+                availableTeqlik: _availableTeqlik,
+                lockedTeqlik: _teqlikLocked,
+                emailVerified: _emailVerified,
+                phoneVerified: _phoneVerified,
+                cashoutEnabled: _cashoutEnabled,
+                tryRate: _tryRate,
+                activeWithdrawalId: _activeWithdrawalId,
+                onConvert: () {
+                  Navigator.pop(context);
+                  _convertToTeqlik();
+                },
+                onIban: () {
+                  Navigator.pop(context);
+                  _showIbanSheet();
+                },
+                onCancelWithdrawal: (id) {
+                  Navigator.pop(context);
+                  _cancelWithdrawal(id);
+                },
+                onStartStream: () => Navigator.pop(context),
+                onGoToProfile: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AccountInfoScreen()),
+                  );
+                },
+                loc: loc,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _syncSubscriptionSilently() {
@@ -4496,7 +4566,9 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isFullyVerified = _emailVerified && _phoneVerified;
     final hasEarnings = _pendingTeqlik > 0 || _availableTeqlik > 0;
+    final hasLocked = _teqlikLocked > 0 && !isFullyVerified;
 
     ref.listen<PurchaseDetails?>(
       proSubscriptionViewModelProvider.select((s) => s.lastPurchase),
@@ -4555,6 +4627,17 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
             ),
           ),
 
+          // ── Kilitli kazanç pill'i (doğrulanmamış kullanıcılar) ────
+          if (hasLocked)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+              child: _LockedEarningsPill(
+                lockedTeqlik: _teqlikLocked,
+                loc: loc,
+                onTap: () => _openEarningsModal(context),
+              ),
+            ),
+
           // ── Kazanç pill'i (yayıncılar için) ───────────────────────
           if (hasEarnings)
             Padding(
@@ -4565,57 +4648,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
                 tryRate: _tryRate,
                 isPro: _isPro,
                 loc: loc,
-                onTap: () => showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  useSafeArea: true,
-                  backgroundColor: Colors.transparent,
-                  builder: (_) => Container(
-                    decoration: BoxDecoration(
-                      color: AppColors.surface(context),
-                      borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(24)),
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          margin: const EdgeInsets.only(top: 10, bottom: 8),
-                          width: 36,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: AppColors.border(context),
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                          child: _EarningsCard(
-                            pendingTeqlik: _pendingTeqlik,
-                            availableTeqlik: _availableTeqlik,
-                            cashoutEnabled: _cashoutEnabled,
-                            tryRate: _tryRate,
-                            activeWithdrawalId: _activeWithdrawalId,
-                            onConvert: () {
-                              Navigator.pop(context);
-                              _convertToTeqlik();
-                            },
-                            onIban: () {
-                              Navigator.pop(context);
-                              _showIbanSheet();
-                            },
-                            onCancelWithdrawal: (id) {
-                              Navigator.pop(context);
-                              _cancelWithdrawal(id);
-                            },
-                            onStartStream: () => Navigator.pop(context),
-                            loc: ref.read(localizationProvider),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                onTap: () => _openEarningsModal(context),
               ),
             ),
 
@@ -5071,7 +5104,7 @@ class _EarningsPill extends StatelessWidget {
                     availableTeqlik > 0
                         ? '$availableTeqlik teqlik kullanıma hazır'
                             '${tryRate > 0 ? '  ·  ≈ ₺${(availableTeqlik * tryRate).toStringAsFixed(2)}' : ''}'
-                        : '14 gün sonra hesabına aktarılır',
+                        : '7 gün sonra hesabına aktarılır',
                     style: const TextStyle(
                         fontSize: 11, color: Color(0x9010B981)),
                   ),
@@ -6635,11 +6668,81 @@ class _UpgradePlanRow extends StatelessWidget {
   }
 }
 
+// ─── Locked Earnings Pill ─────────────────────────────────────────────────────
+
+class _LockedEarningsPill extends StatelessWidget {
+  final int lockedTeqlik;
+  final TranslationPack loc;
+  final VoidCallback onTap;
+
+  const _LockedEarningsPill({
+    required this.lockedTeqlik,
+    required this.loc,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF59E0B).withValues(alpha: 0.09),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.28)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.lock_outline_rounded, size: 15, color: Color(0xFFD97706)),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text.rich(
+                    TextSpan(children: [
+                      TextSpan(
+                        text: '$lockedTeqlik teqlik ',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFFD97706),
+                        ),
+                      ),
+                      const TextSpan(
+                        text: 'kazancın kilitli',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFFD97706),
+                        ),
+                      ),
+                    ]),
+                  ),
+                  const Text(
+                    'Hesabını doğrula, kazancını al',
+                    style: TextStyle(fontSize: 11, color: Color(0x99D97706)),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: Color(0x72D97706), size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // ─── Earnings Card (Kart 2 — W9) ─────────────────────────────────────────────
 
 class _EarningsCard extends StatelessWidget {
   final int pendingTeqlik;
   final int availableTeqlik;
+  final int lockedTeqlik;
+  final bool emailVerified;
+  final bool phoneVerified;
   final bool cashoutEnabled;
   final double tryRate;
   final int? activeWithdrawalId;
@@ -6647,11 +6750,15 @@ class _EarningsCard extends StatelessWidget {
   final VoidCallback onIban;
   final ValueChanged<int> onCancelWithdrawal;
   final VoidCallback onStartStream;
+  final VoidCallback onGoToProfile;
   final TranslationPack loc;
 
   const _EarningsCard({
     required this.pendingTeqlik,
     required this.availableTeqlik,
+    required this.lockedTeqlik,
+    required this.emailVerified,
+    required this.phoneVerified,
     required this.cashoutEnabled,
     required this.tryRate,
     required this.activeWithdrawalId,
@@ -6659,6 +6766,7 @@ class _EarningsCard extends StatelessWidget {
     required this.onIban,
     required this.onCancelWithdrawal,
     required this.onStartStream,
+    required this.onGoToProfile,
     required this.loc,
   });
 
@@ -6667,6 +6775,8 @@ class _EarningsCard extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final hasPendingWithdrawal = activeWithdrawalId != null;
     final hasEarnings = pendingTeqlik > 0 || availableTeqlik > 0;
+    final isFullyVerified = emailVerified && phoneVerified;
+    final hasLocked = lockedTeqlik > 0 && !isFullyVerified;
 
     final gradientColors = isDark
         ? (cashoutEnabled
@@ -6722,14 +6832,26 @@ class _EarningsCard extends StatelessWidget {
           ),
           const SizedBox(height: 10),
 
+          // Kilitli kazanç satırı (doğrulanmamış kullanıcılar)
+          if (hasLocked) ...[
+            _EarningsRow(
+              label: loc.t('walletLockedLabel'),
+              value: '$lockedTeqlik teqlik',
+              icon: Icons.lock_outline_rounded,
+              iconColor: const Color(0xFFD97706),
+              textPrimary: textPrimary,
+              textSecondary: textSecondary,
+              textMuted: textMuted,
+              highlightColor: const Color(0xFFD97706),
+            ),
+            const SizedBox(height: 6),
+          ],
+
           // Pending + Available satırları
           if (hasEarnings) ...[
             _EarningsRow(
               label: loc.t('walletPendingLabel'),
               value: '$pendingTeqlik teqlik',
-              sub: tryRate > 0
-                  ? '≈ ₺${(pendingTeqlik * tryRate).toStringAsFixed(2)}'
-                  : null,
               icon: Icons.lock_clock_outlined,
               textPrimary: textPrimary,
               textSecondary: textSecondary,
@@ -6740,9 +6862,6 @@ class _EarningsCard extends StatelessWidget {
             _EarningsRow(
               label: loc.t('walletAvailableLabel'),
               value: '$availableTeqlik teqlik',
-              sub: tryRate > 0
-                  ? '≈ ₺${(availableTeqlik * tryRate).toStringAsFixed(2)}'
-                  : null,
               icon: Icons.check_circle_outline,
               highlight: availableTeqlik > 0,
               textPrimary: textPrimary,
@@ -6751,12 +6870,81 @@ class _EarningsCard extends StatelessWidget {
               highlightColor: highlightColor,
             ),
             const SizedBox(height: 14),
-          ] else ...[
+          ] else if (!hasLocked) ...[
             Text(
               loc.t('walletNoEarningsYet'),
               style: TextStyle(color: textMuted, fontSize: 13),
             ),
             const SizedBox(height: 14),
+          ] else ...[
+            const SizedBox(height: 14),
+          ],
+
+          // Doğrulama banner'ı (kilitli kazanç varsa)
+          if (hasLocked) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.only(bottom: 14),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? const Color(0xFFF59E0B).withValues(alpha: 0.12)
+                    : const Color(0xFFFEF3C7),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: const Color(0xFFF59E0B).withValues(alpha: 0.35),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.verified_user_outlined,
+                          size: 15, color: Color(0xFFD97706)),
+                      const SizedBox(width: 6),
+                      Text(
+                        loc.t('walletVerifyRequiredTitle'),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFFD97706),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    loc.t('walletVerifyRequiredDesc'),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isDark
+                          ? const Color(0xFFD97706).withValues(alpha: 0.8)
+                          : const Color(0xFF92400E),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: onGoToProfile,
+                      icon: const Icon(Icons.person_outline, size: 15),
+                      label: Text(loc.t('walletGoToAccountInfo')),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFFD97706),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        textStyle: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
 
           // Aktif çekim talebi sıra kartı
@@ -6835,7 +7023,7 @@ class _EarningsCard extends StatelessWidget {
               ),
             ],
             // Henüz kazanç yok → Yayın Başlat CTA
-            if (!hasEarnings) ...[
+            if (!hasEarnings && !hasLocked) ...[
               SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(
@@ -6863,6 +7051,7 @@ class _EarningsRow extends StatelessWidget {
   final String value;
   final String? sub;
   final IconData icon;
+  final Color? iconColor;
   final bool highlight;
   final Color textPrimary;
   final Color textSecondary;
@@ -6874,6 +7063,7 @@ class _EarningsRow extends StatelessWidget {
     required this.value,
     this.sub,
     required this.icon,
+    this.iconColor,
     this.highlight = false,
     required this.textPrimary,
     required this.textSecondary,
@@ -6885,7 +7075,7 @@ class _EarningsRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, size: 15, color: highlight ? highlightColor : textMuted),
+        Icon(icon, size: 15, color: iconColor ?? (highlight ? highlightColor : textMuted)),
         const SizedBox(width: 6),
         Text(label, style: TextStyle(color: textSecondary, fontSize: 12)),
         const Spacer(),
