@@ -1,5 +1,5 @@
 [Unit]
-Description=CrowdSec → Cloudflare IP list sync (60s)
+Description=CrowdSec → Cloudflare IP list sync (300s)
 After=network-online.target
 
 [Timer]
