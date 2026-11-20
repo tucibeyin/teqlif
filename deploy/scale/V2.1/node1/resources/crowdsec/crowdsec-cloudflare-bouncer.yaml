@@ -4,12 +4,20 @@
 # Doldurulacak alanlar (bootstrap sırasında apply_secrets tarafından inject edilir):
 #   cs_lapi_key          → cscli bouncers add ile dinamik üretilir (bootstrap inject eder)
 #   CLOUDFLARE_ACCOUNT_ID→ Cloudflare Dashboard > sağ sidebar > Account ID
-#   CLOUDFLARE_TOKEN     → Cloudflare > My Profile > API Tokens > Zone:Firewall Services:Edit
-#   CLOUDFLARE_ZONE_ID   → Cloudflare > teqlif.com > Overview > Zone ID
+#   CLOUDFLARE_TOKEN     → Account Filter Lists:Edit + Zone Firewall Services:Edit
+#
+# ⚠️  zones YOK — Cloudflare Firewall Rules API deprecated (error 10020).
+#     Bouncer sadece Account-level IP listesi (crowdsec_block) yönetir.
+#     Blok için manuel adım: Cloudflare Dashboard → teqlif.com → Security → WAF →
+#     Custom Rules → Create Rule:
+#       Name   : crowdsec-block
+#       If     : (ip.src in $crowdsec_block)
+#       Action : Block
+#     Bu kural, CrowdSec'in yasakladığı IP'leri edge'de durdurur.
 #
 # Mimari notu: crowdsec-firewall-bouncer (iptables) VE bu bouncer aynı anda çalışır
 #   iptables : DNS-only hostlar (uploads.teqlif.com, minio.teqlif.com)
-#   Cloudflare: proxied hostlar (teqlif.com, api.teqlif.com) — edge'de block
+#   Cloudflare: proxied hostlar (teqlif.com, api.teqlif.com) — IP listesi üzerinden
 
 # CrowdSec Config
 crowdsec_lapi_url: http://localhost:8080/
@@ -21,16 +29,14 @@ exclude_scenarios_containing: []
 only_include_decisions_from: []
 
 # Cloudflare Config
+# zones kaldırıldı — Firewall Rules API deprecated (Cloudflare error 10020)
+# Blocking için WAF Custom Rule'u manuel oluştur (yukarıdaki açıklamaya bak)
 cloudflare_config:
   accounts:
     - id: <CLOUDFLARE_ACCOUNT_ID>
       token: <CLOUDFLARE_TOKEN>
       ip_list_prefix: crowdsec
       default_action: block
-      zones:
-        - actions:
-            - block
-          zone_id: <CLOUDFLARE_ZONE_ID>
 
   update_frequency: 30s
 

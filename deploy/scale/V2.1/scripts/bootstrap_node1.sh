@@ -83,8 +83,9 @@ main() {
         "alembic upgrade head" \
         "certbot certonly --nginx -d uploads.teqlif.com (LE cert)" \
         "Cloudflare origin cert → /etc/ssl/teqlif/cf-origin.{crt,key}" \
-        "CrowdSec CF bouncer: secrets.env'e cf_account_id + cf_api_token + cf_zone_id ekle (Cloudflare > teqlif.com > Overview)" \
+        "CrowdSec CF bouncer: secrets.env'e CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_TOKEN ekle" \
         "CrowdSec CF bouncer: apply_secrets sonrası → systemctl start crowdsec-cloudflare-bouncer; cscli bouncers list" \
+        "CrowdSec CF bouncer: Cloudflare Dashboard → teqlif.com → Security → WAF → Custom Rules → Create: (ip.src in \$crowdsec_block) → Block" \
         "Credential JSON kopyala: scp firebase-service-account.json node1:/var/www/teqlif.com/backend/" \
         "Credential JSON kopyala: scp google-play-service-account.json node1:/var/www/teqlif.com/backend/" \
         "chmod 600 /var/www/teqlif.com/backend/{firebase,google-play}-service-account.json" \

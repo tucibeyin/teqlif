@@ -252,23 +252,27 @@ setup_crowdsec_cloudflare_bouncer() {
 
     # Önceki kayıt varsa sil (idempotent — bootstrap tekrar çalışabilir)
     cscli bouncers delete cloudflare-bouncer 2>/dev/null || true
-    # CrowdSec LAPI'ye bouncer kaydı yap ve API key'i al
+    # cscli --length deprecated → tail -1 ile sadece key satırını al
     local lapi_key
-    lapi_key=$(cscli bouncers add cloudflare-bouncer --length 48 -o raw 2>/dev/null)
+    lapi_key=$(cscli bouncers add cloudflare-bouncer -o raw 2>/dev/null | tail -1)
     [ -n "${lapi_key}" ] || { log_err "cscli bouncers add başarısız"; return 1; }
 
-    # Template'i hedef konuma kopyala ve LAPI key'i hemen inject et
+    # Template'i hedef konuma kopyala ve LAPI key'i inject et
     local cfg_src="${node_dir}/resources/crowdsec/crowdsec-cloudflare-bouncer.yaml"
     local cfg_dst="/etc/crowdsec/bouncers/crowdsec-cloudflare-bouncer.yaml"
     mkdir -p /etc/crowdsec/bouncers
     cp "${cfg_src}" "${cfg_dst}"
+    # sed ile inject (key alfanümerik+/+= içerebilir, pipe-safe)
     sed -i "s|<cs_lapi_key>|${lapi_key}|g" "${cfg_dst}"
     chmod 600 "${cfg_dst}"
 
-    # CF secrets (CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_TOKEN, CLOUDFLARE_ZONE_ID) apply_secrets ile gelir
+    # CF secrets (CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_TOKEN) apply_secrets ile gelir
+    # ⚠️  Blok için manuel adım gerekli: Cloudflare WAF Custom Rule oluştur
+    #     teqlif.com → Security → WAF → Custom Rules → (ip.src in $crowdsec_block) → Block
     systemctl enable crowdsec-cloudflare-bouncer
     log_ok "crowdsec-cloudflare-bouncer enable edildi (apply_secrets sonrası başlatılacak)"
-    log_warn "Eksik: CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_TOKEN, CLOUDFLARE_ZONE_ID → secrets.env'e ekle + apply_secrets"
+    log_warn "Eksik: CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_TOKEN → secrets.env + apply_secrets"
+    log_warn "Sonra: Cloudflare WAF Custom Rule oluştur → (ip.src in \$crowdsec_block) → Block"
 }
 
 # ── Repo klonlama veya doğrulama ──────────────────────────────────────────────
