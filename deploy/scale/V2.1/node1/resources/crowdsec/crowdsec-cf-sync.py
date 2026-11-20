@@ -9,7 +9,7 @@ yapması gereken tek işi doğrudan yapar:
   2. Cloudflare'daki crowdsec_block IP listesini diff ile güncelle
 
 Çalışma şekli:
-  - systemd timer (crowdsec-cf-sync.timer) tarafından 60s'de bir tetiklenir
+  - systemd timer (crowdsec-cf-sync.timer) tarafından 300s'de bir tetiklenir
   - Type=oneshot: çalışır, biter, journal'a yazar
   - Başarılı sync sonunda opsiyonel Uptime Kuma heartbeat gönderir
 
@@ -51,6 +51,10 @@ def _creds():
     return account_id, token
 
 
+class RateLimitError(Exception):
+    pass
+
+
 def _api(method, path, body=None, *, token):
     req = urllib.request.Request(
         CF_API + path,
@@ -64,6 +68,8 @@ def _api(method, path, body=None, *, token):
     try:
         return json.loads(urllib.request.urlopen(req, timeout=15).read())
     except urllib.error.HTTPError as exc:
+        if exc.code == 429:
+            raise RateLimitError('CF API rate limit (10040) — 300s sonra tekrar denenir') from exc
         raise RuntimeError(f'CF API {exc.code}: {exc.read().decode()[:300]}') from exc
 
 
@@ -161,6 +167,11 @@ def main():
 if __name__ == '__main__':
     try:
         main()
+    except RateLimitError as exc:
+        # 429: bu tur sessizce atla; timer 300s sonra tekrar dener.
+        # heartbeat atlanır — Uptime Kuma uzun süre 429 olursa alarm üretir.
+        print(f'SKIP: {exc}', file=sys.stderr)
+        sys.exit(0)
     except Exception as exc:
         print(f'ERROR: {exc}', file=sys.stderr)
         sys.exit(1)
