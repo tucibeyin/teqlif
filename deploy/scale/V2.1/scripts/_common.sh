@@ -236,6 +236,41 @@ PY
     log_ok "CrowdSec + firewall-bouncer aktif (kümülatif ban)"
 }
 
+# ── CrowdSec Cloudflare Bouncer (node1'e özgü) ───────────────────────────────
+# Blok kararlarını Cloudflare edge'ine push eder (proxied hostlar için).
+# crowdsec-firewall-bouncer ile paralel çalışır: iptables DNS-only hostları,
+# Cloudflare proxied hostları (teqlif.com, api.teqlif.com) korur.
+setup_crowdsec_cloudflare_bouncer() {
+    local node_dir="${1:?node_dir gerekli}"
+    log_step "CrowdSec Cloudflare Bouncer"
+
+    if ! dpkg -s crowdsec-cloudflare-bouncer &>/dev/null 2>&1; then
+        apt-get install -y -qq crowdsec-cloudflare-bouncer
+    else
+        log_info "crowdsec-cloudflare-bouncer zaten kurulu"
+    fi
+
+    # Önceki kayıt varsa sil (idempotent — bootstrap tekrar çalışabilir)
+    cscli bouncers delete cloudflare-bouncer 2>/dev/null || true
+    # CrowdSec LAPI'ye bouncer kaydı yap ve API key'i al
+    local lapi_key
+    lapi_key=$(cscli bouncers add cloudflare-bouncer --length 48 -o raw 2>/dev/null)
+    [ -n "${lapi_key}" ] || { log_err "cscli bouncers add başarısız"; return 1; }
+
+    # Template'i hedef konuma kopyala ve LAPI key'i hemen inject et
+    local cfg_src="${node_dir}/resources/crowdsec/crowdsec-cloudflare-bouncer.yaml"
+    local cfg_dst="/etc/crowdsec/bouncers/crowdsec-cloudflare-bouncer.yaml"
+    mkdir -p /etc/crowdsec/bouncers
+    cp "${cfg_src}" "${cfg_dst}"
+    sed -i "s|<cs_lapi_key>|${lapi_key}|g" "${cfg_dst}"
+    chmod 600 "${cfg_dst}"
+
+    # CF secrets (CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_TOKEN, CLOUDFLARE_ZONE_ID) apply_secrets ile gelir
+    systemctl enable crowdsec-cloudflare-bouncer
+    log_ok "crowdsec-cloudflare-bouncer enable edildi (apply_secrets sonrası başlatılacak)"
+    log_warn "Eksik: CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_TOKEN, CLOUDFLARE_ZONE_ID → secrets.env'e ekle + apply_secrets"
+}
+
 # ── Repo klonlama veya doğrulama ──────────────────────────────────────────────
 clone_repo() {
     local repo_dir="${1}"

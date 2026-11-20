@@ -36,6 +36,7 @@ main() {
     setup_auditd
     setup_thp_disable
     setup_crowdsec
+    setup_crowdsec_cloudflare_bouncer "${NODE_DIR}"
     setup_node_conf    "${NODE_DIR}"
     setup_wg_keygen
     setup_wg_config    "${NODE_DIR}"
@@ -66,7 +67,11 @@ main() {
 
     if [ -n "${SECRETS_FILE:-}" ]; then
         apply_secrets "${SECRETS_FILE}" \
-            /project/teqlif/config /etc/wireguard /project/teqlif/config/redis
+            /project/teqlif/config /etc/wireguard /project/teqlif/config/redis \
+            /etc/crowdsec/bouncers
+        # CF secrets tamam → bouncer'ı başlat
+        systemctl start crowdsec-cloudflare-bouncer 2>/dev/null || \
+            log_warn "crowdsec-cloudflare-bouncer başlatılamadı (cscli bouncers list ile kontrol et)"
     fi
 
     print_summary "${NODE_ID}" "${WG_IP}" \
@@ -78,6 +83,8 @@ main() {
         "alembic upgrade head" \
         "certbot certonly --nginx -d uploads.teqlif.com (LE cert)" \
         "Cloudflare origin cert → /etc/ssl/teqlif/cf-origin.{crt,key}" \
+        "CrowdSec CF bouncer: secrets.env'e cf_account_id + cf_api_token + cf_zone_id ekle (Cloudflare > teqlif.com > Overview)" \
+        "CrowdSec CF bouncer: apply_secrets sonrası → systemctl start crowdsec-cloudflare-bouncer; cscli bouncers list" \
         "Credential JSON kopyala: scp firebase-service-account.json node1:/var/www/teqlif.com/backend/" \
         "Credential JSON kopyala: scp google-play-service-account.json node1:/var/www/teqlif.com/backend/" \
         "chmod 600 /var/www/teqlif.com/backend/{firebase,google-play}-service-account.json" \
