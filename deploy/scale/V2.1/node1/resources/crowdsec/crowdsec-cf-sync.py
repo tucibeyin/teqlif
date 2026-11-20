@@ -21,6 +21,7 @@ Credentials kaynağı:
   (apply_secrets tarafından doldurulur)
 """
 
+import ipaddress
 import json
 import os
 import re
@@ -90,11 +91,20 @@ def _list_items(account_id, list_id, token):
     return items
 
 
+def _is_valid_ip_or_cidr(value):
+    try:
+        ipaddress.ip_network(value, strict=False)
+        return True
+    except ValueError:
+        return False
+
+
 def _ban_ips():
     """CrowdSec'teki aktif ban kararlarından IP/CIDR kümesi döndürür.
 
     cscli decisions list -o json çıktısı alert bazlıdır; her alert'in
     nested 'decisions' listesinden değer çıkarılmalı.
+    Sadece Ip/Range scope'lu kararlar alınır — ülke/AS kararları atlanır.
     """
     r = subprocess.run(
         [CSCLI, 'decisions', 'list', '--type', 'ban', '-o', 'json'],
@@ -106,8 +116,10 @@ def _ban_ips():
     ips = set()
     for alert in alerts:
         for dec in alert.get('decisions') or []:
-            if dec.get('value'):
-                ips.add(dec['value'])
+            val = dec.get('value', '')
+            scope = dec.get('scope', '').lower()
+            if scope in ('ip', 'range') and _is_valid_ip_or_cidr(val):
+                ips.add(val)
     return ips
 
 
