@@ -90,7 +90,10 @@ main() {
         "Cloudflare origin cert → /etc/ssl/teqlif/cf-origin.{crt,key}" \
         "CrowdSec CF sync: secrets.env'e CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_TOKEN ekle" \
         "CrowdSec CF sync: apply_secrets sonrası timer otomatik başlar; manuel test: systemctl start crowdsec-cf-sync.service && journalctl -u crowdsec-cf-sync -n 5" \
-        "CrowdSec CF sync: Uptime Kuma > Push monitor oluştur > URL'yi crowdsec-cf-sync.service HEARTBEAT_URL'ye yaz > systemctl daemon-reload && systemctl restart crowdsec-cf-sync.timer" \
+        "CrowdSec CF sync: Uptime Kuma push URL'si için kalıcı drop-in oluştur:" \
+        "  sudo mkdir -p /etc/systemd/system/crowdsec-cf-sync.service.d" \
+        "  sudo tee /etc/systemd/system/crowdsec-cf-sync.service.d/heartbeat.conf <<<'[Service]\\nEnvironment=\"HEARTBEAT_URL=<push-url>\"'" \
+        "  sudo systemctl daemon-reload" \
         "Cloudflare WAF Custom Rule (zaten kurulu): teqlif.com > Security > WAF > Custom Rules > crowdsec-block: (ip.src in \$crowdsec_block) → Block, First" \
         "Credential JSON kopyala: scp firebase-service-account.json node1:/var/www/teqlif.com/backend/" \
         "Credential JSON kopyala: scp google-play-service-account.json node1:/var/www/teqlif.com/backend/" \

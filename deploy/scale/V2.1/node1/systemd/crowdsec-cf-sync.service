@@ -13,5 +13,6 @@ SyslogIdentifier=crowdsec-cf-sync
 TimeoutStartSec=90
 
 # Uptime Kuma push monitor URL'si — boş bırakılırsa heartbeat atlanır.
-# secrets.env'e CF_SYNC_HEARTBEAT_URL ekle → apply_secrets inject eder.
-Environment="HEARTBEAT_URL=<CF_SYNC_HEARTBEAT_URL>"
+# Kalıcı inject için: /etc/systemd/system/crowdsec-cf-sync.service.d/heartbeat.conf
+# [Service]\nEnvironment="HEARTBEAT_URL=<uptime-kuma-push-url>"
+Environment="HEARTBEAT_URL="
