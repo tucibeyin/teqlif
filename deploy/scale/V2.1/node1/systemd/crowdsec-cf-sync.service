@@ -10,7 +10,7 @@ ExecStart=/usr/local/bin/crowdsec-cf-sync.py
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=crowdsec-cf-sync
-TimeoutStartSec=30
+TimeoutStartSec=90
 
 # Uptime Kuma push monitor URL'si — boş bırakılırsa heartbeat atlanır.
 # Uptime Kuma > New Monitor > Push > URL'yi kopyala, buraya yapıştır:

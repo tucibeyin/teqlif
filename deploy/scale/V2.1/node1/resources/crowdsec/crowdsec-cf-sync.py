@@ -91,15 +91,24 @@ def _list_items(account_id, list_id, token):
 
 
 def _ban_ips():
-    """CrowdSec'teki aktif ban kararlarından IP/CIDR kümesi döndürür."""
+    """CrowdSec'teki aktif ban kararlarından IP/CIDR kümesi döndürür.
+
+    cscli decisions list -o json çıktısı alert bazlıdır; her alert'in
+    nested 'decisions' listesinden değer çıkarılmalı.
+    """
     r = subprocess.run(
         [CSCLI, 'decisions', 'list', '--type', 'ban', '-o', 'json'],
         capture_output=True, text=True, timeout=15,
     )
     if r.returncode != 0:
         raise RuntimeError(f'cscli başarısız: {r.stderr.strip()[:200]}')
-    decisions = json.loads(r.stdout or 'null') or []
-    return {d['value'] for d in decisions if d.get('value')}
+    alerts = json.loads(r.stdout or 'null') or []
+    ips = set()
+    for alert in alerts:
+        for dec in alert.get('decisions') or []:
+            if dec.get('value'):
+                ips.add(dec['value'])
+    return ips
 
 
 def _heartbeat(url):
