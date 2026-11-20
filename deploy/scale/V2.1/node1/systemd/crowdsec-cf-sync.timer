@@ -6,7 +6,7 @@ After=network-online.target
 # Boot sonrası ilk tetikleme (crowdsec.service'in ayağa kalkması için süre tanı)
 OnBootSec=120s
 # Başarılı bitiş sonrası bir sonraki tetikleme
-OnUnitActiveSec=60s
+OnUnitActiveSec=300s
 # Küçük kayma kabul edilebilir (journalctl timestamp gürültüsünü azaltır)
 AccuracySec=10s
 # Persist=false: boot'ta geçen süreler için catch-up sync istemiyoruz
