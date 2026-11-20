@@ -1,6 +1,5 @@
 [Unit]
 Description=CrowdSec ban decisions → Cloudflare IP list sync
-Documentation=deploy/scale/V2.1/node1/resources/crowdsec/crowdsec-cf-sync.py
 After=network-online.target crowdsec.service
 # crowdsec dursa timer tetiklenmeye devam eder ama cscli başarısız döner → alarm
 
