@@ -1959,7 +1959,7 @@
   "walletNoEarningsYet": "Дохода от подарков пока нет. Начните трансляцию, чтобы зарабатывать teqlik.",
   "notifPendingEarningsTitle": "У вас есть ожидающие заработки teqlik!",
   "notifPendingEarningsBody": "{amount} teqlik ожидает верификации аккаунта.",
-  "@notifPendingEarningsBody": [["placeholders", [["amount", [["type", "int"]]]]]]
+  "@notifPendingEarningsBody": [["placeholders", [["amount", [["type", "int"]]]]]],
   "walletConvertLegalNotice": "Вариант C: ваш доступный баланс будет конвертирован в teqlik и не может быть снят снова. Подтвердить?",
   "walletIbanLegalNote": "Перевод на ваш IBAN будет выполнен после завершения банковской интеграции.",
   "walletMasakNotice": "В соответствии с требованиями законодательства платежи осуществляются только с корпоративного счёта на личный счёт владельца IBAN.",

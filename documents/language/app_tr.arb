@@ -224,7 +224,7 @@
   "walletNoEarningsYet": "Henüz hediye kazancı yok. Yayın başlatarak teqlik kazanın.",
   "notifPendingEarningsTitle": "Bekleyen teqlik kazancın var!",
   "notifPendingEarningsBody": "{amount} teqlik kazancın hesabını doğrulaman bekleniyor.",
-  "@notifPendingEarningsBody": [["placeholders", [["amount", [["type", "int"]]]]]]
+  "@notifPendingEarningsBody": [["placeholders", [["amount", [["type", "int"]]]]]],
   "walletConvertLegalNotice": "Seçenek C: available bakiyeniz teqlik'e dönüştürülecek ve bir daha nakde çevrilemez. Onaylıyor musunuz?",
   "walletIbanLegalNote": "Kurumsal banka entegrasyonu tamamlandığında IBAN'ınıza transfer yapılacak.",
   "walletMasakNotice": "MASAK düzenlemeleri gereği ödeme yalnızca şirket banka hesabından IBAN sahibinin kişisel hesabına yapılır. Üçüncü taraf IBAN kabul edilmez.",

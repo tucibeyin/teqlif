@@ -196,7 +196,7 @@
   "walletNoEarningsYet": "لا توجد أرباح هدايا بعد. ابدأ البث لكسب teqlik.",
   "notifPendingEarningsTitle": "لديك أرباح teqlik معلقة!",
   "notifPendingEarningsBody": "{amount} teqlik في انتظار التحقق من الحساب.",
-  "@notifPendingEarningsBody": [["placeholders", [["amount", [["type", "int"]]]]]]
+  "@notifPendingEarningsBody": [["placeholders", [["amount", [["type", "int"]]]]]],
   "walletConvertLegalNotice": "الخيار C: سيتم تحويل رصيدك المتاح إلى teqlik ولا يمكن سحبه نقداً مرة أخرى. تأكيد؟",
   "walletIbanLegalNote": "سيتم التحويل إلى IBAN الخاص بك عند اكتمال تكامل البنك المؤسسي.",
   "walletMasakNotice": "وفقاً للوائح التنظيمية، تتم المدفوعات فقط من حساب بنكي مؤسسي إلى الحساب الشخصي لصاحب IBAN.",

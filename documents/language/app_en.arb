@@ -216,7 +216,7 @@
   "walletNoEarningsYet": "No gift earnings yet. Start streaming to earn teqlik.",
   "notifPendingEarningsTitle": "You have pending teqlik earnings!",
   "notifPendingEarningsBody": "{amount} teqlik is waiting for account verification.",
-  "@notifPendingEarningsBody": [["placeholders", [["amount", [["type", "int"]]]]]]
+  "@notifPendingEarningsBody": [["placeholders", [["amount", [["type", "int"]]]]]],
   "walletConvertLegalNotice": "Option C: your available balance will be converted to teqlik and cannot be cashed out again. Confirm?",
   "walletIbanLegalNote": "Transfer will be made to your IBAN once corporate banking integration is complete.",
   "walletMasakNotice": "Due to regulatory requirements, payments are made only from a corporate bank account to the IBAN holder's personal account. Third-party IBANs are not accepted.",

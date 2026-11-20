@@ -216,7 +216,7 @@
   "walletNoEarningsYet": "Noch keine Geschenkeinnahmen. Starte einen Stream, um teqlik zu verdienen.",
   "notifPendingEarningsTitle": "Du hast ausstehende teqlik-Einnahmen!",
   "notifPendingEarningsBody": "{amount} teqlik wartet auf Kontoverifizierung.",
-  "@notifPendingEarningsBody": [["placeholders", [["amount", [["type", "int"]]]]]]
+  "@notifPendingEarningsBody": [["placeholders", [["amount", [["type", "int"]]]]]],
   "walletConvertLegalNotice": "Option C: Dein verfügbares Guthaben wird in teqlik umgewandelt und kann nicht mehr ausgezahlt werden. Bestätigen?",
   "walletIbanLegalNote": "Die Überweisung erfolgt auf deine IBAN, sobald die Bankintegration abgeschlossen ist.",
   "walletMasakNotice": "Gemäß den gesetzlichen Anforderungen erfolgen Zahlungen nur von einem Firmenkonto auf das persönliche Konto des IBAN-Inhabers.",
