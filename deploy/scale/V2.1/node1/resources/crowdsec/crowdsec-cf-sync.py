@@ -37,9 +37,16 @@ CSCLI         = '/usr/bin/cscli'
 
 def _creds():
     txt = open(BOUNCER_CFG).read()
-    account_id = re.search(r'^\s+id:\s+([a-f0-9]+)', txt, re.M).group(1)
-    # Token quotes varsa (yaml single-quote) temizle
-    token = re.search(r"^\s+token:\s+'?([^'\s]+)'?", txt, re.M).group(1)
+    # "    - id: <hex>" veya "      id: <hex>" formatlarını destekle
+    m_id = re.search(r'[-\s]+id:\s+([a-f0-9]{20,})', txt, re.M)
+    if not m_id:
+        raise RuntimeError(f'account id bulunamadı: {BOUNCER_CFG}')
+    account_id = m_id.group(1)
+    # Token single/double quote veya bare olabilir
+    m_tok = re.search(r"^\s+token:\s+['\"]?([^\s'\"]+)['\"]?", txt, re.M)
+    if not m_tok:
+        raise RuntimeError(f'token bulunamadı: {BOUNCER_CFG}')
+    token = m_tok.group(1)
     return account_id, token
 
 
