@@ -237,12 +237,13 @@ PY
 }
 
 # ── CrowdSec Cloudflare Bouncer (node1'e özgü) ───────────────────────────────
-# Blok kararlarını Cloudflare edge'ine push eder (proxied hostlar için).
-# crowdsec-firewall-bouncer ile paralel çalışır: iptables DNS-only hostları,
-# Cloudflare proxied hostları (teqlif.com, api.teqlif.com) korur.
+# crowdsec-cloudflare-bouncer v0.3.0, Cloudflare Firewall Rules API deprecated
+# (error 10020) olduğu için çalışmıyor. Bu fonksiyon SADECE config dosyasını
+# kurar (crowdsec-cf-sync.py credential kaynağı olarak okur) — servisi AÇMAZ.
+# Resmi bouncer v0.4.x çıkınca: `systemctl enable --now crowdsec-cloudflare-bouncer`
 setup_crowdsec_cloudflare_bouncer() {
     local node_dir="${1:?node_dir gerekli}"
-    log_step "CrowdSec Cloudflare Bouncer"
+    log_step "CrowdSec Cloudflare Bouncer config (servis DEVRE DIŞI — ADR §48)"
 
     if ! dpkg -s crowdsec-cloudflare-bouncer &>/dev/null 2>&1; then
         apt-get install -y -qq crowdsec-cloudflare-bouncer
@@ -250,29 +251,46 @@ setup_crowdsec_cloudflare_bouncer() {
         log_info "crowdsec-cloudflare-bouncer zaten kurulu"
     fi
 
-    # Önceki kayıt varsa sil (idempotent — bootstrap tekrar çalışabilir)
+    # Önceki kayıt varsa sil (idempotent)
     cscli bouncers delete cloudflare-bouncer 2>/dev/null || true
     # cscli --length deprecated → tail -1 ile sadece key satırını al
     local lapi_key
     lapi_key=$(cscli bouncers add cloudflare-bouncer -o raw 2>/dev/null | tail -1)
     [ -n "${lapi_key}" ] || { log_err "cscli bouncers add başarısız"; return 1; }
 
-    # Template'i hedef konuma kopyala ve LAPI key'i inject et
+    # Config dosyası kopyala + LAPI key inject (CF secrets apply_secrets ile gelir)
     local cfg_src="${node_dir}/resources/crowdsec/crowdsec-cloudflare-bouncer.yaml"
     local cfg_dst="/etc/crowdsec/bouncers/crowdsec-cloudflare-bouncer.yaml"
     mkdir -p /etc/crowdsec/bouncers
     cp "${cfg_src}" "${cfg_dst}"
-    # sed ile inject (key alfanümerik+/+= içerebilir, pipe-safe)
     sed -i "s|<cs_lapi_key>|${lapi_key}|g" "${cfg_dst}"
     chmod 600 "${cfg_dst}"
 
-    # CF secrets (CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_TOKEN) apply_secrets ile gelir
-    # ⚠️  Blok için manuel adım gerekli: Cloudflare WAF Custom Rule oluştur
-    #     teqlif.com → Security → WAF → Custom Rules → (ip.src in $crowdsec_block) → Block
-    systemctl enable crowdsec-cloudflare-bouncer
-    log_ok "crowdsec-cloudflare-bouncer enable edildi (apply_secrets sonrası başlatılacak)"
+    # Servis kasıtlı olarak enable edilmiyor (v0.3.0 broken — ADR §48)
+    # CF credentials bu dosyadan crowdsec-cf-sync.py tarafından okunur
+    log_ok "crowdsec-cloudflare-bouncer config hazırlandı (servis disable — sync timer kullanılıyor)"
     log_warn "Eksik: CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_TOKEN → secrets.env + apply_secrets"
-    log_warn "Sonra: Cloudflare WAF Custom Rule oluştur → (ip.src in \$crowdsec_block) → Block"
+}
+
+# ── CrowdSec → Cloudflare IP list sync timer (node1'e özgü) ──────────────────
+# Resmi bouncer v0.3.0 çalışmadığı için (ADR §48) bu script ban kararlarını
+# 60s'de bir Cloudflare crowdsec_block IP listesine yazar. WAF Custom Rule
+# (ip.src in $crowdsec_block → Block) Cloudflare dashboard'da manuel kurulu.
+setup_crowdsec_cf_sync() {
+    local node_dir="${1:?node_dir gerekli}"
+    log_step "CrowdSec → Cloudflare IP list sync timer"
+
+    install -m 755 "${node_dir}/resources/crowdsec/crowdsec-cf-sync.py" \
+        /usr/local/bin/crowdsec-cf-sync.py
+    install -m 644 "${node_dir}/systemd/crowdsec-cf-sync.service" \
+        /etc/systemd/system/crowdsec-cf-sync.service
+    install -m 644 "${node_dir}/systemd/crowdsec-cf-sync.timer" \
+        /etc/systemd/system/crowdsec-cf-sync.timer
+    systemctl daemon-reload
+    # Timer enable edildi; apply_secrets CF secrets'ı inject edince başlatılacak
+    systemctl enable crowdsec-cf-sync.timer
+    log_ok "crowdsec-cf-sync.timer enable edildi (apply_secrets sonrası başlatılacak)"
+    log_warn "Uptime Kuma: Push monitor oluştur → URL'yi /etc/systemd/system/crowdsec-cf-sync.service HEARTBEAT_URL'ye yaz"
 }
 
 # ── Repo klonlama veya doğrulama ──────────────────────────────────────────────

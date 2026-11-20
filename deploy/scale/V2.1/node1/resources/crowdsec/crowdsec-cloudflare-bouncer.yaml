@@ -1,6 +1,13 @@
 # crowdsec-cloudflare-bouncer v0.3.0 — node1 config template
 # /etc/crowdsec/bouncers/crowdsec-cloudflare-bouncer.yaml
 #
+# ⚠️  SERVİS DEVRE DIŞI (ADR §48) — v0.3.0 Cloudflare Firewall Rules API
+#     deprecated (error 10020) olduğu için çalışmıyor. Bu dosya yalnızca
+#     CF credentials'ı saklamak için kullanılır; crowdsec-cf-sync.py buradan okur.
+#     Resmi bouncer v0.4.x (Rulesets API destekli) çıkınca:
+#       systemctl enable --now crowdsec-cloudflare-bouncer
+#       systemctl disable --now crowdsec-cf-sync.timer
+#
 # Doldurulacak alanlar (bootstrap sırasında apply_secrets tarafından inject edilir):
 #   cs_lapi_key          → cscli bouncers add ile dinamik üretilir (bootstrap inject eder)
 #   CLOUDFLARE_ACCOUNT_ID→ Cloudflare Dashboard > sağ sidebar > Account ID

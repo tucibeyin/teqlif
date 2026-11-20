@@ -37,6 +37,7 @@ main() {
     setup_thp_disable
     setup_crowdsec
     setup_crowdsec_cloudflare_bouncer "${NODE_DIR}"
+    setup_crowdsec_cf_sync            "${NODE_DIR}"
     setup_node_conf    "${NODE_DIR}"
     setup_wg_keygen
     setup_wg_config    "${NODE_DIR}"
@@ -69,9 +70,13 @@ main() {
         apply_secrets "${SECRETS_FILE}" \
             /project/teqlif/config /etc/wireguard /project/teqlif/config/redis \
             /etc/crowdsec/bouncers
-        # CF secrets tamam → bouncer'ı başlat
-        systemctl start crowdsec-cloudflare-bouncer 2>/dev/null || \
-            log_warn "crowdsec-cloudflare-bouncer başlatılamadı (cscli bouncers list ile kontrol et)"
+        # CF secrets tamam → sync timer'ı başlat
+        # (crowdsec-cloudflare-bouncer servisi v0.3.0 broken, kasıtlı disable — ADR §48)
+        systemctl start crowdsec-cf-sync.timer 2>/dev/null || \
+            log_warn "crowdsec-cf-sync.timer başlatılamadı"
+        # İlk sync'i hemen tetikle (timer OnBootSec=120s beklemeden)
+        systemctl start crowdsec-cf-sync.service 2>/dev/null || \
+            log_warn "crowdsec-cf-sync ilk çalışma başarısız (log: journalctl -u crowdsec-cf-sync)"
     fi
 
     print_summary "${NODE_ID}" "${WG_IP}" \
@@ -83,9 +88,10 @@ main() {
         "alembic upgrade head" \
         "certbot certonly --nginx -d uploads.teqlif.com (LE cert)" \
         "Cloudflare origin cert → /etc/ssl/teqlif/cf-origin.{crt,key}" \
-        "CrowdSec CF bouncer: secrets.env'e CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_TOKEN ekle" \
-        "CrowdSec CF bouncer: apply_secrets sonrası → systemctl start crowdsec-cloudflare-bouncer; cscli bouncers list" \
-        "CrowdSec CF bouncer: Cloudflare Dashboard → teqlif.com → Security → WAF → Custom Rules → Create: (ip.src in \$crowdsec_block) → Block" \
+        "CrowdSec CF sync: secrets.env'e CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_TOKEN ekle" \
+        "CrowdSec CF sync: apply_secrets sonrası timer otomatik başlar; manuel test: systemctl start crowdsec-cf-sync.service && journalctl -u crowdsec-cf-sync -n 5" \
+        "CrowdSec CF sync: Uptime Kuma > Push monitor oluştur > URL'yi crowdsec-cf-sync.service HEARTBEAT_URL'ye yaz > systemctl daemon-reload && systemctl restart crowdsec-cf-sync.timer" \
+        "Cloudflare WAF Custom Rule (zaten kurulu): teqlif.com > Security > WAF > Custom Rules > crowdsec-block: (ip.src in \$crowdsec_block) → Block, First" \
         "Credential JSON kopyala: scp firebase-service-account.json node1:/var/www/teqlif.com/backend/" \
         "Credential JSON kopyala: scp google-play-service-account.json node1:/var/www/teqlif.com/backend/" \
         "chmod 600 /var/www/teqlif.com/backend/{firebase,google-play}-service-account.json" \
