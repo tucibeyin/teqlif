@@ -3183,3 +3183,53 @@ reserved_usernames (id, username UNIQUE, reason, note, reserved_at)
 | `backend/alembic/versions/zzzzzzzf_reserved_usernames.py` | Tablo oluştur + 22 seed |
 | `backend/app/routers/auth.py` | `_create_user_and_send_code` + `check_username` → reserved kontrol |
 
+## §48 — CrowdSec Cloudflare Bouncer: Dual-Layer Edge Koruma (2026-11-20)
+
+### Bağlam
+
+CrowdSec, node1'de iptables (`crowdsec-firewall-bouncer`) üzerinden IP banları uyguluyordu. Ancak `teqlif.com` ve `api.teqlif.com` Cloudflare'ın arkasında (Proxied) çalıştığı için kötü IP'ler önce Cloudflare edge'ine ulaşıyor, oradan node1'e geliyordu. iptables kuralları gerçek istemci IP'sini engelliyor fakat Cloudflare edge'inde hiçbir filtreleme yoktu.
+
+Ek sorun: Tüm node'larda `apache2` CrowdSec koleksiyonu etkinleştirilmişti; oysa sistem nginx kullanıyor.
+
+### Karar
+
+**Dual bouncer mimarisi:**
+
+```
+Kötü IP
+  │
+  ├─→ teqlif.com / api.teqlif.com (CF Proxied)
+  │     └─→ Cloudflare WAF Custom Rule: (ip.src in $crowdsec_block) → Block  ← YENİ
+  │           └─→ [geçerse] node1 iptables (crowdsec-firewall-bouncer)
+  │
+  └─→ uploads.teqlif.com / minio.teqlif.com (DNS only)
+        └─→ node1 iptables (crowdsec-firewall-bouncer)
+```
+
+- `crowdsec-cloudflare-bouncer` (node1): CrowdSec ban kararlarını Cloudflare Account-level IP listesi `crowdsec_block`'a push eder
+- `crowdsec-firewall-bouncer` (tüm node'lar): iptables/nftables katmanı, paralel çalışmaya devam eder
+- `apache2` koleksiyonu tüm node'lardan kaldırıldı (sistem nginx kullanıyor)
+
+### Cloudflare Firewall Rules API Deprecation
+
+`crowdsec-cloudflare-bouncer` v0.3.0, zone-level kural oluşturmak için eski `/zones/{id}/firewall/rules` endpoint'ini kullanıyordu. Cloudflare bu API'yi kapattı (error 10020: `firewallrules.api.deprecated`). Config'deki `zones` bloğu kaldırıldı:
+
+- Bouncer yalnızca Account-level IP listesini (`crowdsec_block`) yönetir
+- Zone-level bloklama: Cloudflare WAF Custom Rule ile sağlanır (dashboard'dan manuel oluşturuldu)
+- Rule: `(ip.src in $crowdsec_block)` → Block, Execution order: First
+
+### Uygulama Notları
+
+- `cscli bouncers add` komutundaki `--length` flag'i deprecated → `tail -1` ile key satırı alınır
+- `CLOUDFLARE_ZONE_ID` artık `secrets.env`'de gerekmez; yalnızca `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_TOKEN`
+- Token izinleri: Account Filter Lists:Edit + Zone Firewall Services:Edit
+- Rulesets API (`/zones/{id}/rulesets/...`) için Zone WAF:Edit izni gerekir (mevcut token kapsamıyor) — WAF Custom Rule dashboard'dan oluşturuldu
+
+### Dosyalar
+
+| Dosya | Değişiklik |
+|-------|------------|
+| `deploy/scale/V2.1/node1/resources/crowdsec/crowdsec-cloudflare-bouncer.yaml` | `zones` bloğu kaldırıldı; WAF Custom Rule adımı belgelendi |
+| `deploy/scale/V2.1/scripts/_common.sh` | `setup_crowdsec_cloudflare_bouncer()` eklendi; `--length` → `tail -1` |
+| `deploy/scale/V2.1/scripts/bootstrap_node1.sh` | CF bouncer kurulum adımı + `apply_secrets` entegrasyonu |
+
