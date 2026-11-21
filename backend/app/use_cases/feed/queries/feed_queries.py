@@ -165,30 +165,17 @@ class FeedQueries:
             return []
 
         # İlanları + kullanıcı bilgilerini çek
+        where_clause = [Listing.id.in_(listing_ids), Listing.status == ListingStatus.ACTIVE]  # noqa: E712
+        if user_id:
+            where_clause.append(Listing.user_id != user_id)
         rows_result = await self.uow.session.execute(
             select(Listing, User)
             .join(User, User.id == Listing.user_id)
-            .where(Listing.id.in_(listing_ids), Listing.status == ListingStatus.ACTIVE)  # noqa: E712
+            .where(*where_clause)
         )
         rows = {listing.id: (listing, user) for listing, user in rows_result.all()}
 
         counts, liked_set = await LikeService.batch_listing_likes(self.uow.session, listing_ids, user_id)
-
-        # Eğer kullanıcının kendi ilanı denk geldiyse impression_count çek
-        impression_map: dict[int, int] = {}
-        if user_id and listing_ids:
-            from sqlalchemy import func
-            from app.models.listing_impression import ListingImpression
-            my_listing_ids = [lid for lid in listing_ids if lid in rows and rows[lid][1].id == user_id]
-            if my_listing_ids:
-                imp_result = await self.uow.session.execute(
-                    select(ListingImpression.listing_id, func.count())
-                    .select_from(ListingImpression)
-                    .where(ListingImpression.listing_id.in_(my_listing_ids))
-                    .group_by(ListingImpression.listing_id)
-                )
-                for lid, imp_count in imp_result.all():
-                    impression_map[lid] = imp_count
 
         # Sıralamayı koru (scoring'den gelen sıra)
         all_uids = list({rows[lid][1].id for lid in listing_ids if lid in rows})
@@ -651,26 +638,11 @@ class FeedQueries:
                 Listing.id.in_(listing_ids),
                 Listing.status == ListingStatus.ACTIVE,  # noqa: E712
                 Listing.status != ListingStatus.DELETED,  # noqa: E712
+                Listing.user_id != user_id,
             )
         )
         rows = {listing.id: (listing, user) for listing, user in rows_result.all()}
         counts, liked_set = await LikeService.batch_listing_likes(self.uow.session, listing_ids, user_id)
-
-        # Kendi ilanıysa impression_count al
-        impression_map: dict[int, int] = {}
-        if user_id and listing_ids:
-            from sqlalchemy import func
-            from app.models.listing_impression import ListingImpression
-            my_listing_ids = [lid for lid in listing_ids if lid in rows and rows[lid][1].id == user_id]
-            if my_listing_ids:
-                imp_result = await self.uow.session.execute(
-                    select(ListingImpression.listing_id, func.count())
-                    .select_from(ListingImpression)
-                    .where(ListingImpression.listing_id.in_(my_listing_ids))
-                    .group_by(ListingImpression.listing_id)
-                )
-                for lid, imp_count in imp_result.all():
-                    impression_map[lid] = imp_count
 
         foryou_uids = list({rows[lid][1].id for lid in listing_ids if lid in rows})
         badge_map_fy, trending_cats_fy, trending_lids_fy, trust_map_fy, influence_map_fy = await _fetch_seller_meta(foryou_uids)
