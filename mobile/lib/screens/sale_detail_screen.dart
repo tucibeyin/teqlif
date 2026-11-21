@@ -251,39 +251,6 @@ class _SaleDetailScreenState extends ConsumerState<SaleDetailScreen> {
                 ),
               ),
 
-            const SizedBox(height: 24),
-
-            // Satış Kanıt Görseli
-            if (proofImageUrl != null && proofImageUrl.isNotEmpty) ...[
-              Text(
-                loc.t('purchaseProofImage'),
-                style: TextStyle(
-                  color: AppColors.textPrimary(context),
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 12),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: CachedNetworkImage(
-                  imageUrl: ref.read(apiClientProvider).imgUrl(proofImageUrl),
-                  cacheManager: TeqlifCacheManager(),
-                  memCacheWidth: 400,
-                  fit: BoxFit.cover,
-                  errorWidget: (_, _, _) => Container(
-                    height: 200,
-                    color: Colors.black26,
-                    child: const Center(child: Icon(Icons.broken_image, color: Colors.white54, size: 50)),
-                  ),
-                  placeholder: (_, _) => Container(
-                    height: 200,
-                    color: Colors.black12,
-                    child: const Center(child: CircularProgressIndicator()),
-                  ),
-                ),
-              ),
-            ],
           ],
         ),
       ),
