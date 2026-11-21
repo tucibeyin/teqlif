@@ -35,10 +35,6 @@ CF_API        = 'https://api.cloudflare.com/client/v4'
 IP_LIST_NAME  = 'crowdsec_block'
 CSCLI         = '/usr/bin/cscli'
 
-# teqlif.com WAF sabitleri (sır değil — CF Dashboard'dan alındı)
-CF_ZONE_ID     = '00937d72408839acf844a92611abc54b'
-CF_RULESET_ID  = 'a1f319dd8bca45a5b9c77617d396bf7e'
-CF_WAF_RULE_ID = '5d3fc5cbd3c04b7abd9f5a9a9885a8be'
 
 
 def _creds():
@@ -134,17 +130,17 @@ def _ban_ips():
     return ips
 
 
-def _waf_ensure_enabled(token):
+def _waf_ensure_enabled(zone_id, ruleset_id, rule_id, token):
     """WAF kuralı disable ise enable yapar; hata olursa sessizce devam eder."""
     try:
-        r = _api('GET', f'/zones/{CF_ZONE_ID}/rulesets/{CF_RULESET_ID}', token=token)
+        r = _api('GET', f'/zones/{zone_id}/rulesets/{ruleset_id}', token=token)
         for rule in (r.get('result') or {}).get('rules') or []:
-            if rule.get('id') == CF_WAF_RULE_ID:
+            if rule.get('id') == rule_id:
                 if rule.get('enabled'):
                     return
                 break
         _api('PATCH',
-             f'/zones/{CF_ZONE_ID}/rulesets/{CF_RULESET_ID}/rules/{CF_WAF_RULE_ID}',
+             f'/zones/{zone_id}/rulesets/{ruleset_id}/rules/{rule_id}',
              {'enabled': True},
              token=token)
         print('WAF rule enabled')
@@ -186,9 +182,12 @@ def main():
     print(f'+{len(to_add)} -{len(to_rem)} total={len(want)}')
 
     # Ban kalktıktan sonra ilk başarılı sync'te WAF kuralını otomatik aktif et
-    waf_token = os.environ.get('CF_WAF_TOKEN', '')
-    if waf_token and want:
-        _waf_ensure_enabled(waf_token)
+    waf_token   = os.environ.get('CF_WAF_TOKEN', '')
+    waf_zone    = os.environ.get('CF_ZONE_ID', '')
+    waf_ruleset = os.environ.get('CF_WAF_RULESET_ID', '')
+    waf_rule    = os.environ.get('CF_WAF_RULE_ID', '')
+    if waf_token and waf_zone and waf_ruleset and waf_rule and want:
+        _waf_ensure_enabled(waf_zone, waf_ruleset, waf_rule, waf_token)
 
     _heartbeat(os.environ.get('HEARTBEAT_URL', ''))
 
