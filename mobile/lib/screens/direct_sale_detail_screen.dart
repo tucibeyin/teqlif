@@ -80,7 +80,7 @@ class _Body extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (imageUrl != null && imageUrl.isNotEmpty)
+          if (imageUrl != null && imageUrl.isNotEmpty) ...[
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: CachedNetworkImage(
@@ -94,10 +94,18 @@ class _Body extends ConsumerWidget {
                 errorWidget: (_, _, _) => _imagePlaceholder(context),
                 placeholder: (_, _) => _imagePlaceholder(context),
               ),
-            )
-          else
-            _imagePlaceholder(context),
-          const SizedBox(height: 16),
+            ),
+            const SizedBox(height: 16),
+          ] else ...[
+            Row(
+              children: [
+                const Icon(Icons.hide_image_outlined, size: 16, color: Color(0xFF9CA3AF)),
+                const SizedBox(width: 6),
+                Text(loc.t('noListingPhoto'), style: const TextStyle(fontSize: 13, color: Color(0xFF9CA3AF))),
+              ],
+            ),
+            const SizedBox(height: 12),
+          ],
           Text(
             summary.itemName,
             style: TextStyle(
