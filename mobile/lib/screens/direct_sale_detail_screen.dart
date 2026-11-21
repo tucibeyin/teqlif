@@ -73,7 +73,7 @@ class _Body extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final imageUrl = summary.displayImageUrl;
+    final imageUrl = summary.imageUrl;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -183,6 +183,35 @@ class _Body extends ConsumerWidget {
               value: TeqNumberFormatter.format(summary.buyerTotal ?? 0, fieldKey: 'price', unit: '₺'),
               valueColor: const Color(0xFF4ADE80),
             ),
+          ],
+
+          // Satış Onay Görseli
+          if (summary.proofImageUrl != null && summary.proofImageUrl!.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            _Divider(),
+            const SizedBox(height: 16),
+            Text(
+              loc.t('saleProofImageTitle'),
+              style: TextStyle(
+                color: AppColors.textPrimary(context),
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 10),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: CachedNetworkImage(
+                imageUrl: ref.read(apiClientProvider).imgUrl(summary.proofImageUrl!),
+                cacheManager: TeqlifCacheManager(),
+                memCacheWidth: 400,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                errorWidget: (_, _, _) => _imagePlaceholder(context),
+                placeholder: (_, _) => _imagePlaceholder(context),
+              ),
+            ),
+            const SizedBox(height: 20),
           ],
         ],
       ),
