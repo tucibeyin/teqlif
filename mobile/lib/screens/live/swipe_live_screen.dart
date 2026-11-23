@@ -48,6 +48,8 @@ import 'viewmodels/swipe_live_view_model.dart';
 import '../../services/push_notification_service.dart';
 import '../../services/category_service.dart';
 import '../../utils/snackbar_helper.dart';
+import '../../core/user_tier.dart';
+import '../../widgets/tier_badge.dart';
 
 // ── SwipeLiveScreen ──────────────────────────────────────────────────────────
 
@@ -1261,6 +1263,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
             viewerCount: _viewerCount,
             title: _resolvedTitle ?? widget.stream.title,
             hostUsername: _resolvedHostUsername ?? widget.stream.host.username,
+            hostUserType: widget.stream.host.userType,
             isCoHost: _isCoHost,
             streamEnded: widget.session.streamEnded || widget.isEnded,
             onLeave: _leave,
@@ -1640,6 +1643,10 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
                     fontWeight: FontWeight.w500,
                   ),
                 ),
+                if (UserTier.isPaidTier(stream.host.userType)) ...[
+                  const SizedBox(height: 6),
+                  TierBadge(userType: stream.host.userType),
+                ],
                 const SizedBox(height: 14),
 
                 // Yayın başlığı

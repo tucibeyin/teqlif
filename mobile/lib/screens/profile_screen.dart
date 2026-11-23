@@ -510,6 +510,15 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 },
                               ),
                             ],
+                            // Tier rozeti (PRO/PRO+/PREMIUM — standard'da gizlenir)
+                            Builder(builder: (ctx) {
+                              final tier = user?['user_type'] as String? ?? UserTier.standard;
+                              if (!UserTier.isPaidTier(tier)) return const SizedBox.shrink();
+                              return Padding(
+                                padding: const EdgeInsetsDirectional.only(start: 6),
+                                child: TierBadge(userType: tier),
+                              );
+                            }),
                           ],
                         ),
 

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../services/localization_service.dart';
 import '../../services/share_service.dart';
+import '../../core/user_tier.dart';
+import '../tier_badge.dart';
 
 /// Canlı yayın izleyici ekranı — üst bilgi çubuğu.
 ///
@@ -19,6 +21,9 @@ class ViewerTopBar extends ConsumerWidget {
   final int? streamId;
   final String? thumbnailUrl;
 
+  /// Host'un tier'ı — tier rozeti ve kalite badge'i için kullanılır.
+  final String hostUserType;
+
   const ViewerTopBar({
     super.key,
     required this.topPad,
@@ -31,6 +36,7 @@ class ViewerTopBar extends ConsumerWidget {
     this.onEnterPip,
     this.streamId,
     this.thumbnailUrl,
+    this.hostUserType = UserTier.standard,
   });
 
   @override
@@ -109,6 +115,34 @@ class ViewerTopBar extends ConsumerWidget {
                   style: const TextStyle(color: Colors.white, fontSize: 11),
                 ),
               ),
+
+              // Host tier rozeti (PRO/PRO+/PREMIUM)
+              if (UserTier.isPaidTier(hostUserType)) ...[
+                const SizedBox(width: 6),
+                TierBadge(userType: hostUserType, fontSize: 8, iconSize: 6),
+              ],
+
+              // Kalite badge'i (PRO+ / PREMIUM → 1080p)
+              if (UserTier.isProPlusOrAbove(hostUserType)) ...[
+                const SizedBox(width: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: Colors.white24),
+                  ),
+                  child: const Text(
+                    'HD',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+              ],
 
               const Spacer(),
 

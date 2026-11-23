@@ -1,15 +1,17 @@
 class StreamHost {
   final int id;
   final String username;
+  final String userType;
 
-  StreamHost({required this.id, required this.username});
+  StreamHost({required this.id, required this.username, this.userType = 'standard'});
 
   factory StreamHost.fromJson(Map<String, dynamic> json) => StreamHost(
         id: json['id'],
         username: json['username'],
+        userType: json['user_type'] as String? ?? 'standard',
       );
 
-  Map<String, dynamic> toJson() => {'id': id, 'username': username};
+  Map<String, dynamic> toJson() => {'id': id, 'username': username, 'user_type': userType};
 }
 
 class StreamOut {

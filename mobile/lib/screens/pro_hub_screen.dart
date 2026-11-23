@@ -940,6 +940,65 @@ class _StreamHoursRow extends ConsumerWidget {
   }
 }
 
+/// Komisyon satırı — "Kazancınızın %X'i sizin"
+class _CommissionRow extends StatelessWidget {
+  final String userType;
+  final TranslationPack loc;
+
+  const _CommissionRow({required this.userType, required this.loc});
+
+  @override
+  Widget build(BuildContext context) {
+    final rate = UserTier.commissionPercent(userType);
+    final isPremium = UserTier.isPremiumTier(userType);
+    final color = isPremium
+        ? const Color(0xFF0891B2)
+        : UserTier.isProPlusOrAbove(userType)
+            ? const Color(0xFF7C3AED)
+            : const Color(0xFFD97706);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(Icons.percent_outlined, color: color, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              loc.tOr('proHubCommission', 'Kazancınızın %$rate\'i sizin')
+                  .replaceAll('{rate}', rate.toString()),
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary(context),
+              ),
+            ),
+          ),
+          if (isPremium)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                '%100',
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: color),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 int? _streamLimitSecondsFor(String userType) => UserTier.streamLimitSeconds(userType);
 
 class _CreditsSummaryCard extends ConsumerWidget {
@@ -1064,6 +1123,8 @@ class _CreditsSummaryCard extends ConsumerWidget {
               isLoading: isLoading,
               loc: loc,
             ),
+            Divider(height: 1, color: AppColors.border(context)),
+            _CommissionRow(userType: userType, loc: loc),
             Divider(height: 1, color: AppColors.border(context)),
           ],
           ...items.asMap().entries.map((entry) {

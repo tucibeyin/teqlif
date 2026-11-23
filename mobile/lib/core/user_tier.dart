@@ -58,4 +58,15 @@ abstract class UserTier {
       default:      return standard;
     }
   }
+
+  /// Yayın geliri komisyon oranı — host'a kalan pay (tam sayı yüzde).
+  /// Backend: tier.py COMMISSION_RATE ile senkron tutulmalı.
+  static int commissionPercent(String userType) {
+    switch (userType) {
+      case premium: return 100;
+      case proPlus: return 90;
+      case pro:     return 75;
+      default:      return 50;
+    }
+  }
 }
