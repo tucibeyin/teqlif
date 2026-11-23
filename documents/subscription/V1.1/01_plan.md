@@ -7,13 +7,14 @@
 Bu döküman genişletilebilir yapıdadır. Her bölüm bağımsız tamamlanabilir.  
 Tamamlananlar `✅`, devam edenler `🔄`, henüz başlanmayanlar `📋` ile işaretlenir.
 
-> **İmplementasyon standardı:** Tüm geliştirme ADR, Clean Code, Clean Architecture,
-> MVVM ve ADR §13 workflow kurallarına uygun yapılmalıdır.
+> **Bu döküman implementasyon için birincil referanstır.**  
+> §3–6'daki her görev aşağıdaki §0 standartlarına göre yapılmalıdır.
 
 ---
 
 ## İçindekiler
 
+0. [İmplementasyon Standartları](#0-i̇mplementasyon-standartları)
 1. [Karar Özeti](#1-karar-özeti)
 2. [Tier Tablosu](#2-tier-tablosu)
 3. [Backend Değişiklikleri](#3-backend-değişiklikleri)
@@ -21,8 +22,144 @@ Tamamlananlar `✅`, devam edenler `🔄`, henüz başlanmayanlar `📋` ile iş
 5. [ARB / OTA Lokalizasyon](#5-arb--ota-lokalizasyon)
 6. [Ekran Değişiklikleri](#6-ekran-değişiklikleri)
 7. [Fiyatlandırma](#7-fiyatlandırma)
-8. [UI / UX Tasarımı](#8-ui--ux-tasarımı) 🔄
+8. [UI / UX Tasarımı](#8-ui--ux-tasarımı)
 9. [App Store / Google Play](#9-app-store--google-play)
+
+---
+
+## 0. İmplementasyon Standartları
+
+> Bu bölüm §3–6'daki tüm geliştirme görevleri için **bağlayıcı referanstır**.
+> Hiçbir kod değişikliği, burada tanımlanan standartların dışına çıkamaz.
+
+---
+
+### 0.1 Workflow — ADR §13
+
+Her kod değişikliği `documents/teqlif_architectural_decisions.md` §13 adım sırasını izler:
+
+1. Planlama dökümanı güncellenir (bu dosya)
+2. Backend değişiklikleri → Alembic migration → test
+3. Flutter değişiklikleri → ARB güncellenir
+4. ARB push → VPS'te `git pull` → `sync_main.py`
+5. `sudo teqlif-restart` ile tüm node'lara deploy
+
+**Kurallar:**
+- `git pull` asla `sudo` ile çalıştırılmaz
+- Deploy için her zaman `sudo teqlif-restart`; `systemctl restart` doğrudan kullanılmaz
+- Flutter build komutlarını Claude çalıştırmaz, geliştirici kendisi yapar
+
+---
+
+### 0.2 Mimari — Clean Architecture
+
+Proje katmanları kesin olarak ayrılır; bağımlılık her zaman içe (domain'e) doğru akar:
+
+```
+Presentation  →  Domain (Use Cases + Entities)  ←  Data
+     ↑                      ↑                         ↑
+   Flutter              Pure Dart              FastAPI / Repository
+   Widgets              Models                  Implementations
+```
+
+- **Domain katmanı** framework'e bağımlı olamaz
+- **Use Case** sınıfları tek bir iş kuralını encapsulate eder
+- **Repository** arayüzleri domain'de tanımlanır, implementasyon data katmanındadır
+- Backend: `routers/` → `use_cases/` → `models/` / `repositories/` ayrımı korunur
+
+---
+
+### 0.3 UI Mimarisi — MVVM
+
+Flutter tarafında her ekran için:
+
+```
+Screen (Widget)  ←→  ViewModel (ChangeNotifier / Riverpod)  ←→  UseCase / Repository
+```
+
+- Widget'lar yalnızca render yapar; iş mantığı ViewModel'de
+- ViewModel'ler doğrudan API çağrısı yapmaz; Use Case / Service katmanını kullanır
+- Subscription state'i (`user_type`, `auto_renew_enabled` vb.) merkezi bir
+  `SubscriptionViewModel` / Provider üzerinden yönetilir; tekil kaynak (single source of truth)
+
+---
+
+### 0.4 Kod Kalitesi — Clean Code + SOLID
+
+**İsimlendirme:**
+- Niyeti açıklayan isimler; `data`, `info`, `temp` gibi belirsiz isimler yasak
+- Python: `snake_case` fonksiyon/değişken, `PascalCase` sınıf
+- Dart: `camelCase` değişken/metod, `PascalCase` sınıf, `snake_case` dosya
+
+**Fonksiyon / Metod:**
+- Tek sorumluluk; bir fonksiyon bir iş yapar
+- 20 satırı geçen fonksiyonlar refactor edilir
+- Yan etki içeren fonksiyonlar açıkça adlandırılır (`update_`, `set_`, `create_`)
+
+**SOLID:**
+- **S** — Her sınıf tek sorumluluk taşır
+- **O** — Yeni tier eklemek mevcut kodu değiştirmemelidir (enum / config tabanlı tier mantığı)
+- **L** — Alt sınıflar üst sınıfın yerine geçebilir
+- **I** — Arayüzler küçük ve odaklı tutulur
+- **D** — Somut sınıflara değil soyutlamalara bağımlılık
+
+**DRY / KISS / YAGNI:**
+- Tekrar eden tier kontrolleri merkezi `TierChecker` / `SubscriptionGuard` ile yönetilir
+- Gereksiz abstraction eklenmez; var olan pattern genişletilir
+- Gelecekte lazım olabilir gerekçesiyle erken optimizasyon yapılmaz
+
+---
+
+### 0.5 Lokalizasyon — ARB / OTA
+
+Subscription ile ilgili tüm kullanıcıya görünen metinler ARB dosyalarına girer:
+
+- **ARB dosyası** güncellenir (`app_tr.arb`, `app_en.arb`)
+- Değişiklik commit'lenir → `git push`
+- VPS'te `git pull` → `python sync_main.py` çalıştırılır
+- OTA: uygulama restart gerektirmeden çekilir (`LocalizationService` / `t()` / `tOr()`)
+- **SQL'e doğrudan çeviri yazılmaz** — her zaman `sync_main.py` üzerinden
+- Çeviri key'leri için Redis'te pack + version key'leri birlikte silinir
+
+---
+
+### 0.6 Veritabanı — Alembic Kuralları
+
+- Her şema değişikliği için ayrı Alembic migration dosyası
+- **Multi-statement migration yasak** — her migration tek DDL işlemi
+- Revision ID ≤ 32 karakter
+- `CREATE INDEX CONCURRENTLY` yasak (Alembic transaction'ı kırar)
+- Staging'de `alembic upgrade head` yerine: `pg_dump --schema-only` + `alembic stamp head`
+- `psql` / `pg_dump` için TCP: `-h 127.0.0.1` zorunlu
+
+---
+
+### 0.7 Güvenlik
+
+- Token / secret'lar statik kodda olmaz; `.env` dosyalarından alınır
+- `.env.*` dosyaları repo'ya commit edilmez (`.gitignore` — repo public)
+- `Settings.Config`'e `extra = 'ignore'` ekli tutulur (pydantic-settings v2)
+- CSP: `innerHTML`'de `onclick=` yasak; `data-*` attribute + event delegation kullanılır
+- WebSocket: `ws.accept()` sadece router'da bir kez çağrılır
+
+---
+
+### 0.8 Test
+
+- Her Use Case için birim testi yazılır
+- Veritabanı mock'lanmaz; testler gerçek DB'ye karşı çalışır
+- Subscription state geçişleri (Normal→PRO, PRO→EXPIRED vb.) entegrasyon testiyle doğrulanır
+- Flutter: Widget test + ViewModel birim testi
+
+---
+
+### 0.9 Deploy
+
+- Tüm node'larda tek komut: `sudo teqlif-restart`
+- SSH + passwordless sudo: `sudo -n teqlif-restart`
+- Paralel deploy: `for` loop ile tüm node'lar tek seferde güncellenir
+- Bootstrap script değişikliklerinde `_common.sh` güncellenir; node-specific script'ler
+  yalnızca node'a özgü parçaları içerir
 
 ---
 
