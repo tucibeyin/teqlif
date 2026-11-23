@@ -2,6 +2,8 @@ import '../services/analytics_service.dart';
 import '../services/category_service.dart';
 import '../services/storage_service.dart';
 import 'direct_sale_detail_screen.dart';
+import 'purchase_detail_screen.dart';
+import '../services/auth_service.dart';
 import 'my_recordings_screen.dart';
 import 'pro_hub_screen.dart';
 import 'recording_detail_screen.dart';
@@ -363,6 +365,19 @@ class _MainScreenState extends ConsumerState<MainScreen> with WidgetsBindingObse
                 context,
                 MaterialPageRoute(builder: (_) => const WalletScreen()),
               );
+              break;
+            case MainNavigationEvent.toPurchaseDetail:
+              final auctionId = navData.payload as int;
+              ref.read(authServiceProvider).getMyPurchases().then((purchases) {
+                if (!context.mounted) return;
+                final match = purchases.where((p) => p['id'] == auctionId && p['type'] == 'auction').firstOrNull;
+                if (match != null) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => PurchaseDetailScreen(purchase: match)),
+                  );
+                }
+              }).catchError((_) {});
               break;
             case MainNavigationEvent.none:
               break;

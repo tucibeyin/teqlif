@@ -28,6 +28,7 @@ enum MainNavigationEvent {
   toProHub,
   toMyRecordings,
   toWallet,
+  toPurchaseDetail,
 }
 
 class MainNavigationData {
@@ -261,13 +262,13 @@ class MainViewModel extends AutoDisposeAsyncNotifier<MainState> {
         break;
 
       case 'auction_won':
-        final wonLid = listingId();
-        if (wonLid != null) {
-          _navigate(MainNavigationEvent.toListing, wonLid);
+        final auctionId = int.tryParse(data['auction_id']?.toString() ?? '');
+        if (auctionId != null) {
+          _navigate(MainNavigationEvent.toPurchaseDetail, auctionId);
         } else {
-          final wonSid = streamId();
-          if (wonSid != null && !StreamService.isHosting) {
-            _navigate(MainNavigationEvent.toLiveStream, wonSid);
+          final wonLid = listingId();
+          if (wonLid != null) {
+            _navigate(MainNavigationEvent.toListing, wonLid);
           } else {
             _navigate(MainNavigationEvent.toNotificationsTab, null);
           }

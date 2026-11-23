@@ -1049,6 +1049,7 @@ class AuctionCommands:
                             "body_params": {"item": item_name, "price": fmt_price(final_price)},
                         },
                         "related_id": listing_id or stream_id,
+                        "auction_id": auction.id,
                         **({"listing_id": listing_id} if listing_id else {"stream_id": stream_id}),
                     },
                     pref_key="auction_won",
