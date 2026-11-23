@@ -329,7 +329,7 @@ class _MainScreenState extends ConsumerState<MainScreen> with WidgetsBindingObse
               final streamId = navData.payload as int;
               StorageService.getUserInfo().then((info) {
                 if (!context.mounted) return;
-                final isPremium = info?['user_type'] == 'pro';
+                final isPremium = info?['user_type'] != 'standard';
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -351,7 +351,7 @@ class _MainScreenState extends ConsumerState<MainScreen> with WidgetsBindingObse
             case MainNavigationEvent.toMyRecordings:
               StorageService.getUserInfo().then((info) {
                 if (!context.mounted) return;
-                final isPremium = info?['user_type'] == 'pro';
+                final isPremium = info?['user_type'] != 'standard';
                 Navigator.push(
                   context,
                   MaterialPageRoute(

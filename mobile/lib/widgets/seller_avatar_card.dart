@@ -20,7 +20,7 @@ class SellerAvatarCard extends ConsumerWidget {
     final username = seller['username'] as String? ?? '';
     final initial = username.isNotEmpty ? username[0].toUpperCase() : '?';
     final isVerified = seller['is_verified'] == true;
-    final isPremium = seller['user_type'] == 'pro';
+    final isPremium = seller['user_type'] != 'standard';
 
     return GestureDetector(
       onTap: onTap,

@@ -381,7 +381,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 ),
                               ),
                             ),
-                            if (user?['user_type'] == 'pro')
+                            if (user?['user_type'] != 'standard')
                               Positioned(
                                 bottom: 0,
                                 right: 0,
@@ -965,7 +965,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
   void initState() {
     super.initState();
     // widget.user'dan ön değer al (anlık gösterim için)
-    _isPremium = widget.user?['user_type'] == 'pro';
+    _isPremium = widget.user?['user_type'] != 'standard';
     _isPrivate = widget.user?['is_private'] == true;
     _displayedLang = ref.read(localeProvider).languageCode;
     _loadBiometricState();
@@ -1085,7 +1085,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
     final info = await StorageService.getUserInfo();
     if (mounted && info != null) {
       setState(() {
-        _isPremium = info['user_type'] == 'pro';
+        _isPremium = info['user_type'] != 'standard';
         _isPrivate = info['is_private'] == true;
         _settingsPlanType = info['plan_type'] as String?;
       });
@@ -1787,7 +1787,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                     context,
                     MaterialPageRoute(
                       builder: (_) => ProHubScreen(
-                        isPremium: freshInfo?['user_type'] == 'pro',
+                        isPremium: freshInfo?['user_type'] != 'standard',
                       ),
                     ),
                   );
@@ -3046,7 +3046,7 @@ class _MyListingsScreenState extends ConsumerState<_MyListingsScreen> {
       final costData = await ref.read(listingServiceProvider).getReactivationCost(id);
       if (!mounted) return;
 
-      final isPremium = costData?['user_type'] == 'pro';
+      final isPremium = costData?['user_type'] != 'standard';
       final remaining = costData?['free_remaining'] as int? ?? 0;
       final cost = costData?['cost'] as int? ?? 10;
       final withinWindow = costData?['within_window'] as bool? ?? false;

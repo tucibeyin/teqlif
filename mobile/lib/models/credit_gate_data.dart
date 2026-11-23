@@ -122,5 +122,5 @@ class CreditGateData {
   /// Ücretli işlem için bakiye yeterli mi?
   bool get canAfford => isFree || teqlikBalance >= costTeqlik;
 
-  bool get isStandard => userType != 'pro';
+  bool get isStandard => userType == 'standard';
 }

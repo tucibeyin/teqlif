@@ -17,7 +17,7 @@ class ListingBadgeOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isPro    = listing['user']?['user_type'] == 'pro';
+    final isPro    = listing['user']?['user_type'] != 'standard';
     final badge    = listing['seller_badge'] as String?;
     final trending = listing['is_trending'] == true;
 

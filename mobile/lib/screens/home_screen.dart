@@ -864,7 +864,7 @@ class _GridItemState extends ConsumerState<_GridItem> {
                 ),
               ),
             // PRO rozeti — sağ üst (kalp butonunun altı)
-            if (widget.listing['user']?['user_type'] == 'pro')
+            if (widget.listing['user']?['user_type'] != 'standard')
               Positioned(
                 top: 36,
                 right: 6,

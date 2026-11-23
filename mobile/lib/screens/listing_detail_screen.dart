@@ -388,7 +388,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     final costData = await ref.read(listingServiceProvider).getReactivationCost(id);
     if (!mounted || !context.mounted) return;
 
-    final isPremium = costData?['user_type'] == 'pro';
+    final isPremium = costData?['user_type'] != 'standard';
     final remaining = costData?['free_remaining'] as int? ?? 0;
     final cost = costData?['cost'] as int? ?? 10;
     final balance = costData?['balance'] as int? ?? 0;
@@ -1413,7 +1413,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                                   : null,
                             );
                           }),
-                          if (user['user_type'] == 'pro')
+                          if (user['user_type'] != 'standard')
                             Positioned(
                               bottom: 0,
                               right: 0,

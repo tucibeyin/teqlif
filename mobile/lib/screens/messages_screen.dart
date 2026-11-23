@@ -1063,7 +1063,7 @@ class _NotificationsTabState extends ConsumerState<_NotificationsTab> {
       case 'recording_available':
         final info = await StorageService.getUserInfo();
         if (!mounted) return;
-        final isPremium = info?['user_type'] == 'pro';
+        final isPremium = info?['user_type'] != 'standard';
         Navigator.push(
           context,
           MaterialPageRoute(
