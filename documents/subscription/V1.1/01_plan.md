@@ -19,7 +19,7 @@ Tamamlananlar `✅`, devam edenler `🔄`, henüz başlanmayanlar `📋` ile iş
 6. [Ekran Değişiklikleri](#6-ekran-değişiklikleri)
 7. [Fiyatlandırma](#7-fiyatlandırma)
 8. [UI / UX Tasarımı](#8-ui--ux-tasarımı) 🔄
-9. [App Store / Google Play](#9-app-store--google-play) *(TODO)*
+9. [App Store / Google Play](#9-app-store--google-play)
 
 ---
 
@@ -208,9 +208,9 @@ String get tierDisplayName => const {
 
 | Tier | Renk | Rozet |
 |------|------|-------|
-| PRO | Mevcut PRO rengi | PRO |
-| PRO+ | Farklılaştırılacak (TODO §8) | PRO+ |
-| PREMIUM | Premium renk (TODO §8) | ✦ PREMIUM |
+| PRO | Altın sarısı | PRO |
+| PRO+ | Altın sarısı | PRO+ |
+| PREMIUM | Teqlif cyan | ✦ PREMIUM |
 
 ### 4.3 `pro_subscription_view_model.dart` 📋
 
