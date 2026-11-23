@@ -84,6 +84,12 @@ batch:
     minute: 10
     watchdog_m: 1440
 
+  # Üyelik sona ermeden 2-3 gün önce push uyarısı
+  - name: notify_subscription_expiry_task
+    hour: 11
+    minute: 15
+    watchdog_m: 1440
+
   # Bekleyen referral bonusu olan kullanıcılara günlük push bildirimi (telefon doğrulaması teşviki)
   - name: notify_pending_referral_bonuses_task
     hour: 11

@@ -5,6 +5,7 @@ release_pending_earnings_task       — Her gün 02:15 (T+14 gift_events → ava
 daily_financial_reconciliation_task — Her gün 00:00 (denetim raporu)
 reset_monthly_withdrawal_quota_task — Her ayın 1'i 00:05 (V1.0: no-op)
 check_expired_pro_users_task        — Her gün 03:10 (süresi dolmuş PRO güvenlik ağı)
+notify_subscription_expiry_task     — Her gün 11:15 (3 gün önce expiry uyarı push)
 process_store_notification_task     — ARQ enqueue (Apple/Google store notif işle)
 """
 
@@ -318,6 +319,68 @@ async def check_expired_pro_users_task(ctx: dict) -> None:
         logger.error("[WalletTask] check_expired_pro başarısız | %s", exc, exc_info=True)
         capture_exception(exc)
         await _agent_fail(ctx, "check_expired_pro_users_task", str(exc))
+        raise
+
+
+async def notify_subscription_expiry_task(ctx: dict) -> None:
+    """pro_expires_at 2-3 gün içinde dolacak kullanıcılara expiry uyarı push gönderir.
+
+    Günlük 11:15'te çalışır — 24 saatlik pencere her kullanıcıya yalnızca bir kez tetikler.
+    """
+    sent = 0
+
+    try:
+        async with AsyncSessionLocal() as session:
+            rows = await session.execute(
+                text(
+                    "SELECT id, fcm_token, locale "
+                    "FROM users "
+                    "WHERE user_type IN ('pro', 'pro_plus', 'premium') "
+                    "  AND fcm_token IS NOT NULL "
+                    "  AND pro_expires_at IS NOT NULL "
+                    "  AND pro_expires_at BETWEEN NOW() + INTERVAL '2 days' "
+                    "                        AND NOW() + INTERVAL '3 days'"
+                )
+            )
+            users = rows.fetchall()
+
+        from app.services.firebase_service import send_push
+        from app.utils.i18n import _get_t
+
+        for user_id, fcm_token, locale in users:
+            if not fcm_token:
+                continue
+            try:
+                t = _get_t(locale or "tr")
+                title = t.get("notifExpiryTitle", "Üyeliğiniz bitiyor!")
+                body = t.get(
+                    "notifExpiryBody",
+                    "Üyeliğiniz 3 gün içinde sona eriyor. Kesmeden devam edin.",
+                ).replace("{days}", "3")
+                await send_push(
+                    token=fcm_token,
+                    title=title,
+                    body=body,
+                    notif_type="subscription_expiry_warning",
+                    extra_data={"deeplink": "teqlif://pro-hub"},
+                )
+                sent += 1
+            except Exception as exc:
+                logger.debug(
+                    "[WalletTask] expiry push başarısız | user=%s | %s", user_id, exc
+                )
+
+        logger.info(
+            "[WalletTask] notify_subscription_expiry: %d bildirim gönderildi", sent
+        )
+        await _agent_ok(ctx, "notify_subscription_expiry_task")
+
+    except Exception as exc:
+        logger.error(
+            "[WalletTask] notify_subscription_expiry başarısız | %s", exc, exc_info=True
+        )
+        capture_exception(exc)
+        await _agent_fail(ctx, "notify_subscription_expiry_task", str(exc))
         raise
 
 

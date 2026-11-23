@@ -15,6 +15,7 @@ class ProHubState {
   final String userType;
   final String? planType;
   final String? proExpiresAt;
+  final String? lastTier;
   final int monthlyStreamSecondsUsed;
 
   const ProHubState({
@@ -26,6 +27,7 @@ class ProHubState {
     this.userType = UserTier.standard,
     this.planType,
     this.proExpiresAt,
+    this.lastTier,
     this.monthlyStreamSecondsUsed = 0,
   });
 
@@ -40,6 +42,7 @@ class ProHubState {
     String? userType,
     String? planType,
     String? proExpiresAt,
+    String? lastTier,
     int? monthlyStreamSecondsUsed,
   }) {
     return ProHubState(
@@ -51,6 +54,7 @@ class ProHubState {
       userType: userType ?? this.userType,
       planType: planType ?? this.planType,
       proExpiresAt: proExpiresAt ?? this.proExpiresAt,
+      lastTier: lastTier ?? this.lastTier,
       monthlyStreamSecondsUsed: monthlyStreamSecondsUsed ?? this.monthlyStreamSecondsUsed,
     );
   }
@@ -114,6 +118,7 @@ class ProHubViewModel extends AutoDisposeFamilyNotifier<ProHubState, String> {
       aiDescCredits: results[2],
       reactivationCredits: results[3],
       proExpiresAt: blast?['pro_expires_at'] as String?,
+      lastTier: blast?['last_tier'] as String?,
       monthlyStreamSecondsUsed: (blast?['monthly_stream_seconds_used'] as num?)?.toInt() ?? 0,
       isLoading: false,
     );

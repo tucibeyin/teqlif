@@ -34,6 +34,7 @@ from app.tasks.wallet_tasks import (
     daily_financial_reconciliation_task,
     reset_monthly_withdrawal_quota_task,
     check_expired_pro_users_task,
+    notify_subscription_expiry_task,
     process_store_notification_task,
     notify_pending_referral_bonuses_task,
 )
@@ -4814,6 +4815,7 @@ _SCHEDULE_FUNCTIONS = {
     "reset_monthly_withdrawal_quota_task":        reset_monthly_withdrawal_quota_task,
     "release_pending_earnings_task":              release_pending_earnings_task,
     "check_expired_pro_users_task":               check_expired_pro_users_task,
+    "notify_subscription_expiry_task":            notify_subscription_expiry_task,
     "notify_pending_referral_bonuses_task":       notify_pending_referral_bonuses_task,
     "cleanup_old_stream_chat_messages_task":      cleanup_old_stream_chat_messages_task,
 }

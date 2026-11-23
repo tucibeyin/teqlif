@@ -1190,6 +1190,12 @@
       ]
     ]
   ],
+  "subExpiryWarning": "اشتراكك ينتهي خلال {days} أيام",
+  "subExpiryWarningToday": "اشتراكك ينتهي اليوم!",
+  "subWelcomeBack": "أهلاً بعودتك!",
+  "subWelcomeBackDesc": "الاشتراك السابق: {tier}",
+  "notifExpiryTitle": "اشتراكك على وشك الانتهاء!",
+  "notifExpiryBody": "اشتراكك ينتهي خلال 3 أيام. استمر معنا.",
   "proUnlockTitle": "فتح أدوات PRO",
   "proUnlockDesc": "بِع بالبيانات، لا بالتخمين",
   "proUnlockBtn": "الترقية إلى PRO",

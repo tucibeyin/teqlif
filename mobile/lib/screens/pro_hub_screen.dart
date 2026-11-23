@@ -84,7 +84,7 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
           padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 32),
         children: [
           // ── Durum Kartı ────────────────────────────────────────────────────
-          if (isPaidTier) _ProStatusCard(renewalDate: state.proExpiresAt, userType: state.userType, planType: state.planType) else _UpgradeBanner(),
+          if (isPaidTier) _ProStatusCard(renewalDate: state.proExpiresAt, userType: state.userType, planType: state.planType) else _UpgradeBanner(lastTier: state.lastTier),
 
           if (!isPaidTier) ...[
             const SizedBox(height: 20),
@@ -452,6 +452,39 @@ class _ProStatusCard extends ConsumerWidget {
                     ],
                   ),
                 ],
+                // ── Expiry uyarı bandı (≤3 gün kaldıysa) ────────────────
+                Builder(builder: (ctx) {
+                  final days = _daysUntilExpiry(renewalDate);
+                  if (days == null || days > 3) return const SizedBox.shrink();
+                  final isCritical = days <= 1;
+                  final bannerColor = isCritical ? const Color(0xFFEF4444) : const Color(0xFFF59E0B);
+                  final label = days == 0
+                      ? loc.tOr('subExpiryWarningToday', 'Bugün sona eriyor!')
+                      : loc.tOr('subExpiryWarning', '{days} gün sonra sona eriyor').replaceAll('{days}', days.toString());
+                  return Padding(
+                    padding: const EdgeInsetsDirectional.only(top: 10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: bannerColor.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: bannerColor.withValues(alpha: 0.5)),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.warning_amber_rounded, size: 14, color: bannerColor),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              label,
+                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: bannerColor),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
               ],
             ),
           ),
@@ -462,6 +495,9 @@ class _ProStatusCard extends ConsumerWidget {
 }
 
 class _UpgradeBanner extends ConsumerWidget {
+  final String? lastTier;
+  const _UpgradeBanner({this.lastTier});
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final loc = ref.watch(localizationProvider);
@@ -475,64 +511,104 @@ class _UpgradeBanner extends ConsumerWidget {
         ),
         borderRadius: BorderRadius.circular(16),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 48,
-            height: 48,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(Icons.lock_outline, color: Color(0xFFFBBF24), size: 26),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  loc.t('proUnlockTitle'),
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Colors.white),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  loc.t('proUnlockDesc'),
-                  style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.75)),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          GestureDetector(
-            onTap: () => showModalBottomSheet(
-              context: context,
-              isScrollControlled: true,
-              useSafeArea: true,
-              backgroundColor: Colors.transparent,
-              builder: (_) => ProSubscriptionSheet(
-                loc: loc,
-                onPurchaseSuccess: () => Navigator.of(context).pop(),
-              ),
-            ),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+          // ── Hoş geldiniz geri bandı ─────────────────────────────
+          if (lastTier != null && lastTier != UserTier.standard) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              margin: const EdgeInsetsDirectional.only(bottom: 12),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFD97706), Color(0xFFFFD700)],
-                ),
-                borderRadius: BorderRadius.circular(10),
+                color: Colors.white.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
               ),
-              child: Text(
-                loc.t('proUnlockBtn'),
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.white),
+              child: Row(
+                children: [
+                  const Text('👋', style: TextStyle(fontSize: 13)),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      loc.tOr('subWelcomeBackDesc', 'Önceki üyeliğiniz: {tier}')
+                          .replaceAll('{tier}', _tierLabel(lastTier!)),
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white),
+                    ),
+                  ),
+                ],
               ),
             ),
+          ],
+          Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.lock_outline, color: Color(0xFFFBBF24), size: 26),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      lastTier != null && lastTier != UserTier.standard
+                          ? loc.tOr('subWelcomeBack', 'Tekrar hoş geldiniz!')
+                          : loc.t('proUnlockTitle'),
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Colors.white),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      loc.t('proUnlockDesc'),
+                      style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.75)),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              GestureDetector(
+                onTap: () => showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  useSafeArea: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (_) => ProSubscriptionSheet(
+                    loc: loc,
+                    onPurchaseSuccess: () => Navigator.of(context).pop(),
+                  ),
+                ),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFD97706), Color(0xFFFFD700)],
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    loc.t('proUnlockBtn'),
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
+  }
+
+  String _tierLabel(String tier) {
+    switch (tier) {
+      case UserTier.premium: return 'PREMIUM';
+      case UserTier.proPlus: return 'PRO+';
+      case UserTier.pro:     return 'PRO';
+      default:               return tier;
+    }
   }
 }
 
@@ -1269,5 +1345,18 @@ String _fmtRenewal(BuildContext context, String? iso) {
     return DateFormat.yMMMMd(locale).format(d);
   } catch (_) {
     return '';
+  }
+}
+
+/// ISO tarihine kaç gün kaldığını döner; geçmişse 0, parse edilemezse null.
+int? _daysUntilExpiry(String? iso) {
+  if (iso == null) return null;
+  try {
+    final expiry = DateTime.parse(iso).toLocal();
+    final now = DateTime.now();
+    final diff = expiry.difference(now);
+    return diff.isNegative ? 0 : diff.inDays;
+  } catch (_) {
+    return null;
   }
 }

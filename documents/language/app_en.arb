@@ -1187,6 +1187,12 @@
       ]
     ]
   ],
+  "subExpiryWarning": "Your subscription expires in {days} days",
+  "subExpiryWarningToday": "Your subscription expires today!",
+  "subWelcomeBack": "Welcome back!",
+  "subWelcomeBackDesc": "Previous subscription: {tier}",
+  "notifExpiryTitle": "Subscription expiring!",
+  "notifExpiryBody": "Your subscription expires in 3 days. Keep it going.",
   "proUnlockTitle": "Unlock PRO Tools",
   "proUnlockDesc": "Sell with data, not guesswork",
   "proUnlockBtn": "Go PRO",

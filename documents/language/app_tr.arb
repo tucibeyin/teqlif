@@ -1188,6 +1188,12 @@
       ]
     ]
   ],
+  "subExpiryWarning": "Üyeliğiniz {days} gün sonra sona eriyor",
+  "subExpiryWarningToday": "Üyeliğiniz bugün sona eriyor!",
+  "subWelcomeBack": "Tekrar hoş geldiniz!",
+  "subWelcomeBackDesc": "Önceki üyeliğiniz: {tier}",
+  "notifExpiryTitle": "Üyeliğiniz bitiyor!",
+  "notifExpiryBody": "Üyeliğiniz 3 gün içinde sona eriyor. Kesmeden devam edin.",
   "proUnlockTitle": "PRO araçları kilidi aç",
   "proUnlockDesc": "Tahminle değil, verilerle sat",
   "proUnlockBtn": "PRO'ya Geç",
