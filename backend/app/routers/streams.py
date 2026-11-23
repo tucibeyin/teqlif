@@ -25,7 +25,7 @@ from app.core.uow import SqlAlchemyUnitOfWork
 
 from app.core.logger import get_logger
 from app.services.like_service import LikeService
-from app.services.subscription.tier import is_paid_tier, FEED_PREMIUM_BOOST, TIER_PREMIUM
+from app.services.subscription.tier import is_paid_tier, FEED_PREMIUM_BOOST, TIER_PREMIUM, TIER_STANDARD
 
 logger = get_logger(__name__)
 from app.use_cases.feed.queries.swipe_live_queries import SwipeLiveQueries
@@ -210,7 +210,7 @@ async def audience_insights(
     high_value = sum(1 for b in budgets if b >= 1000)
     medium_value = sum(1 for b in budgets if 250 <= b < 1000)
     low_budget = sum(1 for b in budgets if b < 250)
-    ready_buyers = sum(1 for r in user_data if r.user_type != 'standard')
+    ready_buyers = sum(1 for r in user_data if r.user_type != TIER_STANDARD)
 
     pip_count = len(pip_members_raw) if pip_members_raw else 0
     return {

@@ -26,6 +26,7 @@ from sqlalchemy.exc import IntegrityError
 from app.core.exceptions import ForbiddenException, NotFoundException, BadRequestException, ConflictException
 from app.core.logger import get_logger, capture_exception
 from app.constants import ws_types as WS
+from app.services.subscription.tier import TIER_PRO, TIER_STANDARD
 
 logger = get_logger(__name__)
 
@@ -241,8 +242,8 @@ async def toggle_pro(
     user = await db.get(User, user_id)
     if not user:
         raise NotFoundException(code="USER_NOT_FOUND")
-    is_now_pro = user.user_type != 'pro'
-    user.user_type = 'pro' if is_now_pro else 'standard'
+    is_now_pro = user.user_type != TIER_PRO
+    user.user_type = TIER_PRO if is_now_pro else TIER_STANDARD
     user.plan_type = (req.plan_type if req.plan_type else "monthly") if is_now_pro else None
     await db.commit()
     await invalidate_user_session_cache(user_id)

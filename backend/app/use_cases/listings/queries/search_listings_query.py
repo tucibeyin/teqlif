@@ -9,6 +9,7 @@ from app.models.enums import ListingStatus
 from app.use_cases.listings.queries.listing_utils import _parse_image_urls, _card_dict, _fetch_seller_meta
 from app.services.like_service import LikeService
 from app.core.logger import get_logger
+from app.services.subscription.tier import TIER_STANDARD
 
 logger = get_logger(__name__)
 
@@ -112,11 +113,11 @@ class SearchListingsQuery:
                         func.similarity(Listing.title, q),
                         func.similarity(Listing.description, q)
                     ).desc(),
-                    (User.user_type != 'standard').desc(),
+                    (User.user_type != TIER_STANDARD).desc(),
                     Listing.created_at.desc()
                 )
             else:
-                q_stmt = q_stmt.order_by((User.user_type != 'standard').desc(), Listing.created_at.desc())
+                q_stmt = q_stmt.order_by((User.user_type != TIER_STANDARD).desc(), Listing.created_at.desc())
 
         if cursor_at and cursor_id and sort_by in (None, "newest"):
             q_stmt = q_stmt.where(
