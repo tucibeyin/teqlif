@@ -122,7 +122,14 @@ setup_ntp() {
 setup_autoupdates() {
     log_step "Otomatik güvenlik güncellemeleri"
     DEBIAN_FRONTEND=noninteractive dpkg-reconfigure -plow unattended-upgrades
-    log_ok "Unattended-upgrades aktif (yalnızca güvenlik)"
+
+    # needrestart: apt upgrade sonrası eski kütüphane kullanan servisleri restart eder.
+    # unattended-upgrades libc/openssl yamaladığında servisler bellekte eski .so ile çalışmaya
+    # devam eder; needrestart bunu tespit edip sessizce yeniden başlatır (mode=automatic).
+    apt-get install -y -qq needrestart
+    sed -i "s/^#\?\\\$nrconf{restart}.*$/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
+
+    log_ok "Unattended-upgrades + needrestart (automatic) aktif"
 }
 
 # ── Dosya sınırları ───────────────────────────────────────────────────────────
