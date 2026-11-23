@@ -6781,6 +6781,10 @@
   "tierProPlusDesc": "90% gift share · 90 hrs/mo · 1080p",
   "tierPremiumDesc": "100% gift share · Unlimited streaming · 1080p",
 
+  "proStreamHoursTitle": "Stream Hours",
+  "proStreamHoursUnlimited": "Unlimited streaming",
+  "proStreamHoursUsed": "{used} / {limit} hours used",
+  "liveStreamQualityLabel": "Stream Quality",
   "streamMonthlyLimitReached": "Monthly streaming limit reached.",
   "streamMonthlyLimitDesc": "Your plan's monthly streaming hours are used up. Resets next billing cycle or upgrade your plan.",
 

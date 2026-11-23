@@ -119,6 +119,8 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
             aiDescCredits: state.aiDescCredits,
             reactivationCredits: state.reactivationCredits,
             isPremium: isPremium,
+            userType: state.userType,
+            monthlyStreamSecondsUsed: state.monthlyStreamSecondsUsed,
             isLoading: state.isLoading,
           ),
           const SizedBox(height: 24),
@@ -833,12 +835,129 @@ class CreditItemModel {
 }
 
 // ── Konsolide Krediler Özeti ────────────────────────────────────────────────
+class _StreamHoursRow extends ConsumerWidget {
+  final String userType;
+  final int secondsUsed;
+  final bool isLoading;
+  final TranslationPack loc;
+
+  const _StreamHoursRow({
+    required this.userType,
+    required this.secondsUsed,
+    required this.isLoading,
+    required this.loc,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final limitSecs = _streamLimitSecondsFor(userType);
+    final isUnlimited = limitSecs == null;
+    final usedHours = (secondsUsed / 3600).floor();
+    final limitHours = isUnlimited ? null : (limitSecs / 3600).floor();
+    final progress = isUnlimited ? 0.0 : (secondsUsed / limitSecs).clamp(0.0, 1.0);
+
+    final Color barColor = isUnlimited
+        ? const Color(0xFF7C3AED)
+        : progress >= 1.0
+            ? const Color(0xFFEF4444)
+            : progress >= 0.8
+                ? const Color(0xFFF59E0B)
+                : const Color(0xFF22C55E);
+
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: const Color(0xFF14B8A6).withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.stream_outlined, color: Color(0xFF14B8A6), size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  loc.tOr('proStreamHoursTitle', 'Yayın Saati'),
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary(context)),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  isUnlimited
+                      ? loc.tOr('proStreamHoursUnlimited', 'Sınırsız yayın')
+                      : loc.tOr('proStreamHoursUsed', '{used} / {limit} saat kullanıldı',
+                          {'used': usedHours.toString(), 'limit': limitHours.toString()}),
+                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              if (isLoading)
+                const SizedBox(
+                  width: 16, height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              else if (isUnlimited)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF7C3AED).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text('∞', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF7C3AED))),
+                )
+              else
+                Text(
+                  '$usedHours/${limitHours}h',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: barColor),
+                ),
+              const SizedBox(height: 4),
+              SizedBox(
+                width: 60,
+                height: 4,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(2),
+                  child: LinearProgressIndicator(
+                    value: isLoading ? null : (isUnlimited ? 1.0 : progress),
+                    backgroundColor: AppColors.border(context),
+                    valueColor: AlwaysStoppedAnimation<Color>(barColor),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+int? _streamLimitSecondsFor(String userType) {
+  switch (userType) {
+    case 'premium': return null;         // unlimited
+    case 'pro_plus': return 324000;      // 90 h
+    case 'pro': return 108000;           // 30 h
+    default: return 54000;               // 15 h standard
+  }
+}
+
 class _CreditsSummaryCard extends ConsumerWidget {
   final Map<String, dynamic>? blastCredits;
   final Map<String, dynamic>? boostCredits;
   final Map<String, dynamic>? aiDescCredits;
   final Map<String, dynamic>? reactivationCredits;
   final bool isPremium;
+  final String userType;
+  final int monthlyStreamSecondsUsed;
   final bool isLoading;
 
   const _CreditsSummaryCard({
@@ -847,6 +966,8 @@ class _CreditsSummaryCard extends ConsumerWidget {
     required this.aiDescCredits,
     required this.reactivationCredits,
     required this.isPremium,
+    this.userType = 'standard',
+    this.monthlyStreamSecondsUsed = 0,
     required this.isLoading,
   });
 
@@ -946,6 +1067,15 @@ class _CreditsSummaryCard extends ConsumerWidget {
             ),
           ),
           Divider(height: 1, color: AppColors.border(context)),
+          if (isPremium) ...[
+            _StreamHoursRow(
+              userType: userType,
+              secondsUsed: monthlyStreamSecondsUsed,
+              isLoading: isLoading,
+              loc: loc,
+            ),
+            Divider(height: 1, color: AppColors.border(context)),
+          ],
           ...items.asMap().entries.map((entry) {
             final index = entry.key;
             final item = entry.value;

@@ -6709,6 +6709,10 @@
   "tierProPlusDesc": "90% доля подарков · 90 ч/мес · 1080p",
   "tierPremiumDesc": "100% доля подарков · Безлимитный стрим · 1080p",
 
+  "proStreamHoursTitle": "Часы трансляции",
+  "proStreamHoursUnlimited": "Безлимитный стрим",
+  "proStreamHoursUsed": "Использовано {used} / {limit} ч",
+  "liveStreamQualityLabel": "Качество трансляции",
   "streamMonthlyLimitReached": "Достигнут месячный лимит трансляций.",
   "streamMonthlyLimitDesc": "Исчерпан лимит часов трансляций по вашему тарифу. Обнуляется в следующем периоде или обновите тариф.",
 

@@ -46,6 +46,9 @@ Future<void> showStartStreamDialog(
   if (!hasPermission) return;
   // ──────────────────────────────────────────────────────────────────────────
 
+  final userInfo = await StorageService.getUserInfo();
+  final userType = userInfo?['user_type'] as String? ?? 'standard';
+
   final titleController = TextEditingController();
   String? selectedCategory;
   String? selectedSubcategory;
@@ -265,6 +268,8 @@ Future<void> showStartStreamDialog(
                 ),
               ),
             ],
+            const SizedBox(height: 10),
+            _StreamQualityInfoRow(userType: userType, loc: loc),
             if (errorText != null) ...[
               const SizedBox(height: 8),
               Text(
@@ -480,6 +485,72 @@ String _mapCaptchaError(AppException e, TranslationPack loc) {
   if (e.statusCode == 429 || e.code == 'RATE_LIMIT_EXCEEDED') return loc.t('errorTooFast');
   if (e.code == 'STREAM_MONTHLY_LIMIT_REACHED') return loc.t('streamMonthlyLimitReached');
   return e.message;
+}
+
+String _qualityLabelFor(String userType) {
+  switch (userType) {
+    case 'pro_plus':
+    case 'premium':
+      return '1080p';
+    case 'pro':
+      return '720p';
+    default:
+      return '540p';
+  }
+}
+
+class _StreamQualityInfoRow extends StatelessWidget {
+  final String userType;
+  final TranslationPack loc;
+  const _StreamQualityInfoRow({required this.userType, required this.loc});
+
+  @override
+  Widget build(BuildContext context) {
+    final quality = _qualityLabelFor(userType);
+    final tierName = switch (userType) {
+      'pro_plus' => 'PRO+',
+      'premium'  => 'PREMIUM',
+      'pro'      => 'PRO',
+      _          => null,
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.hd_outlined, size: 18),
+          const SizedBox(width: 8),
+          Text(
+            quality,
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+          ),
+          if (tierName != null) ...[
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+              decoration: BoxDecoration(
+                color: const Color(0xFFD97706).withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: const Color(0xFFD97706).withValues(alpha: 0.4)),
+              ),
+              child: Text(
+                tierName,
+                style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Color(0xFFD97706)),
+              ),
+            ),
+          ],
+          const Spacer(),
+          Text(
+            loc.tOr('liveStreamQualityLabel', 'Yayın Kalitesi'),
+            style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _InfoRow extends StatelessWidget {

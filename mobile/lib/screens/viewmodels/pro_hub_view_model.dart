@@ -15,6 +15,7 @@ class ProHubState {
   final String userType;
   final String? planType;
   final String? proExpiresAt;
+  final int monthlyStreamSecondsUsed;
 
   const ProHubState({
     this.blastCredits,
@@ -26,6 +27,7 @@ class ProHubState {
     this.userType = 'standard',
     this.planType,
     this.proExpiresAt,
+    this.monthlyStreamSecondsUsed = 0,
   });
 
   ProHubState copyWith({
@@ -38,6 +40,7 @@ class ProHubState {
     String? userType,
     String? planType,
     String? proExpiresAt,
+    int? monthlyStreamSecondsUsed,
   }) {
     return ProHubState(
       blastCredits: blastCredits ?? this.blastCredits,
@@ -49,6 +52,7 @@ class ProHubState {
       userType: userType ?? this.userType,
       planType: planType ?? this.planType,
       proExpiresAt: proExpiresAt ?? this.proExpiresAt,
+      monthlyStreamSecondsUsed: monthlyStreamSecondsUsed ?? this.monthlyStreamSecondsUsed,
     );
   }
 }
@@ -111,6 +115,7 @@ class ProHubViewModel extends AutoDisposeFamilyNotifier<ProHubState, bool> {
       aiDescCredits: results[2],
       reactivationCredits: results[3],
       proExpiresAt: blast?['pro_expires_at'] as String?,
+      monthlyStreamSecondsUsed: (blast?['monthly_stream_seconds_used'] as num?)?.toInt() ?? 0,
       isLoading: false,
     );
   }

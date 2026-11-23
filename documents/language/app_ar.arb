@@ -6709,6 +6709,10 @@
   "tierProPlusDesc": "90% حصة هدايا · 90 ساعة/شهر · 1080p",
   "tierPremiumDesc": "100% حصة هدايا · بث غير محدود · 1080p",
 
+  "proStreamHoursTitle": "ساعات البث",
+  "proStreamHoursUnlimited": "بث غير محدود",
+  "proStreamHoursUsed": "استُخدم {used} / {limit} ساعة",
+  "liveStreamQualityLabel": "جودة البث",
   "streamMonthlyLimitReached": "وصلت إلى الحد الشهري للبث.",
   "streamMonthlyLimitDesc": "انتهت ساعات البث الشهرية لخطتك. تُجدَّد في الدورة التالية أو قم بترقية خطتك.",
 

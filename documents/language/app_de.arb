@@ -6781,6 +6781,10 @@
   "tierProPlusDesc": "90% Geschenkanteil · 90 Std./Monat · 1080p",
   "tierPremiumDesc": "100% Geschenkanteil · Unbegrenzt streamen · 1080p",
 
+  "proStreamHoursTitle": "Stream-Stunden",
+  "proStreamHoursUnlimited": "Unbegrenztes Streaming",
+  "proStreamHoursUsed": "{used} / {limit} Stunden genutzt",
+  "liveStreamQualityLabel": "Stream-Qualität",
   "streamMonthlyLimitReached": "Monatliches Streaming-Limit erreicht.",
   "streamMonthlyLimitDesc": "Die monatlichen Streaming-Stunden Ihres Tarifs sind aufgebraucht. Zurückgesetzt im nächsten Abrechnungszeitraum oder Tarif upgraden.",
 

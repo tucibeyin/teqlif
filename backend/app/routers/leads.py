@@ -155,6 +155,8 @@ async def blast_credits(
         "teqlik_balance": current_user.teqlik_balance,
         "renewal_date":   renewal_date,
         "pro_expires_at": current_user.pro_expires_at.isoformat() if current_user.pro_expires_at else None,
+        "monthly_stream_seconds_used": current_user.monthly_stream_seconds_used,
+        "monthly_stream_reset_at": current_user.monthly_stream_reset_at.isoformat() if current_user.monthly_stream_reset_at else None,
     }
 
 
