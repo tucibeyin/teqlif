@@ -48,6 +48,8 @@ baskısı. Kayıt izleme süresi (24 saat) MinIO ILM kısıtı nedeniyle tüm ü
 
 ## 2. Tier Tablosu
 
+✅ **Tamamlandı — Kasım 2026**
+
 | Özellik | Normal | PRO | PRO+ | PREMIUM |
 |---------|--------|-----|------|---------|
 | **Yayın kalitesi** | 540p | 720p | 1080p | 1080p |
