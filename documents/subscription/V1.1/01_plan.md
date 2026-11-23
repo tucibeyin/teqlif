@@ -610,7 +610,7 @@ Tüm ekranlarda tutarlı:
 - **3 gün önce:** Push notification + in-app banner
 - **Bitince:** Tier Normal'e düşer
   - Aktif canlı yayın sırasında biterse: mevcut yayın tamamlanır, sonraki yayın kısıtlı
-  - **⚠️ Karar gerekiyor:** Kalan aylık stream saatleri sıfırlanır mı, kalan süre kullanılabilir mi?
+  - Kalan aylık stream saatleri **sıfırlanır** — kalan süre aktarılmaz
 - **Yeniden aktivasyon:** "Hoş geldiniz geri" + önceki tier hatırlatıcısı
 
 ---
@@ -618,7 +618,6 @@ Tüm ekranlarda tutarlı:
 ### 8.15 Açık Kararlar (TODO)
 
 - Üyelik Planları ekranı wireframe / tasarım
-- Subscription bitince stream saati davranışı (§8.14 karar)
 - PREMIUM serpiştirilmiş öneri frekansı (A/B test başlangıç değerleri)
 - Kilitli kalite seçici tam etkileşim tasarımı
 - Yayın bitiş özeti ekran tasarımı
