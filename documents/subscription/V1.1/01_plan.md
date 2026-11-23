@@ -811,28 +811,25 @@ Normal ────────────────────────�
 
 #### İlk Ay İndirimli Fiyat (Introductory Offer) ✅
 
-Her tier için ilk aylık abonelikte indirimli fiyat uygulanır.
+Sadece aylık planlara uygulanır. Çok aylık planların kendi indirim yapısı var (%11–26).  
+App Store Connect türü: **Pay as you go** — 1 ay indirimli, sonraki aydan normal fiyat.
 
-| Tier | Normal fiyat | İndirimli fiyat | İndirim |
-|------|-------------|-----------------|---------|
-| PRO | 299,99 ₺ | **TBD** | TBD |
-| PRO+ | 699,99 ₺ | **TBD** | TBD |
-| PREMIUM | 1.299,99 ₺ | **TBD** | TBD |
-
-> ⚠️ **Karar gerekiyor:** İndirimli fiyat miktarları belirlenecek.  
-> App Store Connect'te introductory offer türü: "Pay as you go" (indirimli 1 ay).  
-> Fiyatlar yine App Store Turkey listesinde mevcut bir tier olmalı.
+| Tier | Normal fiyat | İlk ay (%50) | App Store listesinde |
+|------|-------------|--------------|----------------------|
+| PRO 1m | 299,99 ₺ | **149,99 ₺** | ✅ |
+| PRO+ 1m | 699,99 ₺ | **349,99 ₺** | ✅ |
+| PREMIUM 1m | 1.299,99 ₺ | **649,99 ₺** | ✅ |
 
 #### Upgrade Promosyonu ✅
 
-Mevcut abonelere tier yükseltme teşviki.
+**Model: Mevcut tier fiyatında ilk ay** — kullanıcı yeni tieri için ek ödeme hissetmez.  
+App Store Connect: Promotional Offer (mevcut ücretli abonelere özel, subscriber başına 1 kez).
 
-| Yol | Promosyon | Fiyat |
-|----|-----------|-------|
-| PRO → PRO+ | **TBD** | TBD |
-| PRO → PREMIUM | **TBD** | TBD |
-| PRO+ → PREMIUM | **TBD** | TBD |
+| Yol | Normal fiyat | Promo fiyatı | Tasarruf |
+|-----|-------------|--------------|---------|
+| PRO → PRO+ | 699,99 ₺ | **299,99 ₺** | 400 ₺ |
+| PRO+ → PREMIUM | 1.299,99 ₺ | **699,99 ₺** | 600 ₺ |
+| PRO → PREMIUM | 1.299,99 ₺ | **699,99 ₺** | 600 ₺ |
 
-> ⚠️ **Karar gerekiyor:** Upgrade promosyon türü ve miktarları belirlenecek.  
-> Örnek seçenekler: ilk ay hedef tier PRO fiyatında / %50 indirimli / 1 ay ücretsiz.  
-> App Store Connect: Promotional Offer (mevcut abonelere özel, platform korumalı).
+> Psikolojik çerçeveleme: "Bu ay PRO fiyatına PRO+ dene" — ek maliyet hissi yok.  
+> Ay 2'den itibaren yeni tier normal fiyatı geçerli.
