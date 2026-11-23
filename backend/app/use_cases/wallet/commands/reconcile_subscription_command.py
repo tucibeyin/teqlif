@@ -46,7 +46,7 @@ class ReconcileSubscriptionCommand:
 
         # Ücretli abonelik yoksa reconcile gerekmiyor
         if not is_paid_tier(user_type):
-            return {"changed": False, "is_pro": False}
+            return {"changed": False, "user_type": "standard"}
 
         # store_subscription_id yoksa client-side restore gerekiyor
         if not sub_id or platform != "apple":

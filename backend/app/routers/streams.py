@@ -210,7 +210,7 @@ async def audience_insights(
     high_value = sum(1 for b in budgets if b >= 1000)
     medium_value = sum(1 for b in budgets if 250 <= b < 1000)
     low_budget = sum(1 for b in budgets if b < 250)
-    ready_buyers = sum(1 for r in user_data if (r.user_type == 'pro'))
+    ready_buyers = sum(1 for r in user_data if r.user_type != 'standard')
 
     pip_count = len(pip_members_raw) if pip_members_raw else 0
     return {

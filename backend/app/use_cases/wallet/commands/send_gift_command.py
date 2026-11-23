@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import BadRequestException, InsufficientFundsException, NotFoundException
 from app.core.logger import get_logger
+from app.services.subscription.tier import commission_rate
 
 logger = get_logger(__name__)
 
@@ -21,9 +22,6 @@ GIFT_COSTS: dict[str, int] = {
     "rocket":        500,
     "trophy":        1000,
 }
-
-_HOST_SHARE_PRO = 95   # %95
-_HOST_SHARE_STD = 70   # %70
 
 
 class SendGiftCommand:
@@ -78,7 +76,8 @@ class SendGiftCommand:
             raise BadRequestException(code="RECEIVER_IS_NOT_STREAM_HOST")
 
         # ── Kazanç hesabı ──────────────────────────────────────────────────────
-        host_share_pct = _HOST_SHARE_PRO if receiver_type == "pro" else _HOST_SHARE_STD
+        # Tier'a göre host payı: tier.py COMMISSION_RATE tek kaynak.
+        host_share_pct  = int(commission_rate(receiver_type) * 100)
         earned_teqlik   = math.floor(cost * host_share_pct / 100)  # INTEGER
         platform_teqlik = cost - earned_teqlik
 

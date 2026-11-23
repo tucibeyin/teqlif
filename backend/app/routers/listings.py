@@ -862,8 +862,8 @@ async def generate_description(
     )
 
     teqlik_spent = 0
-    if current_user.user_type != 'pro' or ai_used_new > _ai_desc_limit:
-        # Standart kullanıcı VEYA PRO ücretsiz limitini aştı → atomik DB düşürme LLM öncesi
+    if not is_paid_tier(current_user.user_type) or ai_used_new > _ai_desc_limit:
+        # Standart kullanıcı VEYA ücretli tier ücretsiz limitini aştı → atomik DB düşürme LLM öncesi
         result = await db.execute(
             sql_text(
                 "UPDATE users SET teqlik_balance = teqlik_balance - :cost "
@@ -874,7 +874,7 @@ async def generate_description(
         )
         if result.scalar_one_or_none() is None:
             raise InsufficientFundsException(
-                code="MONTHLY_LIMIT_INSUFFICIENT_FUNDS" if current_user.user_type == 'pro' else "INSUFFICIENT_FUNDS"
+                code="MONTHLY_LIMIT_INSUFFICIENT_FUNDS" if is_paid_tier(current_user.user_type) else "INSUFFICIENT_FUNDS"
             )
         db.add(TeqlikTransaction(user_id=current_user.id, amount=-_ai_desc_cost, transaction_type="spend_ai_desc"))
         await db.commit()

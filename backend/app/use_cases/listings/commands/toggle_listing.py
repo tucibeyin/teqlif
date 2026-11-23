@@ -17,6 +17,7 @@ from app.models.teqlik_transaction import TeqlikTransaction
 from app.models.user import User
 from app.services import credit_service
 from app.services.credit_service import CreditFeature
+from app.services.subscription.tier import is_paid_tier
 
 logger = get_logger(__name__)
 
@@ -56,7 +57,7 @@ class ToggleListingCommand:
                     is_free = True
                     is_free_due_to_window = True
                 else:
-                    if current_user.user_type == 'pro':
+                    if is_paid_tier(current_user.user_type):
                         used = await credit_service.get_used(CreditFeature.REACTIVATION, current_user.id, current_user.premium_since)
                         is_free = used < credit_service.free_limit(CreditFeature.REACTIVATION, current_user.user_type)
 
