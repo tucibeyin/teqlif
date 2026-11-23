@@ -15,6 +15,7 @@ from fastapi import APIRouter, Depends, Query
 from app.core.exceptions import NotFoundException, ForbiddenException, InsufficientFundsException, CooldownException
 from app.services import credit_service
 from app.services.credit_service import CreditFeature
+from app.services.subscription.tier import is_paid_tier
 from pydantic import BaseModel, Field
 from sqlalchemy import select, text as sql_text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -401,7 +402,7 @@ async def retargeting_audience(
     PRO: İlanı görüntüleyen ama satın almayan kullanıcı sayısını döner.
     ClickHouse feed_analytics + user_events tablosundan çekilir.
     """
-    if current_user.user_type != 'pro':
+    if not is_paid_tier(current_user.user_type):
         raise ForbiddenException(code="PRO_REQUIRED")
 
     listing = await db.scalar(
@@ -505,7 +506,7 @@ async def send_retargeting(
     PRO: İlanı görüntüleyen ama satın almayan kullanıcılara kişiselleştirilmiş bildirim gönderir.
     1 TEQlik per kişi (blast kredi sayımına dahil edilmez — ayrı bir işlem).
     """
-    if current_user.user_type != 'pro':
+    if not is_paid_tier(current_user.user_type):
         raise ForbiddenException(code="PRO_REQUIRED")
 
     listing = await db.scalar(

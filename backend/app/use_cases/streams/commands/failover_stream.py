@@ -7,6 +7,7 @@ from app.models.stream import LiveStream
 from app.models.enums import StreamStatus
 from app.core.logger import get_logger
 from app.schemas.stream import StreamTokenOut
+from app.services.subscription.tier import quality_profile as tier_quality
 
 logger = get_logger(__name__)
 
@@ -87,7 +88,7 @@ class FailoverStreamCommand:
 
         user = stream.host
         token = make_livekit_token(new_room, user, can_publish=True)
-        quality_profile = "pro" if user.user_type == 'pro' else "standard"
+        quality_profile = tier_quality(user.user_type)
         return StreamTokenOut(
             stream_id=stream_id,
             room_name=new_room,

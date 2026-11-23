@@ -25,6 +25,7 @@ from app.core.uow import SqlAlchemyUnitOfWork
 
 from app.core.logger import get_logger
 from app.services.like_service import LikeService
+from app.services.subscription.tier import is_paid_tier, FEED_PREMIUM_BOOST, TIER_PREMIUM
 
 logger = get_logger(__name__)
 from app.use_cases.feed.queries.swipe_live_queries import SwipeLiveQueries
@@ -314,7 +315,7 @@ async def get_stream_recording(
         raise HTTPException(status_code=404, detail={"error": {"code": "STREAM_NOT_FOUND"}})
     if stream.host_id != current_user.id:
         raise HTTPException(status_code=403, detail={"error": {"code": "FORBIDDEN"}})
-    if current_user.user_type != 'pro':
+    if not is_paid_tier(current_user.user_type):
         raise HTTPException(status_code=403, detail={"error": {"code": "PRO_REQUIRED"}})
 
     # Concat tamamlanmışsa birleşik kayıt önceliklenir; yoksa en son part döner
@@ -440,7 +441,11 @@ async def get_recording_summary(
     if stream.host_id != current_user.id:
         raise HTTPException(status_code=403, detail={"error": {"code": "FORBIDDEN"}})
 
-    return await GetRecordingSummaryQuery(db, uploads_host=settings.uploads_host).execute(stream_id)
+    return await GetRecordingSummaryQuery(
+        db,
+        uploads_host=settings.uploads_host,
+        host_user_type=current_user.user_type,
+    ).execute(stream_id)
 
 
 @router.get("/{stream_id}/viewers")
@@ -822,11 +827,23 @@ async def get_raid_targets(
         viewer_map[s.id] = int(rv)   if rv else s.viewer_count
         hype_map[s.id]   = float(rh) if rh else 0.0
 
+    # Takip edilen host ID'leri (PREMIUM boost takip dışı yayıncılara uygulanır)
+    from sqlalchemy import text as _text
+    following_rows = await db.execute(
+        _text("SELECT following_id FROM follows WHERE follower_id = :uid"),
+        {"uid": current_user.id},
+    )
+    following_ids: set[int] = {r[0] for r in following_rows.fetchall()}
+
     def _score(s: LiveStream) -> float:
         affinity = min(interests.get(s.category or "", 0.05), 1.0)
         hype = min(hype_map.get(s.id, 0.0) / 100.0, 1.0)
         viewers = math.log1p(viewer_map.get(s.id, 0)) / 10.0
-        return affinity * 0.55 + hype * 0.30 + viewers * 0.15
+        base = affinity * 0.55 + hype * 0.30 + viewers * 0.15
+        host_type = s.host.user_type if s.host else "standard"
+        is_unfollowed = s.host_id not in following_ids
+        boost = FEED_PREMIUM_BOOST if (host_type == TIER_PREMIUM and is_unfollowed) else 0.0
+        return base + boost
 
     top3 = sorted(streams, key=_score, reverse=True)[:3]
 

@@ -10,12 +10,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logger import get_logger
 from app.services.store.notifications.base import StoreNotificationHandler
+from app.services.subscription.tier import tier_from_product, plan_type_from_product
 
 logger = get_logger(__name__)
 
 _PLAY_BASE = "https://androidpublisher.googleapis.com/androidpublisher/v3"
 
 # subscriptionNotification.notificationType değerleri
+_TYPE_PURCHASED       = 1
 _TYPE_RENEWED         = 2
 _TYPE_CANCELED        = 3
 _TYPE_ON_HOLD         = 5
@@ -73,7 +75,7 @@ class GoogleNotificationHandler(StoreNotificationHandler):
 
         user_id = user[0]
 
-        if notif_type == _TYPE_RENEWED:
+        if notif_type in (_TYPE_PURCHASED, _TYPE_RENEWED):
             await self._handle_renewed(user_id, purchase_token, subscription_id, package_name)
         elif notif_type in (_TYPE_REVOKED, _TYPE_EXPIRED):
             await self._handle_expired(user_id, notif_type)
@@ -84,8 +86,11 @@ class GoogleNotificationHandler(StoreNotificationHandler):
                 label, user_id,
             )
         elif notif_type == _TYPE_CANCELED:
-            # Abonelik iptal edildi ama expire olmadı — EXPIRED/REVOKED gelince düşürülür.
-            logger.info("[GoogleNotif] CANCELED | user=%s — EXPIRED beklenecek", user_id)
+            await self._session.execute(
+                text("UPDATE users SET auto_renew_enabled = FALSE WHERE id = :uid"),
+                {"uid": user_id},
+            )
+            logger.info("[GoogleNotif] CANCELED | user=%s auto_renew_enabled=False", user_id)
         else:
             logger.info("[GoogleNotif] İşlenmeyen tip | type=%s user=%s", notif_type, user_id)
 
@@ -102,20 +107,37 @@ class GoogleNotificationHandler(StoreNotificationHandler):
         if expires_at is None:
             logger.warning("[GoogleNotif] RENEWED expiry alınamadı | user=%s", user_id)
             return
-        await self._session.execute(
-            text(
-                "UPDATE users SET user_type = 'pro', pro_expires_at = :exp, pro_grace_until = NULL "
-                "WHERE id = :uid"
-            ),
-            {"exp": expires_at, "uid": user_id},
-        )
-        logger.info("[GoogleNotif] RENEWED | user=%s expires=%s", user_id, expires_at)
+        new_tier  = tier_from_product(subscription_id)
+        plan_type = plan_type_from_product(subscription_id)
+        if new_tier and plan_type:
+            await self._session.execute(
+                text(
+                    "UPDATE users SET user_type = :tier, plan_type = :plan, "
+                    "pro_expires_at = :exp, pro_grace_until = NULL, "
+                    "auto_renew_enabled = TRUE, pending_tier = NULL, "
+                    "monthly_stream_seconds_used = 0, monthly_stream_reset_at = NOW() "
+                    "WHERE id = :uid"
+                ),
+                {"tier": new_tier, "plan": plan_type, "exp": expires_at, "uid": user_id},
+            )
+        else:
+            await self._session.execute(
+                text(
+                    "UPDATE users SET pro_expires_at = :exp, pro_grace_until = NULL, "
+                    "monthly_stream_seconds_used = 0, monthly_stream_reset_at = NOW() "
+                    "WHERE id = :uid"
+                ),
+                {"exp": expires_at, "uid": user_id},
+            )
+        logger.info("[GoogleNotif] RENEWED | user=%s tier=%s expires=%s", user_id, new_tier, expires_at)
 
     async def _handle_expired(self, user_id: int, notif_type: int) -> None:
         await self._session.execute(
             text(
-                "UPDATE users SET user_type = 'standard', "
-                "pro_expires_at = NULL, pro_grace_until = NULL "
+                "UPDATE users SET last_tier = user_type, user_type = 'standard', "
+                "plan_type = NULL, pro_expires_at = NULL, pro_grace_until = NULL, "
+                "auto_renew_enabled = TRUE, pending_tier = NULL, "
+                "monthly_stream_seconds_used = 0, monthly_stream_reset_at = NULL "
                 "WHERE id = :uid"
             ),
             {"uid": user_id},

@@ -5,6 +5,7 @@ from app.core.logger import get_logger
 from app.core.exceptions import BadRequestException, NotFoundException
 from app.models.enums import StreamStatus
 from app.models.stream import LiveStream
+from app.services.subscription.tier import quality_profile, stream_limit_seconds
 
 PENDING_STALE_MINUTES = 5
 
@@ -31,6 +32,11 @@ class StartStreamCommand:
             user = await self.uow.users.get(user_id)
             if not user:
                 raise NotFoundException(code="USER_NOT_FOUND")
+
+            # Aylık yayın süresi kontrolü
+            limit = stream_limit_seconds(user.user_type)
+            if limit is not None and (user.monthly_stream_seconds_used or 0) >= limit:
+                raise BadRequestException(code="STREAM_MONTHLY_LIMIT_REACHED")
 
             existing = await self.uow.session.scalar(
                 select(LiveStream).where(
@@ -100,8 +106,8 @@ class StartStreamCommand:
         except Exception as exc:
             logger.warning("[StartStreamCommand] room_to_stream mapping yazılamadı: %s", exc)
 
-        quality_profile = "pro" if user.user_type == 'pro' else "standard"
-        logger.info("[StartStreamCommand] Başarılı | stream_id=%s node=%s quality=%s", new_stream.id, node.get("node_id"), quality_profile)
+        video_quality = quality_profile(user.user_type)
+        logger.info("[StartStreamCommand] Başarılı | stream_id=%s node=%s quality=%s", new_stream.id, node.get("node_id"), video_quality)
 
         return {
             "stream_id": new_stream.id,
@@ -109,5 +115,5 @@ class StartStreamCommand:
             "livekit_url": node["livekit_url"],  # DB'ye yazılan node ile aynı
             "token": token,
             "category": category if category else "other",
-            "video_quality_profile": quality_profile,
+            "video_quality_profile": video_quality,
         }

@@ -294,9 +294,11 @@ async def check_expired_pro_users_task(ctx: dict) -> None:
             result = await session.execute(
                 text(
                     "UPDATE users "
-                    "SET user_type = 'standard', plan_type = NULL, "
-                    "    pro_expires_at = NULL, pro_grace_until = NULL "
-                    "WHERE user_type = 'pro' "
+                    "SET last_tier = user_type, user_type = 'standard', plan_type = NULL, "
+                    "    pro_expires_at = NULL, pro_grace_until = NULL, "
+                    "    auto_renew_enabled = TRUE, pending_tier = NULL, "
+                    "    monthly_stream_seconds_used = 0, monthly_stream_reset_at = NULL "
+                    "WHERE user_type IN ('pro', 'pro_plus', 'premium') "
                     "  AND pro_expires_at IS NOT NULL "
                     "  AND pro_expires_at < NOW() "
                     "  AND (pro_grace_until IS NULL OR pro_grace_until < NOW())"

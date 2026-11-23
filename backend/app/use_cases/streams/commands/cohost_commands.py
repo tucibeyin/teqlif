@@ -8,6 +8,7 @@ from app.utils.redis_client import get_redis
 from app.use_cases.chat.chat_utils import publish_chat
 from app.constants import ws_types as WS
 from app.core.logger import get_logger
+from app.services.subscription.tier import quality_profile as tier_quality
 from app.services.edge_orchestrator import orchestrator, ServiceType
 
 logger = get_logger(__name__)
@@ -121,7 +122,7 @@ class AcceptCohostInviteCommand:
                 logger.warning("[COHOST] cohost:joined pub/sub başarısız: %s", exc)
 
             token = make_livekit_token(stream.room_name, current_user, can_publish=True)
-            quality_profile = "pro" if current_user.user_type == 'pro' else "standard"
+            quality_profile = tier_quality(current_user.user_type)
             return StreamTokenOut(
                 stream_id=stream.id,
                 room_name=stream.room_name,

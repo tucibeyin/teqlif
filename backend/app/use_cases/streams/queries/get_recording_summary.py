@@ -1,5 +1,6 @@
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
+from app.services.subscription.tier import commission_rate
 
 
 class GetRecordingSummaryQuery:
@@ -8,15 +9,16 @@ class GetRecordingSummaryQuery:
 
     Döndürür:
       stream   — başlık, tarih, pik izleyici
-      metrics  — toplam gelir, teklif sayısı, satış sayısı
+      metrics  — toplam gelir, commission_rate, net_earnings, teklif/satış sayısı
       auctions — müzayedeler + kazanan + teklifler (auction_id üzerinden)
       direct_sales — direkt satışlar + siparişler
       gifts    — hediye özeti + olay listesi
     """
 
-    def __init__(self, db: AsyncSession, uploads_host: str = ""):
+    def __init__(self, db: AsyncSession, uploads_host: str = "", host_user_type: str = "standard"):
         self._db = db
         self._uploads_host = uploads_host.rstrip("/")
+        self._commission_rate = commission_rate(host_user_type)
 
     async def execute(self, stream_id: int) -> dict:
         stream = await self._fetch_stream(stream_id)
@@ -28,7 +30,7 @@ class GetRecordingSummaryQuery:
         direct_sales = await self._fetch_direct_sales(stream_id, recording_started_at)
         gifts        = await self._fetch_gifts(stream_id, recording_started_at)
         chat_messages = await self._fetch_chat_messages(stream_id, recording_started_at)
-        metrics      = self._compute_metrics(auctions, direct_sales, gifts)
+        metrics      = self._compute_metrics(auctions, direct_sales, gifts, self._commission_rate)
 
         return {
             "recording_expires_at": stream.pop("recording_expires_at", None),
@@ -272,7 +274,7 @@ class GetRecordingSummaryQuery:
     # ── Metrikler ─────────────────────────────────────────────────────────────
 
     @staticmethod
-    def _compute_metrics(auctions: list, direct_sales: list, gifts: dict) -> dict:
+    def _compute_metrics(auctions: list, direct_sales: list, gifts: dict, rate: float = 0.50) -> dict:
         auction_revenue = sum(
             a["final_price"] for a in auctions
             if a["sold"] and a["final_price"]
@@ -283,14 +285,17 @@ class GetRecordingSummaryQuery:
             for o in ds["orders"]
         )
         total_revenue = auction_revenue + ds_revenue
+        net_earnings  = round(total_revenue * rate, 2)
 
         total_bids  = sum(a["bid_count"] for a in auctions)
         total_sales = sum(ds["sold_count"] for ds in direct_sales)
 
         return {
-            "total_revenue": round(total_revenue, 2),
-            "total_bids":    total_bids,
-            "total_sales":   total_sales,
+            "total_revenue":   round(total_revenue, 2),
+            "commission_rate": rate,
+            "net_earnings":    net_earnings,
+            "total_bids":      total_bids,
+            "total_sales":     total_sales,
         }
 
     # ── Yardımcı ─────────────────────────────────────────────────────────────

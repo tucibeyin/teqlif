@@ -47,6 +47,7 @@ from app.core.exceptions import (
 )
 from app.services import credit_service
 from app.services.credit_service import CreditFeature
+from app.services.subscription.tier import is_paid_tier
 from app.core.read_cache import cache_get, cache_set, cache_get_etag, etag_normalize
 from app.utils.redis_client import get_redis
 
@@ -811,7 +812,7 @@ class GenerateDescriptionRequest(BaseModel):
 @router.get("/ai-desc-credits")
 async def ai_desc_credits(current_user: User = Depends(get_current_user)):
     """PRO kullanıcının bu ayki AI açıklama yazarı kredi durumunu döndürür."""
-    if current_user.user_type != 'pro':
+    if not is_paid_tier(current_user.user_type):
         return {
             "used": 0, "limit": 0, "remaining": 0,
             "cost_teqlik": credit_service.cost_teqlik(CreditFeature.AI_DESC),
@@ -828,7 +829,7 @@ async def ai_desc_credits(current_user: User = Depends(get_current_user)):
         "limit":      limit,
         "remaining":  remaining,
         "cost_teqlik": credit_service.cost_teqlik(CreditFeature.AI_DESC),
-        "user_type":  "pro",
+        "user_type":  current_user.user_type,
         "renewal_date": renewal_date,
     }
 

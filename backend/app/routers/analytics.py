@@ -24,6 +24,7 @@ from app.utils.redis_client import get_redis
 from app.core.exceptions import AppException, InsufficientFundsException, ServiceException, ForbiddenException, NotFoundException
 from app.services import credit_service
 from app.services.credit_service import CreditFeature
+from app.services.subscription.tier import is_paid_tier
 from app.database_clickhouse import get_clickhouse_client, get_buffered_user_event_stats
 from app.models.market_index import ExchangeRates
 from app.models.ad_campaign import AdCampaign
@@ -530,7 +531,7 @@ async def reactivation_credits(
 ):
     """PRO kullanıcının bu ayki reaktivasyon kredi durumunu döndürür."""
     reactivation_cost = credit_service.cost_teqlik(CreditFeature.REACTIVATION)
-    if current_user.user_type != 'pro':
+    if not is_paid_tier(current_user.user_type):
         return {
             "used": 0,
             "limit": 0,
@@ -573,7 +574,7 @@ async def reactivation_credits(
         "remaining": remaining,
         "free_remaining": remaining,
         "cost_teqlik": reactivation_cost,
-        "user_type": "pro",
+        "user_type": current_user.user_type,
         "renewal_date": renewal_date,
         "cost": cost,
         "balance": current_user.teqlik_balance,
@@ -745,7 +746,7 @@ async def pro_insights(
     """
     from app.use_cases.analytics.pro_insights_use_case import ProInsightsUseCase
 
-    if current_user.user_type != 'pro':
+    if not is_paid_tier(current_user.user_type):
         raise ForbiddenException(code="PRO_REQUIRED")
 
     uid = current_user.id
@@ -1070,7 +1071,7 @@ async def my_feed_stats(
     Pro satıcıya özel feed performans istatistikleri.
     Kullanıcının kendi ilanlarının impression/click/skip/CTR/dwell verilerini döndürür.
     """
-    if current_user.user_type != 'pro':
+    if not is_paid_tier(current_user.user_type):
         raise ForbiddenException(code="PRO_REQUIRED")
 
     # Kullanıcının aktif ilan ID'lerini al
@@ -1240,7 +1241,7 @@ async def video_roi(
     Pro: Kullanıcının video ilanları ile fotoğraf ilanlarının CTR karşılaştırması.
     content_type='video' vs 'photo' segmentinde impression/click/CTR ayrımı.
     """
-    if current_user.user_type != 'pro':
+    if not is_paid_tier(current_user.user_type):
         raise ForbiddenException(code="PRO_REQUIRED")
 
     _vroi_redis = None
@@ -1359,7 +1360,7 @@ async def gallery_stats(
     user_events tablosundaki listing_photo_swipe olayları kullanılır;
     duration_seconds alanı max_page_reached değerini taşır.
     """
-    if current_user.user_type != 'pro':
+    if not is_paid_tier(current_user.user_type):
         raise ForbiddenException(code="PRO_REQUIRED")
 
     _gs_redis = None
@@ -1460,7 +1461,7 @@ async def video_performance(
     user_events tablosundaki listing_video_watch olayları kullanılır;
     duration_seconds alanı watch_pct (0.0–1.0) değerini taşır.
     """
-    if current_user.user_type != 'pro':
+    if not is_paid_tier(current_user.user_type):
         raise ForbiddenException(code="PRO_REQUIRED")
 
     _vp_redis = None
@@ -1549,7 +1550,7 @@ async def demand_radar(
     Pro: Platform genelindeki arama trendleri.
     En çok aranan kelimeler ve kategori bazlı arama hacmi.
     """
-    if current_user.user_type != 'pro':
+    if not is_paid_tier(current_user.user_type):
         raise ForbiddenException(code="PRO_REQUIRED")
 
     try:
@@ -1655,7 +1656,7 @@ async def get_pro_metrics(
     PRO kullanıcılar için gelişmiş metrikler (T-1).
     Gece batch'te precompute edilir, node1 Redis'ten servis edilir — CH'a dokunmaz.
     """
-    if current_user.user_type != 'pro':
+    if not is_paid_tier(current_user.user_type):
         raise ForbiddenException(code="PRO_REQUIRED")
 
     uid = current_user.id
@@ -1695,7 +1696,7 @@ async def competitor_radar(
     PRO: Kullanıcının ilanını pgvector ile benzer aktif ilanlarla karşılaştırır.
     Fiyat dağılımı, rakip sayısı ve pozisyon sinyali döner.
     """
-    if current_user.user_type != 'pro':
+    if not is_paid_tier(current_user.user_type):
         raise ForbiddenException(code="PRO_REQUIRED")
 
     # ── Cache Check ──────────────────────────────────────────────────────────
@@ -1950,7 +1951,7 @@ async def demand_trends(
     PRO: Son N haftanın search_events verisinden kategori bazlı talep trendi.
     Döner: kategori, haftalık arama sayısı, trend yönü, momentum, arz açığı oranı.
     """
-    if current_user.user_type != 'pro':
+    if not is_paid_tier(current_user.user_type):
         raise ForbiddenException(code="PRO_REQUIRED")
 
     try:

@@ -4619,8 +4619,9 @@ async def precompute_premium_user_analytics_task(ctx: dict) -> None:
         redis = await get_redis()
 
         async with AsyncSessionLocal() as db:
+            from app.services.subscription.tier import PAID_TIERS
             premium_rows = (await db.execute(
-                _select(_User.id, _User.locale).where(_User.user_type == 'pro')  # noqa: E712
+                _select(_User.id, _User.locale).where(_User.user_type.in_(PAID_TIERS))
             )).all()
 
         if not premium_rows:

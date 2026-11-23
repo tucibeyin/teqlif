@@ -17,15 +17,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logger import get_logger
 from app.services.store.apple_server_api import get_subscription_status
+from app.services.subscription.tier import (
+    tier_from_product, plan_type_from_product, is_paid_tier,
+)
 
 logger = get_logger(__name__)
-
-_PLAN_TYPE: dict[str, str] = {
-    "teqlif_pro_1m":  "monthly",
-    "teqlif_pro_3m":  "quarterly",
-    "teqlif_pro_6m":  "biannual",
-    "teqlif_pro_12m": "annual",
-}
 
 
 class ReconcileSubscriptionCommand:
@@ -48,8 +44,8 @@ class ReconcileSubscriptionCommand:
 
         user_type, plan_type, pro_expires_at, sub_id, platform = user
 
-        # PRO değilse reconcile gerekmiyor
-        if user_type != "pro":
+        # Ücretli abonelik yoksa reconcile gerekmiyor
+        if not is_paid_tier(user_type):
             return {"changed": False, "is_pro": False}
 
         # store_subscription_id yoksa client-side restore gerekiyor
@@ -83,8 +79,9 @@ class ReconcileSubscriptionCommand:
                 "expires_at": pro_expires_at.isoformat() if pro_expires_at else None,
             }
 
-        apple_plan = _PLAN_TYPE.get(apple_status.product_id)
-        if not apple_plan:
+        apple_plan = plan_type_from_product(apple_status.product_id)
+        apple_tier = tier_from_product(apple_status.product_id)
+        if not apple_plan or not apple_tier:
             logger.warning(
                 "[SubReconcile] Bilinmeyen Apple productId | user=%s product=%s",
                 user_id, apple_status.product_id,
@@ -98,9 +95,10 @@ class ReconcileSubscriptionCommand:
             and abs((apple_status.expires_at - pro_expires_at.astimezone(timezone.utc)).total_seconds()) > 60
         ) or (apple_status.expires_at is not None and pro_expires_at is None)
 
-        plan_changed = apple_plan != plan_type
+        plan_changed  = apple_plan != plan_type
+        tier_changed  = apple_tier != user_type
 
-        if not plan_changed and not expires_changed:
+        if not plan_changed and not tier_changed and not expires_changed:
             return {
                 "changed": False,
                 "plan_type": plan_type,
@@ -110,10 +108,11 @@ class ReconcileSubscriptionCommand:
         # Güncelle
         await self._session.execute(
             text(
-                "UPDATE users SET plan_type = :plan, pro_expires_at = :exp "
+                "UPDATE users SET user_type = :tier, plan_type = :plan, pro_expires_at = :exp "
                 "WHERE id = :uid"
             ),
             {
+                "tier": apple_tier,
                 "plan": apple_plan,
                 "exp": apple_status.expires_at,
                 "uid": user_id,
@@ -121,13 +120,14 @@ class ReconcileSubscriptionCommand:
         )
 
         logger.info(
-            "[SubReconcile] Güncellendi | user=%s %s→%s expires=%s",
-            user_id, plan_type, apple_plan,
+            "[SubReconcile] Güncellendi | user=%s tier=%s→%s plan=%s→%s expires=%s",
+            user_id, user_type, apple_tier, plan_type, apple_plan,
             apple_status.expires_at.isoformat() if apple_status.expires_at else "?",
         )
 
         return {
             "changed": True,
+            "user_type": apple_tier,
             "plan_type": apple_plan,
             "expires_at": apple_status.expires_at.isoformat() if apple_status.expires_at else None,
             "previous_plan_type": plan_type,

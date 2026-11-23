@@ -75,3 +75,9 @@ class User(Base):
     store_subscription_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
     store_subscription_platform: Mapped[str | None] = mapped_column(String(20), nullable=True)
     pending_refund: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, server_default="false")
+    # Subscription V1.1
+    auto_renew_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, server_default="true")
+    pending_tier: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    last_tier: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    monthly_stream_seconds_used: Mapped[int] = mapped_column(Integer, default=0, nullable=False, server_default="0")
+    monthly_stream_reset_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)

@@ -8,6 +8,7 @@ from app.use_cases.streams.stream_utils import make_livekit_token
 from app.schemas.stream import StreamTokenOut
 from app.services.edge_orchestrator import orchestrator
 from app.core.logger import get_logger
+from app.services.subscription.tier import quality_profile as tier_quality
 
 logger = get_logger(__name__)
 
@@ -66,7 +67,7 @@ class RefreshStreamTokenQuery:
                 stream_id, current_user.id, is_publisher, room_name,
             )
 
-            quality_profile = "pro" if (is_publisher and current_user.user_type == 'pro') else "standard"
+            quality_profile = tier_quality(current_user.user_type) if is_publisher else "standard"
             return StreamTokenOut(
                 stream_id=stream.id,
                 room_name=room_name,

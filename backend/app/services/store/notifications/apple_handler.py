@@ -7,15 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.logger import get_logger
 from app.services.store.apple_verifier import verify_signed_payload_jws
 from app.services.store.notifications.base import StoreNotificationHandler
+from app.services.subscription.tier import tier_from_product, plan_type_from_product
 
 logger = get_logger(__name__)
-
-_PLAN_TYPE: dict[str, str] = {
-    "teqlif_pro_1m":  "monthly",
-    "teqlif_pro_3m":  "quarterly",
-    "teqlif_pro_6m":  "biannual",
-    "teqlif_pro_12m": "annual",
-}
 
 
 class AppleNotificationHandler(StoreNotificationHandler):
@@ -97,9 +91,11 @@ class AppleNotificationHandler(StoreNotificationHandler):
             # Fatura başarısız, grace period yok; abonelik expiresDate'e kadar hala geçerli
             logger.info("[AppleNotif] DID_FAIL_TO_RENEW (billing retry, işlem yok) | user=%s", user_id)
 
+        elif notification_type == "DID_CHANGE_RENEWAL_PREF" and subtype == "DOWNGRADE":
+            await self._handle_downgrade_pref(user_id, tx_claims)
+
         elif notification_type == "DID_CHANGE_RENEWAL_STATUS":
-            # AUTO_RENEW_ENABLED / AUTO_RENEW_DISABLED — kullanıcı tercihi, DB değişikliği yok
-            logger.info("[AppleNotif] DID_CHANGE_RENEWAL_STATUS | subtype=%s user=%s", subtype, user_id)
+            await self._handle_renewal_status(user_id, subtype)
 
         elif notification_type in ("EXPIRED",) or subtype == "GRACE_PERIOD_EXPIRED":
             await self._handle_expired(user_id)
@@ -118,62 +114,98 @@ class AppleNotificationHandler(StoreNotificationHandler):
 
     async def _handle_subscribed(self, user_id: int, tx_claims: dict) -> None:
         product_id = tx_claims.get("productId", "")
-        plan_type = _PLAN_TYPE.get(product_id)
+        new_tier  = tier_from_product(product_id)
+        plan_type = plan_type_from_product(product_id)
         expires_ms = tx_claims.get("expiresDate", 0)
         expires_at = datetime.fromtimestamp(expires_ms / 1000, tz=timezone.utc) if expires_ms else None
-        if not plan_type or not expires_at:
+        if not new_tier or not expires_at:
             logger.warning("[AppleNotif] SUBSCRIBED eksik veri | product=%s user=%s", product_id, user_id)
             return
         await self._session.execute(
             text(
-                "UPDATE users SET user_type = 'pro', plan_type = :plan, "
-                "pro_expires_at = :exp, pro_grace_until = NULL "
+                "UPDATE users SET user_type = :tier, plan_type = :plan, "
+                "pro_expires_at = :exp, pro_grace_until = NULL, "
+                "auto_renew_enabled = TRUE, pending_tier = NULL "
                 "WHERE id = :uid"
             ),
-            {"plan": plan_type, "exp": expires_at, "uid": user_id},
+            {"tier": new_tier, "plan": plan_type, "exp": expires_at, "uid": user_id},
         )
-        logger.info("[AppleNotif] SUBSCRIBED | user=%s plan=%s expires=%s", user_id, plan_type, expires_at)
+        logger.info("[AppleNotif] SUBSCRIBED | user=%s tier=%s plan=%s expires=%s",
+                    user_id, new_tier, plan_type, expires_at)
 
     async def _handle_did_renew(self, user_id: int, tx_claims: dict) -> None:
+        product_id = tx_claims.get("productId", "")
         expires_ms = tx_claims.get("expiresDate", 0)
         expires_at = datetime.fromtimestamp(expires_ms / 1000, tz=timezone.utc)
-        await self._session.execute(
-            text(
-                "UPDATE users SET pro_expires_at = :exp, pro_grace_until = NULL "
-                "WHERE id = :uid"
-            ),
-            {"exp": expires_at, "uid": user_id},
-        )
-        logger.info("[AppleNotif] DID_RENEW | user=%s expires=%s", user_id, expires_at)
+        # Downgrade pending ise bu yenilemede yeni tiere geç
+        new_tier  = tier_from_product(product_id)
+        plan_type = plan_type_from_product(product_id)
+        if new_tier and plan_type:
+            await self._session.execute(
+                text(
+                    "UPDATE users SET user_type = :tier, plan_type = :plan, "
+                    "pro_expires_at = :exp, pro_grace_until = NULL, "
+                    "auto_renew_enabled = TRUE, pending_tier = NULL, "
+                    "monthly_stream_seconds_used = 0, monthly_stream_reset_at = NOW() "
+                    "WHERE id = :uid"
+                ),
+                {"tier": new_tier, "plan": plan_type, "exp": expires_at, "uid": user_id},
+            )
+        else:
+            await self._session.execute(
+                text(
+                    "UPDATE users SET pro_expires_at = :exp, pro_grace_until = NULL, "
+                    "monthly_stream_seconds_used = 0, monthly_stream_reset_at = NOW() "
+                    "WHERE id = :uid"
+                ),
+                {"exp": expires_at, "uid": user_id},
+            )
+        logger.info("[AppleNotif] DID_RENEW | user=%s tier=%s expires=%s", user_id, new_tier, expires_at)
 
     async def _handle_upgrade(self, user_id: int, tx_claims: dict) -> None:
         product_id = tx_claims.get("productId", "")
-        plan_type = _PLAN_TYPE.get(product_id)
+        new_tier  = tier_from_product(product_id)
+        plan_type = plan_type_from_product(product_id)
         expires_ms = tx_claims.get("expiresDate", 0)
         expires_at = datetime.fromtimestamp(expires_ms / 1000, tz=timezone.utc)
-        if plan_type:
+        if new_tier and plan_type:
             await self._session.execute(
                 text(
-                    "UPDATE users SET plan_type = :plan, pro_expires_at = :exp, "
-                    "pro_grace_until = NULL WHERE id = :uid"
+                    "UPDATE users SET user_type = :tier, plan_type = :plan, "
+                    "pro_expires_at = :exp, pro_grace_until = NULL, "
+                    "auto_renew_enabled = TRUE, pending_tier = NULL "
+                    "WHERE id = :uid"
                 ),
-                {"plan": plan_type, "exp": expires_at, "uid": user_id},
+                {"tier": new_tier, "plan": plan_type, "exp": expires_at, "uid": user_id},
             )
-            logger.info("[AppleNotif] UPGRADE | user=%s plan=%s", user_id, plan_type)
+            logger.info("[AppleNotif] UPGRADE | user=%s tier=%s", user_id, new_tier)
         else:
-            logger.warning(
-                "[AppleNotif] UPGRADE bilinmeyen ürün | product_id=%s user=%s",
-                product_id, user_id,
+            logger.warning("[AppleNotif] UPGRADE bilinmeyen ürün | product_id=%s user=%s",
+                           product_id, user_id)
+
+    async def _handle_downgrade_pref(self, user_id: int, tx_claims: dict) -> None:
+        product_id = tx_claims.get("productId", "")
+        new_tier = tier_from_product(product_id)
+        if new_tier:
+            await self._session.execute(
+                text("UPDATE users SET pending_tier = :tier, auto_renew_enabled = FALSE WHERE id = :uid"),
+                {"tier": new_tier, "uid": user_id},
             )
+            logger.info("[AppleNotif] DOWNGRADE pref | user=%s pending_tier=%s", user_id, new_tier)
+
+    async def _handle_renewal_status(self, user_id: int, subtype: str) -> None:
+        enabled = subtype == "AUTO_RENEW_ENABLED"
+        await self._session.execute(
+            text("UPDATE users SET auto_renew_enabled = :val WHERE id = :uid"),
+            {"val": enabled, "uid": user_id},
+        )
+        logger.info("[AppleNotif] DID_CHANGE_RENEWAL_STATUS | user=%s auto_renew=%s", user_id, enabled)
 
     async def _handle_billing_retry(self, user_id: int, tx_claims: dict) -> None:
         grace_ms = tx_claims.get("gracePeriodExpiresDate", 0)
         grace_until = datetime.fromtimestamp(grace_ms / 1000, tz=timezone.utc)
         await self._session.execute(
-            text(
-                "UPDATE users SET user_type = 'pro', pro_grace_until = :grace "
-                "WHERE id = :uid"
-            ),
+            text("UPDATE users SET pro_grace_until = :grace WHERE id = :uid"),
             {"grace": grace_until, "uid": user_id},
         )
         logger.info("[AppleNotif] BILLING_RETRY | user=%s grace_until=%s", user_id, grace_until)
@@ -181,8 +213,10 @@ class AppleNotificationHandler(StoreNotificationHandler):
     async def _handle_expired(self, user_id: int) -> None:
         await self._session.execute(
             text(
-                "UPDATE users SET user_type = 'standard', plan_type = NULL, "
-                "pro_expires_at = NULL, pro_grace_until = NULL "
+                "UPDATE users SET last_tier = user_type, user_type = 'standard', "
+                "plan_type = NULL, pro_expires_at = NULL, pro_grace_until = NULL, "
+                "auto_renew_enabled = TRUE, pending_tier = NULL, "
+                "monthly_stream_seconds_used = 0, monthly_stream_reset_at = NULL "
                 "WHERE id = :uid"
             ),
             {"uid": user_id},
@@ -192,8 +226,10 @@ class AppleNotificationHandler(StoreNotificationHandler):
     async def _handle_revoke(self, user_id: int) -> None:
         await self._session.execute(
             text(
-                "UPDATE users SET user_type = 'standard', plan_type = NULL, "
-                "pro_expires_at = NULL, pro_grace_until = NULL "
+                "UPDATE users SET last_tier = user_type, user_type = 'standard', "
+                "plan_type = NULL, pro_expires_at = NULL, pro_grace_until = NULL, "
+                "auto_renew_enabled = TRUE, pending_tier = NULL, "
+                "monthly_stream_seconds_used = 0, monthly_stream_reset_at = NULL "
                 "WHERE id = :uid"
             ),
             {"uid": user_id},

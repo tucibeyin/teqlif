@@ -12,7 +12,7 @@ def _parse_dt(val) -> datetime:
             pass
     return datetime.now(timezone.utc)
 
-from sqlalchemy import update, delete as sa_delete
+from sqlalchemy import text, update, delete as sa_delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
@@ -100,10 +100,24 @@ async def finalize_stream(stream: LiveStream, db: AsyncSession) -> None:
     if likes_count is not None:
         stream.total_likes = int(likes_count)
 
-    # 2. DB: stream kapat
+    # 2. DB: stream kapat + aylık süre güncelle
     stream.is_live = False
     stream.status = StreamStatus.ENDED
     stream.ended_at = now
+
+    if stream.started_at:
+        started = stream.started_at if stream.started_at.tzinfo else \
+            stream.started_at.replace(tzinfo=timezone.utc)
+        duration_secs = max(0, int((now - started).total_seconds()))
+        if duration_secs > 0:
+            await db.execute(
+                text(
+                    "UPDATE users SET monthly_stream_seconds_used = "
+                    "COALESCE(monthly_stream_seconds_used, 0) + :secs "
+                    "WHERE id = :uid"
+                ),
+                {"secs": duration_secs, "uid": stream.host_id},
+            )
 
     # 3. DB: açık kalan viewer seanslarını kapat
     await db.execute(
