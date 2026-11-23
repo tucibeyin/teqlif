@@ -178,6 +178,19 @@ groups:
           summary: "LiveKit down: {{ $labels.node }}"
           description: "{{ $labels.node }} LiveKit sunucusu 2 dakikadır erişilemiyor — canlı yayınlar etkilenebilir."
 
+  # ── Stalwart mail servisi (systemd collector) ────────────────────────────────
+  - name: stalwart_health
+    interval: 60s
+    rules:
+      - alert: StalwartMailDown
+        expr: node_systemd_unit_state{node="node2", name="stalwart-mail.service", state="active"} == 0
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "stalwart-mail.service çalışmıyor"
+          description: "node2 Stalwart mail servisi 3 dakikadır active değil — mail gönderimi/alımı durmuş olabilir."
+
   # ── ARQ kuyruk derinliği ──────────────────────────────────────────────────────
   - name: arq_queues
     interval: 30s
