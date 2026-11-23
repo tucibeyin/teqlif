@@ -129,7 +129,17 @@ setup_autoupdates() {
     apt-get install -y -qq needrestart
     sed -i "s/^#\?\\\$nrconf{restart}.*$/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
 
-    log_ok "Unattended-upgrades + needrestart (automatic) aktif"
+    # Kritik uygulama servisleri otomatik restart'tan muaf — koordineli yeniden başlatma gerektirir.
+    # Sistem servisleri (sshd, cron vb.) 'a' modunda kalır; sadece teqlif, postgresql, nginx, redis korunur.
+    mkdir -p /etc/needrestart/conf.d
+    cat > /etc/needrestart/conf.d/teqlif.conf <<'NRCONF'
+$nrconf{override_rc}{qr(^teqlif-)}   = 0;
+$nrconf{override_rc}{qr(^postgresql)} = 0;
+$nrconf{override_rc}{qr(^nginx)}      = 0;
+$nrconf{override_rc}{qr(^redis)}      = 0;
+NRCONF
+
+    log_ok "Unattended-upgrades + needrestart (automatic, teqlif servisleri korumalı) aktif"
 }
 
 # ── Dosya sınırları ───────────────────────────────────────────────────────────
