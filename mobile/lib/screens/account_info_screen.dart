@@ -10,6 +10,7 @@ import '../ui_library/components/inputs/teq_text_field.dart';
 import '../ui_library/components/buttons/teq_button.dart';
 import '../core/app_exception.dart';
 import 'viewmodels/account_info_view_model.dart';
+import 'pro_hub_screen.dart';
 
 class AccountInfoScreen extends ConsumerStatefulWidget {
   const AccountInfoScreen({super.key});
@@ -104,6 +105,8 @@ class _AccountInfoScreenState extends ConsumerState<AccountInfoScreen> with Widg
                     ],
                   ),
                 ),
+                const SizedBox(height: 12),
+                _SubscriptionSectionCard(user: user),
               ],
             ),
           );
@@ -539,6 +542,124 @@ class _PhoneSheetState extends ConsumerState<_PhoneSheet> {
               onPressed: widget.onClose,
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+
+class _SubscriptionSectionCard extends ConsumerWidget {
+  final Map<String, dynamic> user;
+  const _SubscriptionSectionCard({required this.user});
+
+  String _tierLabel(String userType, LocalizationService loc) {
+    switch (userType) {
+      case 'pro': return loc.t('tierLabelPro');
+      case 'pro_plus': return loc.t('tierLabelProPlus');
+      case 'premium': return loc.t('tierLabelPremium');
+      default: return loc.t('tierLabelStandard');
+    }
+  }
+
+  List<Color> _tierGradient(String userType) {
+    switch (userType) {
+      case 'premium': return const [Color(0xFF0284C7), Color(0xFF38BDF8)];
+      case 'pro_plus': return const [Color(0xFF7C3AED), Color(0xFFA78BFA)];
+      case 'pro': return const [Color(0xFFD97706), Color(0xFFFFD700)];
+      default: return const [Color(0xFF6B7280), Color(0xFF9CA3AF)];
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationProvider);
+    final userType = user['user_type'] as String? ?? 'standard';
+    final planType = user['plan_type'] as String?;
+    final autoRenew = user['auto_renew_enabled'] as bool? ?? true;
+    final pendingTier = user['pending_tier'] as String?;
+    final isPaid = userType != 'standard';
+    final colors = _tierGradient(userType);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface(context),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border(context), width: 0.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+            child: Text(
+              loc.t('accountInfoSubscriptionSection'),
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary(context)),
+            ),
+          ),
+          const Divider(height: 1),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                ShaderMask(
+                  shaderCallback: (bounds) => LinearGradient(colors: colors).createShader(bounds),
+                  child: const Icon(Icons.workspace_premium, size: 28, color: Colors.white),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _tierLabel(userType, loc),
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                      ),
+                      if (isPaid && planType != null)
+                        Text(
+                          loc.t('accountInfoSubscriptionPlan', params: {'plan': planType}),
+                          style: TextStyle(fontSize: 13, color: AppColors.textSecondary(context)),
+                        ),
+                      if (!autoRenew && isPaid)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(
+                            loc.t('proAutoRenewOff'),
+                            style: const TextStyle(fontSize: 12, color: Color(0xFFEF4444)),
+                          ),
+                        ),
+                      if (pendingTier != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(
+                            loc.t('proPendingDowngrade'),
+                            style: const TextStyle(fontSize: 12, color: Color(0xFFF59E0B)),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => ProHubScreen(isPremium: isPaid)),
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(colors: colors),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      isPaid ? loc.t('accountInfoManageSubscription') : loc.t('accountInfoUpgrade'),
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

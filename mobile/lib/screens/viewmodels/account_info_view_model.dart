@@ -24,6 +24,10 @@ class AccountInfoViewModel extends AutoDisposeAsyncNotifier<AccountInfoState> {
       'full_name': u.fullName,
       'phone': u.phone,
       'phone_verified': u.phoneVerified,
+      'user_type': u.userType,
+      'plan_type': u.planType,
+      'auto_renew_enabled': u.autoRenewEnabled,
+      'pending_tier': u.pendingTier,
     });
   }
 
@@ -41,6 +45,10 @@ class AccountInfoViewModel extends AutoDisposeAsyncNotifier<AccountInfoState> {
         'full_name': u.fullName,
         'phone': u.phone,
         'phone_verified': u.phoneVerified,
+        'user_type': u.userType,
+        'plan_type': u.planType,
+        'auto_renew_enabled': u.autoRenewEnabled,
+        'pending_tier': u.pendingTier,
       }));
     } catch (e, st) {
       if (silent && prev is AsyncData) {

@@ -289,6 +289,9 @@ class CurrentUserDTO(BaseModel):
     last_active_at: Optional[datetime] = None
     store_subscription_id: Optional[str] = None
     store_subscription_platform: Optional[str] = None
+    auto_renew_enabled: bool = True
+    pending_tier: Optional[str] = None
+    last_tier: Optional[str] = None
 
     @computed_field
     @property
