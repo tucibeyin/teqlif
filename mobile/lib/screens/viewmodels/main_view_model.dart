@@ -260,8 +260,21 @@ class MainViewModel extends AutoDisposeAsyncNotifier<MainState> {
         if (sid != null) _navigate(MainNavigationEvent.toLiveStream, sid);
         break;
 
-      case 'new_listing':
       case 'auction_won':
+        final wonLid = listingId();
+        if (wonLid != null) {
+          _navigate(MainNavigationEvent.toListing, wonLid);
+        } else {
+          final wonSid = streamId();
+          if (wonSid != null && !StreamService.isHosting) {
+            _navigate(MainNavigationEvent.toLiveStream, wonSid);
+          } else {
+            _navigate(MainNavigationEvent.toNotificationsTab, null);
+          }
+        }
+        break;
+
+      case 'new_listing':
       case 'search_alert':
       case 'budget_match':
       case 'price_drop_alert':
