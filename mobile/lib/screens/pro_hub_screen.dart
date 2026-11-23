@@ -888,8 +888,9 @@ class _StreamHoursRow extends ConsumerWidget {
                 Text(
                   isUnlimited
                       ? loc.tOr('proStreamHoursUnlimited', 'Sınırsız yayın')
-                      : loc.tOr('proStreamHoursUsed', '{used} / {limit} saat kullanıldı',
-                          {'used': usedHours.toString(), 'limit': limitHours.toString()}),
+                      : loc.tOr('proStreamHoursUsed', '{used} / {limit} saat kullanıldı')
+                          .replaceAll('{used}', usedHours.toString())
+                          .replaceAll('{limit}', (limitHours ?? 0).toString()),
                   style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
                 ),
               ],
@@ -939,14 +940,7 @@ class _StreamHoursRow extends ConsumerWidget {
   }
 }
 
-int? _streamLimitSecondsFor(String userType) {
-  switch (userType) {
-    case 'premium': return null;         // unlimited
-    case 'pro_plus': return 324000;      // 90 h
-    case 'pro': return 108000;           // 30 h
-    default: return 54000;               // 15 h standard
-  }
-}
+int? _streamLimitSecondsFor(String userType) => UserTier.streamLimitSeconds(userType);
 
 class _CreditsSummaryCard extends ConsumerWidget {
   final Map<String, dynamic>? blastCredits;

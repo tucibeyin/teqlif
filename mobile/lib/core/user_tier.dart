@@ -20,4 +20,42 @@ abstract class UserTier {
 
   /// Yalnızca PREMIUM tier ise true döner.
   static bool isPremiumTier(String userType) => userType == premium;
+
+  /// Aylık yayın süresi sınırı (saniye). null = sınırsız (PREMIUM).
+  static int? streamLimitSeconds(String userType) {
+    switch (userType) {
+      case premium: return null;    // sınırsız
+      case proPlus: return 324000;  // 90 saat
+      case pro:     return 108000;  // 30 saat
+      default:      return 54000;   // 15 saat (standard)
+    }
+  }
+
+  /// Tier'ın izin verdiği maksimum yayın kalitesi.
+  static String maxStreamQuality(String userType) {
+    if (isProPlusOrAbove(userType)) return '1080p';
+    if (isPro(userType)) return '720p';
+    return '540p';
+  }
+
+  /// Kullanılabilir kalite seçenekleri (kilitli olmayanlar dahil — tüm olası değerler).
+  static const List<String> allStreamQualities = ['540p', '720p', '1080p'];
+
+  /// Verilen kalite değeri bu tier için kilitli mi?
+  static bool isQualityLocked(String userType, String quality) {
+    switch (quality) {
+      case '1080p': return !isProPlusOrAbove(userType);
+      case '720p':  return !isPaidTier(userType);
+      default:      return false;
+    }
+  }
+
+  /// Kilitli kalite için gereken minimum tier adı.
+  static String requiredTierForQuality(String quality) {
+    switch (quality) {
+      case '1080p': return proPlus;
+      case '720p':  return pro;
+      default:      return standard;
+    }
+  }
 }

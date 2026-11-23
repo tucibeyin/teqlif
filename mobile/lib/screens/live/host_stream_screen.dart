@@ -53,6 +53,9 @@ class HostStreamScreen extends ConsumerStatefulWidget {
   final bool blastApproved;
   final double blastCost;
 
+  /// Kullanıcının seçtiği yayın kalitesi: '540p' | '720p' | '1080p'
+  final String quality;
+
   const HostStreamScreen({
     super.key,
     required this.streamToken,
@@ -60,6 +63,7 @@ class HostStreamScreen extends ConsumerStatefulWidget {
     required this.hostUsername,
     this.blastApproved = false,
     this.blastCost = 0,
+    this.quality = '720p',
   });
 
   @override

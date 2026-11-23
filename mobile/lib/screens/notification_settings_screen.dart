@@ -6,6 +6,7 @@ import '../config/theme.dart';
 import '../ui_library/components/buttons/teq_button.dart';
 import 'viewmodels/notification_settings_view_model.dart';
 import '../core/user_tier.dart';
+import '../widgets/tier_badge.dart';
 
 class NotificationSettingsScreen extends ConsumerWidget {
   final String userType;
@@ -156,6 +157,7 @@ class NotificationSettingsScreen extends ConsumerWidget {
               // ── Pro Bildirim Ayarları ─────────────────────────────
               _ProSection(
                 isPremium: UserTier.isPaidTier(userType),
+                userType: userType,
                 bidThreshold: state.bidThreshold,
                 quietEnabled: state.quietEnabled,
                 quietFrom: state.quietFrom,
@@ -218,6 +220,7 @@ class NotificationSettingsScreen extends ConsumerWidget {
 
 class _ProSection extends ConsumerWidget {
   final bool isPremium;
+  final String userType;
   final int bidThreshold;
   final bool quietEnabled;
   final TimeOfDay quietFrom;
@@ -234,6 +237,7 @@ class _ProSection extends ConsumerWidget {
 
   const _ProSection({
     required this.isPremium,
+    required this.userType,
     required this.bidThreshold,
     required this.quietEnabled,
     required this.quietFrom,
@@ -268,23 +272,7 @@ class _ProSection extends ConsumerWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF0891B2), Color(0xFF06B6D4)],
-                  ),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: const Text(
-                  '👑 PRO',
-                  style: TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
+              TierBadge(userType: userType),
             ],
           ),
           const SizedBox(height: 8),

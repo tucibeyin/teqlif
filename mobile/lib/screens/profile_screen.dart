@@ -75,6 +75,7 @@ import '../utils/snackbar_helper.dart';
 import '../widgets/consent_settings_modal.dart';
 import '../services/media_compressor.dart';
 import '../widgets/pro_subscription_sheet.dart';
+import '../widgets/tier_badge.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import '../services/iap_service.dart';
 
@@ -1725,58 +1726,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                 icon: Icons.workspace_premium_outlined,
                 iconColor: const Color(0xFFD97706),
                 label: loc.t('proHubTitle'),
-                trailing: UserTier.isPaidTier(_userType)
-                    ? Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 7,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFFD97706), Color(0xFFFFD700)],
-                          ),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const FaIcon(
-                              FontAwesomeIcons.crown,
-                              size: 8,
-                              color: Colors.white,
-                            ),
-                            const SizedBox(width: 3),
-                            Text(
-                              _planLabel(loc, _settingsPlanType),
-                              style: const TextStyle(
-                                fontSize: 9,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    : Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFFD97706), Color(0xFFFFD700)],
-                          ),
-                          borderRadius: BorderRadius.circular(50),
-                        ),
-                        child: Text(
-                          ref.read(localizationProvider).t('pro'),
-                          style: const TextStyle(
-                            fontSize: 9,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
+                trailing: TierBadge(userType: _userType),
                 onTap: () => _proHubGuard.run(() async {
                   // StorageService'ten güncel is_premium oku — widget.user stale olabilir
                   final freshInfo = await StorageService.getUserInfo();

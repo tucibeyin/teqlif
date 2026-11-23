@@ -50,6 +50,15 @@ Future<void> showStartStreamDialog(
   final userInfo = await StorageService.getUserInfo();
   final userType = userInfo?['user_type'] as String? ?? UserTier.standard;
 
+  // Aylık stream kullanımı — blast-credits endpoint'inden gelir
+  final blastCreditsData = await providerContainer
+      .read(analyticsServiceProvider)
+      .getBlastCredits();
+  final streamSecondsUsed =
+      (blastCreditsData?['monthly_stream_seconds_used'] as num?)?.toInt() ?? 0;
+
+  if (!context.mounted) return;
+
   final titleController = TextEditingController();
   String? selectedCategory;
   String? selectedSubcategory;
@@ -59,6 +68,7 @@ Future<void> showStartStreamDialog(
   double audienceCost = 0.0;
   bool audienceLoading = false;
   Timer? debounceTimer;
+  String selectedQuality = UserTier.maxStreamQuality(userType);
 
   Future<void> fetchAudience(
     String title,
@@ -90,7 +100,7 @@ Future<void> showStartStreamDialog(
   }
 
   if (!context.mounted) return;
-  final result = await showDialog<(String, String, String, bool, int)?>(
+  final result = await showDialog<(String, String, String, bool, int, String)?>(
     context: context,
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, setStateDialog) => AlertDialog(
@@ -218,8 +228,10 @@ Future<void> showStartStreamDialog(
                     audienceCost: audienceCost.toInt(),
                   );
                   if (confirmed == true && ctx.mounted) {
-                    Navigator.pop(
-                        ctx, (t, selectedCategory!, selectedSubcategory ?? '', true, audienceCost.toInt()));
+                    Navigator.pop(ctx, (
+                      t, selectedCategory!, selectedSubcategory ?? '',
+                      true, audienceCost.toInt(), selectedQuality,
+                    ));
                   }
                 },
                 child: Container(
@@ -270,7 +282,18 @@ Future<void> showStartStreamDialog(
               ),
             ],
             const SizedBox(height: 10),
-            _StreamQualityInfoRow(userType: userType, loc: loc),
+            _StreamQualitySelector(
+              userType: userType,
+              selectedQuality: selectedQuality,
+              loc: loc,
+              onQualitySelected: (q) => setStateDialog(() => selectedQuality = q),
+            ),
+            const SizedBox(height: 8),
+            _StreamHoursWarningRow(
+              userType: userType,
+              streamSecondsUsed: streamSecondsUsed,
+              loc: loc,
+            ),
             if (errorText != null) ...[
               const SizedBox(height: 8),
               Text(
@@ -290,42 +313,55 @@ Future<void> showStartStreamDialog(
             },
             child: Text(loc.t('btnCancel')),
           ),
-          ElevatedButton(
-            key: const Key('live_dialog_btn_baslat'),
-            style: ElevatedButton.styleFrom(backgroundColor: kPrimary),
-            onPressed: () {
-              final t = titleController.text.trim();
-              if (t.isEmpty) {
-                setStateDialog(() => errorText = loc.t('liveStreamTitleRequired'));
-                return;
-              }
-              if (t.length < 3) {
-                setStateDialog(() => errorText = loc.t('liveStreamTitleMin'));
-                return;
-              }
-              if (selectedCategory == null) {
-                setStateDialog(() => errorText = loc.t('liveCategoryRequired'));
-                return;
-              }
-              if (hasSubcategories && selectedSubcategory == null) {
-                setStateDialog(() => errorText = loc.t('liveSubcategoryRequired'));
-                return;
-              }
-              debounceTimer?.cancel();
-              Navigator.pop(ctx, (t, selectedCategory!, selectedSubcategory ?? '', false, 0));
-            },
-            child: Text(
-              audienceSize > 0 ? loc.t('btnStartNormal') : loc.t('liveStartBtn'),
-              style: const TextStyle(color: Colors.white),
-            ),
-          ),
+          Builder(builder: (ctx2) {
+            final limitSecs = UserTier.streamLimitSeconds(userType);
+            final limitReached = limitSecs != null && streamSecondsUsed >= limitSecs;
+            return ElevatedButton(
+              key: const Key('live_dialog_btn_baslat'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: limitReached ? Colors.grey : kPrimary,
+              ),
+              onPressed: limitReached ? null : () {
+                final t = titleController.text.trim();
+                if (t.isEmpty) {
+                  setStateDialog(() => errorText = loc.t('liveStreamTitleRequired'));
+                  return;
+                }
+                if (t.length < 3) {
+                  setStateDialog(() => errorText = loc.t('liveStreamTitleMin'));
+                  return;
+                }
+                if (selectedCategory == null) {
+                  setStateDialog(() => errorText = loc.t('liveCategoryRequired'));
+                  return;
+                }
+                if (hasSubcategories && selectedSubcategory == null) {
+                  setStateDialog(() => errorText = loc.t('liveSubcategoryRequired'));
+                  return;
+                }
+                debounceTimer?.cancel();
+                Navigator.pop(ctx, (
+                  t, selectedCategory!, selectedSubcategory ?? '',
+                  false, 0, selectedQuality,
+                ));
+              },
+              child: Text(
+                limitReached
+                    ? loc.tOr('streamLimitReached', 'Limit Doldu')
+                    : audienceSize > 0
+                        ? loc.t('btnStartNormal')
+                        : loc.t('liveStartBtn'),
+                style: const TextStyle(color: Colors.white),
+              ),
+            );
+          }),
         ],
       ),
     ),
   );
 
   if (result == null) return;
-  final (title, category, subcategory, blastApproved, blastCost) = result;
+  final (title, category, subcategory, blastApproved, blastCost, quality) = result;
 
   providerContainer.read(analyticsServiceProvider).trackEvent('stream_start_intent', {
     'category': category,
@@ -369,6 +405,7 @@ Future<void> showStartStreamDialog(
           hostUsername: hostUsername,
           blastApproved: blastApproved,
           blastCost: blastCost.toDouble(),
+          quality: quality,
         ),
       ),
     );
@@ -488,65 +525,167 @@ String _mapCaptchaError(AppException e, TranslationPack loc) {
   return e.message;
 }
 
-String _qualityLabelFor(String userType) {
-  switch (userType) {
-    case UserTier.proPlus:
-    case UserTier.premium:
-      return '1080p';
-    case UserTier.pro:
-      return '720p';
-    default:
-      return '540p';
-  }
-}
-
-class _StreamQualityInfoRow extends StatelessWidget {
+/// Yayın kalite seçici — tier'a göre 540p/720p/1080p chip'leri
+class _StreamQualitySelector extends StatelessWidget {
   final String userType;
+  final String selectedQuality;
   final TranslationPack loc;
-  const _StreamQualityInfoRow({required this.userType, required this.loc});
+  final void Function(String quality) onQualitySelected;
+
+  const _StreamQualitySelector({
+    required this.userType,
+    required this.selectedQuality,
+    required this.loc,
+    required this.onQualitySelected,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final quality = _qualityLabelFor(userType);
-    final tierName = switch (userType) {
-      UserTier.proPlus => 'PRO+',
-      UserTier.premium => 'PREMIUM',
-      UserTier.pro     => 'PRO',
-      _                => null,
-    };
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.hd_outlined, size: 16),
+            const SizedBox(width: 6),
+            Text(
+              loc.tOr('liveStreamQualityLabel', 'Yayın Kalitesi'),
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Row(
+          children: UserTier.allStreamQualities.map((q) {
+            final locked = UserTier.isQualityLocked(userType, q);
+            final selected = !locked && selectedQuality == q;
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: GestureDetector(
+                onTap: locked
+                    ? () {
+                        final req = UserTier.requiredTierForQuality(q);
+                        final tierLabel = switch (req) {
+                          UserTier.proPlus => 'PRO+',
+                          _ => 'PRO',
+                        };
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              loc.tOr(
+                                'streamQualityLocked',
+                                '$q için $tierLabel üyeliği gerekli',
+                              ).replaceAll('{tier}', tierLabel),
+                            ),
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    : () => onQualitySelected(q),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: locked
+                        ? Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5)
+                        : selected
+                            ? kPrimary
+                            : Theme.of(context).colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: locked
+                          ? Theme.of(context).dividerColor
+                          : selected
+                              ? kPrimary
+                              : Theme.of(context).colorScheme.outline,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (locked) ...[
+                        Icon(Icons.lock_outline, size: 11,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
+                        const SizedBox(width: 3),
+                      ],
+                      Text(
+                        q,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: locked
+                              ? Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)
+                              : selected
+                                  ? Colors.white
+                                  : Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+}
+
+/// Aylık yayın süresi uyarı satırı
+class _StreamHoursWarningRow extends StatelessWidget {
+  final String userType;
+  final int streamSecondsUsed;
+  final TranslationPack loc;
+
+  const _StreamHoursWarningRow({
+    required this.userType,
+    required this.streamSecondsUsed,
+    required this.loc,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final limitSecs = UserTier.streamLimitSeconds(userType);
+    if (limitSecs == null) return const SizedBox.shrink(); // PREMIUM — sınırsız
+
+    final remainingSecs = (limitSecs - streamSecondsUsed).clamp(0, limitSecs);
+    final remainingHours = (remainingSecs / 3600).ceil();
+    final progress = streamSecondsUsed / limitSecs;
+    final isAtLimit = remainingSecs == 0;
+    final isLowWarning = !isAtLimit && progress >= 0.8; // %80 → sarı
+
+    final Color color = isAtLimit
+        ? const Color(0xFFEF4444)
+        : isLowWarning
+            ? const Color(0xFFF59E0B)
+            : const Color(0xFF22C55E);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: isAtLimit || isLowWarning ? 0.4 : 0.2)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.hd_outlined, size: 18),
-          const SizedBox(width: 8),
-          Text(
-            quality,
-            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+          Icon(
+            isAtLimit ? Icons.block_outlined : Icons.timer_outlined,
+            size: 16,
+            color: color,
           ),
-          if (tierName != null) ...[
-            const SizedBox(width: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-              decoration: BoxDecoration(
-                color: const Color(0xFFD97706).withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: const Color(0xFFD97706).withValues(alpha: 0.4)),
-              ),
-              child: Text(
-                tierName,
-                style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Color(0xFFD97706)),
-              ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              isAtLimit
+                  ? loc.tOr('streamLimitReachedWarning', 'Aylık yayın limitine ulaştınız')
+                  : loc.tOr(
+                      'streamHoursLeft',
+                      'Bu ay {hours} saatiniz kaldı',
+                    ).replaceAll('{hours}', remainingHours.toString()),
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color),
             ),
-          ],
-          const Spacer(),
-          Text(
-            loc.tOr('liveStreamQualityLabel', 'Yayın Kalitesi'),
-            style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
         ],
       ),
