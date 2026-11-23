@@ -178,19 +178,6 @@ groups:
           summary: "LiveKit down: {{ $labels.node }}"
           description: "{{ $labels.node }} LiveKit sunucusu 2 dakikadır erişilemiyor — canlı yayınlar etkilenebilir."
 
-  # ── Stalwart mail metrikleri ──────────────────────────────────────────────────
-  - name: stalwart_health
-    interval: 60s
-    rules:
-      - alert: StalwartDown
-        expr: up{component="stalwart"} == 0
-        for: 5m
-        labels:
-          severity: critical
-        annotations:
-          summary: "Stalwart mail sunucusu erişilemiyor"
-          description: "node2 Stalwart (port 8080) 5 dakikadır scrape edilemiyor — mail gönderimi/alımı durmuş olabilir."
-
   # ── ARQ kuyruk derinliği ──────────────────────────────────────────────────────
   - name: arq_queues
     interval: 30s

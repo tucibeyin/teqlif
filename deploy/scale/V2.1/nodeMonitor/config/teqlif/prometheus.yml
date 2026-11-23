@@ -136,20 +136,6 @@ scrape_configs:
       - targets: ['10.10.0.4:6789']
         labels: { node: node4, component: livekit, env: prod }
 
-  # ── Stalwart mail metrikleri ──────────────────────────────────────────────────
-  # Aktifleştirmek için Stalwart config.toml'a aşağıdaki blok eklenmeli:
-  #   [metrics]
-  #   prometheus.enable = true
-  # Yönetim portunda (/api/telemetry/metrics) Prometheus formatında sunar.
-
-  - job_name: 'stalwart'
-    # Stalwart yönetim API'si basic auth istiyor.
-    # Şifre dosyası: nodeMonitor'da /project/teqlif/config/stalwart_metrics_password
-    # Oluşturma: echo -n "ADMIN_SIFRE" > /project/teqlif/config/stalwart_metrics_password
-    metrics_path: /api/telemetry/metrics
-    basic_auth:
-      username: admin
-      password_file: /project/teqlif/config/stalwart_metrics_password
-    static_configs:
-      - targets: ['10.10.0.2:8080']
-        labels: { node: node2, component: stalwart }
+  # stalwart: /api/telemetry/metrics Enterprise özelliği — ücretsiz sürümde desteklenmiyor.
+  # node2 liveness izlemesi node2 node_exporter (10.10.0.2:9100) üzerinden yapılıyor.
+  # Stalwart servis sağlığı için: systemd unit durumu Loki/journal log akışından izleniyor.
