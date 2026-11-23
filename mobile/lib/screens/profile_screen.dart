@@ -388,11 +388,8 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 child: Container(
                                   padding: const EdgeInsets.all(4),
                                   decoration: BoxDecoration(
-                                    gradient: const LinearGradient(
-                                      colors: [
-                                        Color(0xFFD97706),
-                                        Color(0xFFFFD700),
-                                      ],
+                                    gradient: LinearGradient(
+                                      colors: _tierBadgeColors(user?['user_type'] as String? ?? 'pro'),
                                     ),
                                     shape: BoxShape.circle,
                                     border: Border.all(
@@ -8155,5 +8152,13 @@ class _PrivacyBanner extends ConsumerWidget {
         ],
       ),
     );
+  }
+}
+
+List<Color> _tierBadgeColors(String userType) {
+  switch (userType) {
+    case 'premium': return const [Color(0xFF0284C7), Color(0xFF38BDF8)];
+    case 'pro_plus': return const [Color(0xFF7C3AED), Color(0xFFA78BFA)];
+    default: return const [Color(0xFFD97706), Color(0xFFFFD700)];
   }
 }
