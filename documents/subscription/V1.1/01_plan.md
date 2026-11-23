@@ -17,7 +17,7 @@ Tamamlananlar `✅`, devam edenler `🔄`, henüz başlanmayanlar `📋` ile iş
 4. [Flutter / Mobile Değişiklikleri](#4-flutter--mobile-değişiklikleri)
 5. [ARB / OTA Lokalizasyon](#5-arb--ota-lokalizasyon)
 6. [Ekran Değişiklikleri](#6-ekran-değişiklikleri)
-7. [Fiyatlandırma](#7-fiyatlandırma) *(TODO)*
+7. [Fiyatlandırma](#7-fiyatlandırma)
 8. [UI / UX Tasarımı](#8-ui--ux-tasarımı) *(TODO)*
 9. [App Store / Google Play](#9-app-store--google-play) *(TODO)*
 
@@ -31,15 +31,18 @@ V1.0'da yalnızca `standard` ve `pro` vardı; 540p / 720p kalite farkı tek baş
 dönüşüm motivasyonu sağlamıyordu. 1080p ve sınırsız yayın saati iki yeni tier'ı
 meşrulaştırıyor:
 
-- **Normal → PRO:** Yayın süresi (15h → 45h) ve kalite (540p → 720p) + tüm PRO araçlar
+- **Normal → PRO:** Yayın süresi (15h → 30h) ve kalite (540p → 720p) + tüm PRO araçlar
 - **PRO → PRO+:** 1080p kalite + yüksek kredi limitleri — ciddi satıcı segmenti
 - **PRO+ → PREMIUM:** Sınırsız yayın saati — profesyonel / kurumsal satıcılar
 
 ### Yayın Saati Mantığı
 
-Normal kullanıcı için 15 saat/ay ≈ günde ~30 dakika. Açık artırma yapan aktif satıcı
-günde 1+ saat ihtiyaç duyar → doğal PRO dönüşüm baskısı. Kayıt izleme süresi (24 saat)
-MinIO ILM kısıtı nedeniyle tüm ücretli tierlarda aynı kalır.
+Normal kullanıcı için 15 saat/ay ≈ günde ~30 dakika. Aktif mezatçı (3 gün/hafta × 3 saat)
+36 saat/ay ihtiyaç duyar — PRO sınırı (30h) altında kalmaz, PRO+'ya yükseltmek zorunda
+kalır. Günlük yayıncı (3 saat/gün × 30 gün = 90h) PRO+ sınırını tam dolduruyor → PREMIUM
+baskısı. Kayıt izleme süresi (24 saat) MinIO ILM kısıtı nedeniyle tüm ücretli tierlarda aynı kalır.
+
+**Çarpan mantığı:** Normal→PRO: 2× / PRO→PRO+: 3× / PRO+→PREMIUM: sınırsız
 
 ---
 
@@ -48,7 +51,7 @@ MinIO ILM kısıtı nedeniyle tüm ücretli tierlarda aynı kalır.
 | Özellik | Normal | PRO | PRO+ | PREMIUM |
 |---------|--------|-----|------|---------|
 | **Yayın kalitesi** | 540p | 720p | 1080p | 1080p |
-| **Yayın süresi/ay** | 15 saat | 45 saat | 100 saat | Sınırsız |
+| **Yayın süresi/ay** | 15 saat | 30 saat | 90 saat | Sınırsız |
 | **Kayıt izleme** | — | 24 saat | 24 saat | 24 saat |
 | **PRO Araçlara erişim** | — | ✓ | ✓ | ✓ |
 | | | | | |
@@ -123,8 +126,8 @@ bunun yerine `stream_service.py` içinde ayrı fonksiyon:
 
 **Limitler (dakika):**
 - Normal: 900 dk (15 saat)
-- PRO: 2700 dk (45 saat)
-- PRO+: 6000 dk (100 saat)
+- PRO: 1800 dk (30 saat)
+- PRO+: 5400 dk (90 saat)
 - PREMIUM: `None` (sınırsız)
 
 ### 3.3 `routers/streams.py` 📋
@@ -300,15 +303,79 @@ bağlamına göre ayrıştırılacak.
 
 ## 7. Fiyatlandırma
 
-📋 **Henüz belirlenmedi.**
+✅ **Tamamlandı — Kasım 2026**
 
-Ele alınacak konular:
-- Türkiye App Store / Google Play fiyat kademeleri
-- Aylık vs yıllık abonelik (yıllık indirim oranı)
-- PRO, PRO+, PREMIUM TL fiyatları
-- Fiyat / özellik dengesi rakip analizi (Trendyol Live, Instagram Shop vb.)
-- Öğrenci / lansman dönemi indirim politikası
-- Mevcut PRO aboneleri geçiş senaryosu (grandfathering)
+### 7.1 Aylık Taban Fiyatlar
+
+| Tier | Aylık Fiyat | Yayın Saati | Kalite | Saat Başı Maliyet |
+|------|-------------|-------------|--------|-------------------|
+| Normal | Ücretsiz | 15 saat | 540p | — |
+| PRO | 299,99 ₺ | 30 saat | 720p | ~10 ₺/saat |
+| PRO+ | 699,99 ₺ | 90 saat | 1080p | ~7,78 ₺/saat |
+| PREMIUM | 1.299,99 ₺ | Sınırsız | 1080p | — |
+
+> Üst tier saat başı maliyeti düşüyor — upgrade'i finansal olarak meşrulaştırır.
+
+### 7.2 Çok Aylık Fiyat Tablosu
+
+Tüm fiyatlar Türkiye App Store fiyat listesinde mevcut. Sıfır çakışma.
+
+| | 1 ay | 3 ay | İndirim | 6 ay | İndirim | 12 ay | İndirim |
+|---|---|---|---|---|---|---|---|
+| **PRO** | 299,99 ₺ | 799,99 ₺ | %11 | 1.499,99 ₺ | %17 | 2.699,99 ₺ | %25 |
+| **PRO+** | 699,99 ₺ | 1.799,99 ₺ | %14 | 3.499,99 ₺ | %17 | 6.299,99 ₺ | %25 |
+| **PREMIUM** | 1.299,99 ₺ | 3.299,99 ₺ | %15 | 5.999,99 ₺ | %23 | 11.499,99 ₺ | %26 |
+
+**Yıllık tasarruf (kullanıcıya gösterilebilir):**
+
+| Tier | 12 aylıkta tasarruf |
+|------|---------------------|
+| PRO | ~900 ₺ ≈ 3 ay ücretsiz |
+| PRO+ | ~2.100 ₺ ≈ 3 ay ücretsiz |
+| PREMIUM | ~4.100 ₺ ≈ 3+ ay ücretsiz |
+
+### 7.3 App Store Connect Ürün ID'leri
+
+**PRO:**
+```
+teqlif_pro_1m    → 299,99 ₺
+teqlif_pro_3m    → 799,99 ₺
+teqlif_pro_6m    → 1.499,99 ₺
+teqlif_pro_12m   → 2.699,99 ₺
+```
+
+**PRO+ (yeni):**
+```
+teqlif_pro_plus_1m   → 699,99 ₺
+teqlif_pro_plus_3m   → 1.799,99 ₺
+teqlif_pro_plus_6m   → 3.499,99 ₺
+teqlif_pro_plus_12m  → 6.299,99 ₺
+```
+
+**PREMIUM (yeni):**
+```
+teqlif_premium_1m    → 1.299,99 ₺
+teqlif_premium_3m    → 3.299,99 ₺
+teqlif_premium_6m    → 5.999,99 ₺
+teqlif_premium_12m   → 11.499,99 ₺
+```
+
+### 7.4 FOMO Tasarımı — Yayın Saati
+
+| Kullanıcı tipi | Aylık ihtiyaç | Uygun tier | Upgrade baskısı |
+|----------------|---------------|------------|-----------------|
+| Casual satıcı | 5–10 saat | Normal | PRO CTA |
+| Düzenli satıcı | 15–25 saat | PRO | Rahat |
+| Aktif mezatçı (3 gün/hafta × 3 saat) | 36 saat | PRO+ | PRO sınırı (30h) aşılıyor |
+| Günlük yayıncı (3 saat/gün) | 90 saat | PRO+ dolumu | PREMIUM CTA |
+
+### 7.5 Apple / Google Komisyon Notu
+
+- Apple Year 1: %45 Apple alır (Small Business Program'da %30)
+- Apple Year 2+: %30 → %25 (Small Business Program)
+- Google Play: %15 (ilk 1M USD gelire kadar), sonrası %30
+- Net gelir App Store Connect "Proceeds" sütununda görünür; fiyatlandırma bu kesinti
+  sonrası karlılık hesabıyla doğrulandı.
 
 ---
 
