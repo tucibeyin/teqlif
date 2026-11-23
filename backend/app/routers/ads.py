@@ -192,7 +192,7 @@ async def boost_credits(current_user: User = Depends(get_current_user)):
         "limit": limit,
         "remaining": max(0, limit - used),
         "cost_teqlik": credit_service.cost_teqlik(CreditFeature.BOOST),
-        "is_pro": current_user.user_type == 'pro',
+        "is_pro": current_user.user_type != 'standard',
         "renewal_date": renewal_date,
     }
 

@@ -4024,12 +4024,14 @@ class WalletScreen extends ConsumerStatefulWidget {
   final int? initialBalance;
   final List<dynamic> initialHistory;
   final bool isPro;
+  final String userType;
 
   const WalletScreen({
     super.key,
     this.initialBalance,
     this.initialHistory = const [],
     this.isPro = false,
+    this.userType = 'standard',
   });
 
   @override
@@ -4052,6 +4054,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
 
   // Kart 1 — PRO durumu
   late bool _isPro;
+  late String _userType;
   String? _proExpiresAt;
   String? _activePlanType;
   bool _needsRestore = false; // store_subscription_id yoksa Apple sync mümkün değil
@@ -4104,6 +4107,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
     // PRO kullanıcı için bakiye/hareketler sekmesiyle aç; standart için PRO upsell
     _tabController = TabController(length: 3, vsync: this, initialIndex: widget.isPro ? 1 : 0);
     _isPro = widget.isPro;
+    _userType = widget.userType;
     _balance = widget.initialBalance;
     _txns = List.from(widget.initialHistory);
     _load();
@@ -4149,6 +4153,9 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
         if (summaryData.containsKey('is_pro')) {
           _isPro = summaryData['is_pro'] as bool? ?? false;
           isPro = _isPro;
+        }
+        if (summaryData.containsKey('user_type')) {
+          _userType = summaryData['user_type'] as String? ?? 'standard';
         }
         _proExpiresAt   = summaryData['pro_expires_at'] as String?;
         final rawPlan   = summaryData['plan_type'] as String?;
@@ -4292,7 +4299,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
       backgroundColor: Colors.transparent,
       builder: (_) => ProSubscriptionSheet(
         loc: loc,
-        currentPlanId: _isPro ? _activePlanType : null,
+        currentUserType: _isPro ? _userType : null,
         initialPlanId: targetPlanId,
         onPurchaseSuccess: () {
           setState(() => _isPro = true);
@@ -4604,6 +4611,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
             child: _WalletHeroCard(
               balance: _balance,
               isPro: _isPro,
+              userType: _userType,
               proExpiresAt: _proExpiresAt,
               isDark: isDark,
               onBuyTeqlik: () {
@@ -4697,6 +4705,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
                 // ── Sekme 1: PRO ─────────────────────────────────────
                 _ProTab(
                   isPro: _isPro,
+                  userType: _userType,
                   proExpiresAt: _proExpiresAt,
                   activePlanType: _activePlanType,
                   isDark: isDark,
@@ -4792,6 +4801,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
 class _WalletHeroCard extends StatelessWidget {
   final int? balance;
   final bool isPro;
+  final String userType;
   final String? proExpiresAt;
   final bool isDark;
   final VoidCallback onBuyTeqlik;
@@ -4801,6 +4811,7 @@ class _WalletHeroCard extends StatelessWidget {
   const _WalletHeroCard({
     required this.balance,
     required this.isPro,
+    this.userType = 'standard',
     this.proExpiresAt,
     required this.isDark,
     required this.onBuyTeqlik,
@@ -4856,7 +4867,7 @@ class _WalletHeroCard extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              if (isPro) _ProDaysBadge(proExpiresAt: proExpiresAt, loc: loc),
+              if (isPro) _ProDaysBadge(proExpiresAt: proExpiresAt, userType: userType, loc: loc),
             ],
           ),
           const SizedBox(height: 4),
@@ -4996,8 +5007,25 @@ class _WalletHeroCard extends StatelessWidget {
 
 class _ProDaysBadge extends StatelessWidget {
   final String? proExpiresAt;
+  final String userType;
   final TranslationPack loc;
-  const _ProDaysBadge({this.proExpiresAt, required this.loc});
+  const _ProDaysBadge({this.proExpiresAt, this.userType = 'pro', required this.loc});
+
+  List<Color> _gradientColors() {
+    switch (userType) {
+      case 'premium': return const [Color(0xFF0284C7), Color(0xFF38BDF8)];
+      case 'pro_plus': return const [Color(0xFF7C3AED), Color(0xFFA78BFA)];
+      default: return const [Color(0xFFD97706), Color(0xFFFFD700)];
+    }
+  }
+
+  String _tierLabel() {
+    switch (userType) {
+      case 'premium': return 'PREMIUM';
+      case 'pro_plus': return 'PRO+';
+      default: return 'PRO';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -5011,9 +5039,7 @@ class _ProDaysBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFD97706), Color(0xFFFFD700)],
-        ),
+        gradient: LinearGradient(colors: _gradientColors()),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -5024,7 +5050,7 @@ class _ProDaysBadge extends StatelessWidget {
           Text(
             (daysLeft != null && daysLeft > 0)
                 ? loc.t('walletProDaysBadge', {'days': '$daysLeft'})
-                : 'PRO',
+                : _tierLabel(),
             style: const TextStyle(
               color: Colors.white,
               fontSize: 10,
@@ -5846,6 +5872,7 @@ class _TeqlikPackOption extends StatelessWidget {
 
 class _ProTab extends ConsumerWidget {
   final bool isPro;
+  final String userType;
   final String? proExpiresAt;
   final String? activePlanType;
   final bool isDark;
@@ -5856,6 +5883,7 @@ class _ProTab extends ConsumerWidget {
 
   const _ProTab({
     required this.isPro,
+    this.userType = 'standard',
     required this.proExpiresAt,
     this.activePlanType,
     required this.isDark,
@@ -5889,6 +5917,14 @@ class _ProTab extends ConsumerWidget {
       'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
     ];
     return months[m - 1];
+  }
+
+  static List<Color> _tierCardColors(String userType) {
+    switch (userType) {
+      case 'premium': return const [Color(0xFF0284C7), Color(0xFF0EA5E9), Color(0xFF38BDF8)];
+      case 'pro_plus': return const [Color(0xFF7C3AED), Color(0xFF8B5CF6), Color(0xFFA78BFA)];
+      default: return const [Color(0xFFD97706), Color(0xFFF59E0B), Color(0xFFFFD700)];
+    }
   }
 
   @override
@@ -5987,19 +6023,21 @@ class _ProTab extends ConsumerWidget {
           ),
 
         // ── Aktif Abonelik Kartı ─────────────────────────────────────────
-        Container(
+        Builder(builder: (ctx) {
+          final tierColors = _tierCardColors(userType);
+          return Container(
           margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
           padding: const EdgeInsets.fromLTRB(20, 22, 20, 22),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFFD97706), Color(0xFFF59E0B), Color(0xFFFFD700)],
+            gradient: LinearGradient(
+              colors: tierColors,
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFFD97706).withValues(alpha: 0.4),
+                color: tierColors.first.withValues(alpha: 0.4),
                 blurRadius: 20,
                 offset: const Offset(0, 6),
               ),
@@ -6013,7 +6051,8 @@ class _ProTab extends ConsumerWidget {
                   const FaIcon(FontAwesomeIcons.crown, size: 14, color: Colors.white),
                   const SizedBox(width: 7),
                   Text(
-                    _upgradePlans.where((p) => p.$1 == activePlanType).map((p) => loc.t(p.$2)).firstOrNull ?? 'PRO',
+                    _upgradePlans.where((p) => p.$1 == activePlanType).map((p) => loc.t(p.$2)).firstOrNull
+                        ?? (userType == 'premium' ? 'PREMIUM' : userType == 'pro_plus' ? 'PRO+' : 'PRO'),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 18,
@@ -6064,7 +6103,8 @@ class _ProTab extends ConsumerWidget {
               ],
             ],
           ),
-        ),
+        );
+        }),
 
         // ── App Store / Play Store Yönet Butonu ──────────────────────────
         Container(

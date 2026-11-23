@@ -40,7 +40,8 @@ class GetWalletSummaryQuery:
         )
         u = user_row.fetchone()
         teqlik_balance       = u[0] if u else 0
-        is_pro               = (u[1] == "pro") if u else False
+        user_type            = u[1] if u else "standard"
+        is_pro               = (user_type != "standard") if u else False
         pro_expires_at       = u[2].isoformat() if u and u[2] else None
         plan_type            = _PLAN_TYPE_TO_IAP.get(u[3]) if u and u[3] else None
         pending_referred_by  = u[4] if u else None
@@ -114,6 +115,7 @@ class GetWalletSummaryQuery:
             "try_rate": try_rate,
             "cashout_enabled": cashout_enabled,
             "is_pro": is_pro,
+            "user_type": user_type,
             "pro_expires_at": pro_expires_at,
             "plan_type": plan_type,
             "active_withdrawal_id": active_withdrawal_id,
