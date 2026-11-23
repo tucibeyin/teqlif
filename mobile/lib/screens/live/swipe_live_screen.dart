@@ -769,6 +769,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
   final _heartsKey = GlobalKey<FloatingHeartsState>();
   Timer? _likeThrottleTimer;
   bool _likeThrottlePending = false;
+  int _pendingOwnLikes = 0;
   
   LocalVideoTrack? _localVideoTrack;
   String? _myUsername;
@@ -1100,6 +1101,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
   void _onHeartTap() {
     HapticFeedback.lightImpact();
     _heartsKey.currentState?.addHeart(isLocal: true);
+    _pendingOwnLikes++;
     if (_likeThrottleTimer?.isActive ?? false) {
       _likeThrottlePending = true;
     } else {
@@ -1427,8 +1429,13 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
                         setState(() => _isCoHost = true);
                       }
                     },
-                    onStreamLike: (_, _) =>
-                        _heartsKey.currentState?.addHeart(isLocal: false),
+                    onStreamLike: (_, _) {
+                      if (_pendingOwnLikes > 0) {
+                        _pendingOwnLikes--;
+                        return;
+                      }
+                      _heartsKey.currentState?.addHeart(isLocal: false);
+                    },
                     onCoHostInvite: (hostUsername, targetUsername) {
                       if (!mounted || _isSelfCoHost) return;
                       if (targetUsername == _myUsername) {
