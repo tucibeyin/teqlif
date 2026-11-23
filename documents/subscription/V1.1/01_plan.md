@@ -18,7 +18,7 @@ Tamamlananlar `✅`, devam edenler `🔄`, henüz başlanmayanlar `📋` ile iş
 5. [ARB / OTA Lokalizasyon](#5-arb--ota-lokalizasyon)
 6. [Ekran Değişiklikleri](#6-ekran-değişiklikleri)
 7. [Fiyatlandırma](#7-fiyatlandırma)
-8. [UI / UX Tasarımı](#8-ui--ux-tasarımı) *(TODO)*
+8. [UI / UX Tasarımı](#8-ui--ux-tasarımı) 🔄
 9. [App Store / Google Play](#9-app-store--google-play) *(TODO)*
 
 ---
@@ -371,6 +371,21 @@ teqlif_premium_12m   → 11.499,99 ₺
 | Aktif mezatçı (3 gün/hafta × 3 saat) | 36 saat | PRO+ | PRO sınırı (30h) aşılıyor |
 | Günlük yayıncı (3 saat/gün) | 90 saat | PRO+ dolumu | PREMIUM CTA |
 
+### 7.6 Yayın Geliri Paylaşım Modeli
+
+| Tier | Satıcı payı | Teqlif payı |
+|------|-------------|-------------|
+| Normal | %50 | %50 |
+| PRO | %75 | %25 |
+| PRO+ | %90 | %10 |
+| PREMIUM | %100 | %0 |
+
+> **V1.0 mevcut durum:** Normal %75, PRO %95 — bu değerler V1.1 ile değişecek.  
+> Backend'de `commission_rate` hesaplama mantığı güncellenmeli.
+
+Komisyon oranı üyeliğin en güçlü satış argümanı. "Kazancınızın %100'ü sizin" →
+PREMIUM için Üyelik Planları ekranında above-fold'da en öne çıkarılacak kazanım.
+
 ### 7.5 Apple / Google Komisyon Notu
 
 - Apple Year 1: %45 Apple alır (Small Business Program'da %30)
@@ -383,15 +398,230 @@ teqlif_premium_12m   → 11.499,99 ₺
 
 ## 8. UI / UX Tasarımı
 
-📋 **Henüz tasarlanmadı.**
+🔄 **Planlama / Tasarım — Kasım 2026**
 
-Ele alınacak konular:
-- Tier renk paleti ve rozet tasarımı (PRO / PRO+ / PREMIUM görsel dili)
-- Plan seçim ekranı layout (karşılaştırma tablosu vs kart slider)
-- Upgrade CTA yerleşimleri (ne zaman, nerede gösterilecek)
-- Stream saati progress bar tasarımı
-- Kilitli özellik UI pattern'ı (kilit ikonu + tier adı)
-- Downgrade uyarı akışı
+---
+
+### 8.1 Renk Paleti ve Rozet Sistemi
+
+**Öncelik:** PREMIUM > PRO+ > PRO > Normal
+
+| Tier | Renk | Rozet | String |
+|------|------|-------|--------|
+| PREMIUM | Teqlif cyan | Kral tacı (cyan) | `PREMIUM` |
+| PRO+ | Altın sarısı | Kral tacı (altın) | `PRO+` |
+| PRO | Altın sarısı | Kral tacı (altın) | `PRO` |
+| Normal | — | Yok | — |
+
+**Evrensel badge bileşeni** (tüm ekranlarda aynı):
+- Şekil: **rounded rectangle** (köşe yarıçaplı dikdörtgen — oval yok)
+- İçerik: tier string'i (`PRO`, `PRO+`, `PREMIUM`)
+- Renk: tier rengine göre arka plan / border
+- Normal: badge render edilmez
+
+Kral tacı icon'u mevcut haliyle devam eder; rengi ve konumlandırması değişmez.
+
+---
+
+### 8.2 "Canlı" Ekranı
+
+#### Story Feed
+
+| Öncelik | İçerik | Kural |
+|---------|--------|-------|
+| 1 | Takip edilen + subscription sahibi | PREMIUM > PRO+ > PRO > Normal sırasıyla |
+| 2 | Takip edilmeyen PREMIUM | ClickHouse ilgi skoru yüksek olanlar serpiştirilir |
+
+**Serpiştirme kuralı:** Her 4–5 takip edilen story'nin arasına en fazla 1 PREMIUM öneri.  
+**Kriter:** İzleme geçmişi, arama, beğeni (ClickHouse `user_interest_score`).  
+**İçinde öncelik:** Daha önce izlenmiş ama takip edilmeyen PREMIUM yayıncılar önce gelir.
+
+#### Canlı Yayın Feed (liste / grid)
+
+```
+1. Takip edilen + PREMIUM        ← en üst
+2. Takip edilen + PRO+
+3. Takip edilen + PRO
+4. Takip edilen + Normal
+── serpiştirilmiş öneriler ──────
+5. Takip edilmeyen + PREMIUM     (ilgi skoru yüksek)
+6. Takip edilmeyen + PRO+        (ilgi skoru yüksek)
+7. Takip edilmeyen + PRO
+8. Takip edilmeyen + Normal
+```
+
+- Statik olan tek şey: subscription önceliği
+- Serpiştirilmiş içerik oranı: takip edilenler listesinin ~%20–30'u
+- Kullanıcı "Sadece takip ettiklerim" filtresiyle listeyi daraltabilmeli
+
+---
+
+### 8.3 "İlanlar" Ekranı
+
+- Takip edilenlerin ilanları + araya takip edilmeyenler serpiştirilir (Canlı mantığıyla tutarlı)
+- **İlan kartı üzerinde:** Satıcının subscription rozeti — profil avatar yanında/üzerinde
+  - PREMIUM satıcı → cyan kral tacı
+  - PRO / PRO+ satıcı → altın kral tacı
+  - Normal satıcı → rozet yok
+- Sıralama: subscription önceliği; aynı tier içinde engagement + güncellik
+
+---
+
+### 8.4 "Keşfet" Ekranı
+
+**Prensip:** Kullanıcıyı boğmadan dengeli içerik karması.
+
+- ClickHouse tabanlı kişiselleştirilmiş feed
+- Subscription önceliği var ama yığılma engeli:
+  - Üst üste 3'ten fazla PREMIUM içerik gösterilmez
+  - Her 5 içerikten en az 1'i Normal/PRO tier
+- İçerik tipleri: ilan, canlı yayın, yayıncı hesabı (hepsi subscription rozeti taşır)
+- Sıralama ağırlıkları (başlangıç, A/B test ile optimize edilecek):
+  `0.6 × ilgi_skoru + 0.3 × subscription_ağırlığı + 0.1 × güncellik`
+
+---
+
+### 8.5 "Mesajlar" Ekranı
+
+Değişiklik yok.
+
+---
+
+### 8.6 "Profilim" Ekranı
+
+- Profil başlığına subscription rozeti eklenir (rounded rect badge)
+- Normal kullanıcıda rozet yok; onun yerine PRO CTA butonu görünür
+- Mevcut profil layout'u korunur; sadece rozet alanı eklenir
+
+---
+
+### 8.7 teqlik Cüzdanım
+
+#### "PRO'ya Geç" Butonu
+
+| Durum | Metin |
+|-------|-------|
+| Kullanıcı Normal | "Üyelik Planlarını Gör" (kral tacı icon kalır) |
+| Kullanıcı zaten abone | "Üyelik Yükselt" (PRO Araçları butonu ile tutarlı) |
+| Kullanıcı PREMIUM | Buton gizlenir |
+
+#### Üyelik Planları Ekranı — 3 Tab
+
+Tab'lar: `PRO` · `PRO+` · `PREMIUM`
+
+**Her tab — above the fold (kaydırmadan görünen alan):**
+- Tier adı + kral tacı (tier rengiyle büyük)
+- Aylık fiyat büyük punto + "/ ay"
+- Süre seçici: `1 ay` · `3 ay` · `6 ay` · `12 ay` → seçime göre fiyat güncellenir + tasarruf etiketi
+- En çarpıcı 3 kazanım (büyük, iconlu):
+  1. Yayın saati (ör. "90 saat/ay")
+  2. Kalite (ör. "1080p Full HD")
+  3. Komisyon (ör. "Kazancının %90'ı senin")
+- CTA butonu: "PRO+'ya Başla" / "PREMIUM'a Geçiş Yap" (tier rengiyle)
+
+**Below the fold:**
+- Tam özellik listesi (Blast, Boost, AI Açıklama, Reaktivasyon limitleri)
+- Mevcut tier ile karşılaştırma tablosu
+- İptal ve yenileme politikası (küçük yazı)
+
+**UX kuralı:** Kullanıcının mevcut tier tab'ı varsayılan seçili; upgrade CTA bir üst tier'a yönlendirir.
+
+---
+
+### 8.8 Ayarlar Ekranı
+
+Subscription badge bileşeni ilgili tüm satırlarda tutarlı (rounded rect, aynı bileşen):
+
+| Menu item | Badge |
+|-----------|-------|
+| "PRO Araçları" | Tier badge (sağda) |
+| "Canlı Yayınlarım" | Tier badge (sağda) |
+| Diğer subscription'a bağlı item'lar | Aynı bileşen |
+
+**Tutarsızlık giderme:** Şu an "PRO Araçları" oval, "Canlı Yayınlarım" rounded rect —
+ikisi de rounded rect'e dönüştürülür.
+
+---
+
+### 8.9 Bildirim Ayarları Ekranı
+
+- Subscription modeline göre yazı ve renk dinamik
+- Badge şekli: rounded rectangle (Ayarlar ile tutarlı)
+- Örn: `[PRO]` "PRO bildirimleri" → tier değişince otomatik güncellenir
+
+---
+
+### 8.10 PRO Araçları Ekranı
+
+- Subscription bilgi alanı: tier rengine göre (cyan / altın)
+- **Yayın saati progress bar:**
+  - `[████████░░░░░░░] 36 / 90 saat`
+  - %80 dolunca → sarı uyarı rengi
+  - %100 → kırmızı + "Üyelik Yükselt" soft CTA
+  - PREMIUM: progress bar yerine `Sınırsız ✦` gösterimi
+- **"PRO'ya Geç" → "Üyelik Yükselt"** → Üyelik Planları ekranı açılır (bir üst tier tab'ı seçili)
+- **Komisyon satırı:** "Kazancınızın %X'i sizin" (tier'a göre dinamik)
+- Kredi kartları (Blast / Boost / AI / Reaktivasyon): ücretsiz hak tükenince "Teqlik ile devam et" CTA
+
+---
+
+### 8.11 Gözden Kaçan: Yayın Başlatma Ekranı (`host_stream_screen`) 📋
+
+- **Kalite seçici (tier'a göre):**
+  - Normal: yalnızca 540p
+  - PRO: 540p / 720p
+  - PRO+ / PREMIUM: 540p / 720p / 1080p
+  - Erişilemeyen kalite seçenekleri: kilitli gösterim + "PRO+'ya Geç" tooltip
+- **Aylık kalan süre uyarısı:**
+  - Yayın başlamadan: "Bu ay X saatiniz kaldı" bilgi satırı
+  - %20 kalan (ör. 6 saat / 90h PRO+'da): sarı soft uyarı banner
+  - 0 saat: yayın başlatma engeli + "Üyelik Yükselt" CTA
+- **Yayın bitiş özeti (stream end summary):**
+  - Toplam izleyici sayısı, yayın süresi
+  - Gelir + komisyon: "X ₺ kazandınız — kazancınızın %Y'si (%X ₺) hesabınıza aktarıldı"
+  - Kalan aylık süre güncellendi gösterimi
+
+---
+
+### 8.12 Gözden Kaçan: İzleyici Ekranı (Viewer Side) 📋
+
+- **Host subscription rozeti:** Canlı yayın sırasında host'un kral tacı rozeti görünür (küçük, üst köşe)
+- **Kalite badge'i:** PRO+ / PREMIUM yayıncılarda "1080p" veya "HD" göstergesi
+- Bu iki öğe izleyiciye host'un premium statüsünü sinyaller → izleyici FOMO
+
+---
+
+### 8.13 Gözden Kaçan: Kilitli Özellik UI Pattern'ı 📋
+
+Tüm ekranlarda tutarlı:
+
+```
+[🔒 1080p Yayın]   "PRO+'ya geçerek 1080p kaliteyle yayın yap →"
+```
+
+- Kilit ikonu + opacity düşük özellik gösterimi + kısa CTA
+- Tıklanınca: Üyelik Planları ekranı (ilgili tier tab'ı seçili)
+- Kullanım yerleri: yayın kalite seçici, PRO Araçları, Keşfet filtreler, yayın başlatma
+
+---
+
+### 8.14 Gözden Kaçan: Subscription Sona Erme Akışı 📋
+
+- **3 gün önce:** Push notification + in-app banner
+- **Bitince:** Tier Normal'e düşer
+  - Aktif canlı yayın sırasında biterse: mevcut yayın tamamlanır, sonraki yayın kısıtlı
+  - **⚠️ Karar gerekiyor:** Kalan aylık stream saatleri sıfırlanır mı, kalan süre kullanılabilir mi?
+- **Yeniden aktivasyon:** "Hoş geldiniz geri" + önceki tier hatırlatıcısı
+
+---
+
+### 8.15 Açık Kararlar (TODO)
+
+- Üyelik Planları ekranı wireframe / tasarım
+- Subscription bitince stream saati davranışı (§8.14 karar)
+- PREMIUM serpiştirilmiş öneri frekansı (A/B test başlangıç değerleri)
+- Kilitli kalite seçici tam etkileşim tasarımı
+- Yayın bitiş özeti ekran tasarımı
 
 ---
 
