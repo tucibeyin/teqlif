@@ -78,6 +78,8 @@ ufw_streaming() {
     # LiveKit API sadece WG'den
     ufw allow in on wg0 from 10.10.0.0/24 to any port 7880 proto tcp
     ufw allow in on wg0 from 10.10.0.0/24 to any port 7881 proto tcp
+    # LiveKit Prometheus metrikleri (prometheus_port: 6789) sadece WG'den
+    ufw allow in on wg0 from 10.10.0.0/24 to any port 6789 proto tcp
     ufw_enable
 }
 

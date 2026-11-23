@@ -121,6 +121,11 @@ DROPIN
     # DMS script çalıştırma izni
     chmod 755 "${node_dir}/resources/scripts/nodemonitor_dms_check.sh"
 
+    # node_exporter drop-in override — systemd collector (stalwart-mail.service izleme)
+    mkdir -p /etc/systemd/system/node-exporter.service.d
+    cp "${REPO_DIR}/deploy/scale/V2.1/node2/systemd/node-exporter-override.conf" \
+        /etc/systemd/system/node-exporter.service.d/override.conf
+
     # DMS systemd dosyaları
     cp "${node_dir}/resources/systemd/teqlif-dms.service" /etc/systemd/system/
     cp "${node_dir}/resources/systemd/teqlif-dms.timer"   /etc/systemd/system/
@@ -128,7 +133,8 @@ DROPIN
     systemctl daemon-reload
     systemctl enable --now prometheus-redis-exporter
     systemctl enable --now teqlif-dms.timer
-    log_ok "Redis replica exporter + DMS timer aktif"
+    systemctl restart node-exporter
+    log_ok "Redis replica exporter + DMS timer + node_exporter systemd collector aktif"
 }
 
 setup_backup_directories() {
