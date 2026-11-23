@@ -797,9 +797,42 @@ Normal ────────────────────────�
 
 ---
 
-### 9.7 Açık Kararlar (TODO)
+### 9.7 Promosyon ve Deneme Kararları
 
-- **Ücretsiz deneme (free trial):** Lansman dönemi için 7 günlük PRO denemesi sunulacak mı?
-- **Introductory offer:** İlk ay indirimli fiyat? (App Store Connect'te ayrıca tanımlanır)
-- **Upgrade promosyon:** PRO'dan PRO+'ya geçişte ilk ay indirim?
-- **Google Play product ID isimlendirmesi:** App Store ile aynı mı, yoksa platform özelinde mi?
+**Google Play product ID:** App Store ile aynı isimler (`teqlif_pro_plus_1m` vb.) ✅
+
+#### Ücretsiz Deneme — 7 Gün PRO ✅
+
+- Yeni kayıt olan tüm kullanıcılara 7 günlük PRO denemesi
+- Deneme sonrası: ücretli aboneliğe geçiş veya Normal'e düşüş
+- App Store Connect: Introductory Offer → Free Trial türü
+- Google Play: Free trial base plan offer
+- Kural: Her Apple/Google hesabı başına yalnızca bir kez kullanılabilir (platform güvencesi)
+
+#### İlk Ay İndirimli Fiyat (Introductory Offer) ✅
+
+Her tier için ilk aylık abonelikte indirimli fiyat uygulanır.
+
+| Tier | Normal fiyat | İndirimli fiyat | İndirim |
+|------|-------------|-----------------|---------|
+| PRO | 299,99 ₺ | **TBD** | TBD |
+| PRO+ | 699,99 ₺ | **TBD** | TBD |
+| PREMIUM | 1.299,99 ₺ | **TBD** | TBD |
+
+> ⚠️ **Karar gerekiyor:** İndirimli fiyat miktarları belirlenecek.  
+> App Store Connect'te introductory offer türü: "Pay as you go" (indirimli 1 ay).  
+> Fiyatlar yine App Store Turkey listesinde mevcut bir tier olmalı.
+
+#### Upgrade Promosyonu ✅
+
+Mevcut abonelere tier yükseltme teşviki.
+
+| Yol | Promosyon | Fiyat |
+|----|-----------|-------|
+| PRO → PRO+ | **TBD** | TBD |
+| PRO → PREMIUM | **TBD** | TBD |
+| PRO+ → PREMIUM | **TBD** | TBD |
+
+> ⚠️ **Karar gerekiyor:** Upgrade promosyon türü ve miktarları belirlenecek.  
+> Örnek seçenekler: ilk ay hedef tier PRO fiyatında / %50 indirimli / 1 ay ücretsiz.  
+> App Store Connect: Promotional Offer (mevcut abonelere özel, platform korumalı).
