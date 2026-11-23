@@ -557,9 +557,24 @@ class _ToolCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isLocked = !UserTier.isPaidTier(userType);
+    final loc = ref.read(localizationProvider);
     return GestureDetector(
-      onTap: onTap,
-      child: Container(
+      onTap: isLocked
+          ? () => showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                useSafeArea: true,
+                backgroundColor: Colors.transparent,
+                builder: (_) => ProSubscriptionSheet(
+                  loc: loc,
+                  onPurchaseSuccess: () => Navigator.of(context).pop(),
+                ),
+              )
+          : onTap,
+      child: Opacity(
+        opacity: isLocked ? 0.75 : 1.0,
+        child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: AppColors.card(context),
@@ -623,6 +638,7 @@ class _ToolCard extends ConsumerWidget {
           ],
         ),
       ),
+        ),
     );
   }
 }
