@@ -67,9 +67,9 @@ QUALITY_PROFILE: dict[str, str] = {
 CREDIT_FREE_LIMITS: dict[str, dict[str, int]] = {
     "blast": {
         TIER_STANDARD: 3,
-        TIER_PRO:      6,
-        TIER_PRO_PLUS: 10,
-        TIER_PREMIUM:  20,
+        TIER_PRO:      10,
+        TIER_PRO_PLUS: 20,
+        TIER_PREMIUM:  30,
     },
     "boost": {
         TIER_STANDARD: 0,
@@ -80,8 +80,8 @@ CREDIT_FREE_LIMITS: dict[str, dict[str, int]] = {
     "ai_desc": {
         TIER_STANDARD: 0,
         TIER_PRO:      6,
-        TIER_PRO_PLUS: 12,
-        TIER_PREMIUM:  20,
+        TIER_PRO_PLUS: 15,
+        TIER_PREMIUM:  30,
     },
     "reactivation": {
         TIER_STANDARD: 0,
@@ -96,9 +96,9 @@ CREDIT_FREE_LIMITS: dict[str, dict[str, int]] = {
 CREDIT_PER_OP_CAPS: dict[str, dict[str, int]] = {
     "blast": {
         TIER_STANDARD: 5,
-        TIER_PRO:      10,
-        TIER_PRO_PLUS: 15,
-        TIER_PREMIUM:  25,
+        TIER_PRO:      15,
+        TIER_PRO_PLUS: 30,
+        TIER_PREMIUM:  50,
     },
 }
 

@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.logger import get_logger
 from app.services.store.apple_verifier import verify_signed_payload_jws
 from app.services.store.notifications.base import StoreNotificationHandler
-from app.services.subscription.tier import tier_from_product, plan_type_from_product
+from app.services.subscription.tier import tier_from_product, plan_type_from_product, TIER_STANDARD
 
 logger = get_logger(__name__)
 
@@ -213,25 +213,25 @@ class AppleNotificationHandler(StoreNotificationHandler):
     async def _handle_expired(self, user_id: int) -> None:
         await self._session.execute(
             text(
-                "UPDATE users SET last_tier = user_type, user_type = 'standard', "
+                "UPDATE users SET last_tier = user_type, user_type = :tier, "
                 "plan_type = NULL, pro_expires_at = NULL, pro_grace_until = NULL, "
                 "auto_renew_enabled = TRUE, pending_tier = NULL, "
                 "monthly_stream_seconds_used = 0, monthly_stream_reset_at = NULL "
                 "WHERE id = :uid"
             ),
-            {"uid": user_id},
+            {"tier": TIER_STANDARD, "uid": user_id},
         )
         logger.info("[AppleNotif] EXPIRED | user=%s → standard", user_id)
 
     async def _handle_revoke(self, user_id: int) -> None:
         await self._session.execute(
             text(
-                "UPDATE users SET last_tier = user_type, user_type = 'standard', "
+                "UPDATE users SET last_tier = user_type, user_type = :tier, "
                 "plan_type = NULL, pro_expires_at = NULL, pro_grace_until = NULL, "
                 "auto_renew_enabled = TRUE, pending_tier = NULL, "
                 "monthly_stream_seconds_used = 0, monthly_stream_reset_at = NULL "
                 "WHERE id = :uid"
             ),
-            {"uid": user_id},
+            {"tier": TIER_STANDARD, "uid": user_id},
         )
         logger.info("[AppleNotif] REVOKE | user=%s → standard", user_id)

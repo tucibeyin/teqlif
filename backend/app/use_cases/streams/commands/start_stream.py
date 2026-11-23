@@ -33,6 +33,14 @@ class StartStreamCommand:
             if not user:
                 raise NotFoundException(code="USER_NOT_FOUND")
 
+            # Aylık reset: yeni ay başladıysa sayacı sıfırla
+            now_utc = datetime.now(timezone.utc)
+            reset_at = user.monthly_stream_reset_at
+            if reset_at is None or reset_at.year != now_utc.year or reset_at.month != now_utc.month:
+                user.monthly_stream_seconds_used = 0
+                user.monthly_stream_reset_at = now_utc
+                await self.uow.session.flush()
+
             # Aylık yayın süresi kontrolü
             limit = stream_limit_seconds(user.user_type)
             if limit is not None and (user.monthly_stream_seconds_used or 0) >= limit:

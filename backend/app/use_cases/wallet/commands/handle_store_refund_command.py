@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotFoundException
 from app.core.logger import get_logger
+from app.services.subscription.tier import TIER_STANDARD
 
 logger = get_logger(__name__)
 
@@ -93,13 +94,13 @@ class HandleStoreRefundCommand:
         if product_type == "subscription":
             await self._session.execute(
                 text(
-                    "UPDATE users SET user_type = 'standard', plan_type = NULL, "
+                    "UPDATE users SET user_type = :tier, plan_type = NULL, "
                     "pro_expires_at = NULL, pro_grace_until = NULL "
-                    "WHERE id = :uid AND user_type = 'pro'"
+                    "WHERE id = :uid AND user_type != :tier"
                 ),
-                {"uid": user_id},
+                {"tier": TIER_STANDARD, "uid": user_id},
             )
-            logger.info("[Refund] Abonelik iadesi — PRO hakları geri alındı | user=%s", user_id)
+            logger.info("[Refund] Abonelik iadesi — tier hakları geri alındı | user=%s", user_id)
 
         # ── 5. Orantılı gift kazanç iptali ────────────────────────────────────
         gift_teqlik_cancelled = await self._cancel_proportional_gifts(

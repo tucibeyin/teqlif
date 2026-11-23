@@ -11,6 +11,7 @@ from app.core.logger import get_logger
 from app.services.store.base import PurchaseResult
 from app.services.store.apple_verifier import VALID_CONSUMABLE_IDS
 from app.services.store.factory import StoreVerifierFactory
+from app.services.subscription.tier import tier_from_product, plan_type_from_product
 
 logger = get_logger(__name__)
 
@@ -22,14 +23,6 @@ _CONSUMABLE_AMOUNTS: dict[str, int] = {
     "teqlik_pack_1000": 1200,  # 1000 + 200 bonus
 }
 
-# Abonelik product_id → plan_type
-_PLAN_TYPE: dict[str, str] = {
-    "teqlif_pro_1m":  "monthly",
-    "teqlif_pro_3m":  "quarterly",
-    "teqlif_pro_6m":  "biannual",
-    "teqlif_pro_12m": "annual",
-}
-
 # Redis velocity key: rate:iap:{device_id}  |  fixed 24h window (₺5.000/gün)
 _IAP_VELOCITY_LIMIT_TRY = 5000.0
 _IAP_VELOCITY_TTL_SEC   = 86400  # 24 saat
@@ -37,15 +30,23 @@ _IAP_VELOCITY_TTL_SEC   = 86400  # 24 saat
 # Mobil try_amount <= 0 gelirse fallback fiyat tablosu kullanılır
 # — direkt API çağrılarında client manipülasyonu önlenir
 _PRODUCT_TRY_PRICES: dict[str, float] = {
-    "teqlik_pack_100":   149.99,
-    "teqlik_pack_250":   349.99,
-    "teqlik_pack_500":   599.99,
-    "teqlik_pack_1000":  999.99,
-    # Abonelikler: try_amount=0 gönderildiğinde velocity hesabına girer
-    "teqlif_pro_1m":     299.99,
-    "teqlif_pro_3m":     749.99,
-    "teqlif_pro_6m":    1299.99,
-    "teqlif_pro_12m":   1999.99,
+    "teqlik_pack_100":       149.99,
+    "teqlik_pack_250":       349.99,
+    "teqlik_pack_500":       599.99,
+    "teqlik_pack_1000":      999.99,
+    # Abonelikler — try_amount=0 geldiğinde velocity hesabına girer
+    "teqlif_pro_1m":         299.99,
+    "teqlif_pro_3m":         799.99,
+    "teqlif_pro_6m":        1499.99,
+    "teqlif_pro_12m":       2699.99,
+    "teqlif_pro_plus_1m":    699.99,
+    "teqlif_pro_plus_3m":   1799.99,
+    "teqlif_pro_plus_6m":   3499.99,
+    "teqlif_pro_plus_12m":  6299.99,
+    "teqlif_premium_1m":    1299.99,
+    "teqlif_premium_3m":    3299.99,
+    "teqlif_premium_6m":    5999.99,
+    "teqlif_premium_12m":  11499.99,
 }
 
 # Atomik Lua: GET+limit kontrolü+INCRBYFLOAT+TTL guard tek round-trip'te
@@ -225,13 +226,14 @@ class VerifyPurchaseCommand:
         self, user_id: int, platform: str, result: PurchaseResult,
         try_amount: float = 0.0,
     ) -> dict:
-        plan_type = _PLAN_TYPE.get(result.product_id, "monthly")
+        new_tier  = tier_from_product(result.product_id) or "pro"
+        plan_type = plan_type_from_product(result.product_id) or "monthly"
         now = datetime.now(timezone.utc)
 
         sub_upd_row = await self._session.execute(
             text(
                 "UPDATE users SET "
-                "user_type = 'pro', "
+                "user_type = :tier, "
                 "plan_type = :plan, "
                 "premium_since = COALESCE(premium_since, :now), "
                 "pro_expires_at = :exp, "
@@ -240,6 +242,7 @@ class VerifyPurchaseCommand:
                 "WHERE id = :uid RETURNING teqlik_balance"
             ),
             {
+                "tier": new_tier,
                 "plan": plan_type,
                 "now": now,
                 "exp": result.expires_at,

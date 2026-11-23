@@ -23,6 +23,7 @@ from app.core.rate_limit import limiter
 from app.config import settings
 from app.services.referral_service import apply_referral
 from app.services import storage_service as storage
+from app.services.subscription.tier import TIER_STANDARD
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -104,7 +105,7 @@ async def _create_user_and_send_code(
         referral_code=None,
         pending_referred_by=data.referred_by.strip().upper() if data.referred_by else None,
         age_confirmed_at=now if data.age_confirmed else None,
-        user_type='standard',
+        user_type=TIER_STANDARD,
         cross_border_consent_given=data.cross_border_consent,
         cross_border_consent_at=now if data.cross_border_consent else None,
         cross_border_consent_version="v1" if data.cross_border_consent else None,
@@ -1741,7 +1742,7 @@ async def delete_account(
     await db.execute(sa_delete(UserDevice).where(UserDevice.user_id == uid))
     current_user.preference_embedding    = None
     current_user.max_budget              = None
-    current_user.user_type               = 'standard'
+    current_user.user_type               = TIER_STANDARD
     current_user.plan_type               = None
     current_user.referral_code           = None
     current_user.pending_referred_by     = None
