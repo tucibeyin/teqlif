@@ -432,9 +432,10 @@ Kral tacı icon'u mevcut haliyle devam eder; rengi ve konumlandırması değişm
 | 1 | Takip edilen + subscription sahibi | PREMIUM > PRO+ > PRO > Normal sırasıyla |
 | 2 | Takip edilmeyen PREMIUM | ClickHouse ilgi skoru yüksek olanlar serpiştirilir |
 
-**Serpiştirme kuralı:** Her 4–5 takip edilen story'nin arasına en fazla 1 PREMIUM öneri.  
-**Kriter:** İzleme geçmişi, arama, beğeni (ClickHouse `user_interest_score`).  
-**İçinde öncelik:** Daha önce izlenmiş ama takip edilmeyen PREMIUM yayıncılar önce gelir.
+**Serpiştirme kuralı (başlangıç değeri, A/B test ile optimize edilecek):**
+- Her 5 takip edilen story'den 3. konuma 1 PREMIUM öneri → **%20 oran**
+- Kriter: ClickHouse `user_interest_score` (izleme geçmişi, arama, beğeni)
+- İçinde öncelik: daha önce izlenmiş ama takip edilmeyen PREMIUM yayıncılar
 
 #### Canlı Yayın Feed (liste / grid)
 
@@ -451,7 +452,10 @@ Kral tacı icon'u mevcut haliyle devam eder; rengi ve konumlandırması değişm
 ```
 
 - Statik olan tek şey: subscription önceliği
-- Serpiştirilmiş içerik oranı: takip edilenler listesinin ~%20–30'u
+- **Serpiştirilmiş içerik oranı (başlangıç):** Her 4 takip edilende 1 öneri → **%25 oran**
+- Mevcut sıralama skoru (`0.55 × interest + 0.30 × hype_score + 0.15 × viewer_count`) korunur;
+  takip edilmeyen PREMIUM için `+0.25` subscription ağırlığı eklenir
+- Üst üste 2'den fazla serpiştirilmiş öneri gösterilmez
 - Kullanıcı "Sadece takip ettiklerim" filtresiyle listeyi daraltabilmeli
 
 ---
@@ -571,15 +575,34 @@ ikisi de rounded rect'e dönüştürülür.
   - Normal: yalnızca 540p
   - PRO: 540p / 720p
   - PRO+ / PREMIUM: 540p / 720p / 1080p
-  - Erişilemeyen kalite seçenekleri: kilitli gösterim + "PRO+'ya Geç" tooltip
+  - Kilitli seçeneğe dokunulunca: **Üyelik Planları ekranı açılır, gereken tier tab'ı seçili**
+    (1080p → PRO+ tab; 720p → PRO tab) ← Karar: Seçenek B ✅
 - **Aylık kalan süre uyarısı:**
   - Yayın başlamadan: "Bu ay X saatiniz kaldı" bilgi satırı
   - %20 kalan (ör. 6 saat / 90h PRO+'da): sarı soft uyarı banner
   - 0 saat: yayın başlatma engeli + "Üyelik Yükselt" CTA
-- **Yayın bitiş özeti (stream end summary):**
-  - Toplam izleyici sayısı, yayın süresi
-  - Gelir + komisyon: "X ₺ kazandınız — kazancınızın %Y'si (%X ₺) hesabınıza aktarıldı"
-  - Kalan aylık süre güncellendi gösterimi
+- **Yayın bitiş özeti (`GetRecordingSummaryQuery` + komisyon hesabı):**
+
+  **Above fold — en önemli 3 rakam:**
+  ```
+  ┌─────────────────────────────────┐
+  │  Toplam Gelir      3.450 ₺      │  ← auction + direct sale
+  │  Net Kazanç        3.105 ₺  %90 │  ← × commission_rate (tier badge ile)
+  │  Pik İzleyici          47       │
+  └─────────────────────────────────┘
+  ```
+
+  **Below fold — detay:**
+  - Yayın süresi + bu ay kalan saat (güncellendi)
+  - Müzayede özeti: `{N} müzayede, {K} satıldı`
+  - Direkt satış: `{N} ürün, {K} sipariş`
+  - Beğeni: `{total_likes}`
+  - Hediyeler: `{total_teqlik} teqlik alındı`
+  - Yayın kaydı linki (PRO+/PREMIUM)
+
+  **Upgrade FOMO satırı** (PREMIUM değilse):
+  > "PRO+'ya geçseydiz bu yayından **X ₺ daha fazla** kazanırdınız →"
+  > *(fark: `total_revenue × (hedef_tier_commission - mevcut_commission)`)*
 
 ---
 
@@ -618,9 +641,8 @@ Tüm ekranlarda tutarlı:
 ### 8.15 Açık Kararlar (TODO)
 
 - Üyelik Planları ekranı wireframe / tasarım
-- PREMIUM serpiştirilmiş öneri frekansı (A/B test başlangıç değerleri)
-- Kilitli kalite seçici tam etkileşim tasarımı
-- Yayın bitiş özeti ekran tasarımı
+- `GetRecordingSummaryQuery`'e `commission_rate` ve `net_earnings` alanları eklenmeli (§3 Backend ile bağlantılı)
+- Upgrade FOMO satırı için "kaç ₺ daha kazanırdınız" hesabını döndüren backend endpoint
 
 ---
 
