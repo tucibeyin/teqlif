@@ -164,3 +164,60 @@ groups:
         annotations:
           summary: "{{ $labels.node }} aktif swap yüksek"
           description: "{{ $labels.node }} swap kullanımı %{{ $value | printf \"%.1f\" }} — bellek baskısı kritik düzeye yaklaşıyor, OOM riski artar."
+
+  # ── LiveKit metrikleri ────────────────────────────────────────────────────────
+  - name: livekit_health
+    interval: 30s
+    rules:
+      - alert: LiveKitDown
+        expr: up{component="livekit"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "LiveKit down: {{ $labels.node }}"
+          description: "{{ $labels.node }} LiveKit sunucusu 2 dakikadır erişilemiyor — canlı yayınlar etkilenebilir."
+
+  # ── Stalwart mail metrikleri ──────────────────────────────────────────────────
+  - name: stalwart_health
+    interval: 60s
+    rules:
+      - alert: StalwartDown
+        expr: up{component="stalwart"} == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Stalwart mail sunucusu erişilemiyor"
+          description: "node2 Stalwart (port 8080) 5 dakikadır scrape edilemiyor — mail gönderimi/alımı durmuş olabilir."
+
+  # ── ARQ kuyruk derinliği ──────────────────────────────────────────────────────
+  - name: arq_queues
+    interval: 30s
+    rules:
+      - alert: ARQCriticalQueueBacklog
+        expr: arq_queue_depth{queue="critical"} > 500
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "ARQ critical kuyruğu tıkandı"
+          description: "ARQ critical kuyruğunda {{ $value }} bekleyen iş var — push bildirimleri ve açık artırma işlemleri gecikebilir."
+
+      - alert: ARQDefaultQueueBacklog
+        expr: arq_queue_depth{queue="default"} > 1000
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "ARQ default kuyruğu yüksek"
+          description: "ARQ default kuyruğunda {{ $value }} bekleyen iş var — arka plan görevleri gecikebilir."
+
+      - alert: ARQVideoQueueBacklog
+        expr: arq_queue_depth{queue="video"} > 200
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "ARQ video kuyruğu yüksek"
+          description: "ARQ video kuyruğunda {{ $value }} bekleyen iş var — video işleme gecikebilir."

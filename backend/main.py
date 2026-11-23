@@ -162,6 +162,9 @@ async def lifespan(app: FastAPI):
     # AI registry — node1 Groq-only (EU IP), node2 up ise Groq+Gemini iletir
     from app.services.ml.llm_service import start_registry_loop
     await start_registry_loop()
+    # Custom Prometheus metrikleri: ARQ kuyruk derinliği + iş metrikleri
+    from app.metrics_collector import metrics_collector_loop
+    metrics_task = asyncio.create_task(metrics_collector_loop())
     yield
     task.cancel()
     chat_task.cancel()
@@ -169,7 +172,8 @@ async def lifespan(app: FastAPI):
     dm_task.cancel()
     like_ticker_task.cancel()
     i18n_refresh_task.cancel()
-    await asyncio.gather(task, chat_task, mod_task, dm_task, like_ticker_task, i18n_refresh_task, return_exceptions=True)
+    metrics_task.cancel()
+    await asyncio.gather(task, chat_task, mod_task, dm_task, like_ticker_task, i18n_refresh_task, metrics_task, return_exceptions=True)
     # Tüm açık WS bağlantılarını 1001 ile kapat (graceful shutdown)
     await ws_manager.shutdown()
     hype_manager.stop_decay()

@@ -144,6 +144,13 @@ expire           = "7d"
 [auth.dkim]
 sign = "['rsa-' + sender_domain]"
 
+# ── Prometheus metrikleri ──────────────────────────────────────────────────────
+# /api/telemetry/metrics → Prometheus format; yönetim portu (10.10.0.2:8080)
+# nodeMonitor/prometheus.yml livekit/stalwart job'u bu endpoint'i scrape eder.
+
+[metrics]
+prometheus.enable = true
+
 # ── Logging ────────────────────────────────────────────────────────────────────
 
 [tracer."stdout"]
