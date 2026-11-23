@@ -598,7 +598,7 @@ class _StreamerAvatarCard extends ConsumerWidget {
     return GestureDetector(
       onTap: onTap,
       child: SizedBox(
-        width: 72,
+        width: 86,
         child: Padding(
           padding: const EdgeInsetsDirectional.only(end: 12),
           child: Column(
@@ -609,8 +609,8 @@ class _StreamerAvatarCard extends ConsumerWidget {
                 children: [
                   // Gradient ring + white border + avatar (Story stilinde)
                   Container(
-                    width: 62,
-                    height: 62,
+                    width: 76,
+                    height: 76,
                     decoration: const BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: LinearGradient(
@@ -632,9 +632,9 @@ class _StreamerAvatarCard extends ConsumerWidget {
                                 imageUrl: imageUrl,
                                 cacheKey: TeqlifCacheManager.avatarCacheKey(username, imageUrl),
                                 cacheManager: TeqlifCacheManager(),
-                                memCacheWidth: 124,
+                                memCacheWidth: 152,
                                 fit: BoxFit.cover,
-                                alignment: Alignment.topCenter,
+                                alignment: Alignment.center,
                                 width: double.infinity,
                                 height: double.infinity,
                                 placeholder: (_, _) => _AvatarInitial(
