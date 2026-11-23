@@ -149,7 +149,13 @@ scrape_configs:
   # Yönetim portunda (/api/telemetry/metrics) Prometheus formatında sunar.
 
   - job_name: 'stalwart'
+    # Stalwart yönetim API'si basic auth istiyor.
+    # Şifre dosyası: nodeMonitor'da /project/teqlif/config/stalwart_metrics_password
+    # Oluşturma: echo -n "ADMIN_SIFRE" > /project/teqlif/config/stalwart_metrics_password
     metrics_path: /api/telemetry/metrics
+    basic_auth:
+      username: admin
+      password_file: /project/teqlif/config/stalwart_metrics_password
     static_configs:
       - targets: ['10.10.0.2:8080']
         labels: { node: node2, component: stalwart }

@@ -150,9 +150,6 @@ sign = "['rsa-' + sender_domain]"
 
 [metrics]
 prometheus.enable = true
-# İç ağdan (WireGuard 10.10.0.2:8080) auth gerektirme — nodeMonitor scrape edebilsin.
-# Dış ağa kapalı olduğundan güvenli.
-prometheus.auth.mechanism = "none"
 
 # ── Logging ────────────────────────────────────────────────────────────────────
 
