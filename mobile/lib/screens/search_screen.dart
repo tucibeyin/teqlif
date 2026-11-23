@@ -637,7 +637,7 @@ class SearchScreenState extends ConsumerState<SearchScreen> {
             ),
             SliverToBoxAdapter(
               child: SizedBox(
-                height: 106,
+                height: 118,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 16),

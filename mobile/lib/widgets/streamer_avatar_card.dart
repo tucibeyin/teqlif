@@ -27,7 +27,7 @@ class StreamerAvatarCard extends ConsumerWidget {
     return GestureDetector(
       onTap: onTap,
       child: SizedBox(
-        width: 72,
+        width: 80,
         child: Padding(
           padding: const EdgeInsetsDirectional.only(end: 12),
           child: Column(
@@ -36,13 +36,13 @@ class StreamerAvatarCard extends ConsumerWidget {
               Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  // Gradient ring + white border + avatar (Story stilinde)
+                  // Gradient border + portrait card
                   Container(
-                    width: 62,
-                    height: 62,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
+                    width: 68,
+                    height: 88,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(14),
+                      gradient: const LinearGradient(
                         colors: [kPrimary, kPrimaryLight, Color(0xFF7C3AED)],
                         begin: AlignmentDirectional.topStart,
                         end: AlignmentDirectional.bottomEnd,
@@ -51,17 +51,20 @@ class StreamerAvatarCard extends ConsumerWidget {
                     padding: const EdgeInsets.all(2.5),
                     child: Container(
                       decoration: BoxDecoration(
-                        shape: BoxShape.circle,
+                        borderRadius: BorderRadius.circular(11),
                         color: AppColors.surface(context),
                       ),
                       padding: const EdgeInsets.all(1.5),
-                      child: ClipOval(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(9),
                         child: imageUrl != null && imageUrl.isNotEmpty
                             ? CachedNetworkImage(
                                 cacheKey: TeqlifCacheManager.avatarCacheKey(username, imageUrl),
                                 cacheManager: TeqlifCacheManager(),
-                                memCacheWidth: 400, memCacheHeight: 400, imageUrl: imageUrl,
+                                memCacheWidth: 136,
+                                imageUrl: imageUrl,
                                 fit: BoxFit.cover,
+                                alignment: Alignment.topCenter,
                                 width: double.infinity,
                                 height: double.infinity,
                                 placeholder: (_, _) => _AvatarInitial(initial: initial, context: context),
@@ -92,7 +95,7 @@ class StreamerAvatarCard extends ConsumerWidget {
                         ),
                       ),
                     ),
-                  
+
                   // CANLI badge (üst kısım)
                   if (isLive)
                     Positioned(
