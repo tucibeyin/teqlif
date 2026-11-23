@@ -7,11 +7,12 @@ import '../ui_library/components/filters/teq_filter_bar.dart';
 import 'viewmodels/live_stream_history_view_model.dart';
 import 'live_stream_analytics_screen.dart';
 import '../widgets/pro_paywall_overlay.dart';
+import '../core/user_tier.dart';
 
 class LiveStreamHistoryScreen extends ConsumerStatefulWidget {
-  final bool isPremium;
+  final String userType;
   final bool isEmbedded;
-  const LiveStreamHistoryScreen({super.key, required this.isPremium, this.isEmbedded = false});
+  const LiveStreamHistoryScreen({super.key, this.userType = UserTier.standard, this.isEmbedded = false});
 
   @override
   ConsumerState<LiveStreamHistoryScreen> createState() =>
@@ -44,7 +45,7 @@ class _LiveStreamHistoryScreenState extends ConsumerState<LiveStreamHistoryScree
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
 
-    if (!widget.isPremium && !widget.isEmbedded) {
+    if (!UserTier.isPaidTier(widget.userType) && !widget.isEmbedded) {
       return Scaffold(
         backgroundColor: AppColors.bg(context),
         appBar: AppBar(

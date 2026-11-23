@@ -4,6 +4,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config/app_colors.dart';
+import '../core/user_tier.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/localization_service.dart';
 import 'viewmodels/pro_hub_view_model.dart';
@@ -19,10 +20,10 @@ import 'my_recordings_screen.dart';
 import '../widgets/pro_subscription_sheet.dart';
 
 class ProHubScreen extends ConsumerStatefulWidget {
-  final bool isPremium;
+  final String userType;
   final bool scrollToLiveSection;
 
-  const ProHubScreen({super.key, required this.isPremium, this.scrollToLiveSection = false});
+  const ProHubScreen({super.key, this.userType = UserTier.standard, this.scrollToLiveSection = false});
 
   @override
   ConsumerState<ProHubScreen> createState() => _ProHubScreenState();
@@ -64,14 +65,12 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
   @override
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
-    final state = ref.watch(proHubProvider(widget.isPremium));
-    final viewModel = ref.read(proHubProvider(widget.isPremium).notifier);
+    final state = ref.watch(proHubProvider(widget.userType));
+    final viewModel = ref.read(proHubProvider(widget.userType).notifier);
 
-    // To handle cleanup
-    ref.listenManual(proHubProvider(widget.isPremium), (prev, next) {}, fireImmediately: true); // Keep it alive or whatever
-    // We should probably rely on AutoDispose to garbage collect, or we can use ref.onDispose in the Provider definition.
+    ref.listenManual(proHubProvider(widget.userType), (prev, next) {}, fireImmediately: true);
 
-    final isPremium = state.isPremium;
+    final isPaidTier = state.isPaidTier;
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
@@ -85,9 +84,9 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
           padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 32),
         children: [
           // ── Durum Kartı ────────────────────────────────────────────────────
-          if (isPremium) _ProStatusCard(renewalDate: state.proExpiresAt, userType: state.userType, planType: state.planType) else _UpgradeBanner(),
+          if (isPaidTier) _ProStatusCard(renewalDate: state.proExpiresAt, userType: state.userType, planType: state.planType) else _UpgradeBanner(),
 
-          if (!isPremium) ...[
+          if (!isPaidTier) ...[
             const SizedBox(height: 20),
             Padding(
               padding: const EdgeInsetsDirectional.only(start: 2, bottom: 10),
@@ -118,7 +117,6 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
             boostCredits: state.boostCredits,
             aiDescCredits: state.aiDescCredits,
             reactivationCredits: state.reactivationCredits,
-            isPremium: isPremium,
             userType: state.userType,
             monthlyStreamSecondsUsed: state.monthlyStreamSecondsUsed,
             isLoading: state.isLoading,
@@ -150,8 +148,8 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
                 iconColor: const Color(0xFF6366F1),
                 title: loc.t('proToolSalesTitle'),
                 description: loc.t('proToolSalesDesc'),
-                isPremium: isPremium,
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ProInsightsScreen(isPremium: isPremium))),
+                userType: state.userType,
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ProInsightsScreen(userType: state.userType))),
               ),
               const SizedBox(height: 10),
               _ToolCard(
@@ -159,8 +157,8 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
                 iconColor: const Color(0xFF10B981),
                 title: loc.t('proToolListingsTitle'),
                 description: loc.t('proToolListingsDesc'),
-                isPremium: isPremium,
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ListingAnalyticsScreen(isPremium: isPremium))),
+                userType: state.userType,
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ListingAnalyticsScreen(userType: state.userType))),
               ),
               const SizedBox(height: 10),
               _ToolCard(
@@ -168,8 +166,8 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
                 iconColor: const Color(0xFFEC4899),
                 title: loc.t('proToolConversionTitle'),
                 description: loc.t('proToolConversionDesc'),
-                isPremium: isPremium,
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ConversionBreakdownScreen(isPremium: isPremium))),
+                userType: state.userType,
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ConversionBreakdownScreen(userType: state.userType))),
               ),
             ],
           ),
@@ -188,10 +186,10 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
                 iconColor: const Color(0xFFF59E0B),
                 title: loc.t('proToolMarketTitle'),
                 description: loc.t('proToolMarketDesc'),
-                isPremium: isPremium,
+                userType: state.userType,
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => MarketIntelligenceScreen(isPremium: isPremium)),
+                  MaterialPageRoute(builder: (_) => MarketIntelligenceScreen(userType: state.userType)),
                 ),
               ),
               const SizedBox(height: 10),
@@ -200,8 +198,8 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
                 iconColor: const Color(0xFF10B981),
                 title: loc.t('proToolDemandTrendsTitle'),
                 description: loc.t('proToolDemandTrendsDesc'),
-                isPremium: isPremium,
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => DemandTrendsScreen(isPremium: isPremium))),
+                userType: state.userType,
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => DemandTrendsScreen(userType: state.userType))),
               ),
               const SizedBox(height: 10),
               _ToolCard(
@@ -209,8 +207,8 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
                 iconColor: const Color(0xFF6366F1),
                 title: loc.t('proToolCompetitorRadarTitle'),
                 description: loc.t('proToolCompetitorRadarDesc'),
-                isPremium: isPremium,
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CompetitorRadarScreen(isPremium: isPremium))),
+                userType: state.userType,
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CompetitorRadarScreen(userType: state.userType))),
               ),
             ],
           ),
@@ -230,8 +228,8 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
                 iconColor: const Color(0xFF8B5CF6),
                 title: loc.t('proToolBestTimeTitle'),
                 description: loc.t('proToolBestTimeDesc'),
-                isPremium: isPremium,
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => BestStreamTimeScreen(isPremium: isPremium))),
+                userType: state.userType,
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => BestStreamTimeScreen(userType: state.userType))),
               ),
               const SizedBox(height: 10),
               _ToolCard(
@@ -239,8 +237,8 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
                 iconColor: const Color(0xFF14B8A6),
                 title: loc.t('proToolStreamAnalyticsTitle'),
                 description: loc.t('proToolStreamAnalyticsDesc'),
-                isPremium: isPremium,
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => LiveStreamHistoryScreen(isPremium: isPremium))),
+                userType: state.userType,
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => LiveStreamHistoryScreen(userType: state.userType))),
               ),
               const SizedBox(height: 10),
               _ToolCard(
@@ -248,8 +246,8 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
                 iconColor: const Color(0xFF0EA5E9),
                 title: loc.t('proToolRetargetingTitle'),
                 description: loc.t('proToolRetargetingDesc'),
-                isPremium: isPremium,
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => RetargetingScreen(initialIndex: 0, isPremium: isPremium))),
+                userType: state.userType,
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => RetargetingScreen(initialIndex: 0, userType: state.userType))),
               ),
               const SizedBox(height: 10),
               _ToolCard(
@@ -257,8 +255,8 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
                 iconColor: const Color(0xFFF97316),
                 title: loc.t('proToolMyRecordingsTitle'),
                 description: loc.t('proToolMyRecordingsDesc'),
-                isPremium: isPremium,
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => MyRecordingsScreen(isPremium: isPremium))),
+                userType: state.userType,
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => MyRecordingsScreen(userType: state.userType))),
               ),
             ],
           ),
@@ -335,16 +333,16 @@ class _ProStatusCard extends ConsumerWidget {
 
   String _getTierName(TranslationPack loc, String type) {
     switch (type) {
-      case 'pro_plus': return loc.tOr('tierLabelProPlus', 'PRO+');
-      case 'premium': return loc.tOr('tierLabelPremium', 'PREMIUM');
+      case UserTier.proPlus: return loc.tOr('tierLabelProPlus', 'PRO+');
+      case UserTier.premium: return loc.tOr('tierLabelPremium', 'PREMIUM');
       default: return loc.tOr('tierLabelPro', 'PRO');
     }
   }
 
   Color _getTierColor(String type) {
     switch (type) {
-      case 'pro_plus': return const Color(0xFF7C3AED);
-      case 'premium': return const Color(0xFF0EA5E9);
+      case UserTier.proPlus: return const Color(0xFF7C3AED);
+      case UserTier.premium: return const Color(0xFF0EA5E9);
       default: return const Color(0xFFD97706);
     }
   }
@@ -545,7 +543,7 @@ class _ToolCard extends ConsumerWidget {
   final Color iconColor;
   final String title;
   final String description;
-  final bool isPremium;
+  final String userType;
   final VoidCallback onTap;
 
   const _ToolCard({
@@ -553,7 +551,7 @@ class _ToolCard extends ConsumerWidget {
     required this.iconColor,
     required this.title,
     required this.description,
-    required this.isPremium,
+    this.userType = UserTier.standard,
     required this.onTap,
   });
 
@@ -602,7 +600,7 @@ class _ToolCard extends ConsumerWidget {
               ),
             ),
             const SizedBox(width: 8),
-            if (!isPremium)
+            if (!UserTier.isPaidTier(userType))
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
@@ -955,7 +953,6 @@ class _CreditsSummaryCard extends ConsumerWidget {
   final Map<String, dynamic>? boostCredits;
   final Map<String, dynamic>? aiDescCredits;
   final Map<String, dynamic>? reactivationCredits;
-  final bool isPremium;
   final String userType;
   final int monthlyStreamSecondsUsed;
   final bool isLoading;
@@ -965,8 +962,7 @@ class _CreditsSummaryCard extends ConsumerWidget {
     required this.boostCredits,
     required this.aiDescCredits,
     required this.reactivationCredits,
-    required this.isPremium,
-    this.userType = 'standard',
+    this.userType = UserTier.standard,
     this.monthlyStreamSecondsUsed = 0,
     required this.isLoading,
   });
@@ -1067,7 +1063,7 @@ class _CreditsSummaryCard extends ConsumerWidget {
             ),
           ),
           Divider(height: 1, color: AppColors.border(context)),
-          if (isPremium) ...[
+          if (UserTier.isPaidTier(userType)) ...[
             _StreamHoursRow(
               userType: userType,
               secondsUsed: monthlyStreamSecondsUsed,
@@ -1080,8 +1076,9 @@ class _CreditsSummaryCard extends ConsumerWidget {
             final index = entry.key;
             final item = entry.value;
             final used = item.data?['used'] as int? ?? 0;
-            final limit = item.data?['limit'] as int? ?? (isPremium ? item.defaultPremiumLimit : item.defaultFreeLimit);
-            final remaining = item.data?['remaining'] as int? ?? (isPremium ? item.defaultPremiumLimit : item.defaultFreeLimit);
+            final isPaidTier = UserTier.isPaidTier(userType);
+            final limit = item.data?['limit'] as int? ?? (isPaidTier ? item.defaultPremiumLimit : item.defaultFreeLimit);
+            final remaining = item.data?['remaining'] as int? ?? (isPaidTier ? item.defaultPremiumLimit : item.defaultFreeLimit);
             final progress = limit > 0 ? (used / limit).clamp(0.0, 1.0) : 0.0;
             
             final Color barColor = remaining == 0

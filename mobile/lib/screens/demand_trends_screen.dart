@@ -8,16 +8,19 @@ import '../config/theme.dart';
 import '../ui_library/components/filters/teq_filter_bar.dart';
 import 'viewmodels/demand_trends_view_model.dart';
 import '../widgets/pro_paywall_overlay.dart';
+import '../core/user_tier.dart';
 
 class DemandTrendsScreen extends ConsumerWidget {
-  final bool isPremium;
-  const DemandTrendsScreen({super.key, required this.isPremium});
+  final String userType;
+  const DemandTrendsScreen({super.key, this.userType = UserTier.standard});
+
+  bool get _isPaidTier => UserTier.isPaidTier(userType);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final loc = ref.watch(localizationProvider);
 
-    if (!isPremium) {
+    if (!_isPaidTier) {
       return Scaffold(
         backgroundColor: AppColors.bg(context),
         appBar: AppBar(

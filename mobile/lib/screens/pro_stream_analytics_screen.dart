@@ -6,13 +6,14 @@ import '../config/app_colors.dart';
 import '../config/theme.dart';
 import 'viewmodels/pro_stream_analytics_view_model.dart';
 import '../widgets/pro_paywall_overlay.dart';
+import '../core/user_tier.dart';
 
 // ── En İyi Yayın Saati ────────────────────────────────────────────────────
 
 class BestStreamTimeScreen extends ConsumerStatefulWidget {
-  final bool isPremium;
+  final String userType;
   final bool isEmbedded;
-  const BestStreamTimeScreen({super.key, required this.isPremium, this.isEmbedded = false});
+  const BestStreamTimeScreen({super.key, this.userType = UserTier.standard, this.isEmbedded = false});
 
   @override
   ConsumerState<BestStreamTimeScreen> createState() => _BestStreamTimeScreenState();
@@ -25,7 +26,7 @@ class _BestStreamTimeScreenState extends ConsumerState<BestStreamTimeScreen> {
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
 
-    if (!widget.isPremium && !widget.isEmbedded) {
+    if (!UserTier.isPaidTier(widget.userType) && !widget.isEmbedded) {
       return Scaffold(
         backgroundColor: AppColors.bg(context),
         appBar: AppBar(
@@ -234,9 +235,9 @@ class _BestStreamTimeScreenState extends ConsumerState<BestStreamTimeScreen> {
 // ── Dönüşüm Analizi ────────────────────────────────────────────────────────
 
 class ConversionBreakdownScreen extends ConsumerStatefulWidget {
-  final bool isPremium;
+  final String userType;
   final bool isEmbedded;
-  const ConversionBreakdownScreen({super.key, required this.isPremium, this.isEmbedded = false});
+  const ConversionBreakdownScreen({super.key, this.userType = UserTier.standard, this.isEmbedded = false});
 
   @override
   ConsumerState<ConversionBreakdownScreen> createState() => _ConversionBreakdownScreenState();
@@ -249,7 +250,7 @@ class _ConversionBreakdownScreenState extends ConsumerState<ConversionBreakdownS
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
 
-    if (!widget.isPremium && !widget.isEmbedded) {
+    if (!UserTier.isPaidTier(widget.userType) && !widget.isEmbedded) {
       return Scaffold(
         backgroundColor: AppColors.bg(context),
         appBar: AppBar(

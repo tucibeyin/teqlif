@@ -4,6 +4,7 @@ import '../ui_library/components/overlays/credit_gate_sheet.dart';
 import '../models/credit_gate_data.dart';
 import '../services/localization_service.dart';
 import '../core/event_bus.dart';
+import '../core/user_tier.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -381,7 +382,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 ),
                               ),
                             ),
-                            if (user?['user_type'] != 'standard')
+                            if (UserTier.isPaidTier(user?['user_type'] as String? ?? UserTier.standard))
                               Positioned(
                                 bottom: 0,
                                 right: 0,
@@ -389,7 +390,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                                   padding: const EdgeInsets.all(4),
                                   decoration: BoxDecoration(
                                     gradient: LinearGradient(
-                                      colors: _tierBadgeColors(user?['user_type'] as String? ?? 'pro'),
+                                      colors: _tierBadgeColors(user?['user_type'] as String? ?? UserTier.pro),
                                     ),
                                     shape: BoxShape.circle,
                                     border: Border.all(
@@ -950,7 +951,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
   bool _biometricEnabled = false;
   bool _biometricAvailable = false;
   // widget.user stale olabilir — StorageService'ten güncel değer okunur
-  bool _isPremium = false;
+  String _userType = UserTier.standard;
   bool _isPrivate = false;
   late String _displayedLang;
   bool _isSwitching = false;
@@ -962,7 +963,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
   void initState() {
     super.initState();
     // widget.user'dan ön değer al (anlık gösterim için)
-    _isPremium = widget.user?['user_type'] != 'standard';
+    _userType = widget.user?['user_type'] as String? ?? UserTier.standard;
     _isPrivate = widget.user?['is_private'] == true;
     _displayedLang = ref.read(localeProvider).languageCode;
     _loadBiometricState();
@@ -1082,7 +1083,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
     final info = await StorageService.getUserInfo();
     if (mounted && info != null) {
       setState(() {
-        _isPremium = info['user_type'] != 'standard';
+        _userType = info['user_type'] as String? ?? UserTier.standard;
         _isPrivate = info['is_private'] == true;
         _settingsPlanType = info['plan_type'] as String?;
       });
@@ -1092,7 +1093,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
       final user = await ref.read(authServiceProvider).me();
       if (mounted) {
         setState(() {
-          _isPremium = user.isPremium;
+          _userType = user.userType;
           _settingsPlanType = user.planType;
         });
         await StorageService.saveUserInfo(
@@ -1131,7 +1132,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
           email: data['email'] as String,
           username: data['username'] as String,
           fullName: data['full_name'] as String,
-          userType: data['user_type'] as String? ?? 'standard',
+          userType: data['user_type'] as String? ?? UserTier.standard,
           planType: data['plan_type'] as String?,
           onboardingCompleted: data['onboarding_completed'] == true,
           isVerified: data['is_verified'] == true,
@@ -1724,7 +1725,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                 icon: Icons.workspace_premium_outlined,
                 iconColor: const Color(0xFFD97706),
                 label: loc.t('proHubTitle'),
-                trailing: _isPremium
+                trailing: UserTier.isPaidTier(_userType)
                     ? Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 7,
@@ -1784,7 +1785,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                     context,
                     MaterialPageRoute(
                       builder: (_) => ProHubScreen(
-                        isPremium: freshInfo?['user_type'] != 'standard',
+                        userType: freshInfo?['user_type'] as String? ?? UserTier.standard,
                       ),
                     ),
                   );
@@ -1918,7 +1919,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                   context,
                   MaterialPageRoute(
                     builder: (_) => ProHubScreen(
-                      isPremium: _isPremium,
+                      userType: _userType,
                       scrollToLiveSection: true,
                     ),
                   ),
@@ -2159,7 +2160,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                   context,
                   MaterialPageRoute(
                     builder: (_) =>
-                        NotificationSettingsScreen(isPremium: _isPremium),
+                        NotificationSettingsScreen(userType: _userType),
                   ),
                 ),
               ),
@@ -2575,7 +2576,7 @@ class _EditProfileScreenState extends ConsumerState<_EditProfileScreen> {
         email: updatedUser['email'] as String,
         username: updatedUser['username'] as String,
         fullName: updatedUser['full_name'] as String,
-        userType: updatedUser['user_type'] as String? ?? 'standard',
+        userType: updatedUser['user_type'] as String? ?? UserTier.standard,
         onboardingCompleted:
             updatedUser['onboarding_completed'] as bool? ?? false,
         isVerified: updatedUser['is_verified'] as bool? ?? false,
@@ -2682,7 +2683,7 @@ class _EditProfileScreenState extends ConsumerState<_EditProfileScreen> {
         email: updatedUser['email'] as String,
         username: updatedUser['username'] as String,
         fullName: updatedUser['full_name'] as String,
-        userType: updatedUser['user_type'] as String? ?? 'standard',
+        userType: updatedUser['user_type'] as String? ?? UserTier.standard,
         onboardingCompleted:
             updatedUser['onboarding_completed'] as bool? ?? false,
         isVerified: updatedUser['is_verified'] as bool? ?? false,
@@ -3043,7 +3044,7 @@ class _MyListingsScreenState extends ConsumerState<_MyListingsScreen> {
       final costData = await ref.read(listingServiceProvider).getReactivationCost(id);
       if (!mounted) return;
 
-      final isPremium = costData?['user_type'] != 'standard';
+      final isPremium = UserTier.isPaidTier(costData?['user_type'] as String? ?? UserTier.standard);
       final remaining = costData?['free_remaining'] as int? ?? 0;
       final cost = costData?['cost'] as int? ?? 10;
       final withinWindow = costData?['within_window'] as bool? ?? false;
@@ -4023,15 +4024,13 @@ class _TeqlikWalletSheet extends ConsumerWidget {
 class WalletScreen extends ConsumerStatefulWidget {
   final int? initialBalance;
   final List<dynamic> initialHistory;
-  final bool isPro;
   final String userType;
 
   const WalletScreen({
     super.key,
     this.initialBalance,
     this.initialHistory = const [],
-    this.isPro = false,
-    this.userType = 'standard',
+    this.userType = UserTier.standard,
   });
 
   @override
@@ -4052,8 +4051,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
     'annual':    'teqlif_pro_12m',
   };
 
-  // Kart 1 — PRO durumu
-  late bool _isPro;
+  // Kart 1 — tier durumu
   late String _userType;
   String? _proExpiresAt;
   String? _activePlanType;
@@ -4105,8 +4103,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     // PRO kullanıcı için bakiye/hareketler sekmesiyle aç; standart için PRO upsell
-    _tabController = TabController(length: 3, vsync: this, initialIndex: widget.isPro ? 1 : 0);
-    _isPro = widget.isPro;
+    _tabController = TabController(length: 3, vsync: this, initialIndex: UserTier.isPaidTier(widget.userType) ? 1 : 0);
     _userType = widget.userType;
     _balance = widget.initialBalance;
     _txns = List.from(widget.initialHistory);
@@ -4136,7 +4133,6 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
     final balanceData = results[0];
     final summaryData = results[1];
 
-    bool isPro = _isPro;
     setState(() {
       _loading = false;
       if (balanceData != null) {
@@ -4150,13 +4146,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
         _cashoutEnabled = summaryData['cashout_enabled'] as bool? ?? false;
         _tryRate = (summaryData['try_rate'] as num?)?.toDouble() ?? 0.0;
         _activeWithdrawalId = summaryData['active_withdrawal_id'] as int?;
-        if (summaryData.containsKey('is_pro')) {
-          _isPro = summaryData['is_pro'] as bool? ?? false;
-          isPro = _isPro;
-        }
-        if (summaryData.containsKey('user_type')) {
-          _userType = summaryData['user_type'] as String? ?? 'standard';
-        }
+        _userType = summaryData['user_type'] as String? ?? _userType;
         _proExpiresAt   = summaryData['pro_expires_at'] as String?;
         final rawPlan   = summaryData['plan_type'] as String?;
         _activePlanType = _kDbToIapPlan[rawPlan] ?? rawPlan;
@@ -4166,8 +4156,8 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
       }
     });
 
-    // PRO kullanıcılar için Apple Server API üzerinden sessiz reconciliation
-    if (isPro) {
+    // Ücretli tier kullanıcılar için Apple Server API üzerinden sessiz reconciliation
+    if (UserTier.isPaidTier(_userType)) {
       _syncSubscriptionSilently();
     }
   }
@@ -4299,10 +4289,9 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
       backgroundColor: Colors.transparent,
       builder: (_) => ProSubscriptionSheet(
         loc: loc,
-        currentUserType: _isPro ? _userType : null,
+        currentUserType: UserTier.isPaidTier(_userType) ? _userType : null,
         initialPlanId: targetPlanId,
         onPurchaseSuccess: () {
-          setState(() => _isPro = true);
           _load();
         },
       ),
@@ -4362,7 +4351,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
         purchase.status == PurchaseStatus.restored) {
       _load();
       if (kSubscriptionIds.contains(purchase.productID)) {
-        setState(() => _isPro = true);
+        _load();
       }
     }
   }
@@ -4610,7 +4599,6 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
             child: _WalletHeroCard(
               balance: _balance,
-              isPro: _isPro,
               userType: _userType,
               proExpiresAt: _proExpiresAt,
               isDark: isDark,
@@ -4651,7 +4639,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
                 pendingTeqlik: _pendingTeqlik,
                 availableTeqlik: _availableTeqlik,
                 tryRate: _tryRate,
-                isPro: _isPro,
+                userType: _userType,
                 loc: loc,
                 onTap: () => _openEarningsModal(context),
               ),
@@ -4704,7 +4692,6 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
               children: [
                 // ── Sekme 1: PRO ─────────────────────────────────────
                 _ProTab(
-                  isPro: _isPro,
                   userType: _userType,
                   proExpiresAt: _proExpiresAt,
                   activePlanType: _activePlanType,
@@ -4800,7 +4787,6 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
 
 class _WalletHeroCard extends StatelessWidget {
   final int? balance;
-  final bool isPro;
   final String userType;
   final String? proExpiresAt;
   final bool isDark;
@@ -4810,8 +4796,7 @@ class _WalletHeroCard extends StatelessWidget {
 
   const _WalletHeroCard({
     required this.balance,
-    required this.isPro,
-    this.userType = 'standard',
+    this.userType = UserTier.standard,
     this.proExpiresAt,
     required this.isDark,
     required this.onBuyTeqlik,
@@ -4867,7 +4852,7 @@ class _WalletHeroCard extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              if (isPro) _ProDaysBadge(proExpiresAt: proExpiresAt, userType: userType, loc: loc),
+              if (UserTier.isPaidTier(userType)) _ProDaysBadge(proExpiresAt: proExpiresAt, userType: userType, loc: loc),
             ],
           ),
           const SizedBox(height: 4),
@@ -4970,7 +4955,7 @@ class _WalletHeroCard extends StatelessWidget {
                         const FaIcon(FontAwesomeIcons.crown, size: 11, color: Colors.white),
                         const SizedBox(width: 5),
                         Text(
-                          isPro ? loc.t('walletHeroPrivilegesBtn') : loc.t('proSheetTitle'),
+                          UserTier.isPaidTier(userType) ? loc.t('walletHeroPrivilegesBtn') : loc.t('proSheetTitle'),
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 13,
@@ -5009,20 +4994,20 @@ class _ProDaysBadge extends StatelessWidget {
   final String? proExpiresAt;
   final String userType;
   final TranslationPack loc;
-  const _ProDaysBadge({this.proExpiresAt, this.userType = 'pro', required this.loc});
+  const _ProDaysBadge({this.proExpiresAt, this.userType = UserTier.pro, required this.loc});
 
   List<Color> _gradientColors() {
     switch (userType) {
-      case 'premium': return const [Color(0xFF0284C7), Color(0xFF38BDF8)];
-      case 'pro_plus': return const [Color(0xFF7C3AED), Color(0xFFA78BFA)];
+      case UserTier.premium: return const [Color(0xFF0284C7), Color(0xFF38BDF8)];
+      case UserTier.proPlus: return const [Color(0xFF7C3AED), Color(0xFFA78BFA)];
       default: return const [Color(0xFFD97706), Color(0xFFFFD700)];
     }
   }
 
   String _tierLabel() {
     switch (userType) {
-      case 'premium': return 'PREMIUM';
-      case 'pro_plus': return 'PRO+';
+      case UserTier.premium: return 'PREMIUM';
+      case UserTier.proPlus: return 'PRO+';
       default: return 'PRO';
     }
   }
@@ -5070,7 +5055,7 @@ class _EarningsPill extends StatelessWidget {
   final int pendingTeqlik;
   final int availableTeqlik;
   final double tryRate;
-  final bool isPro;
+  final String userType;
   final TranslationPack loc;
   final VoidCallback onTap;
 
@@ -5078,7 +5063,7 @@ class _EarningsPill extends StatelessWidget {
     required this.pendingTeqlik,
     required this.availableTeqlik,
     required this.tryRate,
-    required this.isPro,
+    required this.userType,
     required this.loc,
     required this.onTap,
   });
@@ -5134,7 +5119,7 @@ class _EarningsPill extends StatelessWidget {
                 ],
               ),
             ),
-            if (isPro) ...[
+            if (UserTier.isPaidTier(userType)) ...[
               Container(
                 margin: const EdgeInsets.only(right: 6),
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
@@ -5871,7 +5856,6 @@ class _TeqlikPackOption extends StatelessWidget {
 // ─── PRO Tab ──────────────────────────────────────────────────────────────────
 
 class _ProTab extends ConsumerWidget {
-  final bool isPro;
   final String userType;
   final String? proExpiresAt;
   final String? activePlanType;
@@ -5882,8 +5866,7 @@ class _ProTab extends ConsumerWidget {
   final TranslationPack loc;
 
   const _ProTab({
-    required this.isPro,
-    this.userType = 'standard',
+    this.userType = UserTier.standard,
     required this.proExpiresAt,
     this.activePlanType,
     required this.isDark,
@@ -5921,15 +5904,15 @@ class _ProTab extends ConsumerWidget {
 
   static List<Color> _tierCardColors(String userType) {
     switch (userType) {
-      case 'premium': return const [Color(0xFF0284C7), Color(0xFF0EA5E9), Color(0xFF38BDF8)];
-      case 'pro_plus': return const [Color(0xFF7C3AED), Color(0xFF8B5CF6), Color(0xFFA78BFA)];
+      case UserTier.premium: return const [Color(0xFF0284C7), Color(0xFF0EA5E9), Color(0xFF38BDF8)];
+      case UserTier.proPlus: return const [Color(0xFF7C3AED), Color(0xFF8B5CF6), Color(0xFFA78BFA)];
       default: return const [Color(0xFFD97706), Color(0xFFF59E0B), Color(0xFFFFD700)];
     }
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return isPro ? _buildActive(context, ref) : _buildPurchase();
+    return UserTier.isPaidTier(userType) ? _buildActive(context, ref) : _buildPurchase();
   }
 
   Uri _subscriptionManageUri() {
@@ -5951,7 +5934,7 @@ class _ProTab extends ConsumerWidget {
   }
 
   Widget _buildActive(BuildContext context, WidgetRef ref) {
-    final hub = ref.watch(proHubProvider(true));
+    final hub = ref.watch(proHubProvider(userType));
 
     // Bitiş tarihi
     String expiryDisplay = '';
@@ -6052,7 +6035,7 @@ class _ProTab extends ConsumerWidget {
                   const SizedBox(width: 7),
                   Text(
                     _upgradePlans.where((p) => p.$1 == activePlanType).map((p) => loc.t(p.$2)).firstOrNull
-                        ?? (userType == 'premium' ? 'PREMIUM' : userType == 'pro_plus' ? 'PRO+' : 'PRO'),
+                        ?? (userType == UserTier.premium ? 'PREMIUM' : userType == UserTier.proPlus ? 'PRO+' : 'PRO'),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 18,
@@ -8197,8 +8180,8 @@ class _PrivacyBanner extends ConsumerWidget {
 
 List<Color> _tierBadgeColors(String userType) {
   switch (userType) {
-    case 'premium': return const [Color(0xFF0284C7), Color(0xFF38BDF8)];
-    case 'pro_plus': return const [Color(0xFF7C3AED), Color(0xFFA78BFA)];
+    case UserTier.premium: return const [Color(0xFF0284C7), Color(0xFF38BDF8)];
+    case UserTier.proPlus: return const [Color(0xFF7C3AED), Color(0xFFA78BFA)];
     default: return const [Color(0xFFD97706), Color(0xFFFFD700)];
   }
 }

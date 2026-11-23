@@ -9,6 +9,7 @@ import '../core/network/api_client.dart';
 import 'storage_service.dart';
 import 'wallet_service.dart';
 import 'package:http/http.dart' as http;
+import '../core/user_tier.dart';
 
 const _kDeviceIdKey = 'teqlif_iap_device_id';
 
@@ -44,9 +45,9 @@ const kSubscriptionIds = {
 
 /// IAP ürün ID → abonelik tier eşlemesi
 const kProductTierMap = <String, String>{
-  'teqlif_pro_1m': 'pro',       'teqlif_pro_3m': 'pro',       'teqlif_pro_6m': 'pro',       'teqlif_pro_12m': 'pro',
-  'teqlif_pro_plus_1m': 'pro_plus', 'teqlif_pro_plus_3m': 'pro_plus', 'teqlif_pro_plus_6m': 'pro_plus', 'teqlif_pro_plus_12m': 'pro_plus',
-  'teqlif_premium_1m': 'premium', 'teqlif_premium_3m': 'premium', 'teqlif_premium_6m': 'premium', 'teqlif_premium_12m': 'premium',
+  'teqlif_pro_1m': UserTier.pro,       'teqlif_pro_3m': UserTier.pro,       'teqlif_pro_6m': UserTier.pro,       'teqlif_pro_12m': UserTier.pro,
+  'teqlif_pro_plus_1m': UserTier.proPlus, 'teqlif_pro_plus_3m': UserTier.proPlus, 'teqlif_pro_plus_6m': UserTier.proPlus, 'teqlif_pro_plus_12m': UserTier.proPlus,
+  'teqlif_premium_1m': UserTier.premium, 'teqlif_premium_3m': UserTier.premium, 'teqlif_premium_6m': UserTier.premium, 'teqlif_premium_12m': UserTier.premium,
 };
 
 final _allIds = {...kConsumableIds, ...kSubscriptionIds};

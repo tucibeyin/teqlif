@@ -24,6 +24,7 @@ import 'package:flutter/material.dart';
 import '../config/theme.dart';
 import 'viewmodels/main_view_model.dart';
 import '../services/call_service.dart' show callServiceProvider, CallStatus;
+import '../core/user_tier.dart';
 
 /// Global visibility notifier for the Live tab.
 /// Prevents background ghost joining of streams when the user is on other tabs.
@@ -329,13 +330,13 @@ class _MainScreenState extends ConsumerState<MainScreen> with WidgetsBindingObse
               final streamId = navData.payload as int;
               StorageService.getUserInfo().then((info) {
                 if (!context.mounted) return;
-                final isPremium = info?['user_type'] != 'standard';
+                final userType = info?['user_type'] as String? ?? UserTier.standard;
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => isPremium
+                    builder: (_) => UserTier.isPaidTier(userType)
                         ? RecordingDetailScreen(streamId: streamId)
-                        : ProHubScreen(isPremium: false, scrollToLiveSection: true),
+                        : ProHubScreen(scrollToLiveSection: true),
                   ),
                 );
               });
@@ -344,18 +345,18 @@ class _MainScreenState extends ConsumerState<MainScreen> with WidgetsBindingObse
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => ProHubScreen(isPremium: false, scrollToLiveSection: true),
+                  builder: (_) => ProHubScreen(scrollToLiveSection: true),
                 ),
               );
               break;
             case MainNavigationEvent.toMyRecordings:
               StorageService.getUserInfo().then((info) {
                 if (!context.mounted) return;
-                final isPremium = info?['user_type'] != 'standard';
+                final userType = info?['user_type'] as String? ?? UserTier.standard;
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => MyRecordingsScreen(isPremium: isPremium),
+                    builder: (_) => MyRecordingsScreen(userType: userType),
                   ),
                 );
               });

@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'retargeting_screen.dart';
+import '../core/user_tier.dart';
 import 'direct_sale_detail_screen.dart';
 import 'sale_detail_screen.dart';
 import 'package:teqlif/core/network/api_client.dart';
@@ -388,7 +389,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     final costData = await ref.read(listingServiceProvider).getReactivationCost(id);
     if (!mounted || !context.mounted) return;
 
-    final isPremium = costData?['user_type'] != 'standard';
+    final isPremium = UserTier.isPaidTier(costData?['user_type'] as String? ?? UserTier.standard);
     final remaining = costData?['free_remaining'] as int? ?? 0;
     final cost = costData?['cost'] as int? ?? 10;
     final balance = costData?['balance'] as int? ?? 0;
@@ -845,13 +846,16 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     }
   }
 
-  void _openMassNotificationReport(BuildContext ctx) {
+  Future<void> _openMassNotificationReport(BuildContext ctx) async {
+    final info = await StorageService.getUserInfo();
+    if (!ctx.mounted) return;
+    final userType = info?['user_type'] as String? ?? UserTier.standard;
     final listingId = widget.listing['id'] as int?;
     Navigator.push(
       ctx,
       MaterialPageRoute(
         builder: (_) =>
-            RetargetingScreen(initialIndex: 1, isPremium: true, listingId: listingId),
+            RetargetingScreen(initialIndex: 1, userType: userType, listingId: listingId),
       ),
     );
   }
@@ -1413,7 +1417,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                                   : null,
                             );
                           }),
-                          if (user['user_type'] != 'standard')
+                          if (UserTier.isPaidTier(user['user_type'] as String? ?? UserTier.standard))
                             Positioned(
                               bottom: 0,
                               right: 0,

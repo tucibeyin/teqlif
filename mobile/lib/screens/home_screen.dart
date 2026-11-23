@@ -34,6 +34,7 @@ import '../widgets/network_error_widget.dart';
 import '../widgets/stale_data_banner.dart';
 import 'viewmodels/home_view_model.dart';
 import 'viewmodels/public_profile_view_model.dart';
+import '../core/user_tier.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -864,7 +865,7 @@ class _GridItemState extends ConsumerState<_GridItem> {
                 ),
               ),
             // PRO rozeti — sağ üst (kalp butonunun altı)
-            if (widget.listing['user']?['user_type'] != 'standard')
+            if (UserTier.isPaidTier(widget.listing['user']?['user_type'] as String? ?? UserTier.standard))
               Positioned(
                 top: 36,
                 right: 6,

@@ -1,3 +1,5 @@
+import '../core/user_tier.dart';
+
 class User {
   final int id;
   final String email;
@@ -18,12 +20,8 @@ class User {
   final String? lastTier;
   final int monthlyStreamSecondsUsed;
 
-  bool get isPaidTier => userType != 'standard';
-  bool get isPro => userType == 'pro';
-  bool get isProPlus => userType == 'pro_plus';
-  bool get isPremiumTier => userType == 'premium';
-  // Screens genelinde "ücretli abonelik var mı" kontrolü için alias
-  bool get isPremium => isPaidTier;
+  /// Ücretli tier (PRO, PRO+ veya PREMIUM) ise true döner.
+  bool get isPaidTier => UserTier.isPaidTier(userType);
 
   final bool onboardingCompleted;
   final String? websiteUrl;
@@ -47,7 +45,7 @@ class User {
     this.phoneVerified = false,
     this.profileImageUrl,
     this.profileImageThumbUrl,
-    this.userType = 'standard',
+    this.userType = UserTier.standard,
     this.planType,
     this.autoRenewEnabled = true,
     this.pendingTier,
@@ -77,7 +75,7 @@ class User {
       phoneVerified: json['phone_verified'] as bool? ?? false,
       profileImageUrl: json['profile_image_url'] as String?,
       profileImageThumbUrl: json['profile_image_thumb_url'] as String?,
-      userType: json['user_type'] as String? ?? 'standard',
+      userType: json['user_type'] as String? ?? UserTier.standard,
       planType: json['plan_type'] as String?,
       autoRenewEnabled: json['auto_renew_enabled'] as bool? ?? true,
       pendingTier: json['pending_tier'] as String?,

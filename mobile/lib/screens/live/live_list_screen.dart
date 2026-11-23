@@ -20,6 +20,7 @@ import '../../widgets/stale_data_banner.dart';
 import 'viewmodels/live_list_view_model.dart';
 import 'swipe_live_screen.dart';
 import '../public_profile_screen.dart';
+import '../../core/user_tier.dart';
 
 class LiveListScreen extends ConsumerStatefulWidget {
   const LiveListScreen({super.key});
@@ -590,7 +591,7 @@ class _StreamerAvatarCard extends ConsumerWidget {
     final rawUrl = (streamer['profile_image_url'] as String?) ?? '';
     final imageUrl = rawUrl.isNotEmpty ? ref.read(apiClientProvider).imgUrl(rawUrl) : null;
     final isVerified = streamer['is_verified'] == true;
-    final isPremium = streamer['user_type'] != 'standard';
+    final isPremium = UserTier.isPaidTier(streamer['user_type'] as String? ?? UserTier.standard);
     final isLive = streamer['is_live'] == true;
     final username = streamer['username'] as String? ?? '';
     final initial = username.isNotEmpty ? username[0].toUpperCase() : '?';

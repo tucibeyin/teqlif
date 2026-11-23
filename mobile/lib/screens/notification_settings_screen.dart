@@ -5,10 +5,11 @@ import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../ui_library/components/buttons/teq_button.dart';
 import 'viewmodels/notification_settings_view_model.dart';
+import '../core/user_tier.dart';
 
 class NotificationSettingsScreen extends ConsumerWidget {
-  final bool isPremium;
-  const NotificationSettingsScreen({super.key, this.isPremium = false});
+  final String userType;
+  const NotificationSettingsScreen({super.key, this.userType = UserTier.standard});
 
   Map<String, (String, String, IconData)> _buildLabels(TranslationPack loc) => {
     'messages': (
@@ -154,17 +155,17 @@ class NotificationSettingsScreen extends ConsumerWidget {
               const SizedBox(height: 12),
               // ── Pro Bildirim Ayarları ─────────────────────────────
               _ProSection(
-                isPremium: isPremium,
+                isPremium: UserTier.isPaidTier(userType),
                 bidThreshold: state.bidThreshold,
                 quietEnabled: state.quietEnabled,
                 quietFrom: state.quietFrom,
                 quietTo: state.quietTo,
                 receiveBlastNotifications: state.receiveBlastNotifications,
-                onBidThreshold: isPremium ? (v) => ref.read(notificationSettingsProvider.notifier).setBidThreshold(v) : null,
-                onQuietEnabled: isPremium ? (v) => ref.read(notificationSettingsProvider.notifier).setQuietEnabled(v) : null,
-                onPickFrom: isPremium ? () => _pickTime(context, ref, state, isFrom: true) : null,
-                onPickTo: isPremium ? () => _pickTime(context, ref, state, isFrom: false) : null,
-                onBlastNotifChanged: isPremium ? (v) => ref.read(notificationSettingsProvider.notifier).setBlastNotifications(v) : null,
+                onBidThreshold: UserTier.isPaidTier(userType) ? (v) => ref.read(notificationSettingsProvider.notifier).setBidThreshold(v) : null,
+                onQuietEnabled: UserTier.isPaidTier(userType) ? (v) => ref.read(notificationSettingsProvider.notifier).setQuietEnabled(v) : null,
+                onPickFrom: UserTier.isPaidTier(userType) ? () => _pickTime(context, ref, state, isFrom: true) : null,
+                onPickTo: UserTier.isPaidTier(userType) ? () => _pickTime(context, ref, state, isFrom: false) : null,
+                onBlastNotifChanged: UserTier.isPaidTier(userType) ? (v) => ref.read(notificationSettingsProvider.notifier).setBlastNotifications(v) : null,
                 onUpgradeTap: () => _showUpgradeSheet(context, loc),
               ),
               const SizedBox(height: 12),

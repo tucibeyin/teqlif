@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../core/user_tier.dart';
 import '../screens/viewmodels/pro_subscription_view_model.dart';
 import '../services/iap_service.dart';
 import '../services/localization_service.dart';
@@ -25,19 +26,19 @@ class _PlanOption {
 }
 
 const _plansByTier = <String, List<_PlanOption>>{
-  'pro': [
+  UserTier.pro: [
     _PlanOption(productId: 'teqlif_pro_1m',  labelKey: 'proMonthly'),
     _PlanOption(productId: 'teqlif_pro_3m',  labelKey: 'proQuarterly', savingKey: 'proSave10', highlighted: true, badgeLabelKey: 'proPopularBadge'),
     _PlanOption(productId: 'teqlif_pro_6m',  labelKey: 'proBiannual',  savingKey: 'proSave20'),
     _PlanOption(productId: 'teqlif_pro_12m', labelKey: 'proAnnual',    savingKey: 'proSave30', badgeLabelKey: 'proPlanBadgeBest'),
   ],
-  'pro_plus': [
+  UserTier.proPlus: [
     _PlanOption(productId: 'teqlif_pro_plus_1m',  labelKey: 'proMonthly'),
     _PlanOption(productId: 'teqlif_pro_plus_3m',  labelKey: 'proQuarterly', savingKey: 'proSave10', highlighted: true, badgeLabelKey: 'proPopularBadge'),
     _PlanOption(productId: 'teqlif_pro_plus_6m',  labelKey: 'proBiannual',  savingKey: 'proSave20'),
     _PlanOption(productId: 'teqlif_pro_plus_12m', labelKey: 'proAnnual',    savingKey: 'proSave30', badgeLabelKey: 'proPlanBadgeBest'),
   ],
-  'premium': [
+  UserTier.premium: [
     _PlanOption(productId: 'teqlif_premium_1m',  labelKey: 'proMonthly'),
     _PlanOption(productId: 'teqlif_premium_3m',  labelKey: 'proQuarterly', savingKey: 'proSave10', highlighted: true, badgeLabelKey: 'proPopularBadge'),
     _PlanOption(productId: 'teqlif_premium_6m',  labelKey: 'proBiannual',  savingKey: 'proSave20'),
@@ -45,8 +46,8 @@ const _plansByTier = <String, List<_PlanOption>>{
   ],
 };
 
-const _tierOrder = ['pro', 'pro_plus', 'premium'];
-const _tierRank = <String, int>{'standard': 0, 'pro': 1, 'pro_plus': 2, 'premium': 3};
+const _tierOrder = [UserTier.pro, UserTier.proPlus, UserTier.premium];
+const _tierRank = <String, int>{UserTier.standard: 0, UserTier.pro: 1, UserTier.proPlus: 2, UserTier.premium: 3};
 
 class ProSubscriptionSheet extends ConsumerStatefulWidget {
   final TranslationPack loc;
@@ -73,7 +74,7 @@ class _ProSubscriptionSheetState extends ConsumerState<ProSubscriptionSheet> {
   late String _selectedPlanId;
 
   List<String> _visibleTiers() {
-    final currentRank = _tierRank[widget.currentUserType ?? 'standard'] ?? 0;
+    final currentRank = _tierRank[widget.currentUserType ?? UserTier.standard] ?? 0;
     return _tierOrder.where((t) => (_tierRank[t] ?? 0) > currentRank).toList();
   }
 
@@ -169,10 +170,10 @@ class _ProSubscriptionSheetState extends ConsumerState<ProSubscriptionSheet> {
 
     final loading = vm.isPurchasing;
     final loc = widget.loc;
-    final isUpgradeMode = widget.currentUserType != null && widget.currentUserType != 'standard';
+    final isUpgradeMode = widget.currentUserType != null && UserTier.isPaidTier(widget.currentUserType!);
     final visibleTiers = _visibleTiers();
-    final isVip = widget.currentUserType == 'premium';
-    final currentPlans = _plansByTier[_selectedTier] ?? _plansByTier['pro']!;
+    final isVip = widget.currentUserType == UserTier.premium;
+    final currentPlans = _plansByTier[_selectedTier] ?? _plansByTier[UserTier.pro]!;
 
     return DraggableScrollableSheet(
       expand: false,
@@ -343,18 +344,18 @@ class _ProSubscriptionSheetState extends ConsumerState<ProSubscriptionSheet> {
 
 String _tierLabel(TranslationPack loc, String tier) {
   switch (tier) {
-    case 'pro': return loc.tOr('tierLabelPro', 'PRO');
-    case 'pro_plus': return loc.tOr('tierLabelProPlus', 'PRO+');
-    case 'premium': return loc.tOr('tierLabelPremium', 'PREMIUM');
+    case UserTier.pro: return loc.tOr('tierLabelPro', 'PRO');
+    case UserTier.proPlus: return loc.tOr('tierLabelProPlus', 'PRO+');
+    case UserTier.premium: return loc.tOr('tierLabelPremium', 'PREMIUM');
     default: return tier.toUpperCase();
   }
 }
 
 Color _tierAccent(String tier) {
   switch (tier) {
-    case 'pro': return const Color(0xFFD97706);
-    case 'pro_plus': return const Color(0xFF7C3AED);
-    case 'premium': return const Color(0xFF0EA5E9);
+    case UserTier.pro: return const Color(0xFFD97706);
+    case UserTier.proPlus: return const Color(0xFF7C3AED);
+    case UserTier.premium: return const Color(0xFF0EA5E9);
     default: return const Color(0xFFD97706);
   }
 }

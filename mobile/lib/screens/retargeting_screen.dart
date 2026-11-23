@@ -10,14 +10,15 @@ import '../ui_library/components/filters/teq_filter_bar.dart';
 import '../ui_library/components/overlays/teq_toast.dart';
 import 'viewmodels/retargeting_view_model.dart';
 import '../widgets/pro_paywall_overlay.dart';
+import '../core/user_tier.dart';
 
 class RetargetingScreen extends ConsumerStatefulWidget {
   final int initialIndex;
-  final bool isPremium;
+  final String userType;
   final bool isEmbedded;
   final int? listingId;
 
-  const RetargetingScreen({super.key, this.initialIndex = 0, required this.isPremium, this.isEmbedded = false, this.listingId});
+  const RetargetingScreen({super.key, this.initialIndex = 0, this.userType = UserTier.standard, this.isEmbedded = false, this.listingId});
 
   @override
   ConsumerState<RetargetingScreen> createState() => _RetargetingScreenState();
@@ -27,7 +28,7 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
   @override
   void initState() {
     super.initState();
-    if (widget.isPremium) {
+    if (UserTier.isPaidTier(widget.userType)) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ref.read(retargetingProvider.notifier).init(widget.listingId);
       });
@@ -425,7 +426,7 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
 
-    if (!widget.isPremium && !widget.isEmbedded) {
+    if (!UserTier.isPaidTier(widget.userType) && !widget.isEmbedded) {
       return Scaffold(
         backgroundColor: AppColors.bg(context),
         appBar: AppBar(

@@ -16,6 +16,7 @@ import 'subcategory_icons.dart';
 import '../ui_library/components/overlays/teq_toast.dart';
 import '../screens/live/host_stream_screen.dart';
 import '../services/permission_service.dart';
+import '../core/user_tier.dart';
 
 /// Canlı yayın başlatma dialog'unu gösterir.
 /// [onStreamStarted]: yayın ekranından geri dönüldüğünde çağrılır (opsiyonel).
@@ -47,7 +48,7 @@ Future<void> showStartStreamDialog(
   // ──────────────────────────────────────────────────────────────────────────
 
   final userInfo = await StorageService.getUserInfo();
-  final userType = userInfo?['user_type'] as String? ?? 'standard';
+  final userType = userInfo?['user_type'] as String? ?? UserTier.standard;
 
   final titleController = TextEditingController();
   String? selectedCategory;
@@ -489,10 +490,10 @@ String _mapCaptchaError(AppException e, TranslationPack loc) {
 
 String _qualityLabelFor(String userType) {
   switch (userType) {
-    case 'pro_plus':
-    case 'premium':
+    case UserTier.proPlus:
+    case UserTier.premium:
       return '1080p';
-    case 'pro':
+    case UserTier.pro:
       return '720p';
     default:
       return '540p';
@@ -508,10 +509,10 @@ class _StreamQualityInfoRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final quality = _qualityLabelFor(userType);
     final tierName = switch (userType) {
-      'pro_plus' => 'PRO+',
-      'premium'  => 'PREMIUM',
-      'pro'      => 'PRO',
-      _          => null,
+      UserTier.proPlus => 'PRO+',
+      UserTier.premium => 'PREMIUM',
+      UserTier.pro     => 'PRO',
+      _                => null,
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),

@@ -11,6 +11,7 @@ import '../ui_library/components/buttons/teq_button.dart';
 import '../core/app_exception.dart';
 import 'viewmodels/account_info_view_model.dart';
 import 'pro_hub_screen.dart';
+import '../core/user_tier.dart';
 
 class AccountInfoScreen extends ConsumerStatefulWidget {
   const AccountInfoScreen({super.key});
@@ -556,18 +557,18 @@ class _SubscriptionSectionCard extends ConsumerWidget {
 
   String _tierLabel(String userType, LocalizationService loc) {
     switch (userType) {
-      case 'pro': return loc.t('tierLabelPro');
-      case 'pro_plus': return loc.t('tierLabelProPlus');
-      case 'premium': return loc.t('tierLabelPremium');
+      case UserTier.pro: return loc.t('tierLabelPro');
+      case UserTier.proPlus: return loc.t('tierLabelProPlus');
+      case UserTier.premium: return loc.t('tierLabelPremium');
       default: return loc.t('tierLabelStandard');
     }
   }
 
   List<Color> _tierGradient(String userType) {
     switch (userType) {
-      case 'premium': return const [Color(0xFF0284C7), Color(0xFF38BDF8)];
-      case 'pro_plus': return const [Color(0xFF7C3AED), Color(0xFFA78BFA)];
-      case 'pro': return const [Color(0xFFD97706), Color(0xFFFFD700)];
+      case UserTier.premium: return const [Color(0xFF0284C7), Color(0xFF38BDF8)];
+      case UserTier.proPlus: return const [Color(0xFF7C3AED), Color(0xFFA78BFA)];
+      case UserTier.pro: return const [Color(0xFFD97706), Color(0xFFFFD700)];
       default: return const [Color(0xFF6B7280), Color(0xFF9CA3AF)];
     }
   }
@@ -575,11 +576,11 @@ class _SubscriptionSectionCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final loc = ref.watch(localizationProvider);
-    final userType = user['user_type'] as String? ?? 'standard';
+    final userType = user['user_type'] as String? ?? UserTier.standard;
     final planType = user['plan_type'] as String?;
     final autoRenew = user['auto_renew_enabled'] as bool? ?? true;
     final pendingTier = user['pending_tier'] as String?;
-    final isPaid = userType != 'standard';
+    final isPaid = UserTier.isPaidTier(userType);
     final colors = _tierGradient(userType);
 
     return Container(
@@ -643,7 +644,7 @@ class _SubscriptionSectionCard extends ConsumerWidget {
                 GestureDetector(
                   onTap: () => Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => ProHubScreen(isPremium: isPaid)),
+                    MaterialPageRoute(builder: (_) => ProHubScreen(userType: userType)),
                   ),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),

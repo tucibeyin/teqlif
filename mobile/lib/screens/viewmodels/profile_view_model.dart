@@ -8,6 +8,7 @@ import '../../services/wallet_service.dart';
 import '../../core/logger_service.dart';
 import '../../core/event_bus.dart';
 import '../../models/listing_filter_state.dart';
+import '../../core/user_tier.dart';
 
 class ProfileUiState {
   final Map<String, dynamic>? user;
@@ -201,7 +202,7 @@ class ProfileViewModel extends AutoDisposeAsyncNotifier<ProfileUiState> {
           email: localInfo?['email'] as String? ?? '',
           username: user['username'] as String? ?? username,
           fullName: user['full_name'] as String? ?? '',
-          userType: user['user_type'] as String? ?? 'standard',
+          userType: user['user_type'] as String? ?? UserTier.standard,
           onboardingCompleted: user['onboarding_completed'] == true,
           isVerified: user['is_verified'] == true,
           phoneVerified: user['phone_verified'] == true,

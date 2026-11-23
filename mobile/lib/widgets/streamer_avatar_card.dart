@@ -7,6 +7,7 @@ import '../services/localization_service.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
 import 'package:teqlif/core/network/api_client.dart';
+import '../core/user_tier.dart';
 
 class StreamerAvatarCard extends ConsumerWidget {
   final Map<String, dynamic> streamer;
@@ -19,7 +20,7 @@ class StreamerAvatarCard extends ConsumerWidget {
     final rawUrl = (streamer['profile_image_url'] as String?) ?? '';
     final imageUrl = rawUrl.isNotEmpty ? ref.read(apiClientProvider).imgUrl(rawUrl) : null;
     final isVerified = streamer['is_verified'] == true;
-    final isPremium = streamer['user_type'] != 'standard';
+    final isPremium = UserTier.isPaidTier(streamer['user_type'] as String? ?? UserTier.standard);
     final isLive = streamer['is_live'] == true;
     final username = streamer['username'] as String? ?? '';
     final initial = username.isNotEmpty ? username[0].toUpperCase() : '?';

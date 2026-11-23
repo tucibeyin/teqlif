@@ -12,10 +12,11 @@ import 'viewmodels/my_recordings_view_model.dart';
 import 'recording_detail_screen.dart';
 import '../widgets/pro_paywall_overlay.dart';
 import '../widgets/teq_search_field.dart';
+import '../core/user_tier.dart';
 
 class MyRecordingsScreen extends ConsumerStatefulWidget {
-  final bool isPremium;
-  const MyRecordingsScreen({super.key, required this.isPremium});
+  final String userType;
+  const MyRecordingsScreen({super.key, this.userType = UserTier.standard});
 
   @override
   ConsumerState<MyRecordingsScreen> createState() => _MyRecordingsScreenState();
@@ -26,7 +27,7 @@ class _MyRecordingsScreenState extends ConsumerState<MyRecordingsScreen> {
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
 
-    if (!widget.isPremium) {
+    if (!UserTier.isPaidTier(widget.userType)) {
       return Scaffold(
         backgroundColor: AppColors.bg(context),
         appBar: AppBar(

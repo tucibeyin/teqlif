@@ -30,6 +30,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'viewmodels/public_profile_view_model.dart';
 import 'viewmodels/direct_chat_request_view_model.dart';
 import '../main.dart' show providerContainer;
+import '../core/user_tier.dart';
 
 const _starColor = Color(0xFFF59E0B);
 
@@ -840,7 +841,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
     final rawImg = _user?['profile_image_url'] as String?;
     final isLive = (_user?['is_live'] as bool?) ?? false;
     final streamId = _user?['active_stream_id'] as int?;
-    final isPremium = _user?['user_type'] != 'standard';
+    final isPremium = UserTier.isPaidTier(_user?['user_type'] as String? ?? UserTier.standard);
 
     Widget avatarWidget = CircleAvatar(
       radius: 44,

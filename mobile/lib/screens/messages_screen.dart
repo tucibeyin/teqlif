@@ -62,6 +62,7 @@ import 'viewmodels/direct_chat_request_view_model.dart';
 import 'viewmodels/message_thread_view_model.dart';
 import '../models/direct_message.dart';
 import '../ui_library/components/buttons/teq_voice_button.dart';
+import '../core/user_tier.dart';
 
 class MessagesScreen extends ConsumerStatefulWidget {
   const MessagesScreen({super.key});
@@ -1063,18 +1064,18 @@ class _NotificationsTabState extends ConsumerState<_NotificationsTab> {
       case 'recording_available':
         final info = await StorageService.getUserInfo();
         if (!mounted) return;
-        final isPremium = info?['user_type'] != 'standard';
+        final userType = info?['user_type'] as String? ?? UserTier.standard;
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => ProHubScreen(isPremium: isPremium, scrollToLiveSection: true),
+            builder: (_) => ProHubScreen(userType: userType, scrollToLiveSection: true),
           ),
         );
       case 'recording_upsell':
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => ProHubScreen(isPremium: false, scrollToLiveSection: true),
+            builder: (_) => ProHubScreen(scrollToLiveSection: true),
           ),
         );
     }

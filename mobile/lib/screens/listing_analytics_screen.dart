@@ -11,13 +11,14 @@ import '../widgets/pro_subscription_sheet.dart';
 import '../config/app_colors.dart';
 import '../ui_library/components/filters/teq_filter_bar.dart';
 import 'viewmodels/listing_analytics_view_model.dart';
+import '../core/user_tier.dart';
 
 class ListingAnalyticsScreen extends ConsumerStatefulWidget {
-  final bool isPremium;
+  final String userType;
   final bool isEmbedded;
   const ListingAnalyticsScreen({
     super.key,
-    required this.isPremium,
+    this.userType = UserTier.standard,
     this.isEmbedded = false,
   });
 
@@ -29,7 +30,7 @@ class _ListingAnalyticsScreenState extends ConsumerState<ListingAnalyticsScreen>
   @override
   void initState() {
     super.initState();
-    if (widget.isPremium) {
+    if (UserTier.isPaidTier(widget.userType)) {
       Future.microtask(() => ref.read(listingAnalyticsProvider.notifier).load());
     }
   }
@@ -51,12 +52,12 @@ class _ListingAnalyticsScreenState extends ConsumerState<ListingAnalyticsScreen>
     
     final bodyContent = state.loading
         ? const Center(child: CircularProgressIndicator())
-        : (state.hasError && widget.isPremium)
+        : (state.hasError && UserTier.isPaidTier(widget.userType))
         ? _buildError(loc, viewModel)
         : Stack(
             children: [
               _buildContent(loc, state, viewModel),
-              if (!widget.isPremium) _buildPaywall(context, loc),
+              if (!UserTier.isPaidTier(widget.userType)) _buildPaywall(context, loc),
             ],
           );
 
@@ -123,7 +124,7 @@ class _ListingAnalyticsScreenState extends ConsumerState<ListingAnalyticsScreen>
             : const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 40),
         children: [
-          if (widget.isPremium) const _FeedStatsCard(),
+          if (UserTier.isPaidTier(widget.userType)) const _FeedStatsCard(),
           TeqFilterBar(
             filter: state.filter,
             onChanged: (f) {

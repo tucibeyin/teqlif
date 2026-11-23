@@ -6,6 +6,7 @@ import '../../../../services/auth_service.dart';
 import '../../../../services/localization_service.dart';
 import '../../../../services/storage_service.dart';
 import '../../../../utils/error_helper.dart';
+import '../../../../core/user_tier.dart';
 
 class CategoryOnboardingViewModel extends AutoDisposeAsyncNotifier<void> {
   @override
@@ -35,7 +36,7 @@ class CategoryOnboardingViewModel extends AutoDisposeAsyncNotifier<void> {
             email: oldInfo['email'] as String,
             username: oldInfo['username'] as String,
             fullName: oldInfo['full_name'] as String,
-            userType: oldInfo['user_type'] as String? ?? 'standard',
+            userType: oldInfo['user_type'] as String? ?? UserTier.standard,
             onboardingCompleted: true,
           );
         }

@@ -6,11 +6,12 @@ import 'package:url_launcher/url_launcher.dart';
 import '../widgets/pro_subscription_sheet.dart';
 import '../config/app_colors.dart';
 import 'viewmodels/market_intelligence_view_model.dart';
+import '../core/user_tier.dart';
 
 class MarketIntelligenceScreen extends ConsumerStatefulWidget {
-  final bool isPremium;
+  final String userType;
   final bool isEmbedded;
-  const MarketIntelligenceScreen({super.key, required this.isPremium, this.isEmbedded = false});
+  const MarketIntelligenceScreen({super.key, this.userType = UserTier.standard, this.isEmbedded = false});
 
   @override
   ConsumerState<MarketIntelligenceScreen> createState() => _MarketIntelligenceScreenState();
@@ -20,7 +21,7 @@ class _MarketIntelligenceScreenState extends ConsumerState<MarketIntelligenceScr
   @override
   void initState() {
     super.initState();
-    if (widget.isPremium) {
+    if (UserTier.isPaidTier(widget.userType)) {
       Future.microtask(() => ref.read(marketIntelligenceProvider.notifier).load());
     }
   }
@@ -33,12 +34,12 @@ class _MarketIntelligenceScreenState extends ConsumerState<MarketIntelligenceScr
 
     final bodyContent = state.loading
         ? const Center(child: CircularProgressIndicator())
-        : (state.hasError && widget.isPremium)
+        : (state.hasError && UserTier.isPaidTier(widget.userType))
             ? _buildError(loc, viewModel)
             : Stack(
                 children: [
                   _buildContent(loc, state, viewModel),
-                  if (!widget.isPremium) _buildPaywall(context, loc),
+                  if (!UserTier.isPaidTier(widget.userType)) _buildPaywall(context, loc),
                 ],
               );
 

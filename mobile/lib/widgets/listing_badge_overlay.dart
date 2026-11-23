@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/user_tier.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 /// Shared seller badge overlay (PRO + seller type + trending).
@@ -17,7 +18,7 @@ class ListingBadgeOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isPro    = listing['user']?['user_type'] != 'standard';
+    final isPro    = UserTier.isPaidTier(listing['user']?['user_type'] as String? ?? UserTier.standard);
     final badge    = listing['seller_badge'] as String?;
     final trending = listing['is_trending'] == true;
 

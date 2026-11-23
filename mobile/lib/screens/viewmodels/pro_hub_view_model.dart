@@ -4,6 +4,7 @@ import '../../services/analytics_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/storage_service.dart';
 import '../../core/event_bus.dart';
+import '../../core/user_tier.dart';
 
 class ProHubState {
   final Map<String, dynamic>? blastCredits;
@@ -11,7 +12,6 @@ class ProHubState {
   final Map<String, dynamic>? aiDescCredits;
   final Map<String, dynamic>? reactivationCredits;
   final bool isLoading;
-  final bool isPremium;
   final String userType;
   final String? planType;
   final String? proExpiresAt;
@@ -23,12 +23,13 @@ class ProHubState {
     this.aiDescCredits,
     this.reactivationCredits,
     this.isLoading = true,
-    this.isPremium = false,
-    this.userType = 'standard',
+    this.userType = UserTier.standard,
     this.planType,
     this.proExpiresAt,
     this.monthlyStreamSecondsUsed = 0,
   });
+
+  bool get isPaidTier => userType != UserTier.standard;
 
   ProHubState copyWith({
     Map<String, dynamic>? blastCredits,
@@ -36,7 +37,6 @@ class ProHubState {
     Map<String, dynamic>? aiDescCredits,
     Map<String, dynamic>? reactivationCredits,
     bool? isLoading,
-    bool? isPremium,
     String? userType,
     String? planType,
     String? proExpiresAt,
@@ -48,7 +48,6 @@ class ProHubState {
       aiDescCredits: aiDescCredits ?? this.aiDescCredits,
       reactivationCredits: reactivationCredits ?? this.reactivationCredits,
       isLoading: isLoading ?? this.isLoading,
-      isPremium: isPremium ?? this.isPremium,
       userType: userType ?? this.userType,
       planType: planType ?? this.planType,
       proExpiresAt: proExpiresAt ?? this.proExpiresAt,
@@ -57,19 +56,19 @@ class ProHubState {
   }
 }
 
-class ProHubViewModel extends AutoDisposeFamilyNotifier<ProHubState, bool> {
+class ProHubViewModel extends AutoDisposeFamilyNotifier<ProHubState, String> {
   StreamSubscription<CreditsChangedEvent>? _creditsSub;
 
   @override
-  ProHubState build(bool arg) {
+  ProHubState build(String arg) {
     _creditsSub = eventBus.on<CreditsChangedEvent>().listen((_) => loadCredits());
     Future.microtask(() {
       loadLocalPlanType();
       verifyPremium();
       loadCredits();
-      ref.read(analyticsServiceProvider).trackEvent('pro_hub_view', {'is_premium': arg});
+      ref.read(analyticsServiceProvider).trackEvent('pro_hub_view', {'user_type': arg});
     });
-    return ProHubState(isPremium: arg, userType: arg ? 'pro' : 'standard');
+    return ProHubState(userType: arg);
   }
 
   Future<void> loadLocalPlanType() async {
@@ -82,8 +81,8 @@ class ProHubViewModel extends AutoDisposeFamilyNotifier<ProHubState, bool> {
   Future<void> verifyPremium() async {
     try {
       final user = await ref.read(authServiceProvider).me();
-      if (user.isPremium != state.isPremium || user.userType != state.userType || user.planType != state.planType) {
-        state = state.copyWith(isPremium: user.isPremium, userType: user.userType, planType: user.planType);
+      if (user.userType != state.userType || user.planType != state.planType) {
+        state = state.copyWith(userType: user.userType, planType: user.planType);
       }
       await StorageService.saveUserInfo(
         id: user.id,
@@ -125,6 +124,6 @@ class ProHubViewModel extends AutoDisposeFamilyNotifier<ProHubState, bool> {
   }
 }
 
-final proHubProvider = NotifierProvider.autoDispose.family<ProHubViewModel, ProHubState, bool>(
+final proHubProvider = NotifierProvider.autoDispose.family<ProHubViewModel, ProHubState, String>(
   () => ProHubViewModel(),
 );

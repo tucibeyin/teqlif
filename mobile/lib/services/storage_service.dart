@@ -4,6 +4,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'cache_service.dart';
 import 'offline_queue_service.dart';
+import '../core/user_tier.dart';
 
 class StorageService {
   static const _tokenKey = 'teqlif_token';
@@ -201,7 +202,7 @@ class StorageService {
       'email': email ?? '',
       'username': username ?? '',
       'full_name': fullName ?? '',
-      'user_type': userType ?? 'standard',
+      'user_type': userType ?? UserTier.standard,
       'plan_type': planType,
       'onboarding_completed': onboardingCompleted == 'true',
       'is_verified': isVerified == 'true',

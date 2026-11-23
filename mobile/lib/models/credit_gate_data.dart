@@ -79,6 +79,8 @@ class CreditGateResult {
   bool get isWalletRedirect => errorKey == '_walletRedirect';
 }
 
+import '../core/user_tier.dart';
+
 class CreditGateData {
   final CreditFeature feature;
 
@@ -122,5 +124,5 @@ class CreditGateData {
   /// Ücretli işlem için bakiye yeterli mi?
   bool get canAfford => isFree || teqlikBalance >= costTeqlik;
 
-  bool get isStandard => userType == 'standard';
+  bool get isStandard => userType == UserTier.standard;
 }

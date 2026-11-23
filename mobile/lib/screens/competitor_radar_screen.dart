@@ -12,17 +12,18 @@ import 'viewmodels/competitor_radar_view_model.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../services/image_cache_manager.dart';
 import '../widgets/pro_paywall_overlay.dart';
+import '../core/user_tier.dart';
 
 class CompetitorRadarScreen extends ConsumerWidget {
-  final bool isPremium;
+  final String userType;
   final bool isEmbedded;
-  const CompetitorRadarScreen({super.key, required this.isPremium, this.isEmbedded = false});
+  const CompetitorRadarScreen({super.key, this.userType = UserTier.standard, this.isEmbedded = false});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final loc = ref.watch(localizationProvider);
 
-    if (!isPremium && !isEmbedded) {
+    if (!UserTier.isPaidTier(userType) && !isEmbedded) {
       return Scaffold(
         backgroundColor: AppColors.bg(context),
         appBar: AppBar(

@@ -9,11 +9,12 @@ import '../models/pro_insights_data.dart';
 import '../ui_library/components/filters/teq_filter_bar.dart';
 import '../utils/number_formatter.dart';
 import 'viewmodels/pro_insights_view_model.dart';
+import '../core/user_tier.dart';
 
 class ProInsightsScreen extends ConsumerStatefulWidget {
-  final bool isPremium;
+  final String userType;
   final bool isEmbedded;
-  const ProInsightsScreen({super.key, required this.isPremium, this.isEmbedded = false});
+  const ProInsightsScreen({super.key, this.userType = UserTier.standard, this.isEmbedded = false});
 
   @override
   ConsumerState<ProInsightsScreen> createState() => _ProInsightsScreenState();
@@ -26,7 +27,7 @@ class _ProInsightsScreenState extends ConsumerState<ProInsightsScreen> {
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
 
-    if (!widget.isPremium && !widget.isEmbedded) {
+    if (!UserTier.isPaidTier(widget.userType) && !widget.isEmbedded) {
       return Scaffold(
         backgroundColor: AppColors.bg(context),
         appBar: AppBar(

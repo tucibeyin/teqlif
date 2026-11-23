@@ -6,6 +6,7 @@ import '../config/app_colors.dart';
 import '../config/theme.dart';
 import 'package:teqlif/core/network/api_client.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/user_tier.dart';
 
 class SellerAvatarCard extends ConsumerWidget {
   final Map<String, dynamic> seller;
@@ -20,7 +21,7 @@ class SellerAvatarCard extends ConsumerWidget {
     final username = seller['username'] as String? ?? '';
     final initial = username.isNotEmpty ? username[0].toUpperCase() : '?';
     final isVerified = seller['is_verified'] == true;
-    final isPremium = seller['user_type'] != 'standard';
+    final isPremium = UserTier.isPaidTier(seller['user_type'] as String? ?? UserTier.standard);
 
     return GestureDetector(
       onTap: onTap,

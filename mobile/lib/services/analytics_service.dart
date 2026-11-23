@@ -13,6 +13,7 @@ import '../models/credit_gate_data.dart';
 import '../services/api_service.dart';
 import '../services/cache_service.dart';
 import '../services/storage_service.dart';
+import '../core/user_tier.dart';
 
 class AiInsufficientTeqlikException implements Exception {
   final String detail;
@@ -649,7 +650,7 @@ class AnalyticsService {
       if (meResp.statusCode != 200) return null;
       final me = await compute(jsonDecode, meResp.body) as Map<String, dynamic>;
       final balance = ((me['wallet_balance'] ?? 0) as num).toInt();
-      final userType = me['user_type'] as String? ?? 'standard';
+      final userType = me['user_type'] as String? ?? UserTier.standard;
 
       // Feature'a özgü kredi endpoint'i
       final String creditsPath;
