@@ -12,6 +12,7 @@ class ProHubState {
   final Map<String, dynamic>? reactivationCredits;
   final bool isLoading;
   final bool isPremium;
+  final String userType;
   final String? planType;
   final String? proExpiresAt;
 
@@ -22,6 +23,7 @@ class ProHubState {
     this.reactivationCredits,
     this.isLoading = true,
     this.isPremium = false,
+    this.userType = 'standard',
     this.planType,
     this.proExpiresAt,
   });
@@ -33,6 +35,7 @@ class ProHubState {
     Map<String, dynamic>? reactivationCredits,
     bool? isLoading,
     bool? isPremium,
+    String? userType,
     String? planType,
     String? proExpiresAt,
   }) {
@@ -43,6 +46,7 @@ class ProHubState {
       reactivationCredits: reactivationCredits ?? this.reactivationCredits,
       isLoading: isLoading ?? this.isLoading,
       isPremium: isPremium ?? this.isPremium,
+      userType: userType ?? this.userType,
       planType: planType ?? this.planType,
       proExpiresAt: proExpiresAt ?? this.proExpiresAt,
     );
@@ -61,7 +65,7 @@ class ProHubViewModel extends AutoDisposeFamilyNotifier<ProHubState, bool> {
       loadCredits();
       ref.read(analyticsServiceProvider).trackEvent('pro_hub_view', {'is_premium': arg});
     });
-    return ProHubState(isPremium: arg);
+    return ProHubState(isPremium: arg, userType: arg ? 'pro' : 'standard');
   }
 
   Future<void> loadLocalPlanType() async {
@@ -74,8 +78,8 @@ class ProHubViewModel extends AutoDisposeFamilyNotifier<ProHubState, bool> {
   Future<void> verifyPremium() async {
     try {
       final user = await ref.read(authServiceProvider).me();
-      if (user.isPremium != state.isPremium || user.planType != state.planType) {
-        state = state.copyWith(isPremium: user.isPremium, planType: user.planType);
+      if (user.isPremium != state.isPremium || user.userType != state.userType || user.planType != state.planType) {
+        state = state.copyWith(isPremium: user.isPremium, userType: user.userType, planType: user.planType);
       }
       await StorageService.saveUserInfo(
         id: user.id,

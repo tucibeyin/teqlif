@@ -4,6 +4,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../screens/viewmodels/pro_subscription_view_model.dart';
+import '../services/iap_service.dart';
 import '../services/localization_service.dart';
 
 /// Plan seçim kartı veri modeli
@@ -13,46 +14,53 @@ class _PlanOption {
   final String? savingKey;
   final bool highlighted;
   final String? badgeLabelKey;
-  final int tierIndex;
 
   const _PlanOption({
     required this.productId,
     required this.labelKey,
-    required this.tierIndex,
     this.savingKey,
     this.highlighted = false,
     this.badgeLabelKey,
   });
 }
 
-const _plans = [
-  _PlanOption(productId: 'teqlif_pro_1m',  labelKey: 'proMonthly',   tierIndex: 0),
-  _PlanOption(productId: 'teqlif_pro_3m',  labelKey: 'proQuarterly', tierIndex: 1, savingKey: 'proSave10', highlighted: true, badgeLabelKey: 'proPopularBadge'),
-  _PlanOption(productId: 'teqlif_pro_6m',  labelKey: 'proBiannual',  tierIndex: 2, savingKey: 'proSave20'),
-  _PlanOption(productId: 'teqlif_pro_12m', labelKey: 'proAnnual',    tierIndex: 3, savingKey: 'proSave30', badgeLabelKey: 'proPlanBadgeBest'),
-];
-
-// DB plan_type → tier indeksi (IAP product ID üzerinden)
-const _kPlanTier = {
-  'teqlif_pro_1m':  0,
-  'teqlif_pro_3m':  1,
-  'teqlif_pro_6m':  2,
-  'teqlif_pro_12m': 3,
+const _plansByTier = <String, List<_PlanOption>>{
+  'pro': [
+    _PlanOption(productId: 'teqlif_pro_1m',  labelKey: 'proMonthly'),
+    _PlanOption(productId: 'teqlif_pro_3m',  labelKey: 'proQuarterly', savingKey: 'proSave10', highlighted: true, badgeLabelKey: 'proPopularBadge'),
+    _PlanOption(productId: 'teqlif_pro_6m',  labelKey: 'proBiannual',  savingKey: 'proSave20'),
+    _PlanOption(productId: 'teqlif_pro_12m', labelKey: 'proAnnual',    savingKey: 'proSave30', badgeLabelKey: 'proPlanBadgeBest'),
+  ],
+  'pro_plus': [
+    _PlanOption(productId: 'teqlif_pro_plus_1m',  labelKey: 'proMonthly'),
+    _PlanOption(productId: 'teqlif_pro_plus_3m',  labelKey: 'proQuarterly', savingKey: 'proSave10', highlighted: true, badgeLabelKey: 'proPopularBadge'),
+    _PlanOption(productId: 'teqlif_pro_plus_6m',  labelKey: 'proBiannual',  savingKey: 'proSave20'),
+    _PlanOption(productId: 'teqlif_pro_plus_12m', labelKey: 'proAnnual',    savingKey: 'proSave30', badgeLabelKey: 'proPlanBadgeBest'),
+  ],
+  'premium': [
+    _PlanOption(productId: 'teqlif_premium_1m',  labelKey: 'proMonthly'),
+    _PlanOption(productId: 'teqlif_premium_3m',  labelKey: 'proQuarterly', savingKey: 'proSave10', highlighted: true, badgeLabelKey: 'proPopularBadge'),
+    _PlanOption(productId: 'teqlif_premium_6m',  labelKey: 'proBiannual',  savingKey: 'proSave20'),
+    _PlanOption(productId: 'teqlif_premium_12m', labelKey: 'proAnnual',    savingKey: 'proSave30', badgeLabelKey: 'proPlanBadgeBest'),
+  ],
 };
+
+const _tierOrder = ['pro', 'pro_plus', 'premium'];
+const _tierRank = <String, int>{'standard': 0, 'pro': 1, 'pro_plus': 2, 'premium': 3};
 
 class ProSubscriptionSheet extends ConsumerStatefulWidget {
   final TranslationPack loc;
   final VoidCallback? onPurchaseSuccess;
-  /// Mevcut IAP plan product ID (ör. 'teqlif_pro_6m'). Null = PRO değil, tüm planlar gösterilir.
-  final String? currentPlanId;
-  /// Açılışta seçili plan. Null ise mevcut tier'ın üzerindeki ilk plan seçilir.
+  /// Kullanıcının mevcut subscription tier'ı (ör. 'pro'). Null = standard, tüm tier'lar gösterilir.
+  final String? currentUserType;
+  /// Açılışta seçili plan ID. Null ise varsayılan (highlighted) plan seçilir.
   final String? initialPlanId;
 
   const ProSubscriptionSheet({
     super.key,
     required this.loc,
     this.onPurchaseSuccess,
-    this.currentPlanId,
+    this.currentUserType,
     this.initialPlanId,
   });
 
@@ -61,23 +69,38 @@ class ProSubscriptionSheet extends ConsumerStatefulWidget {
 }
 
 class _ProSubscriptionSheetState extends ConsumerState<ProSubscriptionSheet> {
+  late String _selectedTier;
   late String _selectedPlanId;
+
+  List<String> _visibleTiers() {
+    final currentRank = _tierRank[widget.currentUserType ?? 'standard'] ?? 0;
+    return _tierOrder.where((t) => (_tierRank[t] ?? 0) > currentRank).toList();
+  }
 
   @override
   void initState() {
     super.initState();
-    // Mevcut tier'ın üzerindeki planları filtrele
-    final currentTier = _kPlanTier[widget.currentPlanId] ?? -1;
-    final visibleIds = _plans
-        .where((p) => p.tierIndex > currentTier)
-        .map((p) => p.productId)
-        .toList();
-    // initialPlanId görünür planlardaysa onu seç, yoksa ilk görünür planı seç
-    if (widget.initialPlanId != null && visibleIds.contains(widget.initialPlanId)) {
-      _selectedPlanId = widget.initialPlanId!;
-    } else {
-      _selectedPlanId = visibleIds.firstOrNull ?? 'teqlif_pro_1m';
+    final visible = _visibleTiers();
+    // initialPlanId verilmişse onun tier'ını ve ID'sini seç
+    if (widget.initialPlanId != null) {
+      final tier = kProductTierMap[widget.initialPlanId];
+      if (tier != null && visible.contains(tier)) {
+        _selectedTier = tier;
+        _selectedPlanId = widget.initialPlanId!;
+        return;
+      }
     }
+    _selectedTier = visible.firstOrNull ?? 'pro';
+    final plans = _plansByTier[_selectedTier] ?? _plansByTier['pro']!;
+    _selectedPlanId = plans.firstWhere((p) => p.highlighted, orElse: () => plans.first).productId;
+  }
+
+  void _onTierChanged(String tier) {
+    final plans = _plansByTier[tier] ?? _plansByTier['pro']!;
+    setState(() {
+      _selectedTier = tier;
+      _selectedPlanId = plans.firstWhere((p) => p.highlighted, orElse: () => plans.first).productId;
+    });
   }
 
   void _onPurchase(PurchaseDetails purchase) {
@@ -103,10 +126,13 @@ class _ProSubscriptionSheetState extends ConsumerState<ProSubscriptionSheet> {
       );
       return;
     }
-    final product = products.firstWhere(
-      (p) => p.id == _selectedPlanId,
-      orElse: () => throw StateError('Ürün bulunamadı'),
-    );
+    final product = products.where((p) => p.id == _selectedPlanId).firstOrNull;
+    if (product == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(widget.loc.t('iapProductsNotLoaded'))),
+      );
+      return;
+    }
     try {
       await ref.read(proSubscriptionViewModelProvider.notifier).buy(product);
     } catch (_) {}
@@ -143,10 +169,10 @@ class _ProSubscriptionSheetState extends ConsumerState<ProSubscriptionSheet> {
 
     final loading = vm.isPurchasing;
     final loc = widget.loc;
-    final currentTier = _kPlanTier[widget.currentPlanId] ?? -1;
-    final isUpgradeMode = widget.currentPlanId != null;
-    final visiblePlans = _plans.where((p) => p.tierIndex > currentTier).toList();
-    final isVip = isUpgradeMode && visiblePlans.isEmpty;
+    final isUpgradeMode = widget.currentUserType != null && widget.currentUserType != 'standard';
+    final visibleTiers = _visibleTiers();
+    final isVip = widget.currentUserType == 'premium';
+    final currentPlans = _plansByTier[_selectedTier] ?? _plansByTier['pro']!;
 
     return DraggableScrollableSheet(
       expand: false,
@@ -214,7 +240,7 @@ class _ProSubscriptionSheetState extends ConsumerState<ProSubscriptionSheet> {
           const SizedBox(height: 20),
 
           if (isVip) ...[
-            // Yıllık plan sahibi — zaten en yüksek tier
+            // PREMIUM sahibi — zaten en yüksek tier
             const FaIcon(FontAwesomeIcons.crown, color: Color(0xFFFFD700), size: 32),
             const SizedBox(height: 12),
             Text(
@@ -235,8 +261,19 @@ class _ProSubscriptionSheetState extends ConsumerState<ProSubscriptionSheet> {
               const SizedBox(height: 20),
             ],
 
-            // Plan seçim kartları (tier filtreli)
-            ...visiblePlans.map((plan) => _PlanCard(
+            // Tier seçici (birden fazla tier görünürse göster)
+            if (visibleTiers.length > 1) ...[
+              _TierSelector(
+                tiers: visibleTiers,
+                selected: _selectedTier,
+                onTierChanged: _onTierChanged,
+                loc: loc,
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            // Plan seçim kartları (seçili tier'a göre)
+            ...currentPlans.map((plan) => _PlanCard(
                   plan: plan,
                   price: _priceFor(plan.productId, vm.products),
                   selected: _selectedPlanId == plan.productId,
@@ -300,6 +337,77 @@ class _ProSubscriptionSheetState extends ConsumerState<ProSubscriptionSheet> {
           ),
         ),
       ),
+    );
+  }
+}
+
+String _tierLabel(TranslationPack loc, String tier) {
+  switch (tier) {
+    case 'pro': return loc.tOr('tierLabelPro', 'PRO');
+    case 'pro_plus': return loc.tOr('tierLabelProPlus', 'PRO+');
+    case 'premium': return loc.tOr('tierLabelPremium', 'PREMIUM');
+    default: return tier.toUpperCase();
+  }
+}
+
+Color _tierAccent(String tier) {
+  switch (tier) {
+    case 'pro': return const Color(0xFFD97706);
+    case 'pro_plus': return const Color(0xFF7C3AED);
+    case 'premium': return const Color(0xFF0EA5E9);
+    default: return const Color(0xFFD97706);
+  }
+}
+
+class _TierSelector extends StatelessWidget {
+  final List<String> tiers;
+  final String selected;
+  final ValueChanged<String> onTierChanged;
+  final TranslationPack loc;
+
+  const _TierSelector({
+    required this.tiers,
+    required this.selected,
+    required this.onTierChanged,
+    required this.loc,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: tiers.asMap().entries.map((entry) {
+        final tier = entry.value;
+        final isSelected = selected == tier;
+        final accent = _tierAccent(tier);
+        return Expanded(
+          child: GestureDetector(
+            onTap: () => onTierChanged(tier),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              margin: EdgeInsetsDirectional.only(end: entry.key < tiers.length - 1 ? 6 : 0),
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              decoration: BoxDecoration(
+                color: isSelected ? accent.withValues(alpha: 0.2) : Colors.white.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isSelected ? accent : Colors.white12,
+                  width: isSelected ? 2 : 1,
+                ),
+              ),
+              child: Text(
+                _tierLabel(loc, tier),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: isSelected ? accent : Colors.white54,
+                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+                  fontSize: 13,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 }

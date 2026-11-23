@@ -13,9 +13,18 @@ class User {
   final String? profileImageThumbUrl;
   final String userType;
   final String? planType;
+  final bool autoRenewEnabled;
+  final String? pendingTier;
+  final String? lastTier;
+  final int monthlyStreamSecondsUsed;
 
-  bool get isPremium => userType == 'pro';
+  bool get isPaidTier => userType != 'standard';
   bool get isPro => userType == 'pro';
+  bool get isProPlus => userType == 'pro_plus';
+  bool get isPremiumTier => userType == 'premium';
+  // Screens genelinde "ücretli abonelik var mı" kontrolü için alias
+  bool get isPremium => isPaidTier;
+
   final bool onboardingCompleted;
   final String? websiteUrl;
   final String? instagramUrl;
@@ -40,6 +49,10 @@ class User {
     this.profileImageThumbUrl,
     this.userType = 'standard',
     this.planType,
+    this.autoRenewEnabled = true,
+    this.pendingTier,
+    this.lastTier,
+    this.monthlyStreamSecondsUsed = 0,
     this.onboardingCompleted = false,
     this.websiteUrl,
     this.instagramUrl,
@@ -66,6 +79,10 @@ class User {
       profileImageThumbUrl: json['profile_image_thumb_url'] as String?,
       userType: json['user_type'] as String? ?? 'standard',
       planType: json['plan_type'] as String?,
+      autoRenewEnabled: json['auto_renew_enabled'] as bool? ?? true,
+      pendingTier: json['pending_tier'] as String?,
+      lastTier: json['last_tier'] as String?,
+      monthlyStreamSecondsUsed: json['monthly_stream_seconds_used'] as int? ?? 0,
       onboardingCompleted: json['onboarding_completed'] as bool? ?? false,
       websiteUrl: json['website_url'] as String?,
       instagramUrl: json['instagram_url'] as String?,

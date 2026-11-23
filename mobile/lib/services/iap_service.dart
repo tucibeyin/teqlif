@@ -35,12 +35,18 @@ const kConsumableIds = {
   'teqlik_pack_1000',
 };
 
-/// PRO abonelik ID'leri
+/// Tüm abonelik ID'leri — PRO / PRO+ / PREMIUM × 1m/3m/6m/12m
 const kSubscriptionIds = {
-  'teqlif_pro_1m',
-  'teqlif_pro_3m',
-  'teqlif_pro_6m',
-  'teqlif_pro_12m',
+  'teqlif_pro_1m',      'teqlif_pro_3m',      'teqlif_pro_6m',      'teqlif_pro_12m',
+  'teqlif_pro_plus_1m', 'teqlif_pro_plus_3m', 'teqlif_pro_plus_6m', 'teqlif_pro_plus_12m',
+  'teqlif_premium_1m',  'teqlif_premium_3m',  'teqlif_premium_6m',  'teqlif_premium_12m',
+};
+
+/// IAP ürün ID → abonelik tier eşlemesi
+const kProductTierMap = <String, String>{
+  'teqlif_pro_1m': 'pro',       'teqlif_pro_3m': 'pro',       'teqlif_pro_6m': 'pro',       'teqlif_pro_12m': 'pro',
+  'teqlif_pro_plus_1m': 'pro_plus', 'teqlif_pro_plus_3m': 'pro_plus', 'teqlif_pro_plus_6m': 'pro_plus', 'teqlif_pro_plus_12m': 'pro_plus',
+  'teqlif_premium_1m': 'premium', 'teqlif_premium_3m': 'premium', 'teqlif_premium_6m': 'premium', 'teqlif_premium_12m': 'premium',
 };
 
 final _allIds = {...kConsumableIds, ...kSubscriptionIds};

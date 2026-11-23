@@ -85,7 +85,7 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
           padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 32),
         children: [
           // ── Durum Kartı ────────────────────────────────────────────────────
-          if (isPremium) _ProStatusCard(renewalDate: state.proExpiresAt, planType: state.planType) else _UpgradeBanner(),
+          if (isPremium) _ProStatusCard(renewalDate: state.proExpiresAt, userType: state.userType, planType: state.planType) else _UpgradeBanner(),
 
           if (!isPremium) ...[
             const SizedBox(height: 20),
@@ -321,13 +321,30 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
 
 class _ProStatusCard extends ConsumerWidget {
   final String? renewalDate;
+  final String userType;
   final String? planType;
-  const _ProStatusCard({this.renewalDate, this.planType});
+  const _ProStatusCard({this.renewalDate, this.userType = 'pro', this.planType});
 
   String _getPlanName(TranslationPack loc, String? type) {
     if (type == null || type.isEmpty) return loc.t('proMonthly');
     final key = 'pro${type[0].toUpperCase()}${type.substring(1)}';
     return loc.tOr(key, loc.t('proMonthly'));
+  }
+
+  String _getTierName(TranslationPack loc, String type) {
+    switch (type) {
+      case 'pro_plus': return loc.tOr('tierLabelProPlus', 'PRO+');
+      case 'premium': return loc.tOr('tierLabelPremium', 'PREMIUM');
+      default: return loc.tOr('tierLabelPro', 'PRO');
+    }
+  }
+
+  Color _getTierColor(String type) {
+    switch (type) {
+      case 'pro_plus': return const Color(0xFF7C3AED);
+      case 'premium': return const Color(0xFF0EA5E9);
+      default: return const Color(0xFFD97706);
+    }
   }
 
   @override
@@ -374,24 +391,43 @@ class _ProStatusCard extends ConsumerWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    if (planType != null) ...[
+                    ...[
                       const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
+                          color: _getTierColor(userType).withValues(alpha: 0.35),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
-                          _getPlanName(loc, planType),
+                          _getTierName(loc, userType),
                           style: const TextStyle(
                             fontSize: 10,
-                            fontWeight: FontWeight.w700,
+                            fontWeight: FontWeight.w800,
                             color: Colors.white,
-                            letterSpacing: 0.3,
+                            letterSpacing: 0.5,
                           ),
                         ),
                       ),
+                      if (planType != null) ...[
+                        const SizedBox(width: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            _getPlanName(loc, planType),
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ],
                 ),
