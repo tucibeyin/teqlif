@@ -269,7 +269,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
           ),
           SliverToBoxAdapter(
             child: SizedBox(
-              height: 118,
+              height: 106,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -598,7 +598,7 @@ class _StreamerAvatarCard extends ConsumerWidget {
     return GestureDetector(
       onTap: onTap,
       child: SizedBox(
-        width: 80,
+        width: 72,
         child: Padding(
           padding: const EdgeInsetsDirectional.only(end: 12),
           child: Column(
@@ -607,13 +607,13 @@ class _StreamerAvatarCard extends ConsumerWidget {
               Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  // Gradient border + portrait card
+                  // Gradient ring + white border + avatar (Story stilinde)
                   Container(
-                    width: 68,
-                    height: 88,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(14),
-                      gradient: const LinearGradient(
+                    width: 62,
+                    height: 62,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
                         colors: [kPrimary, kPrimaryLight, Color(0xFF7C3AED)],
                         begin: AlignmentDirectional.topStart,
                         end: AlignmentDirectional.bottomEnd,
@@ -622,18 +622,17 @@ class _StreamerAvatarCard extends ConsumerWidget {
                     padding: const EdgeInsets.all(2.5),
                     child: Container(
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(11),
+                        shape: BoxShape.circle,
                         color: AppColors.surface(context),
                       ),
                       padding: const EdgeInsets.all(1.5),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(9),
+                      child: ClipOval(
                         child: imageUrl != null && imageUrl.isNotEmpty
                             ? CachedNetworkImage(
                                 imageUrl: imageUrl,
                                 cacheKey: TeqlifCacheManager.avatarCacheKey(username, imageUrl),
                                 cacheManager: TeqlifCacheManager(),
-                                memCacheWidth: 136,
+                                memCacheWidth: 128,
                                 fit: BoxFit.cover,
                                 alignment: Alignment.topCenter,
                                 width: double.infinity,
