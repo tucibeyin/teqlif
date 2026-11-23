@@ -6772,5 +6772,31 @@
   "walletProManageWeb": "Abonnement verwalten",
   "walletNegativeBalanceNote": "Negatives Guthaben durch Rückerstattung",
   "tooltipGridView": "Rasteransicht",
-  "tooltipListView": "Listenansicht"
+  "tooltipListView": "Listenansicht",
+
+  "tierLabelPro": "PRO",
+  "tierLabelProPlus": "PRO+",
+  "tierLabelPremium": "PREMIUM",
+  "tierProDesc": "75% Geschenkanteil · 30 Std./Monat Stream",
+  "tierProPlusDesc": "90% Geschenkanteil · 90 Std./Monat · 1080p",
+  "tierPremiumDesc": "100% Geschenkanteil · Unbegrenzt streamen · 1080p",
+
+  "streamMonthlyLimitReached": "Monatliches Streaming-Limit erreicht.",
+  "streamMonthlyLimitDesc": "Die monatlichen Streaming-Stunden Ihres Tarifs sind aufgebraucht. Zurückgesetzt im nächsten Abrechnungszeitraum oder Tarif upgraden.",
+
+  "walletProTopPlanDesc": "Sie haben alle PREMIUM-Vorteile.",
+  "proStatusTierBadge": "{tier} Mitglied",
+  "@proStatusTierBadge": {
+    "placeholders": {
+      "tier": {"type": "String"}
+    }
+  },
+
+  "proAutoRenewOff": "Automatische Verlängerung deaktiviert",
+  "proPendingDowngrade": "Downgrade auf {tier} ausstehend",
+  "@proPendingDowngrade": {
+    "placeholders": {
+      "tier": {"type": "String"}
+    }
+  }
 }

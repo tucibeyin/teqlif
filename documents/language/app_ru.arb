@@ -6700,5 +6700,31 @@
   "walletProManageWeb": "Управление подпиской",
   "walletNegativeBalanceNote": "Отрицательный баланс из-за возврата",
   "tooltipGridView": "Сетка",
-  "tooltipListView": "Список"
+  "tooltipListView": "Список",
+
+  "tierLabelPro": "PRO",
+  "tierLabelProPlus": "PRO+",
+  "tierLabelPremium": "PREMIUM",
+  "tierProDesc": "75% доля подарков · 30 ч/мес стрим",
+  "tierProPlusDesc": "90% доля подарков · 90 ч/мес · 1080p",
+  "tierPremiumDesc": "100% доля подарков · Безлимитный стрим · 1080p",
+
+  "streamMonthlyLimitReached": "Достигнут месячный лимит трансляций.",
+  "streamMonthlyLimitDesc": "Исчерпан лимит часов трансляций по вашему тарифу. Обнуляется в следующем периоде или обновите тариф.",
+
+  "walletProTopPlanDesc": "У вас все привилегии PREMIUM.",
+  "proStatusTierBadge": "Участник {tier}",
+  "@proStatusTierBadge": {
+    "placeholders": {
+      "tier": {"type": "String"}
+    }
+  },
+
+  "proAutoRenewOff": "Автопродление отключено",
+  "proPendingDowngrade": "Ожидается переход на {tier}",
+  "@proPendingDowngrade": {
+    "placeholders": {
+      "tier": {"type": "String"}
+    }
+  }
 }

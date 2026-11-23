@@ -478,6 +478,7 @@ Future<bool?> _showBlastConfirmDialog(
 String _mapCaptchaError(AppException e, TranslationPack loc) {
   if (e.statusCode == 403 || e.code == 'FORBIDDEN') return loc.t('errorCaptchaFailed');
   if (e.statusCode == 429 || e.code == 'RATE_LIMIT_EXCEEDED') return loc.t('errorTooFast');
+  if (e.code == 'STREAM_MONTHLY_LIMIT_REACHED') return loc.t('streamMonthlyLimitReached');
   return e.message;
 }
 

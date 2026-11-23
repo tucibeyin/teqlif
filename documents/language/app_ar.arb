@@ -6700,5 +6700,31 @@
   "walletProManageWeb": "إدارة الاشتراك",
   "walletNegativeBalanceNote": "رصيد سالب بسبب الاسترداد",
   "tooltipGridView": "عرض الشبكة",
-  "tooltipListView": "عرض القائمة"
+  "tooltipListView": "عرض القائمة",
+
+  "tierLabelPro": "PRO",
+  "tierLabelProPlus": "PRO+",
+  "tierLabelPremium": "PREMIUM",
+  "tierProDesc": "75% حصة هدايا · 30 ساعة/شهر بث",
+  "tierProPlusDesc": "90% حصة هدايا · 90 ساعة/شهر · 1080p",
+  "tierPremiumDesc": "100% حصة هدايا · بث غير محدود · 1080p",
+
+  "streamMonthlyLimitReached": "وصلت إلى الحد الشهري للبث.",
+  "streamMonthlyLimitDesc": "انتهت ساعات البث الشهرية لخطتك. تُجدَّد في الدورة التالية أو قم بترقية خطتك.",
+
+  "walletProTopPlanDesc": "تمتع بجميع مزايا PREMIUM.",
+  "proStatusTierBadge": "عضو {tier}",
+  "@proStatusTierBadge": {
+    "placeholders": {
+      "tier": {"type": "String"}
+    }
+  },
+
+  "proAutoRenewOff": "التجديد التلقائي معطّل",
+  "proPendingDowngrade": "في انتظار التخفيض إلى {tier}",
+  "@proPendingDowngrade": {
+    "placeholders": {
+      "tier": {"type": "String"}
+    }
+  }
 }

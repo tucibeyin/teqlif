@@ -6701,5 +6701,31 @@
   "walletProManageWeb": "Aboneliği Yönet",
   "walletNegativeBalanceNote": "İade sebebiyle negatif bakiye",
   "tooltipGridView": "Izgara Görünümü",
-  "tooltipListView": "Liste Görünümü"
+  "tooltipListView": "Liste Görünümü",
+
+  "tierLabelPro": "PRO",
+  "tierLabelProPlus": "PRO+",
+  "tierLabelPremium": "PREMIUM",
+  "tierProDesc": "%75 hediye payı · 30 saat/ay yayın",
+  "tierProPlusDesc": "%90 hediye payı · 90 saat/ay yayın · 1080p",
+  "tierPremiumDesc": "%100 hediye payı · Sınırsız yayın · 1080p",
+
+  "streamMonthlyLimitReached": "Aylık yayın süre limitine ulaştınız.",
+  "streamMonthlyLimitDesc": "Mevcut planınızın aylık yayın hakkı doldu. Yeni dönemde otomatik sıfırlanır ya da planınızı yükseltebilirsiniz.",
+
+  "walletProTopPlanDesc": "PREMIUM üyeliğiyle tüm ayrıcalıklara sahipsin.",
+  "proStatusTierBadge": "{tier} Kullanıcı",
+  "@proStatusTierBadge": {
+    "placeholders": {
+      "tier": {"type": "String"}
+    }
+  },
+
+  "proAutoRenewOff": "Otomatik yenileme kapalı",
+  "proPendingDowngrade": "{tier} planına geçiş bekliyor",
+  "@proPendingDowngrade": {
+    "placeholders": {
+      "tier": {"type": "String"}
+    }
+  }
 }

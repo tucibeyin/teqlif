@@ -6772,5 +6772,31 @@
   "walletProManageWeb": "Manage Subscription",
   "walletNegativeBalanceNote": "Negative balance due to refund",
   "tooltipGridView": "Grid View",
-  "tooltipListView": "List View"
+  "tooltipListView": "List View",
+
+  "tierLabelPro": "PRO",
+  "tierLabelProPlus": "PRO+",
+  "tierLabelPremium": "PREMIUM",
+  "tierProDesc": "75% gift share · 30 hrs/mo streaming",
+  "tierProPlusDesc": "90% gift share · 90 hrs/mo · 1080p",
+  "tierPremiumDesc": "100% gift share · Unlimited streaming · 1080p",
+
+  "streamMonthlyLimitReached": "Monthly streaming limit reached.",
+  "streamMonthlyLimitDesc": "Your plan's monthly streaming hours are used up. Resets next billing cycle or upgrade your plan.",
+
+  "walletProTopPlanDesc": "You have all PREMIUM privileges.",
+  "proStatusTierBadge": "{tier} Member",
+  "@proStatusTierBadge": {
+    "placeholders": {
+      "tier": {"type": "String"}
+    }
+  },
+
+  "proAutoRenewOff": "Auto-renewal off",
+  "proPendingDowngrade": "Downgrade to {tier} pending",
+  "@proPendingDowngrade": {
+    "placeholders": {
+      "tier": {"type": "String"}
+    }
+  }
 }
