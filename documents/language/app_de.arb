@@ -6807,5 +6807,36 @@
     "placeholders": {
       "tier": {"type": "String"}
     }
+  },
+
+  "tierLabelNormal": "Standard",
+  "streamHoursLeft": "Noch {hours} Stunden diesen Monat",
+  "@streamHoursLeft": {
+    "placeholders": {
+      "hours": {"type": "int"}
+    }
+  },
+  "upgradeToPro": "Zu PRO wechseln",
+  "upgradeToProPlus": "Zu PRO+ wechseln",
+  "upgradeToPremium": "Zu PREMIUM wechseln",
+  "upgradeToNextTier": "Plan upgraden",
+  "proHubBlastCredits": "Massenbenachrichtigung",
+  "proHubBoostCredits": "Boost",
+  "proHubAiCredits": "KI-Beschreibung",
+  "proHubReactCredits": "Reaktivierung",
+  "proHubCommission": "{rate}% deiner Einnahmen gehören dir",
+  "@proHubCommission": {
+    "placeholders": {
+      "rate": {"type": "int"}
+    }
+  },
+  "streamQuality540p": "540p · Standard",
+  "streamQuality720p": "720p · HD",
+  "streamQuality1080p": "1080p · Full HD",
+  "streamQualityLocked": "{tier} erforderlich für diese Qualität",
+  "@streamQualityLocked": {
+    "placeholders": {
+      "tier": {"type": "String"}
+    }
   }
 }

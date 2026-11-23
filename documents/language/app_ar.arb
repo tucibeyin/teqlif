@@ -6735,5 +6735,36 @@
     "placeholders": {
       "tier": {"type": "String"}
     }
+  },
+
+  "tierLabelNormal": "عادي",
+  "streamHoursLeft": "تبقّى {hours} ساعة هذا الشهر",
+  "@streamHoursLeft": {
+    "placeholders": {
+      "hours": {"type": "int"}
+    }
+  },
+  "upgradeToPro": "الترقية إلى PRO",
+  "upgradeToProPlus": "الترقية إلى PRO+",
+  "upgradeToPremium": "الترقية إلى PREMIUM",
+  "upgradeToNextTier": "ترقية الخطة",
+  "proHubBlastCredits": "إشعار جماعي",
+  "proHubBoostCredits": "تعزيز",
+  "proHubAiCredits": "وصف AI",
+  "proHubReactCredits": "إعادة تفعيل",
+  "proHubCommission": "{rate}٪ من أرباحك",
+  "@proHubCommission": {
+    "placeholders": {
+      "rate": {"type": "int"}
+    }
+  },
+  "streamQuality540p": "540p · قياسي",
+  "streamQuality720p": "720p · HD",
+  "streamQuality1080p": "1080p · Full HD",
+  "streamQualityLocked": "يتطلب {tier} لهذه الجودة",
+  "@streamQualityLocked": {
+    "placeholders": {
+      "tier": {"type": "String"}
+    }
   }
 }

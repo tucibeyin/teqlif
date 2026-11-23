@@ -6736,5 +6736,36 @@
     "placeholders": {
       "tier": {"type": "String"}
     }
+  },
+
+  "tierLabelNormal": "Normal",
+  "streamHoursLeft": "Bu ay {hours} saatiniz kaldı",
+  "@streamHoursLeft": {
+    "placeholders": {
+      "hours": {"type": "int"}
+    }
+  },
+  "upgradeToPro": "PRO'ya Geç",
+  "upgradeToProPlus": "PRO+'ya Geç",
+  "upgradeToPremium": "PREMIUM'a Geç",
+  "upgradeToNextTier": "Üyeliği Yükselt",
+  "proHubBlastCredits": "Kitle Bildirimi",
+  "proHubBoostCredits": "Öne Çıkarma",
+  "proHubAiCredits": "AI Açıklama",
+  "proHubReactCredits": "Reaktivasyon",
+  "proHubCommission": "Kazancınızın %{rate}'i sizin",
+  "@proHubCommission": {
+    "placeholders": {
+      "rate": {"type": "int"}
+    }
+  },
+  "streamQuality540p": "540p · Standart",
+  "streamQuality720p": "720p · HD",
+  "streamQuality1080p": "1080p · Full HD",
+  "streamQualityLocked": "Bu kalite için {tier} gerekli",
+  "@streamQualityLocked": {
+    "placeholders": {
+      "tier": {"type": "String"}
+    }
   }
 }

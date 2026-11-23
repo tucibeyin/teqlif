@@ -6807,5 +6807,36 @@
     "placeholders": {
       "tier": {"type": "String"}
     }
+  },
+
+  "tierLabelNormal": "Standard",
+  "streamHoursLeft": "{hours} hours left this month",
+  "@streamHoursLeft": {
+    "placeholders": {
+      "hours": {"type": "int"}
+    }
+  },
+  "upgradeToPro": "Go PRO",
+  "upgradeToProPlus": "Go PRO+",
+  "upgradeToPremium": "Go PREMIUM",
+  "upgradeToNextTier": "Upgrade Plan",
+  "proHubBlastCredits": "Mass Notification",
+  "proHubBoostCredits": "Boost",
+  "proHubAiCredits": "AI Description",
+  "proHubReactCredits": "Reactivation",
+  "proHubCommission": "{rate}% of your earnings",
+  "@proHubCommission": {
+    "placeholders": {
+      "rate": {"type": "int"}
+    }
+  },
+  "streamQuality540p": "540p · Standard",
+  "streamQuality720p": "720p · HD",
+  "streamQuality1080p": "1080p · Full HD",
+  "streamQualityLocked": "{tier} required for this quality",
+  "@streamQualityLocked": {
+    "placeholders": {
+      "tier": {"type": "String"}
+    }
   }
 }

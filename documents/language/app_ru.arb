@@ -6735,5 +6735,36 @@
     "placeholders": {
       "tier": {"type": "String"}
     }
+  },
+
+  "tierLabelNormal": "Стандартный",
+  "streamHoursLeft": "Осталось {hours} часов в этом месяце",
+  "@streamHoursLeft": {
+    "placeholders": {
+      "hours": {"type": "int"}
+    }
+  },
+  "upgradeToPro": "Перейти на PRO",
+  "upgradeToProPlus": "Перейти на PRO+",
+  "upgradeToPremium": "Перейти на PREMIUM",
+  "upgradeToNextTier": "Улучшить план",
+  "proHubBlastCredits": "Массовое уведомление",
+  "proHubBoostCredits": "Продвижение",
+  "proHubAiCredits": "AI описание",
+  "proHubReactCredits": "Реактивация",
+  "proHubCommission": "{rate}% дохода — ваш",
+  "@proHubCommission": {
+    "placeholders": {
+      "rate": {"type": "int"}
+    }
+  },
+  "streamQuality540p": "540p · Стандарт",
+  "streamQuality720p": "720p · HD",
+  "streamQuality1080p": "1080p · Full HD",
+  "streamQualityLocked": "Для этого качества требуется {tier}",
+  "@streamQualityLocked": {
+    "placeholders": {
+      "tier": {"type": "String"}
+    }
   }
 }
