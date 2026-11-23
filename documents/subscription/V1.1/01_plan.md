@@ -626,12 +626,180 @@ Tüm ekranlarda tutarlı:
 
 ## 9. App Store / Google Play
 
-📋 **Henüz planlanmadı.**
+🔄 **Planlama — Kasım 2026**
 
-Ele alınacak konular:
-- In-app purchase (IAP) entegrasyonu — mevcut ödeme sistemi vs platform native
-- App Store Connect / Google Play Console ürün tanımlamaları
-- Fatura ve abonelik yönetimi (iptal, iade, tier değişimi)
-- Platform komisyonu (%15–30) fiyatlandırmaya etkisi
-- Türkiye'de App Store fiyat listesi kısıtları
-- Abonelik restore akışı (cihaz değişimi senaryosu)
+---
+
+### 9.1 App Store Connect Kurulumu 📋
+
+**Mevcut ürünler (fiyat güncellenecek — uygulama henüz yayında değil):**
+
+| Product ID | Eski fiyat | Yeni fiyat |
+|------------|-----------|------------|
+| teqlif_pro_1m | 149,99 ₺ | 299,99 ₺ |
+| teqlif_pro_3m | 399,99 ₺ | 799,99 ₺ |
+| teqlif_pro_6m | 699,99 ₺ | 1.499,99 ₺ |
+| teqlif_pro_12m | 1.299,99 ₺ | 2.699,99 ₺ |
+
+**Yeni oluşturulacak ürünler:**
+
+```
+teqlif_pro_plus_1m   → 699,99 ₺
+teqlif_pro_plus_3m   → 1.799,99 ₺
+teqlif_pro_plus_6m   → 3.499,99 ₺
+teqlif_pro_plus_12m  → 6.299,99 ₺
+
+teqlif_premium_1m    → 1.299,99 ₺
+teqlif_premium_3m    → 3.299,99 ₺
+teqlif_premium_6m    → 5.999,99 ₺
+teqlif_premium_12m   → 11.499,99 ₺
+```
+
+**Subscription Group hiyerarşisi** (App Store Connect'te tier sırası tanımlanmalı):
+```
+PREMIUM  (seviye 1 — en yüksek)
+PRO+     (seviye 2)
+PRO      (seviye 3)
+```
+Bu hiyerarşi Apple'ın otomatik upgrade/downgrade yönetimini sağlar.
+
+**Lokalizasyon:** App Store Connect'te her ürün için TR / EN açıklama metni yazılmalı.
+
+---
+
+### 9.2 Google Play Console Kurulumu 📋
+
+Google Play, App Store'dan farklı bir yapı kullanır: **Subscription + Base Plan + Offer**.
+
+Her tier için:
+1. Subscription oluştur (ör. `teqlif_pro_plus`)
+2. Base plan ekle: `monthly`, `quarterly`, `biannual`, `annual`
+3. Offer (opsiyonel): lansman indirimi, ücretsiz deneme
+
+```
+teqlif_pro        → base plans: 1m / 3m / 6m / 12m
+teqlif_pro_plus   → base plans: 1m / 3m / 6m / 12m
+teqlif_premium    → base plans: 1m / 3m / 6m / 12m
+```
+
+**Not:** Google Play ürün ID'leri App Store'dan farklı olabilir; Flutter `in_app_purchase`
+paketi her iki platformu soyutlar.
+
+---
+
+### 9.3 Flutter IAP Entegrasyonu (`iap_service.dart`) 📋
+
+**Mevcut durum:**
+```dart
+const kSubscriptionIds = {
+  'teqlif_pro_1m', 'teqlif_pro_3m', 'teqlif_pro_6m', 'teqlif_pro_12m',
+};
+```
+
+**Yeni durum:**
+```dart
+const kSubscriptionIds = {
+  // PRO
+  'teqlif_pro_1m', 'teqlif_pro_3m', 'teqlif_pro_6m', 'teqlif_pro_12m',
+  // PRO+
+  'teqlif_pro_plus_1m', 'teqlif_pro_plus_3m',
+  'teqlif_pro_plus_6m', 'teqlif_pro_plus_12m',
+  // PREMIUM
+  'teqlif_premium_1m', 'teqlif_premium_3m',
+  'teqlif_premium_6m', 'teqlif_premium_12m',
+};
+
+// Tier mapping (product ID → user_type)
+const kProductTierMap = {
+  'teqlif_pro_1m':       'pro',
+  'teqlif_pro_3m':       'pro',
+  'teqlif_pro_6m':       'pro',
+  'teqlif_pro_12m':      'pro',
+  'teqlif_pro_plus_1m':  'pro_plus',
+  'teqlif_pro_plus_3m':  'pro_plus',
+  'teqlif_pro_plus_6m':  'pro_plus',
+  'teqlif_pro_plus_12m': 'pro_plus',
+  'teqlif_premium_1m':   'premium',
+  'teqlif_premium_3m':   'premium',
+  'teqlif_premium_6m':   'premium',
+  'teqlif_premium_12m':  'premium',
+};
+```
+
+**Satın alma akışı değişmez** — `purchaseSubscription(productId)` → platforma iletilir →
+receipt/token backend'e gönderilir → backend `user_type` günceller → Flutter state refresh.
+
+---
+
+### 9.4 Backend — Webhook ve Receipt Validation 📋
+
+#### Apple (StoreKit 2 / App Store Server Notifications)
+
+Dinlenecek notification type'lar:
+
+| Event | Aksiyon |
+|-------|---------|
+| `SUBSCRIBED` | `user_type` güncelle |
+| `DID_RENEW` | Süre uzat, stream saati sıfırla |
+| `EXPIRED` | `user_type = 'standard'`, stream saati sıfırla |
+| `DID_CHANGE_RENEWAL_STATUS` (cancel) | Mevcut dönem sonu için işaretle |
+| `REVOKED` (iade) | Anında `user_type = 'standard'` |
+| `GRACE_PERIOD_EXPIRED` | `user_type = 'standard'` |
+
+**Grace period:** Apple ödeme başarısız olunca 6–16 gün grace tanır.
+Bu sürede kullanıcı tier erişimini korur; backend `in_grace_period` flag'i tutmalı.
+
+#### Google Play (RTDN — Real-Time Developer Notifications)
+
+Benzer event'lar: `SUBSCRIPTION_PURCHASED`, `SUBSCRIPTION_RENEWED`,
+`SUBSCRIPTION_CANCELED`, `SUBSCRIPTION_EXPIRED`, `SUBSCRIPTION_REVOKED`.
+
+#### Ortak backend endpoint
+
+```
+POST /webhooks/apple
+POST /webhooks/google
+```
+
+Her iki endpoint de sonuçta aynı iç fonksiyonu çağırır:
+`update_user_subscription(user_id, new_tier, expires_at)`
+
+---
+
+### 9.5 Subscription State Machine 📋
+
+```
+Normal ──────────────────────────────────────────────► PRO
+   ▲                                                     │
+   │  (expire / cancel / revoke)                         ▼
+   └──────── PRO+ ◄──────────────────────────────────── PRO
+   └──────── PREMIUM ◄───────────────────────── PRO+
+```
+
+**Upgrade:** Anlık geçiş, kalan süre prorata hesaplanır (Apple/Google halleder).  
+**Downgrade:** Mevcut dönem sonunda geçerli.  
+**Cancel:** Mevcut dönem sonunda Normal'e düşer; erişim hemen kesilmez.  
+**Revoke (iade):** Anlık Normal'e düşer; stream saati sıfırlanır.  
+**Expire (grace sonrası):** Normal'e düşer; stream saati sıfırlanır.
+
+---
+
+### 9.6 Restore ve Cihaz Değişimi Akışı 📋
+
+**Flutter tarafı:**
+- Uygulama açılışında: `restorePurchases()` → platform aktif subscription'ı döner
+- Backend'e receipt/token gönderilir → `user_type` senkronize edilir
+- "Satın Alımlarımı Geri Yükle" butonu: Ayarlar > Abonelik bölümünde
+
+**Backend tarafı:**
+- Receipt validation idempotent olmalı (aynı receipt tekrar gelirse sorun çıkmamalı)
+- Cihaz değişiminde kullanıcı aynı Apple/Google hesabıyla giriş yaparsa otomatik restore
+
+---
+
+### 9.7 Açık Kararlar (TODO)
+
+- **Ücretsiz deneme (free trial):** Lansman dönemi için 7 günlük PRO denemesi sunulacak mı?
+- **Introductory offer:** İlk ay indirimli fiyat? (App Store Connect'te ayrıca tanımlanır)
+- **Upgrade promosyon:** PRO'dan PRO+'ya geçişte ilk ay indirim?
+- **Google Play product ID isimlendirmesi:** App Store ile aynı mı, yoksa platform özelinde mi?
