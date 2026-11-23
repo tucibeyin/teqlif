@@ -7,6 +7,9 @@
 Bu döküman genişletilebilir yapıdadır. Her bölüm bağımsız tamamlanabilir.  
 Tamamlananlar `✅`, devam edenler `🔄`, henüz başlanmayanlar `📋` ile işaretlenir.
 
+> **İmplementasyon standardı:** Tüm geliştirme ADR, Clean Code, Clean Architecture,
+> MVVM ve ADR §13 workflow kurallarına uygun yapılmalıdır.
+
 ---
 
 ## İçindekiler
@@ -855,3 +858,139 @@ App Store Connect: Promotional Offer (mevcut ücretli abonelere özel, subscribe
 
 > Psikolojik çerçeveleme: "Bu ay PRO fiyatına PRO+ dene" — ek maliyet hissi yok.  
 > Ay 2'den itibaren yeni tier normal fiyatı geçerli.
+
+---
+
+### 9.8 Abonelik İptali ve İndirim (Downgrade) ✅
+
+---
+
+#### 9.8.1 İptal Senaryoları
+
+Dört farklı iptal yolu vardır; her birinde farklı webhook gelir:
+
+| Senaryo | Apple webhook | Google webhook | Sonuç |
+|---------|--------------|----------------|-------|
+| Kullanıcı iptal eder | `DID_CHANGE_RENEWAL_STATUS` (cancel) | `SUBSCRIPTION_CANCELED` | Dönem sonunda Normal |
+| Ödeme başarısız | `DID_FAIL_TO_RENEW` → grace → `GRACE_PERIOD_EXPIRED` | `SUBSCRIPTION_ON_HOLD` → `SUBSCRIPTION_EXPIRED` | Grace sonunda Normal |
+| İade talebi | `REVOKED` | `SUBSCRIPTION_REVOKED` | Anında Normal |
+| Tier düşürme (downgrade) | `DID_CHANGE_RENEWAL_PREF` | `SUBSCRIPTION_DEFERRED` | Yenileme tarihinde düşer |
+
+Ortak kural: **erişim hemen kesilmez** — iade (`REVOKED`) hariç her senaryoda kullanıcı
+mevcut dönem sonuna kadar aktif tier'ını kullanmaya devam eder.
+
+---
+
+#### 9.8.2 İptal UX (Uygulama İçi)
+
+Apple ve Google kendi subscription yönetimini kullanıcıya bırakır; uygulama **doğrudan iptal
+yapamazd**. Yapılacak:
+
+**"Aboneliğimi Yönet" butonu** — Ayarlar > Abonelik bölümünde deep link:
+
+```dart
+// iOS
+Uri.parse('https://apps.apple.com/account/subscriptions')
+// Android
+Uri.parse('https://play.google.com/store/account/subscriptions')
+```
+
+Butona dokunulunca native subscription yönetim sayfası açılır; kullanıcı orada iptal / tier
+değişikliği yapar. Uygulama içinde "İptal Et" akışı yok.
+
+---
+
+#### 9.8.3 İptal Sonrası İn-App Banner
+
+Backend `DID_CHANGE_RENEWAL_STATUS (cancel)` aldığında `auto_renew_enabled = False` kaydeder.
+Flutter bir sonraki kullanıcı açılışında bunu görür ve banner gösterir:
+
+```
+┌────────────────────────────────────────────────────────┐
+│  ⚠️  Aboneliğiniz {expires_date} tarihinde sona erecek │
+│  [Yenile →]                                             │
+└────────────────────────────────────────────────────────┘
+```
+
+- Konum: PRO Araçları ekranı üstü + Ayarlar > Abonelik satırı (kırmızı nokta badge'i)
+- "Yenile →" → native subscription yönetim sayfasını açar
+- Banner, `EXPIRED` gelip tier Normal'e düşünce kaybolur
+
+---
+
+#### 9.8.4 Downgrade (Tier İndirme) Akışı
+
+Kullanıcı üst tierden alt tiere geçmek isterse:
+
+1. Üyelik Planları ekranında alt tier seçilir
+2. "Plana Geç →" butonu → native subscription management sayfasına deep link  
+   *(Apple in-app downgrade'e izin vermez; kullanıcı Settings > Subscriptions'dan yapar)*
+3. Backend `DID_CHANGE_RENEWAL_PREF` alır → `pending_tier = 'pro'` kaydeder
+4. Yenileme tarihinde Apple `SUBSCRIBED` (yeni product ID) gönderir → `user_type` güncellenir
+5. `pending_tier` temizlenir
+
+Kullanıcı downgrade döneminde mevcut tier'ını kullanmaya devam eder. PRO Araçları
+ekranında bilgi satırı:
+
+```
+ℹ️  {date} tarihinden itibaren PRO planına geçilecek
+```
+
+---
+
+#### 9.8.5 Geri Kazanım (Win-Back) Stratejisi
+
+`EXPIRED` → `user_type = 'standard'` geçişinde backend `last_tier` alanını kaydeder.
+Bu sayede kişiselleştirilmiş win-back teklifi yapılabilir.
+
+**Uygulama açılışında (EXPIRED'dan sonraki ilk açılış):**
+
+```
+┌──────────────────────────────────────────────────────────┐
+│  Tekrar hoş geldiniz! 👑                                   │
+│  PRO+ üyeliğiniz sona erdi.                               │
+│  Bu ay %50 indirimle geri dön → 349,99 ₺                  │
+│  [Şimdi Yenile]        [Daha Sonra]                       │
+└──────────────────────────────────────────────────────────┘
+```
+
+**Win-back teklifi:** `last_tier`'ın introductory fiyatı (%50 indirim) — §9.7'deki ilk
+ay indirimli fiyatlarla aynı.
+
+**Teknik not:** Win-back teklifinin introductory offer olarak sunulabilmesi için kullanıcının
+daha önce introductory offer kullanmamış olması gerekir. `last_tier` NULL ise (hiç abonelik
+yoktu) introductory offer gösterilir; doluysa promotional offer (farklı eligibility kuralı)
+kullanılabilir. Bu ayrım §9.3 `iap_service.dart`'ta `checkEligibility()` ile kontrol edilmeli.
+
+---
+
+#### 9.8.6 Backend DB Değişiklikleri
+
+`User` modeline eklenecek alanlar:
+
+```python
+auto_renew_enabled: bool = True      # DID_CHANGE_RENEWAL_STATUS → False; SUBSCRIBED → True
+pending_tier: str | None = None      # Downgrade bekliyorsa: 'pro' / 'pro_plus'
+last_tier: str | None = None         # EXPIRED'da kaydedilir; win-back için
+in_grace_period: bool = False        # Ödeme başarısız → True; GRACE_PERIOD_EXPIRED → False
+```
+
+Mevcut alanlar (`user_type`, `subscription_expires_at`) yeterli; yeni alan yok.**
+
+| Webhook | auto_renew_enabled | pending_tier | last_tier | in_grace_period | user_type |
+|---------|-------------------|--------------|-----------|-----------------|-----------|
+| `DID_CHANGE_RENEWAL_STATUS` (cancel) | `False` | — | — | — | değişmez |
+| `DID_CHANGE_RENEWAL_PREF` (downgrade) | `False` | yeni tier | — | — | değişmez |
+| `DID_FAIL_TO_RENEW` | — | — | — | `True` | değişmez |
+| `GRACE_PERIOD_EXPIRED` | — | — | mevcut | `False` | `standard` |
+| `EXPIRED` | `True` | `None` | mevcut | — | `standard` |
+| `REVOKED` | `True` | `None` | mevcut | — | `standard` (anında) |
+| `SUBSCRIBED` / `DID_RENEW` | `True` | `None` | — | `False` | güncellenir |
+
+---
+
+#### 9.8.7 Aktif Yayın Sırasında İptal / Expire
+
+§8.14'te kapsandı: aktif canlı yayın tamamlanır, tier düşürme **yayın bitiminden sonra**
+geçerli olur. Backend stream finalizasyonunda `user_type` kontrol etmez; `ended_at`
+kaydedildikten sonra webhook işlenir.
