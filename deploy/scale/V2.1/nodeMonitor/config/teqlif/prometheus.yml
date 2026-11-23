@@ -121,26 +121,20 @@ scrape_configs:
         labels: { node: node2, component: redis-replica }
 
   # ── LiveKit metrikleri ────────────────────────────────────────────────────────
-  # LiveKit HTTP portu (7880) aynı zamanda Prometheus /metrics endpoint'i sunar.
-  # node5 staging: port 7890 (livekit-staging.yaml)
+  # LiveKit prometheus_port: 6789 (livekit.yaml'da tanımlı)
+  # /metrics sadece bu ayrı porta gelir; 7880 HTTP + RTC API için kullanılır.
 
   - job_name: 'livekit-node3'
     metrics_path: /metrics
     static_configs:
-      - targets: ['10.10.0.3:7880']
+      - targets: ['10.10.0.3:6789']
         labels: { node: node3, component: livekit, env: prod }
 
   - job_name: 'livekit-node4'
     metrics_path: /metrics
     static_configs:
-      - targets: ['10.10.0.4:7880']
+      - targets: ['10.10.0.4:6789']
         labels: { node: node4, component: livekit, env: prod }
-
-  - job_name: 'livekit-node5-staging'
-    metrics_path: /metrics
-    static_configs:
-      - targets: ['10.10.0.5:7890']
-        labels: { node: node5, component: livekit, env: staging }
 
   # ── Stalwart mail metrikleri ──────────────────────────────────────────────────
   # Aktifleştirmek için Stalwart config.toml'a aşağıdaki blok eklenmeli:
