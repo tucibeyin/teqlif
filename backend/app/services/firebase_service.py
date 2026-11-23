@@ -54,6 +54,12 @@ async def send_push(
         data["type"] = notif_type
     if extra_data:
         data.update(extra_data)
+    # title/body data payload'da da gönderilir; Android background handler
+    # notification bloğuna erişemez, data'dan okur.
+    if title:
+        data["title"] = title
+    if body:
+        data["body"] = body
 
     try:
         # DI Container üzerinden port'u alıyoruz.

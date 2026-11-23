@@ -30,10 +30,11 @@ void _cpLog(String phase, String msg) {
 
 // ─── Action IDs ──────────────────────────────────────────────────────────────
 
-const _kActionAccept  = 'call_accept';
-const _kActionDecline = 'call_decline';
-const _kChannelCalls  = 'incoming_calls';
-const _kCategoryCall  = 'incoming_call_category';
+const _kActionAccept   = 'call_accept';
+const _kActionDecline  = 'call_decline';
+const _kChannelCalls   = 'incoming_calls';
+const _kChannelGeneral = 'general_notifications';
+const _kCategoryCall   = 'incoming_call_category';
 
 // ─── Plugin singleton ─────────────────────────────────────────────────────────
 
@@ -108,7 +109,13 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       'call_id=${message.data['call_id']} — recovery via checkActiveCall() on foreground',
     );
   } else {
-    debugPrint('[FCM][BG][${DateTime.now().toIso8601String()}] arama dışı type, işlem yok');
+    // Arama dışı tüm bildirimler: top-level notification bloğu olmadığından
+    // sistem otomatik göstermez; lokal bildirimle gösteriyoruz.
+    final title = message.data['title'] as String? ?? '';
+    final body  = message.data['body']  as String?;
+    if (title.isNotEmpty) {
+      await _showRegularNotification(title: title, body: body, data: message.data);
+    }
   }
 }
 
@@ -117,6 +124,48 @@ String formatToUuid(String id) {
   // Veritabanındaki integer/string call_id'yi bu formata uyduruyoruz.
   final padded = id.padLeft(32, '0');
   return '${padded.substring(0, 8)}-${padded.substring(8, 12)}-${padded.substring(12, 16)}-${padded.substring(16, 20)}-${padded.substring(20, 32)}';
+}
+
+/// Genel (arama dışı) lokal bildirim — background isolate'ten çağrılabilir.
+Future<void> _showRegularNotification({
+  required String title,
+  String? body,
+  Map<String, dynamic>? data,
+}) async {
+  const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+  final iosInit = DarwinInitializationSettings();
+  await _flnp.initialize(InitializationSettings(android: androidInit, iOS: iosInit));
+
+  await _flnp.resolvePlatformSpecificImplementation<
+      AndroidFlutterLocalNotificationsPlugin>()
+    ?.createNotificationChannel(const AndroidNotificationChannel(
+      _kChannelGeneral,
+      'Bildirimler',
+      description: 'Uygulama bildirimleri',
+      importance: Importance.high,
+    ));
+
+  final id = DateTime.now().millisecondsSinceEpoch & 0x7FFFFFFF;
+
+  await _flnp.show(
+    id,
+    title,
+    body,
+    const NotificationDetails(
+      android: AndroidNotificationDetails(
+        _kChannelGeneral,
+        'Bildirimler',
+        importance: Importance.high,
+        priority: Priority.high,
+      ),
+      iOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: false,
+        presentSound: false,
+      ),
+    ),
+    payload: data != null ? jsonEncode(data) : null,
+  );
 }
 
 /// Yerel bildirim göster — background isolate veya foreground'dan çağrılabilir.
@@ -381,16 +430,22 @@ class PushNotificationService {
     );
     debugPrint('[FLNP] Ana izolat: initialize tamamlandı');
 
-    // Android kanalı
+    // Android kanalları
     const callChannel = AndroidNotificationChannel(
       _kChannelCalls, 'Gelen Aramalar',
       description: 'Sesli arama bildirimleri',
       importance: Importance.max,
     );
+    const generalChannel = AndroidNotificationChannel(
+      _kChannelGeneral, 'Bildirimler',
+      description: 'Uygulama bildirimleri',
+      importance: Importance.high,
+    );
     final androidPlugin = _flnp.resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>();
     await androidPlugin?.createNotificationChannel(callChannel);
-    debugPrint('[FLNP] Ana izolat: Android kanalı oluşturuldu');
+    await androidPlugin?.createNotificationChannel(generalChannel);
+    debugPrint('[FLNP] Ana izolat: Android kanalları oluşturuldu');
     // ─────────────────────────────────────────────────────────────────────────
 
     // Foreground FCM
@@ -661,7 +716,9 @@ class PushNotificationService {
     }
     final callId = data['call_id']?.toString() ?? '';
     if (callId.isEmpty) {
-      debugPrint('[FLNP] Payload\'da call_id yok — işlem yok');
+      // Arama dışı genel bildirim tap'ı → notificationStream'e gönder; navigation yönlendirir.
+      debugPrint('[FLNP] Genel bildirim tap\'ı | type=${data['type']}');
+      notificationStream.add({...data, 'is_foreground_receive': false});
       return;
     }
 

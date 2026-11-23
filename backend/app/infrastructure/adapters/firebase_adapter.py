@@ -67,7 +67,7 @@ class FirebaseAdapter(PushNotificationPort):
         try:
             async with fcm_breaker:
                 msg = self._build_message(
-                    token, title, body, data, is_silent, ttl, android_channel_id, content_available
+                    token, title, body, data, is_silent, ttl, content_available
                 )
                 message_id = await asyncio.to_thread(self._send_http, msg)
                 logger.info(
@@ -109,29 +109,32 @@ class FirebaseAdapter(PushNotificationPort):
         data: Dict[str, Any] | None,
         is_silent: bool,
         ttl: int | None,
-        android_channel_id: str | None,
         content_available: bool = False,
     ) -> dict:
         formatted_data = {k: str(v) for k, v in data.items()} if data else {}
 
         msg: dict = {"token": token, "data": formatted_data}
 
-        if not is_silent:
-            msg["notification"] = {"title": title, "body": body}
+        # Top-level notification bloğu kasıtlı olarak gönderilmiyor:
+        # Android sisteminin foreground'da da banner göstermesini engeller.
+        # title/body data payload'da zaten var (firebase_service.py).
+        # iOS için bildirim gösterimi aşağıda APNs aps.alert ile yapılır.
 
         android: dict = {"priority": "high"}
         if ttl is not None:
             android["ttl"] = f"{ttl}s"
-        if android_channel_id and not is_silent:
-            android["notification"] = {"channel_id": android_channel_id}
         msg["android"] = android
 
-        # iOS: apns-priority 10 olmadan arka planda/kapalıyken bildirim gösterilmez.
+        # iOS: APNs alert ile foreground dışında bildirim göster.
+        # Foreground'da Flutter setForegroundNotificationPresentationOptions(alert:false) bastırır.
         # is_silent=True (VoIP) için yok — o akış apns_service.py'den PushType.VOIP ile gidiyor.
         # content_available=True: aps["content-available"]=1 → iOS background app'i uyandırır;
         # FirebaseMessagingBackgroundHandler çalışır — CallKit endCall() için gerekli.
         if not is_silent:
-            aps: dict = {"sound": "default"}
+            aps: dict = {
+                "sound": "default",
+                "alert": {"title": title, "body": body or ""},
+            }
             if content_available:
                 aps["content-available"] = 1
             msg["apns"] = {
