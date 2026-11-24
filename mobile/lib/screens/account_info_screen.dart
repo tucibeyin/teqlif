@@ -565,12 +565,9 @@ class _SubscriptionSectionCard extends ConsumerWidget {
   }
 
   List<Color> _tierGradient(String userType) {
-    switch (userType) {
-      case UserTier.tier3: return const [Color(0xFF0284C7), Color(0xFF38BDF8)];
-      case UserTier.tier2: return const [Color(0xFF7C3AED), Color(0xFFA78BFA)];
-      case UserTier.tier1: return const [Color(0xFFD97706), Color(0xFFFFD700)];
-      default: return const [Color(0xFF6B7280), Color(0xFF9CA3AF)];
-    }
+    if (UserTier.isTier3OrAbove(userType)) return const [Color(0xFF0284C7), Color(0xFF38BDF8)];
+    if (UserTier.hasSubscription(userType)) return const [Color(0xFFD97706), Color(0xFFFFD700)];
+    return const [Color(0xFF6B7280), Color(0xFF9CA3AF)];
   }
 
   @override

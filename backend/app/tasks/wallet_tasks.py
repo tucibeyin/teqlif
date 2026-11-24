@@ -299,7 +299,7 @@ async def check_expired_pro_users_task(ctx: dict) -> None:
                     "    sub_expires_at = NULL, sub_grace_until = NULL, "
                     "    auto_renew_enabled = TRUE, pending_tier = NULL, "
                     "    monthly_stream_minutes_used = 0, monthly_stream_reset_at = NULL "
-                    "WHERE user_type IN ('tier1', 'tier2', 'tier3') "
+                    "WHERE user_type IN ('tier1', 'tier2', 'tier3', 'tier4') "
                     "  AND sub_expires_at IS NOT NULL "
                     "  AND sub_expires_at < NOW() "
                     "  AND (sub_grace_until IS NULL OR sub_grace_until < NOW())"
@@ -335,7 +335,7 @@ async def notify_subscription_expiry_task(ctx: dict) -> None:
                 text(
                     "SELECT id, fcm_token, locale "
                     "FROM users "
-                    "WHERE user_type IN ('tier1', 'tier2', 'tier3') "
+                    "WHERE user_type IN ('tier1', 'tier2', 'tier3', 'tier4') "
                     "  AND fcm_token IS NOT NULL "
                     "  AND sub_expires_at IS NOT NULL "
                     "  AND sub_expires_at BETWEEN NOW() + INTERVAL '2 days' "

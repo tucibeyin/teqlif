@@ -44,10 +44,22 @@ const _plansByTier = <String, List<_PlanOption>>{
     _PlanOption(productId: 'teqlif_premium_6m',  labelKey: 'subBiannual',  savingKey: 'subSave20'),
     _PlanOption(productId: 'teqlif_premium_12m', labelKey: 'subAnnual',    savingKey: 'subSave30', badgeLabelKey: 'subPlanBadgeBest'),
   ],
+  UserTier.tier4: [
+    _PlanOption(productId: 'teqlif_premium_plus_1m',  labelKey: 'subMonthly'),
+    _PlanOption(productId: 'teqlif_premium_plus_3m',  labelKey: 'subQuarterly', savingKey: 'subSave10', highlighted: true, badgeLabelKey: 'subPopularBadge'),
+    _PlanOption(productId: 'teqlif_premium_plus_6m',  labelKey: 'subBiannual',  savingKey: 'subSave20'),
+    _PlanOption(productId: 'teqlif_premium_plus_12m', labelKey: 'subAnnual',    savingKey: 'subSave30', badgeLabelKey: 'subPlanBadgeBest'),
+  ],
 };
 
-const _tierOrder = [UserTier.tier1, UserTier.tier2, UserTier.tier3];
-const _tierRank = <String, int>{UserTier.standard: 0, UserTier.tier1: 1, UserTier.tier2: 2, UserTier.tier3: 3};
+const _tierOrder = [UserTier.tier1, UserTier.tier2, UserTier.tier3, UserTier.tier4];
+const _tierRank = <String, int>{
+  UserTier.standard: 0,
+  UserTier.tier1:    1,
+  UserTier.tier2:    2,
+  UserTier.tier3:    3,
+  UserTier.tier4:    4,
+};
 
 class SubscriptionSheet extends ConsumerStatefulWidget {
   final TranslationPack loc;
@@ -180,7 +192,7 @@ class _SubscriptionSheetState extends ConsumerState<SubscriptionSheet>
     final loading = vm.isPurchasing;
     final loc = widget.loc;
     final isUpgradeMode = widget.currentUserType != null && UserTier.hasSubscription(widget.currentUserType!);
-    final isVip = widget.currentUserType == UserTier.tier3;
+    final isVip = UserTier.isTier4(widget.currentUserType ?? UserTier.standard);
     final currentPlans = _plansByTier[_selectedTier] ?? _plansByTier[UserTier.tier1]!;
     final isCurrent = widget.currentUserType == _selectedTier;
     final isLower = (_tierRank[widget.currentUserType ?? UserTier.standard] ?? 0) >
@@ -363,15 +375,17 @@ class _SubscriptionSheetState extends ConsumerState<SubscriptionSheet>
 
 String _tierLabel(TranslationPack loc, String tier) {
   switch (tier) {
-    case UserTier.tier1:      return loc.tOr('tierLabelPro', 'PRO');
-    case UserTier.tier2:  return loc.tOr('tierLabelProPlus', 'PRO+');
-    case UserTier.tier3:  return loc.tOr('tierLabelPremium', 'PREMIUM');
-    default:                return tier.toUpperCase();
+    case UserTier.tier4: return loc.tOr('tierLabelPremiumPlus', 'PREMIUM+');
+    case UserTier.tier3: return loc.tOr('tierLabelPremium', 'PREMIUM');
+    case UserTier.tier2: return loc.tOr('tierLabelProPlus', 'PRO+');
+    case UserTier.tier1: return loc.tOr('tierLabelPro', 'PRO');
+    default:             return tier.toUpperCase();
   }
 }
 
 String _ctaLabel(TranslationPack loc, String tier) {
   switch (tier) {
+    case UserTier.tier4: return loc.tOr('subCtaTier4', "PREMIUM+'a Geç");
     case UserTier.tier3: return loc.tOr('subCtaTier3', "PREMIUM'a Geç");
     case UserTier.tier2: return loc.tOr('subCtaTier2', "PRO+'a Geç");
     default:             return loc.tOr('subCtaTier1', "PRO'ya Geç");
@@ -379,18 +393,14 @@ String _ctaLabel(TranslationPack loc, String tier) {
 }
 
 Color _tierAccent(String tier) {
-  switch (tier) {
-    case UserTier.tier3: return const Color(0xFF0EA5E9);
-    default:             return const Color(0xFFD97706); // tier1 ve tier2 gold
-  }
+  if (UserTier.isTier3OrAbove(tier)) return const Color(0xFF0EA5E9); // cyan
+  return const Color(0xFFD97706); // altın — tier1 ve tier2
 }
 
 IconData _tierFaIcon(String tier) {
-  switch (tier) {
-    case UserTier.tier3:  return FontAwesomeIcons.gem;
-    case UserTier.tier2:  return FontAwesomeIcons.crown;
-    default:                return FontAwesomeIcons.bolt;
-  }
+  if (UserTier.isTier3OrAbove(tier)) return FontAwesomeIcons.gem;
+  if (tier == UserTier.tier2)        return FontAwesomeIcons.crown;
+  return FontAwesomeIcons.bolt;
 }
 
 // ── Tier seçici (pulse animasyonlu, her zaman 3 tab) ─────────────────────────
@@ -491,24 +501,31 @@ class _TierBenefits extends StatelessWidget {
     final accent = _tierAccent(tier);
 
     final benefits = switch (tier) {
-      UserTier.tier2 => [
-        (Icons.hd_outlined,                 loc.tOr('subPlus_benefit1', 'HD (720p) yayın kalitesi')),
-        (Icons.percent_rounded,             loc.tOr('subPlus_benefit2', '%90 gelir payı')),
-        (Icons.videocam_outlined,           loc.tOr('subPlus_benefit3', '90 saat/ay yayın süresi')),
-        (Icons.rocket_launch_outlined,      loc.tOr('subPlus_benefit4', 'Blast, Boost ve AI Danışman kredileri')),
-        (Icons.lock_outline,                loc.tOr('subBenefitToolsLocked', 'teqlif Araçları: Erişim yok')),
+      UserTier.tier4 => [
+        (Icons.hd_rounded,                  loc.tOr('premiumPlus_benefit1', 'Full HD (1080p) yayın kalitesi')),
+        (Icons.percent_rounded,             loc.tOr('premiumPlus_benefit2', '%100 gelir payı — kesintisiz')),
+        (Icons.all_inclusive_rounded,       loc.tOr('premiumPlus_benefit3', 'Sınırsız yayın süresi')),
+        (Icons.auto_awesome_rounded,        loc.tOr('premiumPlus_benefit4', 'Tüm krediler + öncelikli destek')),
+        (Icons.check_circle_outline,        loc.tOr('subBenefitToolsIncluded', 'teqlif Araçları: Dahil')),
       ],
       UserTier.tier3 => [
         (Icons.hd_rounded,                  loc.tOr('premium_benefit1', 'Full HD (1080p) yayın kalitesi')),
         (Icons.percent_rounded,             loc.tOr('premium_benefit2', '%100 gelir payı — kesintisiz')),
-        (Icons.all_inclusive_rounded,       loc.tOr('premium_benefit3', 'Sınırsız yayın süresi')),
+        (Icons.videocam_outlined,           loc.tOr('premium_benefit3', '360 saat/ay yayın süresi')),
         (Icons.auto_awesome_rounded,        loc.tOr('premium_benefit4', 'Tüm krediler + öncelikli destek')),
         (Icons.check_circle_outline,        loc.tOr('subBenefitToolsIncluded', 'teqlif Araçları: Dahil')),
+      ],
+      UserTier.tier2 => [
+        (Icons.hd_outlined,                 loc.tOr('subPlus_benefit1', 'Full HD (1080p) yayın kalitesi')),
+        (Icons.percent_rounded,             loc.tOr('subPlus_benefit2', '%90 gelir payı')),
+        (Icons.videocam_outlined,           loc.tOr('subPlus_benefit3', '180 saat/ay yayın süresi')),
+        (Icons.rocket_launch_outlined,      loc.tOr('subPlus_benefit4', 'Blast, Boost ve AI Danışman kredileri')),
+        (Icons.auto_graph_outlined,         loc.tOr('subBenefitToolsPartial', 'Satış ve İlan Analizi: Dahil')),
       ],
       _ /* PRO */ => [
         (Icons.hd_outlined,                 loc.tOr('pro_benefit1', 'HD (720p) yayın kalitesi')),
         (Icons.percent_rounded,             loc.tOr('pro_benefit2', '%75 gelir payı')),
-        (Icons.videocam_outlined,           loc.tOr('pro_benefit3', '30 saat/ay yayın süresi')),
+        (Icons.videocam_outlined,           loc.tOr('pro_benefit3', '90 saat/ay yayın süresi')),
         (Icons.notifications_active_outlined, loc.tOr('pro_benefit4', 'Blast kredileri ve analiz araçları')),
         (Icons.lock_outline,                loc.tOr('subBenefitToolsLocked', 'teqlif Araçları: Erişim yok')),
       ],

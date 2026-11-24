@@ -15,7 +15,7 @@ class LockedFeatureRow extends ConsumerWidget {
   /// Kısa CTA metni (ör. "PRO+'ya geçerek 1080p yayın yap")
   final String ctaText;
 
-  /// Gereken minimum tier (UserTier.tier1 | UserTier.tier2 | UserTier.tier3)
+  /// Gereken minimum tier (UserTier.tier1 | UserTier.tier2 | UserTier.tier3 | UserTier.tier4)
   final String requiredTier;
 
   /// Özel onTap handler — null ise WalletScreen açılır.
@@ -31,11 +31,8 @@ class LockedFeatureRow extends ConsumerWidget {
 
   /// Tier rengi (badge / icon için)
   Color _tierColor() {
-    switch (requiredTier) {
-      case UserTier.tier3: return const Color(0xFF0891B2);
-      case UserTier.tier2: return const Color(0xFF7C3AED);
-      default:               return const Color(0xFFD97706);
-    }
+    if (UserTier.isTier3OrAbove(requiredTier)) return const Color(0xFF0891B2);
+    return const Color(0xFFD97706);
   }
 
   @override
@@ -111,8 +108,9 @@ class LockedChip extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final loc = ref.watch(localizationProvider);
     final tierLabel = switch (requiredTier) {
-      UserTier.tier2 => 'PRO+',
+      UserTier.tier4 => 'PREMIUM+',
       UserTier.tier3 => 'PREMIUM',
+      UserTier.tier2 => 'PRO+',
       _ => 'PRO',
     };
 

@@ -8101,9 +8101,6 @@ class _PrivacyBanner extends ConsumerWidget {
 }
 
 List<Color> _tierBadgeColors(String userType) {
-  switch (userType) {
-    case UserTier.tier3: return const [Color(0xFF0284C7), Color(0xFF38BDF8)];
-    case UserTier.tier2: return const [Color(0xFF7C3AED), Color(0xFFA78BFA)];
-    default: return const [Color(0xFFD97706), Color(0xFFFFD700)];
-  }
+  if (UserTier.isTier3OrAbove(userType)) return const [Color(0xFF0284C7), Color(0xFF38BDF8)];
+  return const [Color(0xFFD97706), Color(0xFFFFD700)];
 }

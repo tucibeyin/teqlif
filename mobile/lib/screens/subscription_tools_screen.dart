@@ -122,7 +122,7 @@ class _SubscriptionToolsScreenState extends ConsumerState<SubscriptionToolsScree
             isLoading: state.isLoading,
           ),
           const SizedBox(height: 16),
-          // ── PREMIUM-only bilgi paneli ──────────────────────────────────────
+          // ── Araç erişim bilgi paneli ───────────────────────────────────────
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
@@ -136,7 +136,7 @@ class _SubscriptionToolsScreenState extends ConsumerState<SubscriptionToolsScree
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    loc.tOr('subToolsPremiumOnly', 'Bu araçlar yalnızca PREMIUM üyelere açıktır.'),
+                    loc.tOr('subToolsAccessInfo', 'Bazı araçlar PRO+, diğerleri PREMIUM üyeliği gerektirir.'),
                     style: TextStyle(
                       color: kPrimary,
                       fontSize: 13,
@@ -175,6 +175,7 @@ class _SubscriptionToolsScreenState extends ConsumerState<SubscriptionToolsScree
                 title: loc.t('subToolSalesTitle'),
                 description: loc.t('subToolSalesDesc'),
                 userType: state.userType,
+                requiredTier: UserTier.tier2,
                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SubInsightsScreen(userType: state.userType))),
               ),
               const SizedBox(height: 10),
@@ -184,6 +185,7 @@ class _SubscriptionToolsScreenState extends ConsumerState<SubscriptionToolsScree
                 title: loc.t('subToolListingsTitle'),
                 description: loc.t('subToolListingsDesc'),
                 userType: state.userType,
+                requiredTier: UserTier.tier2,
                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ListingAnalyticsScreen(userType: state.userType))),
               ),
               const SizedBox(height: 10),
@@ -359,18 +361,16 @@ class _ProStatusCard extends ConsumerWidget {
 
   String _getTierName(TranslationPack loc, String type) {
     switch (type) {
-      case UserTier.tier2: return loc.tOr('tierLabelProPlus', 'PRO+');
+      case UserTier.tier4: return loc.tOr('tierLabelPremiumPlus', 'PREMIUM+');
       case UserTier.tier3: return loc.tOr('tierLabelPremium', 'PREMIUM');
-      default: return loc.tOr('tierLabelPro', 'PRO');
+      case UserTier.tier2: return loc.tOr('tierLabelProPlus', 'PRO+');
+      default:             return loc.tOr('tierLabelPro', 'PRO');
     }
   }
 
   Color _getTierColor(String type) {
-    switch (type) {
-      case UserTier.tier2: return const Color(0xFF7C3AED);
-      case UserTier.tier3: return const Color(0xFF0EA5E9);
-      default: return const Color(0xFFD97706);
-    }
+    if (UserTier.isTier3OrAbove(type)) return const Color(0xFF0EA5E9);
+    return const Color(0xFFD97706); // tier1, tier2 → altın
   }
 
   @override
@@ -623,10 +623,11 @@ class _UpgradeBanner extends ConsumerWidget {
 
   String _tierLabel(String tier) {
     switch (tier) {
+      case UserTier.tier4: return 'PREMIUM+';
       case UserTier.tier3: return 'PREMIUM';
       case UserTier.tier2: return 'PRO+';
-      case UserTier.tier1:     return 'PRO';
-      default:               return tier;
+      case UserTier.tier1: return 'PRO';
+      default:             return tier;
     }
   }
 }
@@ -639,6 +640,7 @@ class _ToolCard extends ConsumerWidget {
   final String title;
   final String description;
   final String userType;
+  final String requiredTier;
   final VoidCallback onTap;
 
   const _ToolCard({
@@ -647,12 +649,13 @@ class _ToolCard extends ConsumerWidget {
     required this.title,
     required this.description,
     this.userType = UserTier.standard,
+    this.requiredTier = UserTier.tier3,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isLocked = !UserTier.isTier3(userType);
+    final isLocked = UserTier.tierLevel(userType) < UserTier.tierLevel(requiredTier);
     return GestureDetector(
       onTap: onTap,
       child: Opacity(
@@ -699,29 +702,51 @@ class _ToolCard extends ConsumerWidget {
             ),
             const SizedBox(width: 8),
             if (isLocked)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF0891B2), Color(0xFF06B6D4)],
-                  ),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const FaIcon(FontAwesomeIcons.crown, size: 7, color: Colors.white),
-                    const SizedBox(width: 3),
-                    Text(ref.read(localizationProvider).tOr('tierLabelPremium', 'PREMIUM'), style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white)),
-                  ],
-                ),
-              )
+              _TierBadge(requiredTier: requiredTier, loc: ref.read(localizationProvider))
             else
               Icon(Icons.chevron_right, color: AppColors.textSecondary(context), size: 20),
           ],
         ),
       ),
         ),
+    );
+  }
+}
+
+// ── Tier Badge (araç kartı kilidi için) ───────────────────────────────────────
+
+class _TierBadge extends StatelessWidget {
+  final String requiredTier;
+  final TranslationPack loc;
+
+  const _TierBadge({required this.requiredTier, required this.loc});
+
+  @override
+  Widget build(BuildContext context) {
+    final isCyan = UserTier.isTier3OrAbove(requiredTier);
+    final colors = isCyan
+        ? const [Color(0xFF0891B2), Color(0xFF06B6D4)]
+        : const [Color(0xFFD97706), Color(0xFFFFD700)];
+    final label = switch (requiredTier) {
+      UserTier.tier4 => loc.tOr('tierLabelPremiumPlus', 'PREMIUM+'),
+      UserTier.tier3 => loc.tOr('tierLabelPremium', 'PREMIUM'),
+      UserTier.tier2 => loc.tOr('tierLabelProPlus', 'PRO+'),
+      _              => loc.tOr('tierLabelPro', 'PRO'),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(colors: colors),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const FaIcon(FontAwesomeIcons.crown, size: 7, color: Colors.white),
+          const SizedBox(width: 3),
+          Text(label, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white)),
+        ],
+      ),
     );
   }
 }
@@ -964,12 +989,12 @@ class _CommissionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final rate = UserTier.commissionPercent(userType);
-    final isPremium = UserTier.isTier3(userType);
-    final color = isPremium
-        ? const Color(0xFF0891B2)
+    final isTopTier = UserTier.isTier3OrAbove(userType);
+    final color = isTopTier
+        ? const Color(0xFF0891B2)   // cyan — PREMIUM / PREMIUM+
         : UserTier.isTier2OrAbove(userType)
-            ? const Color(0xFF7C3AED)
-            : const Color(0xFFD97706);
+            ? const Color(0xFFD97706)   // altın — PRO+
+            : const Color(0xFFD97706);  // altın — PRO
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
@@ -995,7 +1020,7 @@ class _CommissionRow extends StatelessWidget {
               ),
             ),
           ),
-          if (isPremium)
+          if (isTopTier)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
