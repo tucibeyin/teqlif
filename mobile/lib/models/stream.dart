@@ -90,7 +90,7 @@ class StreamTokenOut {
   final String livekitUrl;
   final String token;
   final String category;
-  final String videoQualityProfile;  // "pro" | "standard"
+  final String videoQualityProfile;  // "premium" | "pro" | "standard"
 
   StreamTokenOut({
     required this.streamId,
