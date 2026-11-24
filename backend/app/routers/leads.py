@@ -156,7 +156,7 @@ async def blast_credits(
         "renewal_date":   renewal_date,
         "sub_expires_at": current_user.sub_expires_at.isoformat() if current_user.sub_expires_at else None,
         "last_tier": current_user.last_tier,
-        "monthly_stream_seconds_used": current_user.monthly_stream_seconds_used,
+        "monthly_stream_minutes_used": current_user.monthly_stream_minutes_used,
         "monthly_stream_reset_at": current_user.monthly_stream_reset_at.isoformat() if current_user.monthly_stream_reset_at else None,
     }
 

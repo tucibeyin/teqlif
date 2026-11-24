@@ -5,7 +5,7 @@ from app.core.logger import get_logger
 from app.core.exceptions import BadRequestException, NotFoundException
 from app.models.enums import StreamStatus
 from app.models.stream import LiveStream
-from app.services.subscription.tier import quality_profile, stream_limit_seconds
+from app.services.subscription.tier import quality_profile, stream_limit_minutes
 
 PENDING_STALE_MINUTES = 5
 
@@ -37,13 +37,13 @@ class StartStreamCommand:
             now_utc = datetime.now(timezone.utc)
             reset_at = user.monthly_stream_reset_at
             if reset_at is None or reset_at.year != now_utc.year or reset_at.month != now_utc.month:
-                user.monthly_stream_seconds_used = 0
+                user.monthly_stream_minutes_used = 0
                 user.monthly_stream_reset_at = now_utc
                 await self.uow.session.flush()
 
             # Aylık yayın süresi kontrolü
-            limit = stream_limit_seconds(user.user_type)
-            if limit is not None and (user.monthly_stream_seconds_used or 0) >= limit:
+            limit = stream_limit_minutes(user.user_type)
+            if limit is not None and (user.monthly_stream_minutes_used or 0) >= limit:
                 raise BadRequestException(code="STREAM_MONTHLY_LIMIT_REACHED")
 
             existing = await self.uow.session.scalar(

@@ -115,7 +115,7 @@ class GoogleNotificationHandler(StoreNotificationHandler):
                     "UPDATE users SET user_type = :tier, plan_type = :plan, "
                     "sub_expires_at = :exp, sub_grace_until = NULL, "
                     "auto_renew_enabled = TRUE, pending_tier = NULL, "
-                    "monthly_stream_seconds_used = 0, monthly_stream_reset_at = NOW() "
+                    "monthly_stream_minutes_used = 0, monthly_stream_reset_at = NOW() "
                     "WHERE id = :uid"
                 ),
                 {"tier": new_tier, "plan": plan_type, "exp": expires_at, "uid": user_id},
@@ -124,7 +124,7 @@ class GoogleNotificationHandler(StoreNotificationHandler):
             await self._session.execute(
                 text(
                     "UPDATE users SET sub_expires_at = :exp, sub_grace_until = NULL, "
-                    "monthly_stream_seconds_used = 0, monthly_stream_reset_at = NOW() "
+                    "monthly_stream_minutes_used = 0, monthly_stream_reset_at = NOW() "
                     "WHERE id = :uid"
                 ),
                 {"exp": expires_at, "uid": user_id},
@@ -137,7 +137,7 @@ class GoogleNotificationHandler(StoreNotificationHandler):
                 "UPDATE users SET last_tier = user_type, user_type = :tier, "
                 "plan_type = NULL, sub_expires_at = NULL, sub_grace_until = NULL, "
                 "auto_renew_enabled = TRUE, pending_tier = NULL, "
-                "monthly_stream_seconds_used = 0, monthly_stream_reset_at = NULL "
+                "monthly_stream_minutes_used = 0, monthly_stream_reset_at = NULL "
                 "WHERE id = :uid"
             ),
             {"tier": TIER_STANDARD, "uid": user_id},

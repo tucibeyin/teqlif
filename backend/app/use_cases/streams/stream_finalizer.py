@@ -109,14 +109,15 @@ async def finalize_stream(stream: LiveStream, db: AsyncSession) -> None:
         started = stream.started_at if stream.started_at.tzinfo else \
             stream.started_at.replace(tzinfo=timezone.utc)
         duration_secs = max(0, int((now - started).total_seconds()))
-        if duration_secs > 0:
+        duration_mins = -(-duration_secs // 60)  # ceil integer division
+        if duration_mins > 0:
             await db.execute(
                 text(
-                    "UPDATE users SET monthly_stream_seconds_used = "
-                    "COALESCE(monthly_stream_seconds_used, 0) + :secs "
+                    "UPDATE users SET monthly_stream_minutes_used = "
+                    "COALESCE(monthly_stream_minutes_used, 0) + :mins "
                     "WHERE id = :uid"
                 ),
-                {"secs": duration_secs, "uid": stream.host_id},
+                {"mins": duration_mins, "uid": stream.host_id},
             )
 
     # 3. DB: açık kalan viewer seanslarını kapat

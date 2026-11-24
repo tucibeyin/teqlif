@@ -55,8 +55,8 @@ Future<void> showStartStreamDialog(
   final blastCreditsData = await providerContainer
       .read(analyticsServiceProvider)
       .getBlastCredits();
-  final streamSecondsUsed =
-      (blastCreditsData?['monthly_stream_seconds_used'] as num?)?.toInt() ?? 0;
+  final streamMinutesUsed =
+      (blastCreditsData?['monthly_stream_minutes_used'] as num?)?.toInt() ?? 0;
 
   if (!context.mounted) return;
 
@@ -292,7 +292,7 @@ Future<void> showStartStreamDialog(
             const SizedBox(height: 8),
             _StreamHoursWarningRow(
               userType: userType,
-              streamSecondsUsed: streamSecondsUsed,
+              streamMinutesUsed: streamMinutesUsed,
               loc: loc,
             ),
             if (errorText != null) ...[
@@ -315,8 +315,8 @@ Future<void> showStartStreamDialog(
             child: Text(loc.t('btnCancel')),
           ),
           Builder(builder: (ctx2) {
-            final limitSecs = UserTier.streamLimitSeconds(userType);
-            final limitReached = limitSecs != null && streamSecondsUsed >= limitSecs;
+            final limitMins = UserTier.streamLimitMinutes(userType);
+            final limitReached = limitMins != null && streamMinutesUsed >= limitMins;
             return ElevatedButton(
               key: const Key('live_dialog_btn_baslat'),
               style: ElevatedButton.styleFrom(
@@ -618,27 +618,34 @@ class _StreamQualitySelector extends StatelessWidget {
   }
 }
 
+String _fmtStreamTime(int minutes) {
+  final h = minutes ~/ 60;
+  final m = minutes % 60;
+  if (h == 0) return '${m}dk';
+  if (m == 0) return '${h}s';
+  return '${h}s ${m}dk';
+}
+
 /// Aylık yayın süresi uyarı satırı
 class _StreamHoursWarningRow extends StatelessWidget {
   final String userType;
-  final int streamSecondsUsed;
+  final int streamMinutesUsed;
   final TranslationPack loc;
 
   const _StreamHoursWarningRow({
     required this.userType,
-    required this.streamSecondsUsed,
+    required this.streamMinutesUsed,
     required this.loc,
   });
 
   @override
   Widget build(BuildContext context) {
-    final limitSecs = UserTier.streamLimitSeconds(userType);
-    if (limitSecs == null) return const SizedBox.shrink(); // PREMIUM — sınırsız
+    final limitMins = UserTier.streamLimitMinutes(userType);
+    if (limitMins == null) return const SizedBox.shrink(); // PREMIUM — sınırsız
 
-    final remainingSecs = (limitSecs - streamSecondsUsed).clamp(0, limitSecs);
-    final remainingHours = (remainingSecs / 3600).ceil();
-    final progress = streamSecondsUsed / limitSecs;
-    final isAtLimit = remainingSecs == 0;
+    final remainingMins = (limitMins - streamMinutesUsed).clamp(0, limitMins);
+    final progress = streamMinutesUsed / limitMins;
+    final isAtLimit = remainingMins == 0;
     final isLowWarning = !isAtLimit && progress >= 0.8; // %80 → sarı
 
     final Color color = isAtLimit
@@ -668,8 +675,8 @@ class _StreamHoursWarningRow extends StatelessWidget {
                   ? loc.tOr('streamLimitReachedWarning', 'Aylık yayın limitine ulaştınız')
                   : loc.tOr(
                       'streamHoursLeft',
-                      'Bu ay {hours} saatiniz kaldı',
-                    ).replaceAll('{hours}', remainingHours.toString()),
+                      'Bu ay {hours} kaldı',
+                    ).replaceAll('{hours}', _fmtStreamTime(remainingMins)),
               style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color),
             ),
           ),

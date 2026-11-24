@@ -18,7 +18,7 @@ class User {
   final bool autoRenewEnabled;
   final String? pendingTier;
   final String? lastTier;
-  final int monthlyStreamSecondsUsed;
+  final int monthlyStreamMinutesUsed;
 
   /// Ücretli tier (PRO, PRO+ veya PREMIUM) ise true döner.
   bool get hasSubscription => UserTier.hasSubscription(userType);
@@ -50,7 +50,7 @@ class User {
     this.autoRenewEnabled = true,
     this.pendingTier,
     this.lastTier,
-    this.monthlyStreamSecondsUsed = 0,
+    this.monthlyStreamMinutesUsed = 0,
     this.onboardingCompleted = false,
     this.websiteUrl,
     this.instagramUrl,
@@ -80,7 +80,7 @@ class User {
       autoRenewEnabled: json['auto_renew_enabled'] as bool? ?? true,
       pendingTier: json['pending_tier'] as String?,
       lastTier: json['last_tier'] as String?,
-      monthlyStreamSecondsUsed: json['monthly_stream_seconds_used'] as int? ?? 0,
+      monthlyStreamMinutesUsed: json['monthly_stream_minutes_used'] as int? ?? 0,
       onboardingCompleted: json['onboarding_completed'] as bool? ?? false,
       websiteUrl: json['website_url'] as String?,
       instagramUrl: json['instagram_url'] as String?,

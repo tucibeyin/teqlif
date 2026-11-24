@@ -118,7 +118,7 @@ class _SubscriptionToolsScreenState extends ConsumerState<SubscriptionToolsScree
             aiDescCredits: state.aiDescCredits,
             reactivationCredits: state.reactivationCredits,
             userType: state.userType,
-            monthlyStreamSecondsUsed: state.monthlyStreamSecondsUsed,
+            monthlyStreamMinutesUsed: state.monthlyStreamMinutesUsed,
             isLoading: state.isLoading,
           ),
           const SizedBox(height: 16),
@@ -851,24 +851,22 @@ class CreditItemModel {
 // ── Konsolide Krediler Özeti ────────────────────────────────────────────────
 class _StreamHoursRow extends ConsumerWidget {
   final String userType;
-  final int secondsUsed;
+  final int minutesUsed;
   final bool isLoading;
   final TranslationPack loc;
 
   const _StreamHoursRow({
     required this.userType,
-    required this.secondsUsed,
+    required this.minutesUsed,
     required this.isLoading,
     required this.loc,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final limitSecs = _streamLimitSecondsFor(userType);
-    final isUnlimited = limitSecs == null;
-    final usedHours = (secondsUsed / 3600).floor();
-    final limitHours = isUnlimited ? null : (limitSecs / 3600).floor();
-    final progress = isUnlimited ? 0.0 : (secondsUsed / limitSecs).clamp(0.0, 1.0);
+    final limitMins = _streamLimitMinutesFor(userType);
+    final isUnlimited = limitMins == null;
+    final progress = isUnlimited ? 0.0 : (minutesUsed / limitMins).clamp(0.0, 1.0);
 
     final Color barColor = isUnlimited
         ? const Color(0xFF7C3AED)
@@ -904,9 +902,9 @@ class _StreamHoursRow extends ConsumerWidget {
                 Text(
                   isUnlimited
                       ? loc.tOr('subStreamHoursUnlimited', 'Sınırsız yayın')
-                      : loc.tOr('subStreamHoursUsed', '{used} / {limit} saat kullanıldı')
-                          .replaceAll('{used}', usedHours.toString())
-                          .replaceAll('{limit}', (limitHours ?? 0).toString()),
+                      : loc.tOr('subStreamHoursUsed', '{used} / {limit} kullanıldı')
+                          .replaceAll('{used}', _fmtStreamTime(minutesUsed))
+                          .replaceAll('{limit}', _fmtStreamTime(limitMins ?? 0)),
                   style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
                 ),
               ],
@@ -932,7 +930,7 @@ class _StreamHoursRow extends ConsumerWidget {
                 )
               else
                 Text(
-                  '$usedHours/${limitHours}h',
+                  '${_fmtStreamTime(minutesUsed)} / ${_fmtStreamTime(limitMins ?? 0)}',
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: barColor),
                 ),
               const SizedBox(height: 4),
@@ -1015,7 +1013,15 @@ class _CommissionRow extends StatelessWidget {
   }
 }
 
-int? _streamLimitSecondsFor(String userType) => UserTier.streamLimitSeconds(userType);
+int? _streamLimitMinutesFor(String userType) => UserTier.streamLimitMinutes(userType);
+
+String _fmtStreamTime(int minutes) {
+  final h = minutes ~/ 60;
+  final m = minutes % 60;
+  if (h == 0) return '${m}dk';
+  if (m == 0) return '${h}s';
+  return '${h}s ${m}dk';
+}
 
 class _CreditsSummaryCard extends ConsumerWidget {
   final Map<String, dynamic>? blastCredits;
@@ -1023,7 +1029,7 @@ class _CreditsSummaryCard extends ConsumerWidget {
   final Map<String, dynamic>? aiDescCredits;
   final Map<String, dynamic>? reactivationCredits;
   final String userType;
-  final int monthlyStreamSecondsUsed;
+  final int monthlyStreamMinutesUsed;
   final bool isLoading;
 
   const _CreditsSummaryCard({
@@ -1032,7 +1038,7 @@ class _CreditsSummaryCard extends ConsumerWidget {
     required this.aiDescCredits,
     required this.reactivationCredits,
     this.userType = UserTier.standard,
-    this.monthlyStreamSecondsUsed = 0,
+    this.monthlyStreamMinutesUsed = 0,
     required this.isLoading,
   });
 
@@ -1135,7 +1141,7 @@ class _CreditsSummaryCard extends ConsumerWidget {
           if (UserTier.hasSubscription(userType)) ...[
             _StreamHoursRow(
               userType: userType,
-              secondsUsed: monthlyStreamSecondsUsed,
+              minutesUsed: monthlyStreamMinutesUsed,
               isLoading: isLoading,
               loc: loc,
             ),

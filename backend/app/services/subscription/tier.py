@@ -31,11 +31,11 @@ TIER_RANK: dict[str, int] = {
 # ── Yayın limitleri ───────────────────────────────────────────────────────────
 
 # Aylık yayın süre limiti (saniye). None = sınırsız.
-STREAM_LIMIT_SECONDS: dict[str, int | None] = {
-    TIER_STANDARD: 54_000,    # 15 saat
-    TIER_1:        108_000,   # 30 saat
-    TIER_2:        324_000,   # 90 saat
-    TIER_3:        None,      # sınırsız
+STREAM_LIMIT_MINUTES: dict[str, int | None] = {
+    TIER_STANDARD: 900,    # 15 saat
+    TIER_1:        1_800,  # 30 saat
+    TIER_2:        5_400,  # 90 saat
+    TIER_3:        None,   # sınırsız
 }
 
 # ── Gelir modeli ──────────────────────────────────────────────────────────────
@@ -167,9 +167,9 @@ def quality_profile(user_type: str) -> str:
     return QUALITY_PROFILE.get(user_type, QUALITY_PROFILE[TIER_STANDARD])
 
 
-def stream_limit_seconds(user_type: str) -> int | None:
-    """Tier'a göre aylık yayın sınırı (saniye). None = sınırsız."""
-    return STREAM_LIMIT_SECONDS.get(user_type, STREAM_LIMIT_SECONDS[TIER_STANDARD])
+def stream_limit_minutes(user_type: str) -> int | None:
+    """Tier'a göre aylık yayın sınırı (dakika). None = sınırsız."""
+    return STREAM_LIMIT_MINUTES.get(user_type, STREAM_LIMIT_MINUTES[TIER_STANDARD])
 
 
 def credit_free_limit(feature: str, user_type: str) -> int:

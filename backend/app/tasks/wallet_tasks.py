@@ -298,7 +298,7 @@ async def check_expired_pro_users_task(ctx: dict) -> None:
                     "SET last_tier = user_type, user_type = 'standard', plan_type = NULL, "
                     "    sub_expires_at = NULL, sub_grace_until = NULL, "
                     "    auto_renew_enabled = TRUE, pending_tier = NULL, "
-                    "    monthly_stream_seconds_used = 0, monthly_stream_reset_at = NULL "
+                    "    monthly_stream_minutes_used = 0, monthly_stream_reset_at = NULL "
                     "WHERE user_type IN ('tier1', 'tier2', 'tier3') "
                     "  AND sub_expires_at IS NOT NULL "
                     "  AND sub_expires_at < NOW() "

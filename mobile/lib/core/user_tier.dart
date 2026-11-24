@@ -21,13 +21,13 @@ abstract class UserTier {
   /// Yalnızca tier3 ise true döner.
   static bool isTier3(String userType) => userType == tier3;
 
-  /// Aylık yayın süresi sınırı (saniye). null = sınırsız (tier3).
-  static int? streamLimitSeconds(String userType) {
+  /// Aylık yayın süresi sınırı (dakika). null = sınırsız (tier3).
+  static int? streamLimitMinutes(String userType) {
     switch (userType) {
-      case tier3: return null;    // sınırsız
-      case tier2: return 324000;  // 90 saat
-      case tier1: return 108000;  // 30 saat
-      default:    return 54000;   // 15 saat (standard)
+      case tier3: return null;   // sınırsız
+      case tier2: return 5400;   // 90 saat
+      case tier1: return 1800;   // 30 saat
+      default:    return 900;    // 15 saat (standard)
     }
   }
 

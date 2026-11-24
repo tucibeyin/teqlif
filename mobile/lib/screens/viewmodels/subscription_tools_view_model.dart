@@ -16,7 +16,7 @@ class SubscriptionToolsState {
   final String? planType;
   final String? proExpiresAt;
   final String? lastTier;
-  final int monthlyStreamSecondsUsed;
+  final int monthlyStreamMinutesUsed;
 
   const SubscriptionToolsState({
     this.blastCredits,
@@ -28,7 +28,7 @@ class SubscriptionToolsState {
     this.planType,
     this.proExpiresAt,
     this.lastTier,
-    this.monthlyStreamSecondsUsed = 0,
+    this.monthlyStreamMinutesUsed = 0,
   });
 
   bool get hasSubscription => userType != UserTier.standard;
@@ -43,7 +43,7 @@ class SubscriptionToolsState {
     String? planType,
     String? proExpiresAt,
     String? lastTier,
-    int? monthlyStreamSecondsUsed,
+    int? monthlyStreamMinutesUsed,
   }) {
     return SubscriptionToolsState(
       blastCredits: blastCredits ?? this.blastCredits,
@@ -55,7 +55,7 @@ class SubscriptionToolsState {
       planType: planType ?? this.planType,
       proExpiresAt: proExpiresAt ?? this.proExpiresAt,
       lastTier: lastTier ?? this.lastTier,
-      monthlyStreamSecondsUsed: monthlyStreamSecondsUsed ?? this.monthlyStreamSecondsUsed,
+      monthlyStreamMinutesUsed: monthlyStreamMinutesUsed ?? this.monthlyStreamMinutesUsed,
     );
   }
 }
@@ -119,7 +119,7 @@ class SubscriptionToolsViewModel extends AutoDisposeFamilyNotifier<SubscriptionT
       reactivationCredits: results[3],
       proExpiresAt: blast?['pro_expires_at'] as String?,
       lastTier: blast?['last_tier'] as String?,
-      monthlyStreamSecondsUsed: (blast?['monthly_stream_seconds_used'] as num?)?.toInt() ?? 0,
+      monthlyStreamMinutesUsed: (blast?['monthly_stream_minutes_used'] as num?)?.toInt() ?? 0,
       isLoading: false,
     );
   }
