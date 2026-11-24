@@ -54,13 +54,17 @@ COMMISSION_RATE: dict[str, float] = {
 
 # ── Kalite profili ────────────────────────────────────────────────────────────
 
-# LiveKit kalite profili adı.
+# LiveKit profil sabitleri — backend/livekit config ile senkron tutulmalı.
+_QUALITY_540P  = "standard"
+_QUALITY_720P  = "tier1"
+_QUALITY_1080P = "tier3"
+
 QUALITY_PROFILE: dict[str, str] = {
-    TIER_STANDARD: "standard",   # 540p
-    TIER_1:        "tier1",      # 720p
-    TIER_2:        "tier1",      # 720p
-    TIER_3:        "tier3",      # 1080p
-    TIER_4:        "tier3",      # 1080p
+    TIER_STANDARD: _QUALITY_540P,
+    TIER_1:        _QUALITY_720P,
+    TIER_2:        _QUALITY_720P,
+    TIER_3:        _QUALITY_1080P,
+    TIER_4:        _QUALITY_1080P,
 }
 
 # ── Kredi limitleri ───────────────────────────────────────────────────────────
