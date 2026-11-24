@@ -19,16 +19,16 @@ const _kTierProductIds = <String, List<String>>{
 
 // Fallback fiyatlar (IAP yüklenene kadar gösterilir)
 const _kFallbackPrices = <String, List<String>>{
-  UserTier.pro:     ['299,99 ₺', '799,99 ₺', '1.499,99 ₺', '2.699,99 ₺'],
-  UserTier.proPlus: ['699,99 ₺', '1.799,99 ₺', '3.499,99 ₺', '6.299,99 ₺'],
-  UserTier.premium: ['1.299,99 ₺', '3.299,99 ₺', '5.999,99 ₺', '11.499,99 ₺'],
+  UserTier.pro:     ['399,99 ₺', '1.079,99 ₺', '1.999,99 ₺', '3.599,99 ₺'],
+  UserTier.proPlus: ['899,99 ₺', '2.399,99 ₺', '4.499,99 ₺', '7.999,99 ₺'],
+  UserTier.premium: ['1.799,99 ₺', '4.599,99 ₺', '8.999,99 ₺', '15.999,99 ₺'],
 };
 
 // Tasarruf yüzdesi [1ay, 3ay, 6ay, 12ay]
 const _kSavings = <String, List<int>>{
-  UserTier.pro:     [0, 11, 17, 25],
-  UserTier.proPlus: [0, 14, 17, 25],
-  UserTier.premium: [0, 15, 23, 26],
+  UserTier.pro:     [0, 10, 17, 25],
+  UserTier.proPlus: [0, 11, 17, 26],
+  UserTier.premium: [0, 15, 17, 26],
 };
 
 // Süre etiketleri
