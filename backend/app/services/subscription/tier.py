@@ -58,7 +58,7 @@ COMMISSION_RATE: dict[str, float] = {
 QUALITY_PROFILE: dict[str, str] = {
     TIER_STANDARD: "standard",   # 540p
     TIER_1:        "tier1",      # 720p
-    TIER_2:        "tier3",      # 1080p
+    TIER_2:        "tier1",      # 720p
     TIER_3:        "tier3",      # 1080p
     TIER_4:        "tier3",      # 1080p
 }

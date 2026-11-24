@@ -516,7 +516,7 @@ class _TierBenefits extends StatelessWidget {
         (Icons.check_circle_outline,        loc.tOr('subBenefitToolsIncluded', 'teqlif Araçları: Dahil')),
       ],
       UserTier.tier2 => [
-        (Icons.hd_outlined,                 loc.tOr('subPlus_benefit1', 'Full HD (1080p) yayın kalitesi')),
+        (Icons.hd_outlined,                 loc.tOr('subPlus_benefit1', 'HD (720p) yayın kalitesi')),
         (Icons.percent_rounded,             loc.tOr('subPlus_benefit2', '%90 gelir payı')),
         (Icons.videocam_outlined,           loc.tOr('subPlus_benefit3', '180 saat/ay yayın süresi')),
         (Icons.rocket_launch_outlined,      loc.tOr('subPlus_benefit4', 'Blast, Boost ve AI Danışman kredileri')),
