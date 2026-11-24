@@ -292,6 +292,8 @@ class CurrentUserDTO(BaseModel):
     auto_renew_enabled: bool = True
     pending_tier: Optional[str] = None
     last_tier: Optional[str] = None
+    monthly_stream_seconds_used: int = 0
+    monthly_stream_reset_at: Optional[datetime] = None
 
     @computed_field
     @property
