@@ -1188,6 +1188,17 @@
       ]
     ]
   ],
+  "subPlansTitle": "Üyelik Planları",
+  "subPlanCurrentBadge": "Mevcut Plan",
+  "subPlanStartCta": "{tier}'ya Başla",
+  "subPlanUpgradeCta": "{tier}'a Geçiş Yap",
+  "subSaveBadge": "%{pct} tasarruf",
+  "subPerMonth": "/ ay",
+  "subFeaturesTitle": "Tüm Özellikler",
+  "subFeatureUnlimited": "Sınırsız",
+  "subFeatureLiveRecording": "Yayın Kaydı",
+  "subBenefitUnlimitedStream": "Sınırsız",
+  "subHourUnit": "saat",
   "subExpiryWarning": "Üyeliğiniz {days} gün sonra sona eriyor",
   "subExpiryWarningToday": "Üyeliğiniz bugün sona eriyor!",
   "subWelcomeBack": "Tekrar hoş geldiniz!",

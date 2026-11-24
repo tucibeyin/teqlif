@@ -59,6 +59,16 @@ abstract class UserTier {
     }
   }
 
+  /// Tier sıralaması (0=standard, 1=pro, 2=pro_plus, 3=premium).
+  static int tierLevel(String userType) {
+    switch (userType) {
+      case premium: return 3;
+      case proPlus: return 2;
+      case pro:     return 1;
+      default:      return 0;
+    }
+  }
+
   /// Yayın geliri komisyon oranı — host'a kalan pay (tam sayı yüzde).
   /// Backend: tier.py COMMISSION_RATE ile senkron tutulmalı.
   static int commissionPercent(String userType) {

@@ -1187,6 +1187,17 @@
       ]
     ]
   ],
+  "subPlansTitle": "Abonnement-Pläne",
+  "subPlanCurrentBadge": "Aktueller Plan",
+  "subPlanStartCta": "{tier} starten",
+  "subPlanUpgradeCta": "Zu {tier} wechseln",
+  "subSaveBadge": "{pct}% sparen",
+  "subPerMonth": "/ Mon.",
+  "subFeaturesTitle": "Alle Funktionen",
+  "subFeatureUnlimited": "Unbegrenzt",
+  "subFeatureLiveRecording": "Live-Aufzeichnung",
+  "subBenefitUnlimitedStream": "Unbegrenzt",
+  "subHourUnit": "Std.",
   "subExpiryWarning": "Ihr Abonnement läuft in {days} Tagen ab",
   "subExpiryWarningToday": "Ihr Abonnement läuft heute ab!",
   "subWelcomeBack": "Willkommen zurück!",

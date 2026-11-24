@@ -1190,6 +1190,17 @@
       ]
     ]
   ],
+  "subPlansTitle": "خطط الاشتراك",
+  "subPlanCurrentBadge": "الخطة الحالية",
+  "subPlanStartCta": "ابدأ {tier}",
+  "subPlanUpgradeCta": "الترقية إلى {tier}",
+  "subSaveBadge": "وفّر {pct}٪",
+  "subPerMonth": "/ شهر",
+  "subFeaturesTitle": "كل الميزات",
+  "subFeatureUnlimited": "غير محدود",
+  "subFeatureLiveRecording": "تسجيل البث",
+  "subBenefitUnlimitedStream": "غير محدود",
+  "subHourUnit": "ساعة",
   "subExpiryWarning": "اشتراكك ينتهي خلال {days} أيام",
   "subExpiryWarningToday": "اشتراكك ينتهي اليوم!",
   "subWelcomeBack": "أهلاً بعودتك!",

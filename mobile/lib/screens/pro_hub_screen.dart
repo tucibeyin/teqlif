@@ -17,6 +17,7 @@ import 'pro_stream_analytics_screen.dart';
 import 'retargeting_screen.dart';
 import 'live_stream_history_screen.dart';
 import 'my_recordings_screen.dart';
+import '../screens/subscription_plans_screen.dart';
 import '../widgets/pro_subscription_sheet.dart';
 
 class ProHubScreen extends ConsumerStatefulWidget {
@@ -571,16 +572,7 @@ class _UpgradeBanner extends ConsumerWidget {
               ),
               const SizedBox(width: 10),
               GestureDetector(
-                onTap: () => showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  useSafeArea: true,
-                  backgroundColor: Colors.transparent,
-                  builder: (_) => ProSubscriptionSheet(
-                    loc: loc,
-                    onPurchaseSuccess: () => Navigator.of(context).pop(),
-                  ),
-                ),
+                onTap: () => SubscriptionPlansScreen.show(context),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
                   decoration: BoxDecoration(
@@ -637,16 +629,7 @@ class _ToolCard extends ConsumerWidget {
     final loc = ref.read(localizationProvider);
     return GestureDetector(
       onTap: isLocked
-          ? () => showModalBottomSheet(
-                context: context,
-                isScrollControlled: true,
-                useSafeArea: true,
-                backgroundColor: Colors.transparent,
-                builder: (_) => ProSubscriptionSheet(
-                  loc: loc,
-                  onPurchaseSuccess: () => Navigator.of(context).pop(),
-                ),
-              )
+          ? () => SubscriptionPlansScreen.show(context)
           : onTap,
       child: Opacity(
         opacity: isLocked ? 0.75 : 1.0,

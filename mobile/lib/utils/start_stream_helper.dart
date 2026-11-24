@@ -17,6 +17,7 @@ import '../ui_library/components/overlays/teq_toast.dart';
 import '../screens/live/host_stream_screen.dart';
 import '../services/permission_service.dart';
 import '../core/user_tier.dart';
+import '../screens/subscription_plans_screen.dart';
 
 /// Canlı yayın başlatma dialog'unu gösterir.
 /// [onStreamStarted]: yayın ekranından geri dönüldüğünde çağrılır (opsiyonel).
@@ -563,24 +564,10 @@ class _StreamQualitySelector extends StatelessWidget {
               padding: const EdgeInsets.only(right: 8),
               child: GestureDetector(
                 onTap: locked
-                    ? () {
-                        final req = UserTier.requiredTierForQuality(q);
-                        final tierLabel = switch (req) {
-                          UserTier.proPlus => 'PRO+',
-                          _ => 'PRO',
-                        };
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              loc.tOr(
-                                'streamQualityLocked',
-                                '$q için $tierLabel üyeliği gerekli',
-                              ).replaceAll('{tier}', tierLabel),
-                            ),
-                            duration: const Duration(seconds: 2),
-                          ),
-                        );
-                      }
+                    ? () => SubscriptionPlansScreen.show(
+                          context,
+                          initialTier: UserTier.requiredTierForQuality(q),
+                        )
                     : () => onQualitySelected(q),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 150),

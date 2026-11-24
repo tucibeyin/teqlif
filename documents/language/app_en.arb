@@ -1187,6 +1187,17 @@
       ]
     ]
   ],
+  "subPlansTitle": "Subscription Plans",
+  "subPlanCurrentBadge": "Current Plan",
+  "subPlanStartCta": "Start {tier}",
+  "subPlanUpgradeCta": "Upgrade to {tier}",
+  "subSaveBadge": "Save {pct}%",
+  "subPerMonth": "/ mo",
+  "subFeaturesTitle": "All Features",
+  "subFeatureUnlimited": "Unlimited",
+  "subFeatureLiveRecording": "Live Recording",
+  "subBenefitUnlimitedStream": "Unlimited",
+  "subHourUnit": "hrs",
   "subExpiryWarning": "Your subscription expires in {days} days",
   "subExpiryWarningToday": "Your subscription expires today!",
   "subWelcomeBack": "Welcome back!",

@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/user_tier.dart';
 import '../services/localization_service.dart';
-import '../widgets/pro_subscription_sheet.dart';
+import '../screens/subscription_plans_screen.dart';
 
 /// Kilitli özellik satırı — §8.13 UI pattern'ı.
 ///
 /// Kullanım: kalite seçici, PRO Araçları, Keşfet filtreler, yayın başlatma.
-/// Tıklanınca ProSubscriptionSheet açılır (Üyelik Planları ekranı henüz yok).
+/// Tıklanınca SubscriptionPlansScreen açılır (ilgili tier tab'ı seçili).
 class LockedFeatureRow extends ConsumerWidget {
   /// Özellik adı (ör. "1080p Yayın", "Pazar Analizi")
   final String label;
@@ -18,7 +18,7 @@ class LockedFeatureRow extends ConsumerWidget {
   /// Gereken minimum tier (UserTier.pro | UserTier.proPlus | UserTier.premium)
   final String requiredTier;
 
-  /// Özel onTap handler — null ise ProSubscriptionSheet açılır.
+  /// Özel onTap handler — null ise SubscriptionPlansScreen açılır.
   final VoidCallback? onTap;
 
   const LockedFeatureRow({
@@ -87,15 +87,9 @@ class LockedFeatureRow extends ConsumerWidget {
   }
 
   void _showUpgradeSheet(BuildContext context, TranslationPack loc) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => ProSubscriptionSheet(
-        loc: loc,
-        onPurchaseSuccess: () => Navigator.of(context).pop(),
-      ),
+    SubscriptionPlansScreen.show(
+      context,
+      initialTier: requiredTier != UserTier.standard ? requiredTier : null,
     );
   }
 }
@@ -133,15 +127,9 @@ class LockedChip extends ConsumerWidget {
           duration: const Duration(seconds: 2),
           action: SnackBarAction(
             label: loc.tOr('btnUpgrade', 'Yükselt'),
-            onPressed: () => showModalBottomSheet(
-              context: context,
-              isScrollControlled: true,
-              useSafeArea: true,
-              backgroundColor: Colors.transparent,
-              builder: (_) => ProSubscriptionSheet(
-                loc: loc,
-                onPurchaseSuccess: () => Navigator.of(context).pop(),
-              ),
+            onPressed: () => SubscriptionPlansScreen.show(
+              context,
+              initialTier: requiredTier != UserTier.standard ? requiredTier : null,
             ),
           ),
         ),
