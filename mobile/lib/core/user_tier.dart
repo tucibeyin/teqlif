@@ -33,8 +33,8 @@ abstract class UserTier {
 
   /// Tier'ın izin verdiği maksimum yayın kalitesi.
   static String maxStreamQuality(String userType) {
-    if (isProPlusOrAbove(userType)) return '1080p';
-    if (isPro(userType)) return '720p';
+    if (isPremiumTier(userType)) return '1080p';
+    if (isPaidTier(userType)) return '720p';
     return '540p';
   }
 
@@ -44,7 +44,7 @@ abstract class UserTier {
   /// Verilen kalite değeri bu tier için kilitli mi?
   static bool isQualityLocked(String userType, String quality) {
     switch (quality) {
-      case '1080p': return !isProPlusOrAbove(userType);
+      case '1080p': return !isPremiumTier(userType);
       case '720p':  return !isPaidTier(userType);
       default:      return false;
     }
@@ -53,7 +53,7 @@ abstract class UserTier {
   /// Kilitli kalite için gereken minimum tier adı.
   static String requiredTierForQuality(String quality) {
     switch (quality) {
-      case '1080p': return proPlus;
+      case '1080p': return premium;
       case '720p':  return pro;
       default:      return standard;
     }

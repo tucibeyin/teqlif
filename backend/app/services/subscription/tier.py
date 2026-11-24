@@ -54,8 +54,8 @@ COMMISSION_RATE: dict[str, float] = {
 QUALITY_PROFILE: dict[str, str] = {
     TIER_STANDARD: "standard",   # 540p
     TIER_PRO:      "pro",        # 720p
-    TIER_PRO_PLUS: "pro_plus",   # 1080p
-    TIER_PREMIUM:  "pro_plus",   # 1080p (aynı profil, PRO+ ile)
+    TIER_PRO_PLUS: "pro",        # 720p
+    TIER_PREMIUM:  "pro_plus",   # 1080p — sadece PREMIUM
 }
 
 # ── Kredi limitleri ───────────────────────────────────────────────────────────
