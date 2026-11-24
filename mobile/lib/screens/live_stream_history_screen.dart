@@ -6,7 +6,7 @@ import '../services/localization_service.dart';
 import '../ui_library/components/filters/teq_filter_bar.dart';
 import 'viewmodels/live_stream_history_view_model.dart';
 import 'live_stream_analytics_screen.dart';
-import '../widgets/pro_paywall_overlay.dart';
+import '../widgets/subscription_paywall.dart';
 import '../core/user_tier.dart';
 
 class LiveStreamHistoryScreen extends ConsumerStatefulWidget {
@@ -45,17 +45,17 @@ class _LiveStreamHistoryScreenState extends ConsumerState<LiveStreamHistoryScree
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
 
-    if (!UserTier.isPaidTier(widget.userType) && !widget.isEmbedded) {
+    if (!UserTier.hasSubscription(widget.userType) && !widget.isEmbedded) {
       return Scaffold(
         backgroundColor: AppColors.bg(context),
         appBar: AppBar(
           backgroundColor: AppColors.bg(context),
           elevation: 0,
-          title: Text(loc.t('proToolStreamAnalyticsTitle'), style: const TextStyle(fontWeight: FontWeight.w800)),
+          title: Text(loc.t('subToolStreamAnalyticsTitle'), style: const TextStyle(fontWeight: FontWeight.w800)),
         ),
         body: Stack(children: [
           const ProLockedPlaceholder(),
-          ProPaywallOverlay(
+          SubscriptionPaywall(
             icon: Icons.stream_outlined,
             gradientColors: const [Color(0xFF14B8A6), Color(0xFF0D9488)],
             descKey: 'streamHistPaywallDesc',

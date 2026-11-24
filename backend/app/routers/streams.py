@@ -25,7 +25,7 @@ from app.core.uow import SqlAlchemyUnitOfWork
 
 from app.core.logger import get_logger
 from app.services.like_service import LikeService
-from app.services.subscription.tier import is_paid_tier, FEED_PREMIUM_BOOST, TIER_PREMIUM, TIER_STANDARD
+from app.services.subscription.tier import has_subscription, FEED_TOP_TIER_BOOST, TIER_3, TIER_STANDARD
 
 logger = get_logger(__name__)
 from app.use_cases.feed.queries.swipe_live_queries import SwipeLiveQueries
@@ -315,7 +315,7 @@ async def get_stream_recording(
         raise HTTPException(status_code=404, detail={"error": {"code": "STREAM_NOT_FOUND"}})
     if stream.host_id != current_user.id:
         raise HTTPException(status_code=403, detail={"error": {"code": "FORBIDDEN"}})
-    if not is_paid_tier(current_user.user_type):
+    if not has_subscription(current_user.user_type):
         raise HTTPException(status_code=403, detail={"error": {"code": "PRO_REQUIRED"}})
 
     # Concat tamamlanmışsa birleşik kayıt önceliklenir; yoksa en son part döner
@@ -842,7 +842,7 @@ async def get_raid_targets(
         base = affinity * 0.55 + hype * 0.30 + viewers * 0.15
         host_type = s.host.user_type if s.host else "standard"
         is_unfollowed = s.host_id not in following_ids
-        boost = FEED_PREMIUM_BOOST if (host_type == TIER_PREMIUM and is_unfollowed) else 0.0
+        boost = FEED_TOP_TIER_BOOST if (host_type == TIER_3 and is_unfollowed) else 0.0
         return base + boost
 
     top3 = sorted(streams, key=_score, reverse=True)[:3]

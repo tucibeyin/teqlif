@@ -3,27 +3,27 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import '../../services/iap_service.dart';
 
-class ProSubscriptionState {
+class SubscriptionState {
   final List<ProductDetails> products;
   final bool isPurchasing;
   final PurchaseDetails? lastPurchase;
   final String? error;
 
-  const ProSubscriptionState({
+  const SubscriptionState({
     this.products = const [],
     this.isPurchasing = false,
     this.lastPurchase,
     this.error,
   });
 
-  ProSubscriptionState copyWith({
+  SubscriptionState copyWith({
     List<ProductDetails>? products,
     bool? isPurchasing,
     PurchaseDetails? lastPurchase,
     String? error,
     bool clearLastPurchase = false,
   }) {
-    return ProSubscriptionState(
+    return SubscriptionState(
       products: products ?? this.products,
       isPurchasing: isPurchasing ?? this.isPurchasing,
       lastPurchase: clearLastPurchase ? null : (lastPurchase ?? this.lastPurchase),
@@ -32,11 +32,11 @@ class ProSubscriptionState {
   }
 }
 
-class ProSubscriptionViewModel extends AutoDisposeNotifier<ProSubscriptionState> {
+class SubscriptionViewModel extends AutoDisposeNotifier<SubscriptionState> {
   StreamSubscription<PurchaseDetails>? _purchaseSub;
 
   @override
-  ProSubscriptionState build() {
+  SubscriptionState build() {
     final iap = IAPService();
     _purchaseSub = iap.purchaseStream.listen(
       _onPurchase,
@@ -45,7 +45,7 @@ class ProSubscriptionViewModel extends AutoDisposeNotifier<ProSubscriptionState>
       },
     );
     ref.onDispose(() => _purchaseSub?.cancel());
-    final initial = ProSubscriptionState(products: iap.products);
+    final initial = SubscriptionState(products: iap.products);
     if (iap.products.isEmpty) {
       Future.microtask(loadProducts);
     }
@@ -88,7 +88,7 @@ class ProSubscriptionViewModel extends AutoDisposeNotifier<ProSubscriptionState>
   }
 }
 
-final proSubscriptionViewModelProvider =
-    NotifierProvider.autoDispose<ProSubscriptionViewModel, ProSubscriptionState>(
-  ProSubscriptionViewModel.new,
+final subscriptionViewModelProvider =
+    NotifierProvider.autoDispose<SubscriptionViewModel, SubscriptionState>(
+  SubscriptionViewModel.new,
 );

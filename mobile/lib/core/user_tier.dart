@@ -4,37 +4,37 @@
 /// Hiçbir ekran/widget literal tier değeri içermemelidir.
 abstract class UserTier {
   static const standard = 'standard';
-  static const pro      = 'pro';
-  static const proPlus  = 'pro_plus';
-  static const premium  = 'premium';
+  static const tier1    = 'tier1';   // PRO (Temel üyelik)
+  static const tier2    = 'tier2';   // PRO+ (İleri üyelik)
+  static const tier3    = 'tier3';   // PREMIUM (Premium üyelik)
 
-  /// Ücretli tier (PRO, PRO+ veya PREMIUM) ise true döner.
-  static bool isPaidTier(String userType) => userType != standard;
+  /// Aktif üyeliği (tier1, tier2, tier3) olan kullanıcı ise true döner.
+  static bool hasSubscription(String userType) => userType != standard;
 
-  /// Yalnızca PRO tier ise true döner.
-  static bool isPro(String userType) => userType == pro;
+  /// Yalnızca tier1 ise true döner.
+  static bool isTier1(String userType) => userType == tier1;
 
-  /// PRO+ veya üstü ise true döner.
-  static bool isProPlusOrAbove(String userType) =>
-      userType == proPlus || userType == premium;
+  /// tier2 veya üstü ise true döner.
+  static bool isTier2OrAbove(String userType) =>
+      userType == tier2 || userType == tier3;
 
-  /// Yalnızca PREMIUM tier ise true döner.
-  static bool isPremiumTier(String userType) => userType == premium;
+  /// Yalnızca tier3 ise true döner.
+  static bool isTier3(String userType) => userType == tier3;
 
-  /// Aylık yayın süresi sınırı (saniye). null = sınırsız (PREMIUM).
+  /// Aylık yayın süresi sınırı (saniye). null = sınırsız (tier3).
   static int? streamLimitSeconds(String userType) {
     switch (userType) {
-      case premium: return null;    // sınırsız
-      case proPlus: return 324000;  // 90 saat
-      case pro:     return 108000;  // 30 saat
-      default:      return 54000;   // 15 saat (standard)
+      case tier3: return null;    // sınırsız
+      case tier2: return 324000;  // 90 saat
+      case tier1: return 108000;  // 30 saat
+      default:    return 54000;   // 15 saat (standard)
     }
   }
 
   /// Tier'ın izin verdiği maksimum yayın kalitesi.
   static String maxStreamQuality(String userType) {
-    if (isPremiumTier(userType)) return '1080p';
-    if (isPaidTier(userType)) return '720p';
+    if (isTier3(userType)) return '1080p';
+    if (hasSubscription(userType)) return '720p';
     return '540p';
   }
 
@@ -44,8 +44,8 @@ abstract class UserTier {
   /// Verilen kalite değeri bu tier için kilitli mi?
   static bool isQualityLocked(String userType, String quality) {
     switch (quality) {
-      case '1080p': return !isPremiumTier(userType);
-      case '720p':  return !isPaidTier(userType);
+      case '1080p': return !isTier3(userType);
+      case '720p':  return !hasSubscription(userType);
       default:      return false;
     }
   }
@@ -53,19 +53,19 @@ abstract class UserTier {
   /// Kilitli kalite için gereken minimum tier adı.
   static String requiredTierForQuality(String quality) {
     switch (quality) {
-      case '1080p': return premium;
-      case '720p':  return pro;
+      case '1080p': return tier3;
+      case '720p':  return tier1;
       default:      return standard;
     }
   }
 
-  /// Tier sıralaması (0=standard, 1=pro, 2=pro_plus, 3=premium).
+  /// Tier sıralaması (0=standard, 1=tier1, 2=tier2, 3=tier3).
   static int tierLevel(String userType) {
     switch (userType) {
-      case premium: return 3;
-      case proPlus: return 2;
-      case pro:     return 1;
-      default:      return 0;
+      case tier3: return 3;
+      case tier2: return 2;
+      case tier1: return 1;
+      default:    return 0;
     }
   }
 
@@ -73,10 +73,10 @@ abstract class UserTier {
   /// Backend: tier.py COMMISSION_RATE ile senkron tutulmalı.
   static int commissionPercent(String userType) {
     switch (userType) {
-      case premium: return 100;
-      case proPlus: return 90;
-      case pro:     return 75;
-      default:      return 50;
+      case tier3: return 100;
+      case tier2: return 90;
+      case tier1: return 75;
+      default:    return 50;
     }
   }
 }

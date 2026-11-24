@@ -4,7 +4,7 @@ import '../../config/app_colors.dart';
 import '../../config/theme.dart';
 import '../../core/user_tier.dart';
 import '../../models/recording.dart';
-import '../../screens/subscription_plans_screen.dart';
+import '../profile_screen.dart';
 import '../../services/category_service.dart';
 import '../../services/localization_service.dart';
 import 'widgets/metric_grid.dart';
@@ -245,9 +245,8 @@ class _EarningsCard extends StatelessWidget {
           if (fomoNextTier != null && fomoSavings != null && fomoSavings > 0) ...[
             const SizedBox(height: 10),
             GestureDetector(
-              onTap: () => SubscriptionPlansScreen.show(
-                context,
-                initialTier: fomoNextTier.$1,
+              onTap: () => Navigator.of(context, rootNavigator: true).push(
+                MaterialPageRoute(builder: (_) => const WalletScreen()),
               ),
               child: Container(
                 padding:
@@ -265,9 +264,9 @@ class _EarningsCard extends StatelessWidget {
                               'recordingFomoLine',
                               '{tier}\'a geçseydiniz {amount} daha kazanırdınız',
                             )
-                            .replaceAll('{tier}', fomoNextTier.$1 == UserTier.pro
+                            .replaceAll('{tier}', fomoNextTier.$1 == UserTier.tier1
                                 ? 'PRO'
-                                : fomoNextTier.$1 == UserTier.proPlus
+                                : fomoNextTier.$1 == UserTier.tier2
                                     ? 'PRO+'
                                     : 'PREMIUM')
                             .replaceAll('{amount}', rdPrice(fomoSavings, loc.lang)),
@@ -292,9 +291,9 @@ class _EarningsCard extends StatelessWidget {
 
   /// Returns (nextTierString, nextRate) or null if already PREMIUM.
   (String, double)? _fomoNextTier(double rate) {
-    if (rate < 0.75) return (UserTier.pro, 0.75);
-    if (rate < 0.90) return (UserTier.proPlus, 0.90);
-    if (rate < 1.00) return (UserTier.premium, 1.00);
+    if (rate < 0.75) return (UserTier.tier1, 0.75);
+    if (rate < 0.90) return (UserTier.tier2, 0.90);
+    if (rate < 1.00) return (UserTier.tier3, 1.00);
     return null;
   }
 }

@@ -5,7 +5,7 @@ from sqlalchemy import text as sql_text
 logger = logging.getLogger(__name__)
 
 
-class ProMetricsUseCase:
+class SubMetricsUseCase:
     """
     PRO gelişmiş metrikler — T-1 analitik (gece batch'te hesaplanır, node1 Redis'ten servis edilir).
 
@@ -105,7 +105,7 @@ class ProMetricsUseCase:
                             best_hour = hr
 
             except Exception as exc:
-                logger.warning("[ProMetricsUseCase] ClickHouse sorgusu başarısız uid=%d: %s", self.uid, exc)
+                logger.warning("[SubMetricsUseCase] ClickHouse sorgusu başarısız uid=%d: %s", self.uid, exc)
 
         # ── 3. Geri dönen izleyici oranı (PG) ────────────────────────────────
         try:
@@ -131,7 +131,7 @@ class ProMetricsUseCase:
                 total_viewer_count = int(row[1])
                 return_viewer_count = int(row[2])
         except Exception as exc:
-            logger.warning("[ProMetricsUseCase] PG return_viewer sorgusu başarısız uid=%d: %s", self.uid, exc)
+            logger.warning("[SubMetricsUseCase] PG return_viewer sorgusu başarısız uid=%d: %s", self.uid, exc)
 
         return {
             "avg_detail_dwell_seconds": avg_dwell,

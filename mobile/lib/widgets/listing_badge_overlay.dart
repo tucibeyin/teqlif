@@ -18,7 +18,7 @@ class ListingBadgeOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isPro    = UserTier.isPaidTier(listing['user']?['user_type'] as String? ?? UserTier.standard);
+    final isPro    = UserTier.hasSubscription(listing['user']?['user_type'] as String? ?? UserTier.standard);
     final badge    = listing['seller_badge'] as String?;
     final trending = listing['is_trending'] == true;
 

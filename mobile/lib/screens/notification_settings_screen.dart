@@ -7,6 +7,7 @@ import '../ui_library/components/buttons/teq_button.dart';
 import 'viewmodels/notification_settings_view_model.dart';
 import '../core/user_tier.dart';
 import '../widgets/tier_badge.dart';
+import 'profile_screen.dart';
 
 class NotificationSettingsScreen extends ConsumerWidget {
   final String userType;
@@ -55,7 +56,7 @@ class NotificationSettingsScreen extends ConsumerWidget {
     ),
   };
 
-  void _showUpgradeSheet(BuildContext context, TranslationPack loc) {
+  void _showUpgradeSheet(BuildContext context, WidgetRef ref, TranslationPack loc) {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -90,8 +91,13 @@ class NotificationSettingsScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 24),
             TeqButton(
-              text: loc.t("btnGoPro"),
-              onPressed: () => Navigator.pop(context),
+              text: loc.t("btnUpgradeMembership"),
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.of(context, rootNavigator: true).push(
+                  MaterialPageRoute(builder: (_) => const WalletScreen()),
+                );
+              },
               isExpanded: true,
             ),
           ],
@@ -156,19 +162,19 @@ class NotificationSettingsScreen extends ConsumerWidget {
               const SizedBox(height: 12),
               // ── Pro Bildirim Ayarları ─────────────────────────────
               _ProSection(
-                isPremium: UserTier.isPaidTier(userType),
+                isPremium: UserTier.hasSubscription(userType),
                 userType: userType,
                 bidThreshold: state.bidThreshold,
                 quietEnabled: state.quietEnabled,
                 quietFrom: state.quietFrom,
                 quietTo: state.quietTo,
                 receiveBlastNotifications: state.receiveBlastNotifications,
-                onBidThreshold: UserTier.isPaidTier(userType) ? (v) => ref.read(notificationSettingsProvider.notifier).setBidThreshold(v) : null,
-                onQuietEnabled: UserTier.isPaidTier(userType) ? (v) => ref.read(notificationSettingsProvider.notifier).setQuietEnabled(v) : null,
-                onPickFrom: UserTier.isPaidTier(userType) ? () => _pickTime(context, ref, state, isFrom: true) : null,
-                onPickTo: UserTier.isPaidTier(userType) ? () => _pickTime(context, ref, state, isFrom: false) : null,
-                onBlastNotifChanged: UserTier.isPaidTier(userType) ? (v) => ref.read(notificationSettingsProvider.notifier).setBlastNotifications(v) : null,
-                onUpgradeTap: () => _showUpgradeSheet(context, loc),
+                onBidThreshold: UserTier.hasSubscription(userType) ? (v) => ref.read(notificationSettingsProvider.notifier).setBidThreshold(v) : null,
+                onQuietEnabled: UserTier.hasSubscription(userType) ? (v) => ref.read(notificationSettingsProvider.notifier).setQuietEnabled(v) : null,
+                onPickFrom: UserTier.hasSubscription(userType) ? () => _pickTime(context, ref, state, isFrom: true) : null,
+                onPickTo: UserTier.hasSubscription(userType) ? () => _pickTime(context, ref, state, isFrom: false) : null,
+                onBlastNotifChanged: UserTier.hasSubscription(userType) ? (v) => ref.read(notificationSettingsProvider.notifier).setBlastNotifications(v) : null,
+                onUpgradeTap: () => _showUpgradeSheet(context, ref, loc),
               ),
               const SizedBox(height: 12),
               // ── Gizlilik ────────────────────────────────────────────

@@ -95,7 +95,7 @@ class HandleStoreRefundCommand:
             await self._session.execute(
                 text(
                     "UPDATE users SET user_type = :tier, plan_type = NULL, "
-                    "pro_expires_at = NULL, pro_grace_until = NULL "
+                    "sub_expires_at = NULL, sub_grace_until = NULL "
                     "WHERE id = :uid AND user_type != :tier"
                 ),
                 {"tier": TIER_STANDARD, "uid": user_id},

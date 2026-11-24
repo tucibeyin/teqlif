@@ -113,7 +113,7 @@ class GoogleNotificationHandler(StoreNotificationHandler):
             await self._session.execute(
                 text(
                     "UPDATE users SET user_type = :tier, plan_type = :plan, "
-                    "pro_expires_at = :exp, pro_grace_until = NULL, "
+                    "sub_expires_at = :exp, sub_grace_until = NULL, "
                     "auto_renew_enabled = TRUE, pending_tier = NULL, "
                     "monthly_stream_seconds_used = 0, monthly_stream_reset_at = NOW() "
                     "WHERE id = :uid"
@@ -123,7 +123,7 @@ class GoogleNotificationHandler(StoreNotificationHandler):
         else:
             await self._session.execute(
                 text(
-                    "UPDATE users SET pro_expires_at = :exp, pro_grace_until = NULL, "
+                    "UPDATE users SET sub_expires_at = :exp, sub_grace_until = NULL, "
                     "monthly_stream_seconds_used = 0, monthly_stream_reset_at = NOW() "
                     "WHERE id = :uid"
                 ),
@@ -135,7 +135,7 @@ class GoogleNotificationHandler(StoreNotificationHandler):
         await self._session.execute(
             text(
                 "UPDATE users SET last_tier = user_type, user_type = :tier, "
-                "plan_type = NULL, pro_expires_at = NULL, pro_grace_until = NULL, "
+                "plan_type = NULL, sub_expires_at = NULL, sub_grace_until = NULL, "
                 "auto_renew_enabled = TRUE, pending_tier = NULL, "
                 "monthly_stream_seconds_used = 0, monthly_stream_reset_at = NULL "
                 "WHERE id = :uid"

@@ -42,7 +42,7 @@ class ValidationErrorEvent {
 }
 
 /// Herhangi bir işlem sonucunda Pro kredi sayıları değiştiğinde fırlatılır.
-/// ProHubScreen bu event'i dinleyerek _loadCredits() çağırır.
+/// SubscriptionToolsScreen bu event'i dinleyerek _loadCredits() çağırır.
 class CreditsChangedEvent {
   const CreditsChangedEvent();
 }

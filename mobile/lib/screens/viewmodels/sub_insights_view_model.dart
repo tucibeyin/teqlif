@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../services/analytics_service.dart';
-import '../../models/pro_insights_data.dart';
+import '../../models/sub_insights_data.dart';
 import '../../models/listing_filter_state.dart';
 class ProInsightsState {
   final ProInsightsData? data;

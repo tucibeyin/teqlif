@@ -4,8 +4,8 @@ import "../services/localization_service.dart";
 import 'package:intl/intl.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
-import 'viewmodels/pro_stream_analytics_view_model.dart';
-import '../widgets/pro_paywall_overlay.dart';
+import 'viewmodels/sub_stream_analytics_view_model.dart';
+import '../widgets/subscription_paywall.dart';
 import '../core/user_tier.dart';
 
 // ── En İyi Yayın Saati ────────────────────────────────────────────────────
@@ -26,17 +26,17 @@ class _BestStreamTimeScreenState extends ConsumerState<BestStreamTimeScreen> {
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
 
-    if (!UserTier.isPaidTier(widget.userType) && !widget.isEmbedded) {
+    if (!UserTier.hasSubscription(widget.userType) && !widget.isEmbedded) {
       return Scaffold(
         backgroundColor: AppColors.bg(context),
         appBar: AppBar(
           backgroundColor: AppColors.bg(context),
           elevation: 0,
-          title: Text(loc.t('proToolBestTimeTitle'), style: const TextStyle(fontWeight: FontWeight.w800)),
+          title: Text(loc.t('subToolBestTimeTitle'), style: const TextStyle(fontWeight: FontWeight.w800)),
         ),
         body: Stack(children: [
           const ProLockedPlaceholder(),
-          ProPaywallOverlay(
+          SubscriptionPaywall(
             icon: Icons.schedule_outlined,
             gradientColors: const [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
             descKey: 'bestTimePaywallDesc',
@@ -250,17 +250,17 @@ class _ConversionBreakdownScreenState extends ConsumerState<ConversionBreakdownS
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
 
-    if (!UserTier.isPaidTier(widget.userType) && !widget.isEmbedded) {
+    if (!UserTier.hasSubscription(widget.userType) && !widget.isEmbedded) {
       return Scaffold(
         backgroundColor: AppColors.bg(context),
         appBar: AppBar(
           backgroundColor: AppColors.bg(context),
           elevation: 0,
-          title: Text(loc.t('proToolConversionTitle'), style: const TextStyle(fontWeight: FontWeight.w800)),
+          title: Text(loc.t('subToolConversionTitle'), style: const TextStyle(fontWeight: FontWeight.w800)),
         ),
         body: Stack(children: [
           const ProLockedPlaceholder(),
-          ProPaywallOverlay(
+          SubscriptionPaywall(
             icon: Icons.pie_chart_outline,
             gradientColors: const [Color(0xFFEC4899), Color(0xFFF43F5E)],
             descKey: 'conversionPaywallDesc',

@@ -2,8 +2,7 @@ import 'dart:ui';
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:flutter/material.dart";
 import "../services/localization_service.dart";
-import 'package:url_launcher/url_launcher.dart';
-import '../widgets/pro_subscription_sheet.dart';
+import 'profile_screen.dart';
 import '../config/app_colors.dart';
 import 'viewmodels/market_intelligence_view_model.dart';
 import '../core/user_tier.dart';
@@ -21,7 +20,7 @@ class _MarketIntelligenceScreenState extends ConsumerState<MarketIntelligenceScr
   @override
   void initState() {
     super.initState();
-    if (UserTier.isPaidTier(widget.userType)) {
+    if (UserTier.hasSubscription(widget.userType)) {
       Future.microtask(() => ref.read(marketIntelligenceProvider.notifier).load());
     }
   }
@@ -34,12 +33,12 @@ class _MarketIntelligenceScreenState extends ConsumerState<MarketIntelligenceScr
 
     final bodyContent = state.loading
         ? const Center(child: CircularProgressIndicator())
-        : (state.hasError && UserTier.isPaidTier(widget.userType))
+        : (state.hasError && UserTier.hasSubscription(widget.userType))
             ? _buildError(loc, viewModel)
             : Stack(
                 children: [
                   _buildContent(loc, state, viewModel),
-                  if (!UserTier.isPaidTier(widget.userType)) _buildPaywall(context, loc),
+                  if (!UserTier.hasSubscription(widget.userType)) _buildPaywall(context, loc),
                 ],
               );
 
@@ -386,19 +385,15 @@ class _MarketIntelligenceScreenState extends ConsumerState<MarketIntelligenceScr
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: ElevatedButton(
-                          onPressed: () => showModalBottomSheet(
-                            context: context,
-                            isScrollControlled: true,
-                            useSafeArea: true,
-                            backgroundColor: Colors.transparent,
-                            builder: (_) => ProSubscriptionSheet(loc: loc),
+                          onPressed: () => Navigator.of(context, rootNavigator: true).push(
+                            MaterialPageRoute(builder: (_) => const WalletScreen()),
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent, shadowColor: Colors.transparent,
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
-                          child: Text(loc.t("proUpgradeBtn"),
+                          child: Text(loc.t("subUpgradeBtn"),
                               style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Colors.white)),
                         ),
                       ),

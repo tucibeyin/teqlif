@@ -6,8 +6,7 @@ import "package:flutter/material.dart";
 import "../services/localization_service.dart";
 import '../ui_library/components/buttons/teq_button.dart';
 
-import 'package:url_launcher/url_launcher.dart';
-import '../widgets/pro_subscription_sheet.dart';
+import 'profile_screen.dart';
 import '../config/app_colors.dart';
 import '../ui_library/components/filters/teq_filter_bar.dart';
 import 'viewmodels/listing_analytics_view_model.dart';
@@ -30,7 +29,7 @@ class _ListingAnalyticsScreenState extends ConsumerState<ListingAnalyticsScreen>
   @override
   void initState() {
     super.initState();
-    if (UserTier.isPaidTier(widget.userType)) {
+    if (UserTier.hasSubscription(widget.userType)) {
       Future.microtask(() => ref.read(listingAnalyticsProvider.notifier).load());
     }
   }
@@ -52,12 +51,12 @@ class _ListingAnalyticsScreenState extends ConsumerState<ListingAnalyticsScreen>
     
     final bodyContent = state.loading
         ? const Center(child: CircularProgressIndicator())
-        : (state.hasError && UserTier.isPaidTier(widget.userType))
+        : (state.hasError && UserTier.hasSubscription(widget.userType))
         ? _buildError(loc, viewModel)
         : Stack(
             children: [
               _buildContent(loc, state, viewModel),
-              if (!UserTier.isPaidTier(widget.userType)) _buildPaywall(context, loc),
+              if (!UserTier.hasSubscription(widget.userType)) _buildPaywall(context, loc),
             ],
           );
 
@@ -124,7 +123,7 @@ class _ListingAnalyticsScreenState extends ConsumerState<ListingAnalyticsScreen>
             : const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 40),
         children: [
-          if (UserTier.isPaidTier(widget.userType)) const _FeedStatsCard(),
+          if (UserTier.hasSubscription(widget.userType)) const _FeedStatsCard(),
           TeqFilterBar(
             filter: state.filter,
             onChanged: (f) {
@@ -497,12 +496,8 @@ class _ListingAnalyticsScreenState extends ConsumerState<ListingAnalyticsScreen>
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: ElevatedButton(
-                          onPressed: () => showModalBottomSheet(
-                            context: context,
-                            isScrollControlled: true,
-                            useSafeArea: true,
-                            backgroundColor: Colors.transparent,
-                            builder: (_) => ProSubscriptionSheet(loc: loc),
+                          onPressed: () => Navigator.of(context, rootNavigator: true).push(
+                            MaterialPageRoute(builder: (_) => const WalletScreen()),
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent,
@@ -513,7 +508,7 @@ class _ListingAnalyticsScreenState extends ConsumerState<ListingAnalyticsScreen>
                             ),
                           ),
                           child: Text(
-                            loc.t("proUpgradeBtn"),
+                            loc.t("subUpgradeBtn"),
                             style: const TextStyle(
                               fontWeight: FontWeight.w800,
                               fontSize: 15,
@@ -786,7 +781,7 @@ class _FeedStatsCardState extends ConsumerState<_FeedStatsCard> {
                 child: CircularProgressIndicator(strokeWidth: 2),
               )),
               error: (e, _) => Text(
-                loc.tOr('proLoadFailed', 'Yüklenemedi'),
+                loc.tOr('subLoadFailed', 'Yüklenemedi'),
                 style: TextStyle(color: AppColors.textSecondary(context), fontSize: 13),
               ),
               data: (stats) {

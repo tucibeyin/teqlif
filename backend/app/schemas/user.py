@@ -284,8 +284,8 @@ class CurrentUserDTO(BaseModel):
     cross_border_consent_ip: Optional[str] = None
     cross_border_consent_locale: Optional[str] = None
     token_version: int = 0
-    pro_expires_at: Optional[datetime] = None
-    pro_grace_until: Optional[datetime] = None
+    sub_expires_at: Optional[datetime] = None
+    sub_grace_until: Optional[datetime] = None
     last_active_at: Optional[datetime] = None
     store_subscription_id: Optional[str] = None
     store_subscription_platform: Optional[str] = None

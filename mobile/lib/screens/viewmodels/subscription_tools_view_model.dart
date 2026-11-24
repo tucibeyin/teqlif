@@ -6,7 +6,7 @@ import '../../services/storage_service.dart';
 import '../../core/event_bus.dart';
 import '../../core/user_tier.dart';
 
-class ProHubState {
+class SubscriptionToolsState {
   final Map<String, dynamic>? blastCredits;
   final Map<String, dynamic>? boostCredits;
   final Map<String, dynamic>? aiDescCredits;
@@ -18,7 +18,7 @@ class ProHubState {
   final String? lastTier;
   final int monthlyStreamSecondsUsed;
 
-  const ProHubState({
+  const SubscriptionToolsState({
     this.blastCredits,
     this.boostCredits,
     this.aiDescCredits,
@@ -31,9 +31,9 @@ class ProHubState {
     this.monthlyStreamSecondsUsed = 0,
   });
 
-  bool get isPaidTier => userType != UserTier.standard;
+  bool get hasSubscription => userType != UserTier.standard;
 
-  ProHubState copyWith({
+  SubscriptionToolsState copyWith({
     Map<String, dynamic>? blastCredits,
     Map<String, dynamic>? boostCredits,
     Map<String, dynamic>? aiDescCredits,
@@ -45,7 +45,7 @@ class ProHubState {
     String? lastTier,
     int? monthlyStreamSecondsUsed,
   }) {
-    return ProHubState(
+    return SubscriptionToolsState(
       blastCredits: blastCredits ?? this.blastCredits,
       boostCredits: boostCredits ?? this.boostCredits,
       aiDescCredits: aiDescCredits ?? this.aiDescCredits,
@@ -60,11 +60,11 @@ class ProHubState {
   }
 }
 
-class ProHubViewModel extends AutoDisposeFamilyNotifier<ProHubState, String> {
+class SubscriptionToolsViewModel extends AutoDisposeFamilyNotifier<SubscriptionToolsState, String> {
   StreamSubscription<CreditsChangedEvent>? _creditsSub;
 
   @override
-  ProHubState build(String arg) {
+  SubscriptionToolsState build(String arg) {
     _creditsSub = eventBus.on<CreditsChangedEvent>().listen((_) => loadCredits());
     Future.microtask(() {
       loadLocalPlanType();
@@ -72,7 +72,7 @@ class ProHubViewModel extends AutoDisposeFamilyNotifier<ProHubState, String> {
       loadCredits();
       ref.read(analyticsServiceProvider).trackEvent('pro_hub_view', {'user_type': arg});
     });
-    return ProHubState(userType: arg);
+    return SubscriptionToolsState(userType: arg);
   }
 
   Future<void> loadLocalPlanType() async {
@@ -129,6 +129,6 @@ class ProHubViewModel extends AutoDisposeFamilyNotifier<ProHubState, String> {
   }
 }
 
-final proHubProvider = NotifierProvider.autoDispose.family<ProHubViewModel, ProHubState, String>(
-  () => ProHubViewModel(),
+final subscriptionToolsProvider = NotifierProvider.autoDispose.family<SubscriptionToolsViewModel, SubscriptionToolsState, String>(
+  () => SubscriptionToolsViewModel(),
 );

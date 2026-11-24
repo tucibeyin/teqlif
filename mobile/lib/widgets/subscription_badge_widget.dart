@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
 /// Küçük PRO rozeti — profil, Kart 1, kullanıcı listesi vb.
-class ProBadgeWidget extends StatelessWidget {
+class SubscriptionBadgeWidget extends StatelessWidget {
   final double fontSize;
-  const ProBadgeWidget({super.key, this.fontSize = 10});
+  const SubscriptionBadgeWidget({super.key, this.fontSize = 10});
 
   @override
   Widget build(BuildContext context) {

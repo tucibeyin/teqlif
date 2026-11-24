@@ -7,7 +7,7 @@ notify_new_recordings_task  : available + host_notified_at IS NULL → host'a pu
 from __future__ import annotations
 
 from app.core.logger import get_logger, capture_exception
-from app.services.subscription.tier import is_paid_tier
+from app.services.subscription.tier import has_subscription
 
 logger = get_logger(__name__)
 
@@ -77,7 +77,7 @@ async def notify_new_recordings_task(ctx: dict) -> None:
 
         notified = 0
         for rec_id, stream_id, host_id, user_type, stream_title in (rows or []):
-            is_pro = is_paid_tier(user_type)
+            is_pro = has_subscription(user_type)
             try:
                 if is_pro:
                     notif = {

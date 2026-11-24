@@ -284,9 +284,9 @@ async def reset_monthly_withdrawal_quota_task(ctx: dict) -> None:
 
 
 async def check_expired_pro_users_task(ctx: dict) -> None:
-    """pro_expires_at < NOW() olan kullanıcıları 'standard'a düşür (güvenlik ağı).
+    """sub_expires_at < NOW() olan kullanıcıları 'standard'a düşür (güvenlik ağı).
 
-    Grace period (pro_grace_until) dolmadan düşürme yapılmaz.
+    Grace period (sub_grace_until) dolmadan düşürme yapılmaz.
     """
     downgraded = 0
 
@@ -296,13 +296,13 @@ async def check_expired_pro_users_task(ctx: dict) -> None:
                 text(
                     "UPDATE users "
                     "SET last_tier = user_type, user_type = 'standard', plan_type = NULL, "
-                    "    pro_expires_at = NULL, pro_grace_until = NULL, "
+                    "    sub_expires_at = NULL, sub_grace_until = NULL, "
                     "    auto_renew_enabled = TRUE, pending_tier = NULL, "
                     "    monthly_stream_seconds_used = 0, monthly_stream_reset_at = NULL "
-                    "WHERE user_type IN ('pro', 'pro_plus', 'premium') "
-                    "  AND pro_expires_at IS NOT NULL "
-                    "  AND pro_expires_at < NOW() "
-                    "  AND (pro_grace_until IS NULL OR pro_grace_until < NOW())"
+                    "WHERE user_type IN ('tier1', 'tier2', 'tier3') "
+                    "  AND sub_expires_at IS NOT NULL "
+                    "  AND sub_expires_at < NOW() "
+                    "  AND (sub_grace_until IS NULL OR sub_grace_until < NOW())"
                 )
             )
             await session.commit()
@@ -323,7 +323,7 @@ async def check_expired_pro_users_task(ctx: dict) -> None:
 
 
 async def notify_subscription_expiry_task(ctx: dict) -> None:
-    """pro_expires_at 2-3 gün içinde dolacak kullanıcılara expiry uyarı push gönderir.
+    """sub_expires_at 2-3 gün içinde dolacak kullanıcılara expiry uyarı push gönderir.
 
     Günlük 11:15'te çalışır — 24 saatlik pencere her kullanıcıya yalnızca bir kez tetikler.
     """
@@ -335,10 +335,10 @@ async def notify_subscription_expiry_task(ctx: dict) -> None:
                 text(
                     "SELECT id, fcm_token, locale "
                     "FROM users "
-                    "WHERE user_type IN ('pro', 'pro_plus', 'premium') "
+                    "WHERE user_type IN ('tier1', 'tier2', 'tier3') "
                     "  AND fcm_token IS NOT NULL "
-                    "  AND pro_expires_at IS NOT NULL "
-                    "  AND pro_expires_at BETWEEN NOW() + INTERVAL '2 days' "
+                    "  AND sub_expires_at IS NOT NULL "
+                    "  AND sub_expires_at BETWEEN NOW() + INTERVAL '2 days' "
                     "                        AND NOW() + INTERVAL '3 days'"
                 )
             )

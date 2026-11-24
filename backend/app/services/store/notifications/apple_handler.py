@@ -124,7 +124,7 @@ class AppleNotificationHandler(StoreNotificationHandler):
         await self._session.execute(
             text(
                 "UPDATE users SET user_type = :tier, plan_type = :plan, "
-                "pro_expires_at = :exp, pro_grace_until = NULL, "
+                "sub_expires_at = :exp, sub_grace_until = NULL, "
                 "auto_renew_enabled = TRUE, pending_tier = NULL "
                 "WHERE id = :uid"
             ),
@@ -144,7 +144,7 @@ class AppleNotificationHandler(StoreNotificationHandler):
             await self._session.execute(
                 text(
                     "UPDATE users SET user_type = :tier, plan_type = :plan, "
-                    "pro_expires_at = :exp, pro_grace_until = NULL, "
+                    "sub_expires_at = :exp, sub_grace_until = NULL, "
                     "auto_renew_enabled = TRUE, pending_tier = NULL, "
                     "monthly_stream_seconds_used = 0, monthly_stream_reset_at = NOW() "
                     "WHERE id = :uid"
@@ -154,7 +154,7 @@ class AppleNotificationHandler(StoreNotificationHandler):
         else:
             await self._session.execute(
                 text(
-                    "UPDATE users SET pro_expires_at = :exp, pro_grace_until = NULL, "
+                    "UPDATE users SET sub_expires_at = :exp, sub_grace_until = NULL, "
                     "monthly_stream_seconds_used = 0, monthly_stream_reset_at = NOW() "
                     "WHERE id = :uid"
                 ),
@@ -172,7 +172,7 @@ class AppleNotificationHandler(StoreNotificationHandler):
             await self._session.execute(
                 text(
                     "UPDATE users SET user_type = :tier, plan_type = :plan, "
-                    "pro_expires_at = :exp, pro_grace_until = NULL, "
+                    "sub_expires_at = :exp, sub_grace_until = NULL, "
                     "auto_renew_enabled = TRUE, pending_tier = NULL "
                     "WHERE id = :uid"
                 ),
@@ -205,7 +205,7 @@ class AppleNotificationHandler(StoreNotificationHandler):
         grace_ms = tx_claims.get("gracePeriodExpiresDate", 0)
         grace_until = datetime.fromtimestamp(grace_ms / 1000, tz=timezone.utc)
         await self._session.execute(
-            text("UPDATE users SET pro_grace_until = :grace WHERE id = :uid"),
+            text("UPDATE users SET sub_grace_until = :grace WHERE id = :uid"),
             {"grace": grace_until, "uid": user_id},
         )
         logger.info("[AppleNotif] BILLING_RETRY | user=%s grace_until=%s", user_id, grace_until)
@@ -214,7 +214,7 @@ class AppleNotificationHandler(StoreNotificationHandler):
         await self._session.execute(
             text(
                 "UPDATE users SET last_tier = user_type, user_type = :tier, "
-                "plan_type = NULL, pro_expires_at = NULL, pro_grace_until = NULL, "
+                "plan_type = NULL, sub_expires_at = NULL, sub_grace_until = NULL, "
                 "auto_renew_enabled = TRUE, pending_tier = NULL, "
                 "monthly_stream_seconds_used = 0, monthly_stream_reset_at = NULL "
                 "WHERE id = :uid"
@@ -227,7 +227,7 @@ class AppleNotificationHandler(StoreNotificationHandler):
         await self._session.execute(
             text(
                 "UPDATE users SET last_tier = user_type, user_type = :tier, "
-                "plan_type = NULL, pro_expires_at = NULL, pro_grace_until = NULL, "
+                "plan_type = NULL, sub_expires_at = NULL, sub_grace_until = NULL, "
                 "auto_renew_enabled = TRUE, pending_tier = NULL, "
                 "monthly_stream_seconds_used = 0, monthly_stream_reset_at = NULL "
                 "WHERE id = :uid"

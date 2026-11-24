@@ -54,9 +54,9 @@ import 'listing_detail_screen.dart';
 import 'live_stream_analytics_screen.dart';
 import 'public_profile_screen.dart';
 import 'create_listing_screen.dart';
-import 'pro_hub_screen.dart';
-import 'viewmodels/pro_hub_view_model.dart';
-import 'viewmodels/pro_subscription_view_model.dart';
+import 'subscription_tools_screen.dart';
+import 'viewmodels/subscription_tools_view_model.dart';
+import 'viewmodels/subscription_view_model.dart';
 import 'notification_settings_screen.dart';
 import 'blocked_users_screen.dart';
 import 'account_info_screen.dart';
@@ -74,7 +74,7 @@ import 'viewmodels/profile_view_model.dart';
 import '../utils/snackbar_helper.dart';
 import '../widgets/consent_settings_modal.dart';
 import '../services/media_compressor.dart';
-import '../widgets/pro_subscription_sheet.dart';
+import '../widgets/subscription_sheet.dart';
 import '../widgets/tier_badge.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import '../services/iap_service.dart';
@@ -383,7 +383,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 ),
                               ),
                             ),
-                            if (UserTier.isPaidTier(user?['user_type'] as String? ?? UserTier.standard))
+                            if (UserTier.hasSubscription(user?['user_type'] as String? ?? UserTier.standard))
                               Positioned(
                                 bottom: 0,
                                 right: 0,
@@ -391,7 +391,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                                   padding: const EdgeInsets.all(4),
                                   decoration: BoxDecoration(
                                     gradient: LinearGradient(
-                                      colors: _tierBadgeColors(user?['user_type'] as String? ?? UserTier.pro),
+                                      colors: _tierBadgeColors(user?['user_type'] as String? ?? UserTier.tier1),
                                     ),
                                     shape: BoxShape.circle,
                                     border: Border.all(
@@ -513,7 +513,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                             // Tier rozeti (PRO/PRO+/PREMIUM — standard'da gizlenir)
                             Builder(builder: (ctx) {
                               final tier = user?['user_type'] as String? ?? UserTier.standard;
-                              if (!UserTier.isPaidTier(tier)) return const SizedBox.shrink();
+                              if (!UserTier.hasSubscription(tier)) return const SizedBox.shrink();
                               return Padding(
                                 padding: const EdgeInsetsDirectional.only(start: 6),
                                 child: TierBadge(userType: tier),
@@ -1734,7 +1734,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
               _SettingsTile(
                 icon: Icons.workspace_premium_outlined,
                 iconColor: const Color(0xFFD97706),
-                label: loc.t('proHubTitle'),
+                label: loc.t('subHubTitle'),
                 trailing: TierBadge(userType: _userType),
                 onTap: () => _proHubGuard.run(() async {
                   // StorageService'ten güncel is_premium oku — widget.user stale olabilir
@@ -1743,7 +1743,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => ProHubScreen(
+                      builder: (_) => SubscriptionToolsScreen(
                         userType: freshInfo?['user_type'] as String? ?? UserTier.standard,
                       ),
                     ),
@@ -1839,45 +1839,10 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
               _SettingsTile(
                 icon: Icons.videocam_outlined,
                 label: loc.t('settingsMyRecordings'),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFFD97706), Color(0xFFFFD700)],
-                        ),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          FaIcon(
-                            FontAwesomeIcons.crown,
-                            size: 8,
-                            color: Colors.white,
-                          ),
-                          SizedBox(width: 3),
-                          Text(
-                            'PRO',
-                            style: TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Icon(Icons.chevron_right, color: AppColors.border(context), size: 20),
-                  ],
-                ),
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => ProHubScreen(
+                    builder: (_) => SubscriptionToolsScreen(
                       userType: _userType,
                       scrollToLiveSection: true,
                     ),
@@ -3003,7 +2968,7 @@ class _MyListingsScreenState extends ConsumerState<_MyListingsScreen> {
       final costData = await ref.read(listingServiceProvider).getReactivationCost(id);
       if (!mounted) return;
 
-      final isPremium = UserTier.isPaidTier(costData?['user_type'] as String? ?? UserTier.standard);
+      final isPremium = UserTier.hasSubscription(costData?['user_type'] as String? ?? UserTier.standard);
       final remaining = costData?['free_remaining'] as int? ?? 0;
       final cost = costData?['cost'] as int? ?? 10;
       final withinWindow = costData?['within_window'] as bool? ?? false;
@@ -4062,7 +4027,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     // PRO kullanıcı için bakiye/hareketler sekmesiyle aç; standart için PRO upsell
-    _tabController = TabController(length: 3, vsync: this, initialIndex: UserTier.isPaidTier(widget.userType) ? 1 : 0);
+    _tabController = TabController(length: 3, vsync: this, initialIndex: UserTier.hasSubscription(widget.userType) ? 1 : 0);
     _userType = widget.userType;
     _balance = widget.initialBalance;
     _txns = List.from(widget.initialHistory);
@@ -4106,7 +4071,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
         _tryRate = (summaryData['try_rate'] as num?)?.toDouble() ?? 0.0;
         _activeWithdrawalId = summaryData['active_withdrawal_id'] as int?;
         _userType = summaryData['user_type'] as String? ?? _userType;
-        _proExpiresAt   = summaryData['pro_expires_at'] as String?;
+        _proExpiresAt   = summaryData['sub_expires_at'] as String?;
         final rawPlan   = summaryData['plan_type'] as String?;
         _activePlanType = _kDbToIapPlan[rawPlan] ?? rawPlan;
         _teqlikLocked   = summaryData['teqlik_locked'] as int? ?? 0;
@@ -4116,7 +4081,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
     });
 
     // Ücretli tier kullanıcılar için Apple Server API üzerinden sessiz reconciliation
-    if (UserTier.isPaidTier(_userType)) {
+    if (UserTier.hasSubscription(_userType)) {
       _syncSubscriptionSilently();
     }
   }
@@ -4246,9 +4211,9 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => ProSubscriptionSheet(
+      builder: (_) => SubscriptionSheet(
         loc: loc,
-        currentUserType: UserTier.isPaidTier(_userType) ? _userType : null,
+        currentUserType: UserTier.hasSubscription(_userType) ? _userType : null,
         initialPlanId: targetPlanId,
         onPurchaseSuccess: () {
           _load();
@@ -4318,7 +4283,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
   Future<void> _buyPack(ProductDetails product) async {
     setState(() => _iapLoading = true);
     try {
-      await ref.read(proSubscriptionViewModelProvider.notifier).buy(product);
+      await ref.read(subscriptionViewModelProvider.notifier).buy(product);
     } catch (_) {
       if (mounted) setState(() => _iapLoading = false);
     }
@@ -4523,7 +4488,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
     final hasLocked = _teqlikLocked > 0 && !isFullyVerified;
 
     ref.listen<PurchaseDetails?>(
-      proSubscriptionViewModelProvider.select((s) => s.lastPurchase),
+      subscriptionViewModelProvider.select((s) => s.lastPurchase),
       (prev, next) {
         if (next == null || next == prev) return;
         _onIapPurchase(next);
@@ -4626,7 +4591,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
                   children: const [
                     FaIcon(FontAwesomeIcons.crown, size: 12),
                     SizedBox(width: 5),
-                    Text('PRO'),
+                    Text('ÜYELİK'),
                   ],
                 ),
               ),
@@ -4811,7 +4776,7 @@ class _WalletHeroCard extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              if (UserTier.isPaidTier(userType)) _ProDaysBadge(proExpiresAt: proExpiresAt, userType: userType, loc: loc),
+              if (UserTier.hasSubscription(userType)) _ProDaysBadge(proExpiresAt: proExpiresAt, userType: userType, loc: loc),
             ],
           ),
           const SizedBox(height: 4),
@@ -4914,7 +4879,7 @@ class _WalletHeroCard extends StatelessWidget {
                         const FaIcon(FontAwesomeIcons.crown, size: 11, color: Colors.white),
                         const SizedBox(width: 5),
                         Text(
-                          UserTier.isPaidTier(userType) ? loc.t('walletHeroPrivilegesBtn') : loc.t('proSheetTitle'),
+                          UserTier.hasSubscription(userType) ? loc.t('walletHeroPrivilegesBtn') : loc.t('subUpgradeBtn'),
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 13,
@@ -4953,20 +4918,19 @@ class _ProDaysBadge extends StatelessWidget {
   final String? proExpiresAt;
   final String userType;
   final TranslationPack loc;
-  const _ProDaysBadge({this.proExpiresAt, this.userType = UserTier.pro, required this.loc});
+  const _ProDaysBadge({this.proExpiresAt, this.userType = UserTier.tier1, required this.loc});
 
   List<Color> _gradientColors() {
     switch (userType) {
-      case UserTier.premium: return const [Color(0xFF0284C7), Color(0xFF38BDF8)];
-      case UserTier.proPlus: return const [Color(0xFF7C3AED), Color(0xFFA78BFA)];
-      default: return const [Color(0xFFD97706), Color(0xFFFFD700)];
+      case UserTier.tier3: return const [Color(0xFF0284C7), Color(0xFF38BDF8)];
+      default: return const [Color(0xFFD97706), Color(0xFFFFD700)]; // tier1 ve tier2 gold
     }
   }
 
   String _tierLabel() {
     switch (userType) {
-      case UserTier.premium: return 'PREMIUM';
-      case UserTier.proPlus: return 'PRO+';
+      case UserTier.tier3: return 'PREMIUM';
+      case UserTier.tier2: return 'PRO+';
       default: return 'PRO';
     }
   }
@@ -5078,7 +5042,7 @@ class _EarningsPill extends StatelessWidget {
                 ],
               ),
             ),
-            if (UserTier.isPaidTier(userType)) ...[
+            if (UserTier.hasSubscription(userType)) ...[
               Container(
                 margin: const EdgeInsets.only(right: 6),
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
@@ -5473,7 +5437,7 @@ class _TeqlikPacksSheetState extends ConsumerState<_TeqlikPacksSheet> {
     if (!mounted) return;
     if (purchase.status == PurchaseStatus.purchased ||
         purchase.status == PurchaseStatus.restored) {
-      // Sadece consumable için kapat — subscription ProSubscriptionSheet tarafından kapatılır
+      // Sadece consumable için kapat — subscription SubscriptionSheet tarafından kapatılır
       if (kConsumableIds.contains(purchase.productID)) {
         Navigator.pop(context);
       }
@@ -5486,12 +5450,12 @@ class _TeqlikPacksSheetState extends ConsumerState<_TeqlikPacksSheet> {
       orElse: () => throw StateError('Ürün bulunamadı'),
     );
     try {
-      await ref.read(proSubscriptionViewModelProvider.notifier).buy(product);
+      await ref.read(subscriptionViewModelProvider.notifier).buy(product);
     } catch (_) {}
   }
 
   Future<void> _restore() async {
-    await ref.read(proSubscriptionViewModelProvider.notifier).restorePurchases();
+    await ref.read(subscriptionViewModelProvider.notifier).restorePurchases();
   }
 
   String _priceFor(String productId, List<ProductDetails> products) =>
@@ -5499,10 +5463,10 @@ class _TeqlikPacksSheetState extends ConsumerState<_TeqlikPacksSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final vm = ref.watch(proSubscriptionViewModelProvider);
+    final vm = ref.watch(subscriptionViewModelProvider);
 
     ref.listen<PurchaseDetails?>(
-      proSubscriptionViewModelProvider.select((s) => s.lastPurchase),
+      subscriptionViewModelProvider.select((s) => s.lastPurchase),
       (prev, next) {
         if (next == null || next == prev) return;
         _onPurchase(next);
@@ -5837,10 +5801,10 @@ class _ProTab extends ConsumerWidget {
 
   // Yükseltme seçenekleri: (productId, ARB labelKey, tasarruf%, tierIndex)
   static const _upgradePlans = [
-    ('teqlif_pro_1m',  'proMonthlyFull',   0,  0),
-    ('teqlif_pro_3m',  'proQuarterlyFull', 10, 1),
-    ('teqlif_pro_6m',  'proBiannualFull',  20, 2),
-    ('teqlif_pro_12m', 'proAnnualFull',    30, 3),
+    ('teqlif_pro_1m',  'subMonthlyFull',   0,  0),
+    ('teqlif_pro_3m',  'subQuarterlyFull', 10, 1),
+    ('teqlif_pro_6m',  'subBiannualFull',  20, 2),
+    ('teqlif_pro_12m', 'subAnnualFull',    30, 3),
   ];
 
   static const _benefits = [
@@ -5863,15 +5827,14 @@ class _ProTab extends ConsumerWidget {
 
   static List<Color> _tierCardColors(String userType) {
     switch (userType) {
-      case UserTier.premium: return const [Color(0xFF0284C7), Color(0xFF0EA5E9), Color(0xFF38BDF8)];
-      case UserTier.proPlus: return const [Color(0xFF7C3AED), Color(0xFF8B5CF6), Color(0xFFA78BFA)];
-      default: return const [Color(0xFFD97706), Color(0xFFF59E0B), Color(0xFFFFD700)];
+      case UserTier.tier3: return const [Color(0xFF0284C7), Color(0xFF0EA5E9), Color(0xFF38BDF8)];
+      default: return const [Color(0xFFD97706), Color(0xFFF59E0B), Color(0xFFFFD700)]; // tier1 ve tier2 gold
     }
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return UserTier.isPaidTier(userType) ? _buildActive(context, ref) : _buildPurchase();
+    return UserTier.hasSubscription(userType) ? _buildActive(context, ref) : _buildPurchase();
   }
 
   Uri _subscriptionManageUri() {
@@ -5893,7 +5856,7 @@ class _ProTab extends ConsumerWidget {
   }
 
   Widget _buildActive(BuildContext context, WidgetRef ref) {
-    final hub = ref.watch(proHubProvider(userType));
+    final hub = ref.watch(subscriptionToolsProvider(userType));
 
     // Bitiş tarihi
     String expiryDisplay = '';
@@ -5934,7 +5897,7 @@ class _ProTab extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(14),
                 onTap: () async {
                   HapticFeedback.lightImpact();
-                  await ref.read(proSubscriptionViewModelProvider.notifier).restorePurchases();
+                  await ref.read(subscriptionViewModelProvider.notifier).restorePurchases();
                 },
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -5994,7 +5957,7 @@ class _ProTab extends ConsumerWidget {
                   const SizedBox(width: 7),
                   Text(
                     _upgradePlans.where((p) => p.$1 == activePlanType).map((p) => loc.t(p.$2)).firstOrNull
-                        ?? (userType == UserTier.premium ? 'PREMIUM' : userType == UserTier.proPlus ? 'PRO+' : 'PRO'),
+                        ?? (userType == UserTier.tier3 ? 'PREMIUM' : userType == UserTier.tier2 ? 'PRO+' : 'PRO'),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 18,
@@ -6175,7 +6138,7 @@ class _ProTab extends ConsumerWidget {
                 ..._upgradePlans
                     .where((p) => p.$4 > currentTierIndex)
                     .map((p) {
-                      final product = ref.watch(proSubscriptionViewModelProvider).products
+                      final product = ref.watch(subscriptionViewModelProvider).products
                           .where((pr) => pr.id == p.$1)
                           .firstOrNull;
                       final price = product?.price ?? '—';
@@ -6218,10 +6181,10 @@ class _ProTab extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
-                _CreditRow(label: loc.t('proCreditsBlastName'), credits: hub.blastCredits, isDark: isDark),
-                _CreditRow(label: loc.t('proCreditsBoostName'), credits: hub.boostCredits, isDark: isDark),
-                _CreditRow(label: loc.t('proCreditsAiDescName'), credits: hub.aiDescCredits, isDark: isDark),
-                _CreditRow(label: loc.t('proCreditsReactivationName'), credits: hub.reactivationCredits, isDark: isDark, isLast: true),
+                _CreditRow(label: loc.t('subCreditsBlastName'), credits: hub.blastCredits, isDark: isDark),
+                _CreditRow(label: loc.t('subCreditsBoostName'), credits: hub.boostCredits, isDark: isDark),
+                _CreditRow(label: loc.t('subCreditsAiDescName'), credits: hub.aiDescCredits, isDark: isDark),
+                _CreditRow(label: loc.t('subCreditsReactivationName'), credits: hub.reactivationCredits, isDark: isDark, isLast: true),
               ],
             ),
           ),
@@ -6298,7 +6261,7 @@ class _ProTab extends ConsumerWidget {
                                 size: 11, color: Colors.white),
                             SizedBox(width: 5),
                             Text(
-                              'PRO Üyelik',
+                              'ÜYELİK SEÇ',
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w800,
@@ -6440,7 +6403,7 @@ class _ProTab extends ConsumerWidget {
                   FaIcon(FontAwesomeIcons.crown, size: 15, color: Colors.white),
                   SizedBox(width: 8),
                   Text(
-                    'PRO Üyelikleri Gör',
+                    'Üyelikleri Gör',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
@@ -8139,8 +8102,8 @@ class _PrivacyBanner extends ConsumerWidget {
 
 List<Color> _tierBadgeColors(String userType) {
   switch (userType) {
-    case UserTier.premium: return const [Color(0xFF0284C7), Color(0xFF38BDF8)];
-    case UserTier.proPlus: return const [Color(0xFF7C3AED), Color(0xFFA78BFA)];
+    case UserTier.tier3: return const [Color(0xFF0284C7), Color(0xFF38BDF8)];
+    case UserTier.tier2: return const [Color(0xFF7C3AED), Color(0xFFA78BFA)];
     default: return const [Color(0xFFD97706), Color(0xFFFFD700)];
   }
 }

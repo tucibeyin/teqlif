@@ -31,7 +31,7 @@ class GetWalletSummaryQuery:
         # ── kullanıcı temel alanları ───────────────────────────────────────────
         user_row = await self._session.execute(
             text(
-                "SELECT teqlik_balance, user_type, pro_expires_at, plan_type, "
+                "SELECT teqlik_balance, user_type, sub_expires_at, plan_type, "
                 "       pending_referred_by, email_verified, phone_verified, "
                 "       teqlik_locked_balance "
                 "FROM users WHERE id = :uid"
@@ -41,7 +41,7 @@ class GetWalletSummaryQuery:
         u = user_row.fetchone()
         teqlik_balance       = u[0] if u else 0
         user_type            = u[1] if u else "standard"
-        pro_expires_at       = u[2].isoformat() if u and u[2] else None
+        sub_expires_at       = u[2].isoformat() if u and u[2] else None
         plan_type            = _PLAN_TYPE_TO_IAP.get(u[3]) if u and u[3] else None
         pending_referred_by  = u[4] if u else None
         email_verified       = bool(u[5]) if u else False
@@ -114,7 +114,7 @@ class GetWalletSummaryQuery:
             "try_rate": try_rate,
             "cashout_enabled": cashout_enabled,
             "user_type": user_type,
-            "pro_expires_at": pro_expires_at,
+            "sub_expires_at": sub_expires_at,
             "plan_type": plan_type,
             "active_withdrawal_id": active_withdrawal_id,
             "pending_referral_bonus": pending_referral_bonus,

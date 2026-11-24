@@ -56,7 +56,7 @@ import '../utils/call_permission_helper.dart';
 import 'package:shimmer/shimmer.dart';
 import '../utils/snackbar_helper.dart';
 import 'my_ratings_screen.dart';
-import 'pro_hub_screen.dart';
+import 'subscription_tools_screen.dart';
 import 'viewmodels/messages_view_model.dart';
 import 'viewmodels/direct_chat_request_view_model.dart';
 import 'viewmodels/message_thread_view_model.dart';
@@ -1068,14 +1068,14 @@ class _NotificationsTabState extends ConsumerState<_NotificationsTab> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => ProHubScreen(userType: userType, scrollToLiveSection: true),
+            builder: (_) => SubscriptionToolsScreen(userType: userType, scrollToLiveSection: true),
           ),
         );
       case 'recording_upsell':
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => ProHubScreen(scrollToLiveSection: true),
+            builder: (_) => SubscriptionToolsScreen(scrollToLiveSection: true),
           ),
         );
     }

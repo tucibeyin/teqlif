@@ -25,8 +25,8 @@ RoomOptions _roomOptionsForProfile(String profile) {
   // premium: main=1080p (4000k) + simulcast 720p(1700k)/540p(800k)          — PiP=360p
   // pro:     main=720p  (1700k) + simulcast 540p(800k)/360p(450k)           — PiP=360p
   // standard: main=540p  (800k) + simulcast 360p(450k)/240p(140k)           — PiP=240p
-  final isPremium = profile == 'premium';
-  final isPro     = profile == 'pro';
+  final isPremium = profile == 'tier3';
+  final isPro     = profile == 'tier1' || profile == 'tier2';
   return RoomOptions(
     adaptiveStream: true,
     dynacast: true,
@@ -51,9 +51,9 @@ RoomOptions _roomOptionsForProfile(String profile) {
 
 CameraCaptureOptions _cameraOptionsForProfile(String profile) {
   return CameraCaptureOptions(
-    params: profile == 'premium'
+    params: profile == 'tier3'
         ? VideoParametersPresets.h1080_169
-        : profile == 'pro'
+        : (profile == 'tier1' || profile == 'tier2')
             ? VideoParametersPresets.h720_169
             : VideoParametersPresets.h540_169,
   );

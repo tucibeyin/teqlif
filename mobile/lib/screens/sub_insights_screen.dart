@@ -1,43 +1,42 @@
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:flutter/material.dart";
-import '../widgets/pro_paywall_overlay.dart';
+import '../widgets/subscription_paywall.dart';
 import "../services/localization_service.dart";
-import 'package:intl/intl.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
-import '../models/pro_insights_data.dart';
+import '../models/sub_insights_data.dart';
 import '../ui_library/components/filters/teq_filter_bar.dart';
 import '../utils/number_formatter.dart';
-import 'viewmodels/pro_insights_view_model.dart';
+import 'viewmodels/sub_insights_view_model.dart';
 import '../core/user_tier.dart';
 
-class ProInsightsScreen extends ConsumerStatefulWidget {
+class SubInsightsScreen extends ConsumerStatefulWidget {
   final String userType;
   final bool isEmbedded;
-  const ProInsightsScreen({super.key, this.userType = UserTier.standard, this.isEmbedded = false});
+  const SubInsightsScreen({super.key, this.userType = UserTier.standard, this.isEmbedded = false});
 
   @override
-  ConsumerState<ProInsightsScreen> createState() => _ProInsightsScreenState();
+  ConsumerState<SubInsightsScreen> createState() => _SubInsightsScreenState();
 }
 
-class _ProInsightsScreenState extends ConsumerState<ProInsightsScreen> {
+class _SubInsightsScreenState extends ConsumerState<SubInsightsScreen> {
   static const int _kMaxVisible = 5;
 
   @override
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
 
-    if (!UserTier.isPaidTier(widget.userType) && !widget.isEmbedded) {
+    if (!UserTier.hasSubscription(widget.userType) && !widget.isEmbedded) {
       return Scaffold(
         backgroundColor: AppColors.bg(context),
         appBar: AppBar(
           backgroundColor: AppColors.bg(context),
           elevation: 0,
-          title: Text(loc.t('proToolSalesTitle'), style: const TextStyle(fontWeight: FontWeight.w800)),
+          title: Text(loc.t('subToolSalesTitle'), style: const TextStyle(fontWeight: FontWeight.w800)),
         ),
         body: Stack(children: [
           const ProLockedPlaceholder(),
-          ProPaywallOverlay(
+          SubscriptionPaywall(
             icon: Icons.auto_graph_outlined,
             gradientColors: const [Color(0xFF6366F1), Color(0xFF8B5CF6)],
             descKey: 'salesPaywallDesc',

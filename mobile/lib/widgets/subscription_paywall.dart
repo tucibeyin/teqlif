@@ -1,19 +1,18 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'pro_subscription_sheet.dart';
+import '../screens/profile_screen.dart';
 import '../config/app_colors.dart';
 import '../services/localization_service.dart';
 
 /// Blurred paywall overlay for PRO tool screens.
 /// Wrap in a Stack — it uses Positioned.fill.
-class ProPaywallOverlay extends ConsumerWidget {
+class SubscriptionPaywall extends ConsumerWidget {
   final IconData icon;
   final List<Color> gradientColors;
   final String descKey;
 
-  const ProPaywallOverlay({
+  const SubscriptionPaywall({
     super.key,
     required this.icon,
     required this.gradientColors,
@@ -58,7 +57,7 @@ class ProPaywallOverlay extends ConsumerWidget {
                     ),
                     const SizedBox(height: 20),
                     Text(
-                      loc.t('proUpgradeTitle'),
+                      loc.t('subUpgradeTitle'),
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w800,
@@ -84,12 +83,8 @@ class ProPaywallOverlay extends ConsumerWidget {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: ElevatedButton(
-                          onPressed: () => showModalBottomSheet(
-                            context: context,
-                            isScrollControlled: true,
-                            useSafeArea: true,
-                            backgroundColor: Colors.transparent,
-                            builder: (_) => ProSubscriptionSheet(loc: loc),
+                          onPressed: () => Navigator.of(context, rootNavigator: true).push(
+                            MaterialPageRoute(builder: (_) => const WalletScreen()),
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent,
@@ -100,7 +95,7 @@ class ProPaywallOverlay extends ConsumerWidget {
                             ),
                           ),
                           child: Text(
-                            loc.t('proUpgradeBtn'),
+                            loc.t('subUpgradeBtn'),
                             style: const TextStyle(
                               fontWeight: FontWeight.w800,
                               fontSize: 15,

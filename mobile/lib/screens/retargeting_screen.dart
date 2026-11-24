@@ -9,7 +9,7 @@ import '../config/app_colors.dart';
 import '../ui_library/components/filters/teq_filter_bar.dart';
 import '../ui_library/components/overlays/teq_toast.dart';
 import 'viewmodels/retargeting_view_model.dart';
-import '../widgets/pro_paywall_overlay.dart';
+import '../widgets/subscription_paywall.dart';
 import '../core/user_tier.dart';
 
 class RetargetingScreen extends ConsumerStatefulWidget {
@@ -28,7 +28,7 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
   @override
   void initState() {
     super.initState();
-    if (UserTier.isPaidTier(widget.userType)) {
+    if (UserTier.hasSubscription(widget.userType)) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ref.read(retargetingProvider.notifier).init(widget.listingId);
       });
@@ -426,7 +426,7 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
 
-    if (!UserTier.isPaidTier(widget.userType) && !widget.isEmbedded) {
+    if (!UserTier.hasSubscription(widget.userType) && !widget.isEmbedded) {
       return Scaffold(
         backgroundColor: AppColors.bg(context),
         appBar: AppBar(
@@ -436,7 +436,7 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
         ),
         body: Stack(children: [
           const ProLockedPlaceholder(),
-          ProPaywallOverlay(
+          SubscriptionPaywall(
             icon: Icons.mark_email_unread_outlined,
             gradientColors: const [Color(0xFF0EA5E9), Color(0xFF0284C7)],
             descKey: 'retargetPaywallDesc',

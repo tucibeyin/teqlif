@@ -3,7 +3,7 @@
 Çağrıldığında:
   1. Kullanıcının store_subscription_id (originalTransactionId) DB'den alınır.
   2. Apple'ın /inApps/v1/subscriptions/{id} endpoint'i sorgulanır.
-  3. Apple'dan gelen plan_type / pro_expires_at DB'dekinden farklıysa güncellenir.
+  3. Apple'dan gelen plan_type / sub_expires_at DB'dekinden farklıysa güncellenir.
   4. Değişim özeti döner.
 
 store_subscription_id NULL ise needs_restore=True döner — Flutter "Restore Purchases" gösterir.
@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.logger import get_logger
 from app.services.store.apple_server_api import get_subscription_status
 from app.services.subscription.tier import (
-    tier_from_product, plan_type_from_product, is_paid_tier,
+    tier_from_product, plan_type_from_product, has_subscription,
 )
 
 logger = get_logger(__name__)
@@ -32,7 +32,7 @@ class ReconcileSubscriptionCommand:
         # Kullanıcının mevcut subscription bilgisini al
         row = await self._session.execute(
             text(
-                "SELECT user_type, plan_type, pro_expires_at, "
+                "SELECT user_type, plan_type, sub_expires_at, "
                 "store_subscription_id, store_subscription_platform "
                 "FROM users WHERE id = :uid"
             ),
@@ -42,10 +42,10 @@ class ReconcileSubscriptionCommand:
         if user is None:
             return {"changed": False, "error": "user_not_found"}
 
-        user_type, plan_type, pro_expires_at, sub_id, platform = user
+        user_type, plan_type, sub_expires_at, sub_id, platform = user
 
         # Ücretli abonelik yoksa reconcile gerekmiyor
-        if not is_paid_tier(user_type):
+        if not has_subscription(user_type):
             return {"changed": False, "user_type": "standard"}
 
         # store_subscription_id yoksa client-side restore gerekiyor
@@ -64,7 +64,7 @@ class ReconcileSubscriptionCommand:
                 "changed": False,
                 "sync_unavailable": True,
                 "plan_type": plan_type,
-                "expires_at": pro_expires_at.isoformat() if pro_expires_at else None,
+                "expires_at": sub_expires_at.isoformat() if sub_expires_at else None,
             }
 
         # Aktif olmayan aboneliği client-side reconcile etme — downgrade S2S notification'ın işi
@@ -76,7 +76,7 @@ class ReconcileSubscriptionCommand:
             return {
                 "changed": False,
                 "plan_type": plan_type,
-                "expires_at": pro_expires_at.isoformat() if pro_expires_at else None,
+                "expires_at": sub_expires_at.isoformat() if sub_expires_at else None,
             }
 
         apple_plan = plan_type_from_product(apple_status.product_id)
@@ -91,9 +91,9 @@ class ReconcileSubscriptionCommand:
         # Fark var mı?
         expires_changed = (
             apple_status.expires_at is not None
-            and pro_expires_at is not None
-            and abs((apple_status.expires_at - pro_expires_at.astimezone(timezone.utc)).total_seconds()) > 60
-        ) or (apple_status.expires_at is not None and pro_expires_at is None)
+            and sub_expires_at is not None
+            and abs((apple_status.expires_at - sub_expires_at.astimezone(timezone.utc)).total_seconds()) > 60
+        ) or (apple_status.expires_at is not None and sub_expires_at is None)
 
         plan_changed  = apple_plan != plan_type
         tier_changed  = apple_tier != user_type
@@ -102,13 +102,13 @@ class ReconcileSubscriptionCommand:
             return {
                 "changed": False,
                 "plan_type": plan_type,
-                "expires_at": pro_expires_at.isoformat() if pro_expires_at else None,
+                "expires_at": sub_expires_at.isoformat() if sub_expires_at else None,
             }
 
         # Güncelle
         await self._session.execute(
             text(
-                "UPDATE users SET user_type = :tier, plan_type = :plan, pro_expires_at = :exp "
+                "UPDATE users SET user_type = :tier, plan_type = :plan, sub_expires_at = :exp "
                 "WHERE id = :uid"
             ),
             {

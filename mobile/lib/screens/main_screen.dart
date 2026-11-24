@@ -5,7 +5,7 @@ import 'direct_sale_detail_screen.dart';
 import 'purchase_detail_screen.dart';
 import '../services/auth_service.dart';
 import 'my_recordings_screen.dart';
-import 'pro_hub_screen.dart';
+import 'subscription_tools_screen.dart';
 import 'recording_detail_screen.dart';
 import 'home_screen.dart';
 import 'listing_detail_screen.dart';
@@ -334,9 +334,9 @@ class _MainScreenState extends ConsumerState<MainScreen> with WidgetsBindingObse
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => UserTier.isPaidTier(userType)
+                    builder: (_) => UserTier.hasSubscription(userType)
                         ? RecordingDetailScreen(streamId: streamId)
-                        : ProHubScreen(scrollToLiveSection: true),
+                        : SubscriptionToolsScreen(scrollToLiveSection: true),
                   ),
                 );
               });
@@ -345,7 +345,7 @@ class _MainScreenState extends ConsumerState<MainScreen> with WidgetsBindingObse
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => ProHubScreen(scrollToLiveSection: true),
+                  builder: (_) => SubscriptionToolsScreen(scrollToLiveSection: true),
                 ),
               );
               break;

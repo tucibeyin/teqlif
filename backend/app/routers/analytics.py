@@ -24,7 +24,7 @@ from app.utils.redis_client import get_redis
 from app.core.exceptions import AppException, InsufficientFundsException, ServiceException, ForbiddenException, NotFoundException
 from app.services import credit_service
 from app.services.credit_service import CreditFeature
-from app.services.subscription.tier import is_paid_tier
+from app.services.subscription.tier import has_subscription
 from app.database_clickhouse import get_clickhouse_client, get_buffered_user_event_stats
 from app.models.market_index import ExchangeRates
 from app.models.ad_campaign import AdCampaign
@@ -531,7 +531,7 @@ async def reactivation_credits(
 ):
     """PRO kullanıcının bu ayki reaktivasyon kredi durumunu döndürür."""
     reactivation_cost = credit_service.cost_teqlik(CreditFeature.REACTIVATION)
-    if not is_paid_tier(current_user.user_type):
+    if not has_subscription(current_user.user_type):
         return {
             "used": 0,
             "limit": 0,
@@ -731,7 +731,7 @@ async def market_trends(
 
 
 
-@router.get("/pro-insights")
+@router.get("/sub-insights")
 async def pro_insights(
     request: Request,
     db: AsyncSession = Depends(get_db),
@@ -744,9 +744,9 @@ async def pro_insights(
     7 bölüm: KPI özeti · dönüşüm hunisi · sıcak talepler · fiyat zekası ·
              yayın performansı · pik saatler · akıllı öneriler
     """
-    from app.use_cases.analytics.pro_insights_use_case import ProInsightsUseCase
+    from app.use_cases.analytics.sub_insights_use_case import SubInsightsUseCase
 
-    if not is_paid_tier(current_user.user_type):
+    if not has_subscription(current_user.user_type):
         raise ForbiddenException(code="PRO_REQUIRED")
 
     uid = current_user.id
@@ -761,7 +761,7 @@ async def pro_insights(
     cache_key = None
     try:
         redis = await get_redis()
-        cache_key = f"cache:pro_insights:{uid}:{_locale}:{start_date or ''}:{end_date or ''}"
+        cache_key = f"cache:sub_insights:{uid}:{_locale}:{start_date or ''}:{end_date or ''}"
         cached_data = await redis.get(cache_key) if not (start_date or end_date) else None
         if cached_data:
             import json as _json
@@ -770,7 +770,7 @@ async def pro_insights(
         redis = None
         cache_key = None
 
-    response_data = await ProInsightsUseCase(
+    response_data = await SubInsightsUseCase(
         db=db, uid=uid, t=_t, sd=_sd, ed=_ed
     ).execute()
 
@@ -1071,7 +1071,7 @@ async def my_feed_stats(
     Pro satıcıya özel feed performans istatistikleri.
     Kullanıcının kendi ilanlarının impression/click/skip/CTR/dwell verilerini döndürür.
     """
-    if not is_paid_tier(current_user.user_type):
+    if not has_subscription(current_user.user_type):
         raise ForbiddenException(code="PRO_REQUIRED")
 
     # Kullanıcının aktif ilan ID'lerini al
@@ -1241,7 +1241,7 @@ async def video_roi(
     Pro: Kullanıcının video ilanları ile fotoğraf ilanlarının CTR karşılaştırması.
     content_type='video' vs 'photo' segmentinde impression/click/CTR ayrımı.
     """
-    if not is_paid_tier(current_user.user_type):
+    if not has_subscription(current_user.user_type):
         raise ForbiddenException(code="PRO_REQUIRED")
 
     _vroi_redis = None
@@ -1360,7 +1360,7 @@ async def gallery_stats(
     user_events tablosundaki listing_photo_swipe olayları kullanılır;
     duration_seconds alanı max_page_reached değerini taşır.
     """
-    if not is_paid_tier(current_user.user_type):
+    if not has_subscription(current_user.user_type):
         raise ForbiddenException(code="PRO_REQUIRED")
 
     _gs_redis = None
@@ -1461,7 +1461,7 @@ async def video_performance(
     user_events tablosundaki listing_video_watch olayları kullanılır;
     duration_seconds alanı watch_pct (0.0–1.0) değerini taşır.
     """
-    if not is_paid_tier(current_user.user_type):
+    if not has_subscription(current_user.user_type):
         raise ForbiddenException(code="PRO_REQUIRED")
 
     _vp_redis = None
@@ -1550,7 +1550,7 @@ async def demand_radar(
     Pro: Platform genelindeki arama trendleri.
     En çok aranan kelimeler ve kategori bazlı arama hacmi.
     """
-    if not is_paid_tier(current_user.user_type):
+    if not has_subscription(current_user.user_type):
         raise ForbiddenException(code="PRO_REQUIRED")
 
     try:
@@ -1646,7 +1646,7 @@ async def demand_radar(
 
 # ── PRO Metrik Endpointleri ───────────────────────────────────────────────────
 
-@router.get("/pro/metrics")
+@router.get("/sub/metrics")
 async def get_pro_metrics(
     request: Request,
     db: AsyncSession = Depends(get_db),
@@ -1656,11 +1656,11 @@ async def get_pro_metrics(
     PRO kullanıcılar için gelişmiş metrikler (T-1).
     Gece batch'te precompute edilir, node1 Redis'ten servis edilir — CH'a dokunmaz.
     """
-    if not is_paid_tier(current_user.user_type):
+    if not has_subscription(current_user.user_type):
         raise ForbiddenException(code="PRO_REQUIRED")
 
     uid = current_user.id
-    cache_key = f"cache:pro_metrics:{uid}"
+    cache_key = f"cache:sub_metrics:{uid}"
 
     try:
         redis = await get_redis()
@@ -1671,8 +1671,8 @@ async def get_pro_metrics(
     except Exception:
         redis = None
 
-    from app.use_cases.analytics.pro_metrics_use_case import ProMetricsUseCase
-    result = await ProMetricsUseCase(db=db, uid=uid).execute()
+    from app.use_cases.analytics.sub_metrics_use_case import SubMetricsUseCase
+    result = await SubMetricsUseCase(db=db, uid=uid).execute()
 
     try:
         import json as _j
@@ -1696,7 +1696,7 @@ async def competitor_radar(
     PRO: Kullanıcının ilanını pgvector ile benzer aktif ilanlarla karşılaştırır.
     Fiyat dağılımı, rakip sayısı ve pozisyon sinyali döner.
     """
-    if not is_paid_tier(current_user.user_type):
+    if not has_subscription(current_user.user_type):
         raise ForbiddenException(code="PRO_REQUIRED")
 
     # ── Cache Check ──────────────────────────────────────────────────────────
@@ -1951,7 +1951,7 @@ async def demand_trends(
     PRO: Son N haftanın search_events verisinden kategori bazlı talep trendi.
     Döner: kategori, haftalık arama sayısı, trend yönü, momentum, arz açığı oranı.
     """
-    if not is_paid_tier(current_user.user_type):
+    if not has_subscription(current_user.user_type):
         raise ForbiddenException(code="PRO_REQUIRED")
 
     try:

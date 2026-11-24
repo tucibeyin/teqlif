@@ -12,7 +12,7 @@ from app.use_cases.analytics.tips_use_case import TipsUseCase
 logger = logging.getLogger(__name__)
 
 
-class ProInsightsUseCase:
+class SubInsightsUseCase:
     """
     Pro Insights orkestratörü — 7 bölümün iş mantığını koordine eder:
     KPI · Funnel · Sıcak Talepler · Fiyat Zekası · Yayın · Pik Saatler · İpuçları
@@ -90,7 +90,7 @@ class ProInsightsUseCase:
                 "bids_30d": int(brow.total_bids or 0),
             }
         except Exception as exc:
-            logger.warning("[ProInsightsUseCase] kpis başarısız: %s", exc)
+            logger.warning("[SubInsightsUseCase] kpis başarısız: %s", exc)
             await self.db.rollback()
 
         # ── 2. Dönüşüm Hunisi ─────────────────────────────────────────────────
@@ -142,7 +142,7 @@ class ProInsightsUseCase:
                 "bid_to_sale_pct": round((sales_count / bids_count) * 100, 1) if bids_count > 0 else 0,
             }
         except Exception as exc:
-            logger.warning("[ProInsightsUseCase] funnel başarısız: %s", exc)
+            logger.warning("[SubInsightsUseCase] funnel başarısız: %s", exc)
             await self.db.rollback()
 
         # ── 3 & 4 — Sıcak Talepler + Fiyat Zekası ────────────────────────────
@@ -190,7 +190,7 @@ class ProInsightsUseCase:
                 "best_streams": best_streams,
             }
         except Exception as exc:
-            logger.warning("[ProInsightsUseCase] stream_stats başarısız: %s", exc)
+            logger.warning("[SubInsightsUseCase] stream_stats başarısız: %s", exc)
             await self.db.rollback()
 
         # ── 6. Pik Saatler ────────────────────────────────────────────────────
@@ -215,7 +215,7 @@ class ProInsightsUseCase:
                     for r in ph_r.result_rows
                 ]
         except Exception as exc:
-            logger.warning("[ProInsightsUseCase] peak_hours başarısız: %s", exc)
+            logger.warning("[SubInsightsUseCase] peak_hours başarısız: %s", exc)
 
         # ── 7. Akıllı Öneriler ────────────────────────────────────────────────
         tips = await TipsUseCase(

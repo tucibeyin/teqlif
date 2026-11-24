@@ -4594,8 +4594,8 @@ async def precompute_premium_user_analytics_task(ctx: dict) -> None:
     window'unda sorgulanır, sonuçlar node1 Redis'e yazılır; gün boyunca CH'a dokunulmaz.
 
     Her PRO kullanıcı için:
-      - cache:pro_insights:{uid}:{locale}::   (ProInsightsUseCase — CH + PG)
-      - cache:pro_metrics:{uid}              (ProMetricsUseCase  — CH + PG)
+      - cache:sub_insights:{uid}:{locale}::   (SubInsightsUseCase — CH + PG)
+      - cache:sub_metrics:{uid}              (SubMetricsUseCase  — CH + PG)
       - cache:best_stream_time:{uid}:{locale} (PG only, 90 gün geçmiş)
     Tüm keyler TTL=90000s (25 saat) → bir sonraki gece batch'e kadar geçerli.
 
@@ -4607,8 +4607,8 @@ async def precompute_premium_user_analytics_task(ctx: dict) -> None:
     from app.utils.redis_client import get_redis
     from app.utils.i18n import _get_t
     from app.models.user import User as _User
-    from app.use_cases.analytics.pro_insights_use_case import ProInsightsUseCase
-    from app.use_cases.analytics.pro_metrics_use_case import ProMetricsUseCase
+    from app.use_cases.analytics.sub_insights_use_case import SubInsightsUseCase
+    from app.use_cases.analytics.sub_metrics_use_case import SubMetricsUseCase
     from sqlalchemy import select as _select, text as _sql_text
     import json as _json
 
@@ -4620,9 +4620,9 @@ async def precompute_premium_user_analytics_task(ctx: dict) -> None:
         redis = await get_redis()
 
         async with AsyncSessionLocal() as db:
-            from app.services.subscription.tier import PAID_TIERS
+            from app.services.subscription.tier import SUBSCRIPTION_TIERS
             premium_rows = (await db.execute(
-                _select(_User.id, _User.locale).where(_User.user_type.in_(PAID_TIERS))
+                _select(_User.id, _User.locale).where(_User.user_type.in_(SUBSCRIPTION_TIERS))
             )).all()
 
         if not premium_rows:
@@ -4642,8 +4642,8 @@ async def precompute_premium_user_analytics_task(ctx: dict) -> None:
             try:
                 async with AsyncSessionLocal() as db:
                     t = _get_t(locale)
-                    data = await ProInsightsUseCase(db=db, uid=uid, t=t, sd=None, ed=None).execute()
-                await redis.setex(f"cache:pro_insights:{uid}:{locale}::", TTL, _json.dumps(data))
+                    data = await SubInsightsUseCase(db=db, uid=uid, t=t, sd=None, ed=None).execute()
+                await redis.setex(f"cache:sub_insights:{uid}:{locale}::", TTL, _json.dumps(data))
                 insights_ok += 1
             except Exception as e:
                 logger.warning("[AnalyticsCache] pro_insights uid=%d başarısız: %s", uid, e)
@@ -4651,8 +4651,8 @@ async def precompute_premium_user_analytics_task(ctx: dict) -> None:
             # ── pro_metrics ───────────────────────────────────────────────────
             try:
                 async with AsyncSessionLocal() as db:
-                    metrics = await ProMetricsUseCase(db=db, uid=uid).execute()
-                await redis.setex(f"cache:pro_metrics:{uid}", TTL, _json.dumps(metrics))
+                    metrics = await SubMetricsUseCase(db=db, uid=uid).execute()
+                await redis.setex(f"cache:sub_metrics:{uid}", TTL, _json.dumps(metrics))
                 metrics_ok += 1
             except Exception as e:
                 logger.warning("[AnalyticsCache] pro_metrics uid=%d başarısız: %s", uid, e)
@@ -4727,15 +4727,15 @@ async def precompute_premium_user_analytics_task(ctx: dict) -> None:
         )
 
         # ── Stale key cleanup — PRO olmayan kullanıcıların key'lerini sil ─────
-        # Pattern: cache:pro_insights:*, cache:pro_metrics:*, cache:best_stream_time:*
+        # Pattern: cache:sub_insights:*, cache:sub_metrics:*, cache:best_stream_time:*
         stale_deleted = 0
-        for pattern in ("cache:pro_insights:*", "cache:pro_metrics:*", "cache:best_stream_time:*"):
+        for pattern in ("cache:sub_insights:*", "cache:sub_metrics:*", "cache:best_stream_time:*"):
             try:
                 cursor = 0
                 while True:
                     cursor, keys = await redis.scan(cursor, match=pattern, count=100)
                     for key in keys:
-                        # Key formatından uid çıkar: cache:pro_metrics:{uid}
+                        # Key formatından uid çıkar: cache:sub_metrics:{uid}
                         parts = key.split(":")
                         try:
                             uid_str = parts[2]

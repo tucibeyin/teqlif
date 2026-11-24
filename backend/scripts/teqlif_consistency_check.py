@@ -30,8 +30,8 @@ async def main():
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         
         # 1. Pro Insights (Tüm Pro Araçlar Modülleri)
-        print("1. [GET] /api/analytics/pro-insights")
-        r_insights = await client.get("/api/analytics/pro-insights", headers=headers)
+        print("1. [GET] /api/analytics/sub-insights")
+        r_insights = await client.get("/api/analytics/sub-insights", headers=headers)
         if r_insights.status_code == 200:
             data = r_insights.json()
             funnel = data.get("funnel", {})
@@ -89,8 +89,8 @@ async def main():
             
         # 2. AI Metrics (Yeni ClickHouse Entegrasyonu)
         print("\n=======================================================")
-        print("2. [GET] /api/analytics/pro/metrics (AI Metrikleri)")
-        r_metrics = await client.get("/api/analytics/pro/metrics", headers=headers)
+        print("2. [GET] /api/analytics/sub/metrics (AI Metrikleri)")
+        r_metrics = await client.get("/api/analytics/sub/metrics", headers=headers)
         if r_metrics.status_code == 200:
             metrics = r_metrics.json()
             print("  ✅ Başarılı!")

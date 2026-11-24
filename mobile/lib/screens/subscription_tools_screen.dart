@@ -2,35 +2,34 @@ import 'package:flutter/material.dart';
 import '../ui_library/components/buttons/teq_button.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../config/app_colors.dart';
+import '../config/theme.dart';
 import '../core/user_tier.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/localization_service.dart';
-import 'viewmodels/pro_hub_view_model.dart';
+import 'viewmodels/subscription_tools_view_model.dart';
 import 'competitor_radar_screen.dart';
 import 'demand_trends_screen.dart';
 import 'listing_analytics_screen.dart';
 import 'market_intelligence_screen.dart';
-import 'pro_insights_screen.dart';
-import 'pro_stream_analytics_screen.dart';
+import 'sub_insights_screen.dart';
+import 'sub_stream_analytics_screen.dart';
 import 'retargeting_screen.dart';
 import 'live_stream_history_screen.dart';
 import 'my_recordings_screen.dart';
-import '../screens/subscription_plans_screen.dart';
-import '../widgets/pro_subscription_sheet.dart';
+import 'profile_screen.dart';
 
-class ProHubScreen extends ConsumerStatefulWidget {
+class SubscriptionToolsScreen extends ConsumerStatefulWidget {
   final String userType;
   final bool scrollToLiveSection;
 
-  const ProHubScreen({super.key, this.userType = UserTier.standard, this.scrollToLiveSection = false});
+  const SubscriptionToolsScreen({super.key, this.userType = UserTier.standard, this.scrollToLiveSection = false});
 
   @override
-  ConsumerState<ProHubScreen> createState() => _ProHubScreenState();
+  ConsumerState<SubscriptionToolsScreen> createState() => _SubscriptionToolsScreenState();
 }
 
-class _ProHubScreenState extends ConsumerState<ProHubScreen> {
+class _SubscriptionToolsScreenState extends ConsumerState<SubscriptionToolsScreen> {
   final _liveAccordionKey = GlobalKey();
 
   @override
@@ -66,16 +65,16 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
   @override
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
-    final state = ref.watch(proHubProvider(widget.userType));
-    final viewModel = ref.read(proHubProvider(widget.userType).notifier);
+    final state = ref.watch(subscriptionToolsProvider(widget.userType));
+    final viewModel = ref.read(subscriptionToolsProvider(widget.userType).notifier);
 
-    ref.listenManual(proHubProvider(widget.userType), (prev, next) {}, fireImmediately: true);
+    ref.listenManual(subscriptionToolsProvider(widget.userType), (prev, next) {}, fireImmediately: true);
 
-    final isPaidTier = state.isPaidTier;
+    final hasSubscription = state.hasSubscription;
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
-        title: Text(loc.t('proHubTitle')),
+        title: Text(loc.t('subHubTitle')),
         backgroundColor: AppColors.bg(context),
         elevation: 0,
       ),
@@ -85,14 +84,14 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
           padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 32),
         children: [
           // ── Durum Kartı ────────────────────────────────────────────────────
-          if (isPaidTier) _ProStatusCard(renewalDate: state.proExpiresAt, userType: state.userType, planType: state.planType) else _UpgradeBanner(lastTier: state.lastTier),
+          if (hasSubscription) _ProStatusCard(renewalDate: state.proExpiresAt, userType: state.userType, planType: state.planType) else _UpgradeBanner(lastTier: state.lastTier),
 
-          if (!isPaidTier) ...[
+          if (!hasSubscription) ...[
             const SizedBox(height: 20),
             Padding(
               padding: const EdgeInsetsDirectional.only(start: 2, bottom: 10),
               child: Text(
-                loc.t('proBenefitsTitle'),
+                loc.t('subBenefitsTitle'),
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
@@ -101,14 +100,14 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
                 ),
               ),
             ),
-            _BenefitRow(icon: Icons.auto_graph_outlined,        text: loc.t('proBenefit1')),
-            _BenefitRow(icon: Icons.radar,                      text: loc.t('proBenefit2')),
-            _BenefitRow(icon: Icons.trending_up_outlined,       text: loc.t('proBenefit3')),
-            _BenefitRow(icon: Icons.mark_email_unread_outlined, text: loc.t('proBenefit4')),
-            _BenefitRow(icon: Icons.stream_outlined,            text: loc.t('proBenefit5')),
-            _BenefitRow(icon: Icons.video_library_outlined,     text: loc.t('proBenefit6')),
+            _BenefitRow(icon: Icons.auto_graph_outlined,        text: loc.t('subBenefit1')),
+            _BenefitRow(icon: Icons.radar,                      text: loc.t('subBenefit2')),
+            _BenefitRow(icon: Icons.trending_up_outlined,       text: loc.t('subBenefit3')),
+            _BenefitRow(icon: Icons.mark_email_unread_outlined, text: loc.t('subBenefit4')),
+            _BenefitRow(icon: Icons.stream_outlined,            text: loc.t('subBenefit5')),
+            _BenefitRow(icon: Icons.video_library_outlined,     text: loc.t('subBenefit6')),
             const SizedBox(height: 16),
-            _ScrollHintWidget(text: loc.t('proScrollHint')),
+            _ScrollHintWidget(text: loc.t('subScrollHint')),
             const SizedBox(height: 8),
           ],
 
@@ -122,12 +121,38 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
             monthlyStreamSecondsUsed: state.monthlyStreamSecondsUsed,
             isLoading: state.isLoading,
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
+          // ── PREMIUM-only bilgi paneli ──────────────────────────────────────
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: kPrimary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: kPrimary.withValues(alpha: 0.35)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: kPrimary, size: 18),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    loc.tOr('subToolsPremiumOnly', 'Bu araçlar yalnızca PREMIUM üyelere açıktır.'),
+                    style: TextStyle(
+                      color: kPrimary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
           // ── Araçlar Başlığı ────────────────────────────────────────────────
           Padding(
             padding: const EdgeInsetsDirectional.only(start: 2, bottom: 12),
             child: Text(
-              loc.t('proHubTitle'),
+              loc.t('subHubTitle'),
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
@@ -140,24 +165,24 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
           // ── 1. Satış & Performans ──────────────────────────────────────────
           _buildAccordion(
             context: context,
-            title: loc.t('proHubTabSales'),
+            title: loc.t('subHubTabSales'),
             icon: Icons.trending_up,
             iconColor: const Color(0xFF6366F1),
             children: [
               _ToolCard(
                 icon: Icons.auto_graph_outlined,
                 iconColor: const Color(0xFF6366F1),
-                title: loc.t('proToolSalesTitle'),
-                description: loc.t('proToolSalesDesc'),
+                title: loc.t('subToolSalesTitle'),
+                description: loc.t('subToolSalesDesc'),
                 userType: state.userType,
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ProInsightsScreen(userType: state.userType))),
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SubInsightsScreen(userType: state.userType))),
               ),
               const SizedBox(height: 10),
               _ToolCard(
                 icon: Icons.bar_chart_outlined,
                 iconColor: const Color(0xFF10B981),
-                title: loc.t('proToolListingsTitle'),
-                description: loc.t('proToolListingsDesc'),
+                title: loc.t('subToolListingsTitle'),
+                description: loc.t('subToolListingsDesc'),
                 userType: state.userType,
                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ListingAnalyticsScreen(userType: state.userType))),
               ),
@@ -165,8 +190,8 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
               _ToolCard(
                 icon: Icons.pie_chart_outline,
                 iconColor: const Color(0xFFEC4899),
-                title: loc.t('proToolConversionTitle'),
-                description: loc.t('proToolConversionDesc'),
+                title: loc.t('subToolConversionTitle'),
+                description: loc.t('subToolConversionDesc'),
                 userType: state.userType,
                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ConversionBreakdownScreen(userType: state.userType))),
               ),
@@ -177,7 +202,7 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
           // ── 2. Piyasa & Rekabet ────────────────────────────────────────────
           _buildAccordion(
             context: context,
-            title: loc.t('proHubTabMarket'),
+            title: loc.t('subHubTabMarket'),
             icon: Icons.public,
             iconColor: const Color(0xFFF59E0B),
             initiallyExpanded: false,
@@ -185,8 +210,8 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
               _ToolCard(
                 icon: Icons.insights_outlined,
                 iconColor: const Color(0xFFF59E0B),
-                title: loc.t('proToolMarketTitle'),
-                description: loc.t('proToolMarketDesc'),
+                title: loc.t('subToolMarketTitle'),
+                description: loc.t('subToolMarketDesc'),
                 userType: state.userType,
                 onTap: () => Navigator.push(
                   context,
@@ -197,8 +222,8 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
               _ToolCard(
                 icon: Icons.trending_up_outlined,
                 iconColor: const Color(0xFF10B981),
-                title: loc.t('proToolDemandTrendsTitle'),
-                description: loc.t('proToolDemandTrendsDesc'),
+                title: loc.t('subToolDemandTrendsTitle'),
+                description: loc.t('subToolDemandTrendsDesc'),
                 userType: state.userType,
                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => DemandTrendsScreen(userType: state.userType))),
               ),
@@ -206,8 +231,8 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
               _ToolCard(
                 icon: Icons.radar,
                 iconColor: const Color(0xFF6366F1),
-                title: loc.t('proToolCompetitorRadarTitle'),
-                description: loc.t('proToolCompetitorRadarDesc'),
+                title: loc.t('subToolCompetitorRadarTitle'),
+                description: loc.t('subToolCompetitorRadarDesc'),
                 userType: state.userType,
                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CompetitorRadarScreen(userType: state.userType))),
               ),
@@ -219,7 +244,7 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
           _buildAccordion(
             widgetKey: _liveAccordionKey,
             context: context,
-            title: loc.t('proHubTabAudience'),
+            title: loc.t('subHubTabAudience'),
             icon: Icons.stream,
             iconColor: const Color(0xFF14B8A6),
             initiallyExpanded: widget.scrollToLiveSection,
@@ -227,8 +252,8 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
               _ToolCard(
                 icon: Icons.schedule_outlined,
                 iconColor: const Color(0xFF8B5CF6),
-                title: loc.t('proToolBestTimeTitle'),
-                description: loc.t('proToolBestTimeDesc'),
+                title: loc.t('subToolBestTimeTitle'),
+                description: loc.t('subToolBestTimeDesc'),
                 userType: state.userType,
                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => BestStreamTimeScreen(userType: state.userType))),
               ),
@@ -236,8 +261,8 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
               _ToolCard(
                 icon: Icons.stream_outlined,
                 iconColor: const Color(0xFF14B8A6),
-                title: loc.t('proToolStreamAnalyticsTitle'),
-                description: loc.t('proToolStreamAnalyticsDesc'),
+                title: loc.t('subToolStreamAnalyticsTitle'),
+                description: loc.t('subToolStreamAnalyticsDesc'),
                 userType: state.userType,
                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => LiveStreamHistoryScreen(userType: state.userType))),
               ),
@@ -245,8 +270,8 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
               _ToolCard(
                 icon: Icons.mark_email_unread_outlined,
                 iconColor: const Color(0xFF0EA5E9),
-                title: loc.t('proToolRetargetingTitle'),
-                description: loc.t('proToolRetargetingDesc'),
+                title: loc.t('subToolRetargetingTitle'),
+                description: loc.t('subToolRetargetingDesc'),
                 userType: state.userType,
                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => RetargetingScreen(initialIndex: 0, userType: state.userType))),
               ),
@@ -254,8 +279,8 @@ class _ProHubScreenState extends ConsumerState<ProHubScreen> {
               _ToolCard(
                 icon: Icons.video_library_outlined,
                 iconColor: const Color(0xFFF97316),
-                title: loc.t('proToolMyRecordingsTitle'),
-                description: loc.t('proToolMyRecordingsDesc'),
+                title: loc.t('subToolMyRecordingsTitle'),
+                description: loc.t('subToolMyRecordingsDesc'),
                 userType: state.userType,
                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => MyRecordingsScreen(userType: state.userType))),
               ),
@@ -324,26 +349,26 @@ class _ProStatusCard extends ConsumerWidget {
   final String? renewalDate;
   final String userType;
   final String? planType;
-  const _ProStatusCard({this.renewalDate, this.userType = 'pro', this.planType});
+  const _ProStatusCard({this.renewalDate, this.userType = 'tier1', this.planType});
 
   String _getPlanName(TranslationPack loc, String? type) {
-    if (type == null || type.isEmpty) return loc.t('proMonthly');
+    if (type == null || type.isEmpty) return loc.t('subMonthly');
     final key = 'pro${type[0].toUpperCase()}${type.substring(1)}';
-    return loc.tOr(key, loc.t('proMonthly'));
+    return loc.tOr(key, loc.t('subMonthly'));
   }
 
   String _getTierName(TranslationPack loc, String type) {
     switch (type) {
-      case UserTier.proPlus: return loc.tOr('tierLabelProPlus', 'PRO+');
-      case UserTier.premium: return loc.tOr('tierLabelPremium', 'PREMIUM');
+      case UserTier.tier2: return loc.tOr('tierLabelProPlus', 'PRO+');
+      case UserTier.tier3: return loc.tOr('tierLabelPremium', 'PREMIUM');
       default: return loc.tOr('tierLabelPro', 'PRO');
     }
   }
 
   Color _getTierColor(String type) {
     switch (type) {
-      case UserTier.proPlus: return const Color(0xFF7C3AED);
-      case UserTier.premium: return const Color(0xFF0EA5E9);
+      case UserTier.tier2: return const Color(0xFF7C3AED);
+      case UserTier.tier3: return const Color(0xFF0EA5E9);
       default: return const Color(0xFFD97706);
     }
   }
@@ -383,7 +408,7 @@ class _ProStatusCard extends ConsumerWidget {
                   children: [
                     Flexible(
                       child: Text(
-                        loc.t('proStatusTitle'),
+                        loc.t('subStatusTitle'),
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w800,
@@ -434,7 +459,7 @@ class _ProStatusCard extends ConsumerWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  loc.t('proStatusDesc'),
+                  loc.t('subStatusDesc'),
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.white.withValues(alpha: 0.75),
@@ -447,7 +472,7 @@ class _ProStatusCard extends ConsumerWidget {
                       Icon(Icons.event_repeat_outlined, size: 11, color: Colors.white.withValues(alpha: 0.55)),
                       const SizedBox(width: 4),
                       Text(
-                        loc.t('proRenewalDate', {'date': _fmtRenewal(context, renewalDate)}),
+                        loc.t('subRenewalDate', {'date': _fmtRenewal(context, renewalDate)}),
                         style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.55)),
                       ),
                     ],
@@ -559,12 +584,12 @@ class _UpgradeBanner extends ConsumerWidget {
                     Text(
                       lastTier != null && lastTier != UserTier.standard
                           ? loc.tOr('subWelcomeBack', 'Tekrar hoş geldiniz!')
-                          : loc.t('proUnlockTitle'),
+                          : loc.t('subUnlockTitle'),
                       style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Colors.white),
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      loc.t('proUnlockDesc'),
+                      loc.t('subUnlockDesc'),
                       style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.75)),
                     ),
                   ],
@@ -572,7 +597,9 @@ class _UpgradeBanner extends ConsumerWidget {
               ),
               const SizedBox(width: 10),
               GestureDetector(
-                onTap: () => SubscriptionPlansScreen.show(context),
+                onTap: () => Navigator.of(context, rootNavigator: true).push(
+                  MaterialPageRoute(builder: (_) => const WalletScreen()),
+                ),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
                   decoration: BoxDecoration(
@@ -582,7 +609,7 @@ class _UpgradeBanner extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
-                    loc.t('proUnlockBtn'),
+                    loc.t('subUnlockBtn'),
                     style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.white),
                   ),
                 ),
@@ -596,9 +623,9 @@ class _UpgradeBanner extends ConsumerWidget {
 
   String _tierLabel(String tier) {
     switch (tier) {
-      case UserTier.premium: return 'PREMIUM';
-      case UserTier.proPlus: return 'PRO+';
-      case UserTier.pro:     return 'PRO';
+      case UserTier.tier3: return 'PREMIUM';
+      case UserTier.tier2: return 'PRO+';
+      case UserTier.tier1:     return 'PRO';
       default:               return tier;
     }
   }
@@ -625,12 +652,9 @@ class _ToolCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isLocked = !UserTier.isPaidTier(userType);
-    final loc = ref.read(localizationProvider);
+    final isLocked = !UserTier.isTier3(userType);
     return GestureDetector(
-      onTap: isLocked
-          ? () => SubscriptionPlansScreen.show(context)
-          : onTap,
+      onTap: onTap,
       child: Opacity(
         opacity: isLocked ? 0.75 : 1.0,
         child: Container(
@@ -674,12 +698,12 @@ class _ToolCard extends ConsumerWidget {
               ),
             ),
             const SizedBox(width: 8),
-            if (!UserTier.isPaidTier(userType))
+            if (isLocked)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [Color(0xFFD97706), Color(0xFFFFD700)],
+                    colors: [Color(0xFF0891B2), Color(0xFF06B6D4)],
                   ),
                   borderRadius: BorderRadius.circular(4),
                 ),
@@ -688,7 +712,7 @@ class _ToolCard extends ConsumerWidget {
                   children: [
                     const FaIcon(FontAwesomeIcons.crown, size: 7, color: Colors.white),
                     const SizedBox(width: 3),
-                    Text(ref.read(localizationProvider).t('pro'), style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white)),
+                    Text(ref.read(localizationProvider).tOr('tierLabelPremium', 'PREMIUM'), style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white)),
                   ],
                 ),
               )
@@ -801,89 +825,6 @@ class _ScrollHintWidgetState extends State<_ScrollHintWidget>
   }
 }
 
-// ── Yükseltme Bottom Sheet ─────────────────────────────────────────────────────
-
-class _UpgradeSheet extends ConsumerWidget {
-  const _UpgradeSheet();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final loc = ref.watch(localizationProvider);
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.card(context),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      padding: const EdgeInsetsDirectional.fromSTEB(24, 16, 24, 40),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 36,
-            height: 4,
-            decoration: BoxDecoration(
-              color: AppColors.border(context),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 24),
-          const FaIcon(FontAwesomeIcons.crown, size: 48, color: Color(0xFFFFD700)),
-          const SizedBox(height: 12),
-          Text(
-            loc.t('proUpgradeTitle'),
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              color: AppColors.textPrimary(context),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            loc.t('proUpgradeSheetDesc'),
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 14, color: AppColors.textSecondary(context), height: 1.5),
-          ),
-          const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [Color(0xFFD97706), Color(0xFFFFD700)]),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: TeqButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  showModalBottomSheet(
-                    context: context,
-                    isScrollControlled: true,
-                    useSafeArea: true,
-                    backgroundColor: Colors.transparent,
-                    builder: (_) => ProSubscriptionSheet(
-                      loc: loc,
-                      onPurchaseSuccess: () => Navigator.of(context).pop(),
-                    ),
-                  );
-                },
-                text: loc.t('proUpgradeBtn'),
-                customColor: Colors.transparent,
-                isExpanded: true,
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          TeqButton.text(
-            onPressed: () => Navigator.pop(context),
-            text: loc.t('btnDismiss'),
-            customColor: AppColors.textSecondary(context),
-            isExpanded: false,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 // ── Kapsülleyici Model Sınıfı ───────────────────────────────────────────────
 class CreditItemModel {
   final IconData icon;
@@ -956,14 +897,14 @@ class _StreamHoursRow extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  loc.tOr('proStreamHoursTitle', 'Yayın Saati'),
+                  loc.tOr('subStreamHoursTitle', 'Yayın Saati'),
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary(context)),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   isUnlimited
-                      ? loc.tOr('proStreamHoursUnlimited', 'Sınırsız yayın')
-                      : loc.tOr('proStreamHoursUsed', '{used} / {limit} saat kullanıldı')
+                      ? loc.tOr('subStreamHoursUnlimited', 'Sınırsız yayın')
+                      : loc.tOr('subStreamHoursUsed', '{used} / {limit} saat kullanıldı')
                           .replaceAll('{used}', usedHours.toString())
                           .replaceAll('{limit}', (limitHours ?? 0).toString()),
                   style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
@@ -1025,10 +966,10 @@ class _CommissionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final rate = UserTier.commissionPercent(userType);
-    final isPremium = UserTier.isPremiumTier(userType);
+    final isPremium = UserTier.isTier3(userType);
     final color = isPremium
         ? const Color(0xFF0891B2)
-        : UserTier.isProPlusOrAbove(userType)
+        : UserTier.isTier2OrAbove(userType)
             ? const Color(0xFF7C3AED)
             : const Color(0xFFD97706);
     return Padding(
@@ -1047,7 +988,7 @@ class _CommissionRow extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              loc.tOr('proHubCommission', 'Kazancınızın %$rate\'i sizin')
+              loc.tOr('subHubCommission', 'Kazancınızın %$rate\'i sizin')
                   .replaceAll('{rate}', rate.toString()),
               style: TextStyle(
                 fontSize: 13,
@@ -1115,7 +1056,7 @@ class _CreditsSummaryCard extends ConsumerWidget {
                 width: double.infinity,
                 child: TeqButton(
                   onPressed: () => Navigator.pop(context),
-                  text: loc.t('proHubGotIt'),
+                  text: loc.t('subHubGotIt'),
                   customColor: const Color(0xFF6366F1),
                   isExpanded: true,
                 ),
@@ -1135,8 +1076,8 @@ class _CreditsSummaryCard extends ConsumerWidget {
       CreditItemModel(
         icon: Icons.campaign_outlined,
         iconColor: const Color(0xFF8B5CF6),
-        titleBuilder: (l) => loc.t('proCreditsBlastName'),
-        descBuilder: (l) => loc.t('proCreditsBlastDesc'),
+        titleBuilder: (l) => loc.t('subCreditsBlastName'),
+        descBuilder: (l) => loc.t('subCreditsBlastDesc'),
         data: blastCredits,
         defaultPremiumLimit: 6,
         defaultFreeLimit: 3,
@@ -1144,8 +1085,8 @@ class _CreditsSummaryCard extends ConsumerWidget {
       CreditItemModel(
         icon: Icons.rocket_launch_outlined,
         iconColor: const Color(0xFF0EA5E9),
-        titleBuilder: (l) => loc.t('proCreditsBoostName'),
-        descBuilder: (l) => loc.t('proCreditsBoostDesc'),
+        titleBuilder: (l) => loc.t('subCreditsBoostName'),
+        descBuilder: (l) => loc.t('subCreditsBoostDesc'),
         data: boostCredits,
         defaultPremiumLimit: 3,
         defaultFreeLimit: 0,
@@ -1153,8 +1094,8 @@ class _CreditsSummaryCard extends ConsumerWidget {
       CreditItemModel(
         icon: Icons.edit_note_outlined,
         iconColor: const Color(0xFF8B5CF6),
-        titleBuilder: (l) => loc.t('proCreditsAiDescName'),
-        descBuilder: (l) => loc.t('proCreditsAiDescDesc'),
+        titleBuilder: (l) => loc.t('subCreditsAiDescName'),
+        descBuilder: (l) => loc.t('subCreditsAiDescDesc'),
         data: aiDescCredits,
         defaultPremiumLimit: 6,
         defaultFreeLimit: 0,
@@ -1162,14 +1103,14 @@ class _CreditsSummaryCard extends ConsumerWidget {
       CreditItemModel(
         icon: Icons.replay_outlined,
         iconColor: const Color(0xFF10B981),
-        titleBuilder: (l) => loc.t('proCreditsReactivationName'),
-        descBuilder: (l) => loc.t('proCreditsReactivationDesc'),
+        titleBuilder: (l) => loc.t('subCreditsReactivationName'),
+        descBuilder: (l) => loc.t('subCreditsReactivationDesc'),
         data: reactivationCredits,
         defaultPremiumLimit: 3,
         defaultFreeLimit: 0,
         extraHintBuilder: (l, d) {
           final count = (d?['within_window_count'] as num?)?.toInt() ?? 0;
-          return count > 0 ? l.t('proReactivationWindowHint', {'count': count.toString()}) : '';
+          return count > 0 ? l.t('subReactivationWindowHint', {'count': count.toString()}) : '';
         },
       ),
     ];
@@ -1186,12 +1127,12 @@ class _CreditsSummaryCard extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Text(
-              loc.t('proCreditsSummaryTitle'),
+              loc.t('subCreditsSummaryTitle'),
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary(context)),
             ),
           ),
           Divider(height: 1, color: AppColors.border(context)),
-          if (UserTier.isPaidTier(userType)) ...[
+          if (UserTier.hasSubscription(userType)) ...[
             _StreamHoursRow(
               userType: userType,
               secondsUsed: monthlyStreamSecondsUsed,
@@ -1206,9 +1147,9 @@ class _CreditsSummaryCard extends ConsumerWidget {
             final index = entry.key;
             final item = entry.value;
             final used = item.data?['used'] as int? ?? 0;
-            final isPaidTier = UserTier.isPaidTier(userType);
-            final limit = item.data?['limit'] as int? ?? (isPaidTier ? item.defaultPremiumLimit : item.defaultFreeLimit);
-            final remaining = item.data?['remaining'] as int? ?? (isPaidTier ? item.defaultPremiumLimit : item.defaultFreeLimit);
+            final hasSubscription = UserTier.hasSubscription(userType);
+            final limit = item.data?['limit'] as int? ?? (hasSubscription ? item.defaultPremiumLimit : item.defaultFreeLimit);
+            final remaining = item.data?['remaining'] as int? ?? (hasSubscription ? item.defaultPremiumLimit : item.defaultFreeLimit);
             final progress = limit > 0 ? (used / limit).clamp(0.0, 1.0) : 0.0;
             
             final Color barColor = remaining == 0
@@ -1256,7 +1197,7 @@ class _CreditsSummaryCard extends ConsumerWidget {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                loc.t('proCreditsUsedFormat', {'used': (limit - remaining).toString(), 'remaining': remaining.toString()}),
+                                loc.t('subCreditsUsedFormat', {'used': (limit - remaining).toString(), 'remaining': remaining.toString()}),
                                 style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
                               ),
                               if (item.extraHintBuilder != null) Builder(builder: (_) {
@@ -1285,7 +1226,7 @@ class _CreditsSummaryCard extends ConsumerWidget {
                               )
                             else ...[
                               Text(
-                                loc.t('proCreditsLimitFormat', {'remaining': remaining.toString(), 'limit': limit.toString()}),
+                                loc.t('subCreditsLimitFormat', {'remaining': remaining.toString(), 'limit': limit.toString()}),
                                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: barColor),
                               ),
                               const SizedBox(height: 4),

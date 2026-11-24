@@ -20,33 +20,47 @@ class TierBadge extends ConsumerWidget {
 
   static Color tierColor(String userType) {
     switch (userType) {
-      case UserTier.premium: return const Color(0xFF0891B2);
-      case UserTier.proPlus: return const Color(0xFF7C3AED);
-      default:               return const Color(0xFFD97706);
+      case UserTier.tier3: return const Color(0xFF0891B2);
+      default:             return const Color(0xFFD97706); // tier1 ve tier2 gold
     }
   }
 
   static List<Color> tierGradient(String userType) {
     switch (userType) {
-      case UserTier.premium: return const [Color(0xFF0891B2), Color(0xFF06B6D4)];
-      case UserTier.proPlus: return const [Color(0xFF7C3AED), Color(0xFF9333EA)];
-      default:               return const [Color(0xFFD97706), Color(0xFFFFD700)];
+      case UserTier.tier3: return const [Color(0xFF0891B2), Color(0xFF06B6D4)];
+      default:             return const [Color(0xFFD97706), Color(0xFFFFD700)]; // tier1 ve tier2 gold
     }
   }
 
   static String tierLabel(String userType, dynamic loc) {
     switch (userType) {
-      case UserTier.premium: return loc.tOr('tierLabelPremium', 'PREMIUM');
-      case UserTier.proPlus: return loc.tOr('tierLabelProPlus', 'PRO+');
-      case UserTier.pro:     return loc.tOr('tierLabelPro', 'PRO');
+      case UserTier.tier3: return loc.tOr('tierLabelPremium', 'PREMIUM');
+      case UserTier.tier2: return loc.tOr('tierLabelProPlus', 'PRO+');
+      case UserTier.tier1:     return loc.tOr('tierLabelPro', 'PRO');
       default:               return loc.tOr('tierLabelNormal', 'Normal');
     }
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (!UserTier.isPaidTier(userType)) return const SizedBox.shrink();
     final loc = ref.watch(localizationProvider);
+    if (!UserTier.hasSubscription(userType)) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+        decoration: BoxDecoration(
+          color: const Color(0xFF9CA3AF),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Text(
+          tierLabel(userType, loc),
+          style: TextStyle(
+            fontSize: fontSize,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+          ),
+        ),
+      );
+    }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       decoration: BoxDecoration(

@@ -117,13 +117,13 @@ class ViewerTopBar extends ConsumerWidget {
               ),
 
               // Host tier rozeti (PRO/PRO+/PREMIUM)
-              if (UserTier.isPaidTier(hostUserType)) ...[
+              if (UserTier.hasSubscription(hostUserType)) ...[
                 const SizedBox(width: 6),
                 TierBadge(userType: hostUserType, fontSize: 8, iconSize: 6),
               ],
 
               // Kalite badge'i (PRO+ / PREMIUM → 1080p)
-              if (UserTier.isProPlusOrAbove(hostUserType)) ...[
+              if (UserTier.isTier2OrAbove(hostUserType)) ...[
                 const SizedBox(width: 4),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),

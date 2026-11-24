@@ -841,7 +841,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
     final rawImg = _user?['profile_image_url'] as String?;
     final isLive = (_user?['is_live'] as bool?) ?? false;
     final streamId = _user?['active_stream_id'] as int?;
-    final isPremium = UserTier.isPaidTier(_user?['user_type'] as String? ?? UserTier.standard);
+    final isPremium = UserTier.hasSubscription(_user?['user_type'] as String? ?? UserTier.standard);
 
     Widget avatarWidget = CircleAvatar(
       radius: 44,

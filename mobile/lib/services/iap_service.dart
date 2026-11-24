@@ -45,9 +45,9 @@ const kSubscriptionIds = {
 
 /// IAP ürün ID → abonelik tier eşlemesi
 const kProductTierMap = <String, String>{
-  'teqlif_pro_1m': UserTier.pro,       'teqlif_pro_3m': UserTier.pro,       'teqlif_pro_6m': UserTier.pro,       'teqlif_pro_12m': UserTier.pro,
-  'teqlif_pro_plus_1m': UserTier.proPlus, 'teqlif_pro_plus_3m': UserTier.proPlus, 'teqlif_pro_plus_6m': UserTier.proPlus, 'teqlif_pro_plus_12m': UserTier.proPlus,
-  'teqlif_premium_1m': UserTier.premium, 'teqlif_premium_3m': UserTier.premium, 'teqlif_premium_6m': UserTier.premium, 'teqlif_premium_12m': UserTier.premium,
+  'teqlif_pro_1m': UserTier.tier1,       'teqlif_pro_3m': UserTier.tier1,       'teqlif_pro_6m': UserTier.tier1,       'teqlif_pro_12m': UserTier.tier1,
+  'teqlif_pro_plus_1m': UserTier.tier2, 'teqlif_pro_plus_3m': UserTier.tier2, 'teqlif_pro_plus_6m': UserTier.tier2, 'teqlif_pro_plus_12m': UserTier.tier2,
+  'teqlif_premium_1m': UserTier.tier3, 'teqlif_premium_3m': UserTier.tier3, 'teqlif_premium_6m': UserTier.tier3, 'teqlif_premium_12m': UserTier.tier3,
 };
 
 final _allIds = {...kConsumableIds, ...kSubscriptionIds};

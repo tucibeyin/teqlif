@@ -1,11 +1,11 @@
-"""Subscription tier sabitleri ve yardımcıları — V1.1.
+"""Subscription tier sabitleri ve yardımcıları — V2.0.
 
 TEK KAYNAK: Tüm tier mantığı buradan okunur.
 Hiçbir router/use-case/service literal tier değeri veya limit içermemelidir.
 
 Yeni tier eklemek için:
-  1. TIER_* sabiti ekle
-  2. PAID_TIERS'a ekle (ücretliyse)
+  1. TIER_* sabiti ekle (TIER_4, TIER_5 …)
+  2. SUBSCRIPTION_TIERS'a ekle
   3. Tüm dict'lere giriş ekle
   4. Alembic migration: user_type CHECK constraint güncelle
 """
@@ -14,18 +14,18 @@ from __future__ import annotations
 # ── Tier sabitleri ────────────────────────────────────────────────────────────
 
 TIER_STANDARD = "standard"
-TIER_PRO      = "pro"
-TIER_PRO_PLUS = "pro_plus"
-TIER_PREMIUM  = "premium"
+TIER_1        = "tier1"    # PRO (Temel üyelik)
+TIER_2        = "tier2"    # PRO+ (İleri üyelik)
+TIER_3        = "tier3"    # PREMIUM (Premium üyelik)
 
-PAID_TIERS: frozenset[str] = frozenset({TIER_PRO, TIER_PRO_PLUS, TIER_PREMIUM})
+SUBSCRIPTION_TIERS: frozenset[str] = frozenset({TIER_1, TIER_2, TIER_3})
 
 # Tier sıralaması — yükseltme/sınırlama mantığı için
 TIER_RANK: dict[str, int] = {
     TIER_STANDARD: 0,
-    TIER_PRO:      1,
-    TIER_PRO_PLUS: 2,
-    TIER_PREMIUM:  3,
+    TIER_1:        1,
+    TIER_2:        2,
+    TIER_3:        3,
 }
 
 # ── Yayın limitleri ───────────────────────────────────────────────────────────
@@ -33,9 +33,9 @@ TIER_RANK: dict[str, int] = {
 # Aylık yayın süre limiti (saniye). None = sınırsız.
 STREAM_LIMIT_SECONDS: dict[str, int | None] = {
     TIER_STANDARD: 54_000,    # 15 saat
-    TIER_PRO:      108_000,   # 30 saat
-    TIER_PRO_PLUS: 324_000,   # 90 saat
-    TIER_PREMIUM:  None,      # sınırsız
+    TIER_1:        108_000,   # 30 saat
+    TIER_2:        324_000,   # 90 saat
+    TIER_3:        None,      # sınırsız
 }
 
 # ── Gelir modeli ──────────────────────────────────────────────────────────────
@@ -43,9 +43,9 @@ STREAM_LIMIT_SECONDS: dict[str, int | None] = {
 # Yayın geliri komisyon oranı (0.0–1.0, host'a kalan pay).
 COMMISSION_RATE: dict[str, float] = {
     TIER_STANDARD: 0.50,
-    TIER_PRO:      0.75,
-    TIER_PRO_PLUS: 0.90,
-    TIER_PREMIUM:  1.00,
+    TIER_1:        0.75,
+    TIER_2:        0.90,
+    TIER_3:        1.00,
 }
 
 # ── Kalite profili ────────────────────────────────────────────────────────────
@@ -53,52 +53,47 @@ COMMISSION_RATE: dict[str, float] = {
 # LiveKit kalite profili adı.
 QUALITY_PROFILE: dict[str, str] = {
     TIER_STANDARD: "standard",   # 540p
-    TIER_PRO:      "pro",        # 720p
-    TIER_PRO_PLUS: "pro",        # 720p
-    TIER_PREMIUM:  "premium",    # 1080p — sadece PREMIUM
+    TIER_1:        "tier1",      # 720p
+    TIER_2:        "tier1",      # 720p
+    TIER_3:        "tier3",      # 1080p — sadece TIER_3
 }
 
 # ── Kredi limitleri ───────────────────────────────────────────────────────────
-#
-# Her özellik için tier başına aylık ücretsiz kullanım hakkı.
-# Yeni özellik eklenmesi: _FEATURES içine yeni key + tüm tier'lara değer.
-# Değer belirsizse 0 kullan — açık erişim, maliyet alınmaz.
 
 CREDIT_FREE_LIMITS: dict[str, dict[str, int]] = {
     "blast": {
         TIER_STANDARD: 3,
-        TIER_PRO:      10,
-        TIER_PRO_PLUS: 20,
-        TIER_PREMIUM:  30,
+        TIER_1:        10,
+        TIER_2:        20,
+        TIER_3:        30,
     },
     "boost": {
         TIER_STANDARD: 0,
-        TIER_PRO:      3,
-        TIER_PRO_PLUS: 6,
-        TIER_PREMIUM:  10,
+        TIER_1:        3,
+        TIER_2:        6,
+        TIER_3:        10,
     },
     "ai_desc": {
         TIER_STANDARD: 0,
-        TIER_PRO:      6,
-        TIER_PRO_PLUS: 15,
-        TIER_PREMIUM:  30,
+        TIER_1:        6,
+        TIER_2:        15,
+        TIER_3:        30,
     },
     "reactivation": {
         TIER_STANDARD: 0,
-        TIER_PRO:      3,
-        TIER_PRO_PLUS: 6,
-        TIER_PREMIUM:  10,
+        TIER_1:        3,
+        TIER_2:        6,
+        TIER_3:        10,
     },
 }
 
 # Tek blast işleminde gönderilebilecek maksimum kişi sayısı (per-operation cap).
-# Tanımsız özellik için None döner (sınır yok).
 CREDIT_PER_OP_CAPS: dict[str, dict[str, int]] = {
     "blast": {
         TIER_STANDARD: 5,
-        TIER_PRO:      15,
-        TIER_PRO_PLUS: 30,
-        TIER_PREMIUM:  50,
+        TIER_1:        15,
+        TIER_2:        30,
+        TIER_3:        50,
     },
 }
 
@@ -112,20 +107,20 @@ CREDIT_COSTS_TEQLIK: dict[str, int] = {
 
 # ── IAP product mapping ───────────────────────────────────────────────────────
 
-# Product ID → user_type
+# Product ID → user_type (Apple/Google'da kayıtlı ID'ler değişmez)
 PRODUCT_TIER: dict[str, str] = {
-    "teqlif_pro_1m":        TIER_PRO,
-    "teqlif_pro_3m":        TIER_PRO,
-    "teqlif_pro_6m":        TIER_PRO,
-    "teqlif_pro_12m":       TIER_PRO,
-    "teqlif_pro_plus_1m":   TIER_PRO_PLUS,
-    "teqlif_pro_plus_3m":   TIER_PRO_PLUS,
-    "teqlif_pro_plus_6m":   TIER_PRO_PLUS,
-    "teqlif_pro_plus_12m":  TIER_PRO_PLUS,
-    "teqlif_premium_1m":    TIER_PREMIUM,
-    "teqlif_premium_3m":    TIER_PREMIUM,
-    "teqlif_premium_6m":    TIER_PREMIUM,
-    "teqlif_premium_12m":   TIER_PREMIUM,
+    "teqlif_pro_1m":        TIER_1,
+    "teqlif_pro_3m":        TIER_1,
+    "teqlif_pro_6m":        TIER_1,
+    "teqlif_pro_12m":       TIER_1,
+    "teqlif_pro_plus_1m":   TIER_2,
+    "teqlif_pro_plus_3m":   TIER_2,
+    "teqlif_pro_plus_6m":   TIER_2,
+    "teqlif_pro_plus_12m":  TIER_2,
+    "teqlif_premium_1m":    TIER_3,
+    "teqlif_premium_3m":    TIER_3,
+    "teqlif_premium_6m":    TIER_3,
+    "teqlif_premium_12m":   TIER_3,
 }
 
 # Product ID → plan_type (ödeme periyodu)
@@ -146,19 +141,19 @@ PRODUCT_PLAN_TYPE: dict[str, str] = {
 
 # ── Feed ──────────────────────────────────────────────────────────────────────
 
-# Takip edilmeyen PREMIUM yayıncıya eklenen feed skor ağırlığı.
-FEED_PREMIUM_BOOST = 0.25
+# Takip edilmeyen TIER_3 yayıncıya eklenen feed skor ağırlığı.
+FEED_TOP_TIER_BOOST = 0.25
 
 
 # ── Yardımcı fonksiyonlar ─────────────────────────────────────────────────────
 
-def is_paid_tier(user_type: str) -> bool:
-    """Ücretli tier (PRO, PRO+ veya PREMIUM) ise True döner."""
-    return user_type in PAID_TIERS
+def has_subscription(user_type: str) -> bool:
+    """Aktif üyeliği (tier1, tier2, tier3) olan kullanıcı ise True döner."""
+    return user_type in SUBSCRIPTION_TIERS
 
 
 def tier_rank(user_type: str) -> int:
-    """Tier sıralaması (0=standard, 1=pro, 2=pro_plus, 3=premium)."""
+    """Tier sıralaması (0=standard, 1=tier1, 2=tier2, 3=tier3)."""
     return TIER_RANK.get(user_type, 0)
 
 

@@ -47,7 +47,7 @@ from app.core.exceptions import (
 )
 from app.services import credit_service
 from app.services.credit_service import CreditFeature
-from app.services.subscription.tier import is_paid_tier
+from app.services.subscription.tier import has_subscription
 from app.core.read_cache import cache_get, cache_set, cache_get_etag, etag_normalize
 from app.utils.redis_client import get_redis
 
@@ -812,7 +812,7 @@ class GenerateDescriptionRequest(BaseModel):
 @router.get("/ai-desc-credits")
 async def ai_desc_credits(current_user: User = Depends(get_current_user)):
     """PRO kullanıcının bu ayki AI açıklama yazarı kredi durumunu döndürür."""
-    if not is_paid_tier(current_user.user_type):
+    if not has_subscription(current_user.user_type):
         return {
             "used": 0, "limit": 0, "remaining": 0,
             "cost_teqlik": credit_service.cost_teqlik(CreditFeature.AI_DESC),
@@ -862,7 +862,7 @@ async def generate_description(
     )
 
     teqlik_spent = 0
-    if not is_paid_tier(current_user.user_type) or ai_used_new > _ai_desc_limit:
+    if not has_subscription(current_user.user_type) or ai_used_new > _ai_desc_limit:
         # Standart kullanıcı VEYA ücretli tier ücretsiz limitini aştı → atomik DB düşürme LLM öncesi
         result = await db.execute(
             sql_text(
@@ -874,7 +874,7 @@ async def generate_description(
         )
         if result.scalar_one_or_none() is None:
             raise InsufficientFundsException(
-                code="MONTHLY_LIMIT_INSUFFICIENT_FUNDS" if is_paid_tier(current_user.user_type) else "INSUFFICIENT_FUNDS"
+                code="MONTHLY_LIMIT_INSUFFICIENT_FUNDS" if has_subscription(current_user.user_type) else "INSUFFICIENT_FUNDS"
             )
         db.add(TeqlikTransaction(user_id=current_user.id, amount=-_ai_desc_cost, transaction_type="spend_ai_desc"))
         await db.commit()

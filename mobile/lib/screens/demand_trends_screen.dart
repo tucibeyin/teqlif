@@ -7,20 +7,20 @@ import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../ui_library/components/filters/teq_filter_bar.dart';
 import 'viewmodels/demand_trends_view_model.dart';
-import '../widgets/pro_paywall_overlay.dart';
+import '../widgets/subscription_paywall.dart';
 import '../core/user_tier.dart';
 
 class DemandTrendsScreen extends ConsumerWidget {
   final String userType;
   const DemandTrendsScreen({super.key, this.userType = UserTier.standard});
 
-  bool get _isPaidTier => UserTier.isPaidTier(userType);
+  bool get _hasSubscription => UserTier.hasSubscription(userType);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final loc = ref.watch(localizationProvider);
 
-    if (!_isPaidTier) {
+    if (!_hasSubscription) {
       return Scaffold(
         backgroundColor: AppColors.bg(context),
         appBar: AppBar(
@@ -30,7 +30,7 @@ class DemandTrendsScreen extends ConsumerWidget {
         ),
         body: Stack(children: [
           const ProLockedPlaceholder(),
-          ProPaywallOverlay(
+          SubscriptionPaywall(
             icon: Icons.trending_up_outlined,
             gradientColors: const [Color(0xFF10B981), Color(0xFF059669)],
             descKey: 'demandPaywallDesc',

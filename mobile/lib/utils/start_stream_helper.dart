@@ -17,7 +17,7 @@ import '../ui_library/components/overlays/teq_toast.dart';
 import '../screens/live/host_stream_screen.dart';
 import '../services/permission_service.dart';
 import '../core/user_tier.dart';
-import '../screens/subscription_plans_screen.dart';
+import '../screens/profile_screen.dart';
 
 /// Canlı yayın başlatma dialog'unu gösterir.
 /// [onStreamStarted]: yayın ekranından geri dönüldüğünde çağrılır (opsiyonel).
@@ -564,9 +564,8 @@ class _StreamQualitySelector extends StatelessWidget {
               padding: const EdgeInsets.only(right: 8),
               child: GestureDetector(
                 onTap: locked
-                    ? () => SubscriptionPlansScreen.show(
-                          context,
-                          initialTier: UserTier.requiredTierForQuality(q),
+                    ? () => Navigator.of(context, rootNavigator: true).push(
+                          MaterialPageRoute(builder: (_) => const WalletScreen()),
                         )
                     : () => onQualitySelected(q),
                 child: AnimatedContainer(

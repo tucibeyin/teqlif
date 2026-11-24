@@ -140,7 +140,7 @@ def _msg(request, data, key: str, default: str) -> str:
 async def invalidate_user_i18n_caches(user_id: int, old_locale: str = None) -> None:
     """
     Kullanıcının dili değiştiğinde ilgili önbellekleri temizler:
-    - Pazar trendleri ve istatistikler (cache:market_trends_*, cache:pro_insights:{uid}:*)
+    - Pazar trendleri ve istatistikler (cache:market_trends_*, cache:sub_insights:{uid}:*)
     - Dile özel feed ve öneri önbellekleri (interests:{uid}, subcat_interests:{uid}, feed:foryou:{uid})
     - Oturum önbelleği (session:user:{uid})
     """
@@ -160,7 +160,7 @@ async def invalidate_user_i18n_caches(user_id: int, old_locale: str = None) -> N
         # Desen eşleşen tuşları bul ve sil
         patterns = [
             "cache:market_trends_*",
-            f"cache:pro_insights:{user_id}:*",
+            f"cache:sub_insights:{user_id}:*",
         ]
         for pattern in patterns:
             keys_to_del = []

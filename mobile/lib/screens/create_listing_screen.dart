@@ -196,7 +196,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
         final data = jsonDecode(resp.body) as Map<String, dynamic>;
         final userType = data['user_type'] as String? ?? UserTier.standard;
         setState(() => _userType = userType);
-        if (UserTier.isPaidTier(userType)) {
+        if (UserTier.hasSubscription(userType)) {
           _loadAiDescCredits();
         }
       }
@@ -278,7 +278,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
 
     // Ücretli kullanım öncesi onay: standart her zaman, PRO kredi bitince
     final creditsLeft = _aiDescCreditsRemaining ?? 0;
-    final needsConfirm = !UserTier.isPaidTier(_userType) || creditsLeft <= 0;
+    final needsConfirm = !UserTier.hasSubscription(_userType) || creditsLeft <= 0;
     if (needsConfirm && mounted) {
       final result = await CreditGateSheet.show(
         context: context,
@@ -1232,7 +1232,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
           const SizedBox(height: 10),
           _AiDescButton(
             loading: ref.watch(aiDescProvider).status == AiDescStatus.loading || _typing,
-            isPro: UserTier.isPaidTier(_userType),
+            isPro: UserTier.hasSubscription(_userType),
             creditsRemaining: _aiDescCreditsRemaining,
             onTap: _fetchAiDescription,
           ),

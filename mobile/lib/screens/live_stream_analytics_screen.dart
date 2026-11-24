@@ -35,7 +35,7 @@ class LiveStreamAnalyticsScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  loc.t('proLoadError'),
+                  loc.t('subLoadError'),
                   style: TextStyle(color: AppColors.textSecondary(context)),
                 ),
                 const SizedBox(height: 16),
@@ -56,7 +56,7 @@ class LiveStreamAnalyticsScreen extends ConsumerWidget {
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
         title: Text(
-          loc.t('proToolStreamAnalyticsTitle'),
+          loc.t('subToolStreamAnalyticsTitle'),
           style: const TextStyle(fontWeight: FontWeight.w700),
         ),
         backgroundColor: AppColors.bg(context),

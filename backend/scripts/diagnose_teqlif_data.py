@@ -122,7 +122,7 @@ async def main():
         print("Teqlif sisteminde analiz verileri (Pro Insights, Funnel, Reklam) yeni ve hızlı olan")
         print("'ClickHouse' (user_events) veritabanına taşınmış/kaydedilmektedir. Sizin de bahsettiğiniz")
         print("gibi orada bolca veri (gösterim, arama, tıklama) bulunmaktadır.")
-        print("\nAncak AI Metrikleri endpoint'i (/pro/metrics) eski (legacy) PostgreSQL")
+        print("\nAncak AI Metrikleri endpoint'i (/sub/metrics) eski (legacy) PostgreSQL")
         print("'analytics_events' ve 'listing_impressions' tablolarını kullanmaya devam etmektedir.")
         print("Yeni veriler ClickHouse'a aktığı için, PostgreSQL tabloları boş (veya güncel değil) kalmakta,")
         print("bu nedenle AI Metrikleri tüm istatistikleri 0 veya None olarak göstermektedir.")

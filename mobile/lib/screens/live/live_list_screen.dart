@@ -591,7 +591,7 @@ class _StreamerAvatarCard extends ConsumerWidget {
     final rawUrl = (streamer['profile_image_url'] as String?) ?? '';
     final imageUrl = rawUrl.isNotEmpty ? ref.read(apiClientProvider).imgUrl(rawUrl) : null;
     final isVerified = streamer['is_verified'] == true;
-    final isPremium = UserTier.isPaidTier(streamer['user_type'] as String? ?? UserTier.standard);
+    final isPremium = UserTier.hasSubscription(streamer['user_type'] as String? ?? UserTier.standard);
     final isLive = streamer['is_live'] == true;
     final username = streamer['username'] as String? ?? '';
     final initial = username.isNotEmpty ? username[0].toUpperCase() : '?';

@@ -1643,7 +1643,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                if (UserTier.isPaidTier(stream.host.userType)) ...[
+                if (UserTier.hasSubscription(stream.host.userType)) ...[
                   const SizedBox(height: 6),
                   TierBadge(userType: stream.host.userType),
                 ],

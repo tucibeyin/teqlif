@@ -10,7 +10,7 @@ import '../ui_library/components/inputs/teq_text_field.dart';
 import '../ui_library/components/buttons/teq_button.dart';
 import '../core/app_exception.dart';
 import 'viewmodels/account_info_view_model.dart';
-import 'pro_hub_screen.dart';
+import 'subscription_tools_screen.dart';
 import '../core/user_tier.dart';
 
 class AccountInfoScreen extends ConsumerStatefulWidget {
@@ -555,20 +555,20 @@ class _SubscriptionSectionCard extends ConsumerWidget {
   final Map<String, dynamic> user;
   const _SubscriptionSectionCard({required this.user});
 
-  String _tierLabel(String userType, LocalizationService loc) {
+  String _tierLabel(String userType, TranslationPack loc) {
     switch (userType) {
-      case UserTier.pro: return loc.t('tierLabelPro');
-      case UserTier.proPlus: return loc.t('tierLabelProPlus');
-      case UserTier.premium: return loc.t('tierLabelPremium');
+      case UserTier.tier1: return loc.t('tierLabelPro');
+      case UserTier.tier2: return loc.t('tierLabelProPlus');
+      case UserTier.tier3: return loc.t('tierLabelPremium');
       default: return loc.t('tierLabelStandard');
     }
   }
 
   List<Color> _tierGradient(String userType) {
     switch (userType) {
-      case UserTier.premium: return const [Color(0xFF0284C7), Color(0xFF38BDF8)];
-      case UserTier.proPlus: return const [Color(0xFF7C3AED), Color(0xFFA78BFA)];
-      case UserTier.pro: return const [Color(0xFFD97706), Color(0xFFFFD700)];
+      case UserTier.tier3: return const [Color(0xFF0284C7), Color(0xFF38BDF8)];
+      case UserTier.tier2: return const [Color(0xFF7C3AED), Color(0xFFA78BFA)];
+      case UserTier.tier1: return const [Color(0xFFD97706), Color(0xFFFFD700)];
       default: return const [Color(0xFF6B7280), Color(0xFF9CA3AF)];
     }
   }
@@ -580,7 +580,7 @@ class _SubscriptionSectionCard extends ConsumerWidget {
     final planType = user['plan_type'] as String?;
     final autoRenew = user['auto_renew_enabled'] as bool? ?? true;
     final pendingTier = user['pending_tier'] as String?;
-    final isPaid = UserTier.isPaidTier(userType);
+    final isPaid = UserTier.hasSubscription(userType);
     final colors = _tierGradient(userType);
 
     return Container(
@@ -619,14 +619,14 @@ class _SubscriptionSectionCard extends ConsumerWidget {
                       ),
                       if (isPaid && planType != null)
                         Text(
-                          loc.t('accountInfoSubscriptionPlan', params: {'plan': planType}),
+                          loc.t('accountInfoSubscriptionPlan', {'plan': planType}),
                           style: TextStyle(fontSize: 13, color: AppColors.textSecondary(context)),
                         ),
                       if (!autoRenew && isPaid)
                         Padding(
                           padding: const EdgeInsets.only(top: 2),
                           child: Text(
-                            loc.t('proAutoRenewOff'),
+                            loc.t('subAutoRenewOff'),
                             style: const TextStyle(fontSize: 12, color: Color(0xFFEF4444)),
                           ),
                         ),
@@ -634,7 +634,7 @@ class _SubscriptionSectionCard extends ConsumerWidget {
                         Padding(
                           padding: const EdgeInsets.only(top: 2),
                           child: Text(
-                            loc.t('proPendingDowngrade'),
+                            loc.t('subPendingDowngrade'),
                             style: const TextStyle(fontSize: 12, color: Color(0xFFF59E0B)),
                           ),
                         ),
@@ -644,7 +644,7 @@ class _SubscriptionSectionCard extends ConsumerWidget {
                 GestureDetector(
                   onTap: () => Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => ProHubScreen(userType: userType)),
+                    MaterialPageRoute(builder: (_) => SubscriptionToolsScreen(userType: userType)),
                   ),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),

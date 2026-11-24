@@ -8,7 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/network/api_client.dart';
 import '../core/app_exception.dart';
-import '../models/pro_insights_data.dart';
+import '../models/sub_insights_data.dart';
 import '../models/credit_gate_data.dart';
 import '../services/api_service.dart';
 import '../services/cache_service.dart';

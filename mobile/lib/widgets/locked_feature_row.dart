@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/user_tier.dart';
 import '../services/localization_service.dart';
-import '../screens/subscription_plans_screen.dart';
+import '../screens/profile_screen.dart';
 
 /// Kilitli özellik satırı — §8.13 UI pattern'ı.
 ///
 /// Kullanım: kalite seçici, PRO Araçları, Keşfet filtreler, yayın başlatma.
-/// Tıklanınca SubscriptionPlansScreen açılır (ilgili tier tab'ı seçili).
+/// Tıklanınca WalletScreen'e yönlendirilir.
 class LockedFeatureRow extends ConsumerWidget {
   /// Özellik adı (ör. "1080p Yayın", "Pazar Analizi")
   final String label;
@@ -15,25 +15,25 @@ class LockedFeatureRow extends ConsumerWidget {
   /// Kısa CTA metni (ör. "PRO+'ya geçerek 1080p yayın yap")
   final String ctaText;
 
-  /// Gereken minimum tier (UserTier.pro | UserTier.proPlus | UserTier.premium)
+  /// Gereken minimum tier (UserTier.tier1 | UserTier.tier2 | UserTier.tier3)
   final String requiredTier;
 
-  /// Özel onTap handler — null ise SubscriptionPlansScreen açılır.
+  /// Özel onTap handler — null ise WalletScreen açılır.
   final VoidCallback? onTap;
 
   const LockedFeatureRow({
     super.key,
     required this.label,
     required this.ctaText,
-    this.requiredTier = UserTier.pro,
+    this.requiredTier = UserTier.tier1,
     this.onTap,
   });
 
   /// Tier rengi (badge / icon için)
   Color _tierColor() {
     switch (requiredTier) {
-      case UserTier.premium: return const Color(0xFF0891B2);
-      case UserTier.proPlus: return const Color(0xFF7C3AED);
+      case UserTier.tier3: return const Color(0xFF0891B2);
+      case UserTier.tier2: return const Color(0xFF7C3AED);
       default:               return const Color(0xFFD97706);
     }
   }
@@ -87,9 +87,8 @@ class LockedFeatureRow extends ConsumerWidget {
   }
 
   void _showUpgradeSheet(BuildContext context, TranslationPack loc) {
-    SubscriptionPlansScreen.show(
-      context,
-      initialTier: requiredTier != UserTier.standard ? requiredTier : null,
+    Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute(builder: (_) => const WalletScreen()),
     );
   }
 }
@@ -104,7 +103,7 @@ class LockedChip extends ConsumerWidget {
   const LockedChip({
     super.key,
     required this.label,
-    this.requiredTier = UserTier.pro,
+    this.requiredTier = UserTier.tier1,
     this.onTap,
   });
 
@@ -112,8 +111,8 @@ class LockedChip extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final loc = ref.watch(localizationProvider);
     final tierLabel = switch (requiredTier) {
-      UserTier.proPlus => 'PRO+',
-      UserTier.premium => 'PREMIUM',
+      UserTier.tier2 => 'PRO+',
+      UserTier.tier3 => 'PREMIUM',
       _ => 'PRO',
     };
 
@@ -127,9 +126,8 @@ class LockedChip extends ConsumerWidget {
           duration: const Duration(seconds: 2),
           action: SnackBarAction(
             label: loc.tOr('btnUpgrade', 'Yükselt'),
-            onPressed: () => SubscriptionPlansScreen.show(
-              context,
-              initialTier: requiredTier != UserTier.standard ? requiredTier : null,
+            onPressed: () => Navigator.of(context, rootNavigator: true).push(
+              MaterialPageRoute(builder: (_) => const WalletScreen()),
             ),
           ),
         ),

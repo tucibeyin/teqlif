@@ -10,7 +10,7 @@ import '../services/category_service.dart';
 import '../services/localization_service.dart';
 import 'viewmodels/my_recordings_view_model.dart';
 import 'recording_detail_screen.dart';
-import '../widgets/pro_paywall_overlay.dart';
+import '../widgets/subscription_paywall.dart';
 import '../widgets/teq_search_field.dart';
 import '../core/user_tier.dart';
 
@@ -27,17 +27,17 @@ class _MyRecordingsScreenState extends ConsumerState<MyRecordingsScreen> {
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationProvider);
 
-    if (!UserTier.isPaidTier(widget.userType)) {
+    if (!UserTier.hasSubscription(widget.userType)) {
       return Scaffold(
         backgroundColor: AppColors.bg(context),
         appBar: AppBar(
           backgroundColor: AppColors.bg(context),
           elevation: 0,
-          title: Text(loc.t('proToolMyRecordingsTitle'), style: const TextStyle(fontWeight: FontWeight.w800)),
+          title: Text(loc.t('subToolMyRecordingsTitle'), style: const TextStyle(fontWeight: FontWeight.w800)),
         ),
         body: Stack(children: [
           const ProLockedPlaceholder(),
-          ProPaywallOverlay(
+          SubscriptionPaywall(
             icon: Icons.video_library_outlined,
             gradientColors: const [Color(0xFFF97316), Color(0xFFEA580C)],
             descKey: 'recordingPaywallDesc',
@@ -56,7 +56,7 @@ class _MyRecordingsScreenState extends ConsumerState<MyRecordingsScreen> {
         foregroundColor: AppColors.textPrimary(context),
         elevation: 0,
         title: Text(
-          loc.t('proToolMyRecordingsTitle'),
+          loc.t('subToolMyRecordingsTitle'),
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
       ),

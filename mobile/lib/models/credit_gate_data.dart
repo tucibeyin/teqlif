@@ -7,6 +7,8 @@
 /// bilgiyi taşıyan immutable değer nesnesi.
 library;
 
+import '../core/user_tier.dart';
+
 enum CreditFeature {
   blast,
   boost,
@@ -79,12 +81,10 @@ class CreditGateResult {
   bool get isWalletRedirect => errorKey == '_walletRedirect';
 }
 
-import '../core/user_tier.dart';
-
 class CreditGateData {
   final CreditFeature feature;
 
-  /// Kullanıcı tipi: 'pro' | 'standard'
+  /// Kullanıcı tipi: 'tier1'|'tier2'|'tier3' | 'standard'
   final String userType;
 
   /// Bu dönemde kalan ücretsiz hak sayısı.

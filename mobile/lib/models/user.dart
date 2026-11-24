@@ -21,7 +21,7 @@ class User {
   final int monthlyStreamSecondsUsed;
 
   /// Ücretli tier (PRO, PRO+ veya PREMIUM) ise true döner.
-  bool get isPaidTier => UserTier.isPaidTier(userType);
+  bool get hasSubscription => UserTier.hasSubscription(userType);
 
   final bool onboardingCompleted;
   final String? websiteUrl;

@@ -36,6 +36,7 @@ from app.models.block import UserBlock
 from app.services.moderation_service import kick_key, mute_key
 from app.utils.auth import decode_token, _decode_token_version
 from app.utils.redis_client import get_redis
+from app.services.subscription.tier import has_subscription
 
 # ── WebSocket sabitleri ───────────────────────────────────────────────────────
 _WS_AUTH_TIMEOUT_SECS    = 5.0   # ilk auth mesajı için bekleme süresi
@@ -84,7 +85,7 @@ async def _check_whale_status(
         async with AsyncSessionLocal() as db:
             host_row = await db.execute(select(User.user_type).where(User.id == host_id))
             host_type = host_row.scalar_one_or_none()
-            if host_type != "pro":
+            if not has_subscription(host_type):
                 return  # Balina radarı yalnızca Pro host'lara gönderilir
 
             result = await db.execute(

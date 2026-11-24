@@ -226,7 +226,7 @@ class VerifyPurchaseCommand:
         self, user_id: int, platform: str, result: PurchaseResult,
         try_amount: float = 0.0,
     ) -> dict:
-        new_tier  = tier_from_product(result.product_id) or "pro"
+        new_tier  = tier_from_product(result.product_id) or "tier1"
         plan_type = plan_type_from_product(result.product_id) or "monthly"
         now = datetime.now(timezone.utc)
 
@@ -236,7 +236,7 @@ class VerifyPurchaseCommand:
                 "user_type = :tier, "
                 "plan_type = :plan, "
                 "premium_since = COALESCE(premium_since, :now), "
-                "pro_expires_at = :exp, "
+                "sub_expires_at = :exp, "
                 "store_subscription_id = :sub_id, "
                 "store_subscription_platform = :platform "
                 "WHERE id = :uid RETURNING teqlik_balance"
@@ -265,7 +265,7 @@ class VerifyPurchaseCommand:
                 ),
                 {
                     "uid": user_id,
-                    "tx_type": f"pro_subscription_{plan_type}",
+                    "tx_type": f"subscription_{plan_type}",
                     "platform": platform,
                     "tx_id": result.transaction_id,
                     "raw": result.raw_payload,
@@ -285,7 +285,7 @@ class VerifyPurchaseCommand:
             {
                 "uid": user_id,
                 "bal": sub_balance_after,
-                "tx_type": f"pro_subscription_{plan_type}",
+                "tx_type": f"subscription_{plan_type}",
                 "ref_id": sub_tx_id,
             },
         )
