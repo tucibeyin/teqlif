@@ -6855,5 +6855,14 @@
     "placeholders": {
       "tier": {"type": "String"}
     }
+  },
+  "recordingNetEarnings": "Net Earnings",
+  "recordingGrossRevenue": "Gross Revenue",
+  "recordingFomoLine": "With {tier} you'd earn {amount} more",
+  "@recordingFomoLine": {
+    "placeholders": {
+      "tier": {"type": "String"},
+      "amount": {"type": "String"}
+    }
   }
 }

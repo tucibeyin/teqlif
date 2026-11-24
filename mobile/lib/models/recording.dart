@@ -221,23 +221,31 @@ class RecordingMetrics {
   final double totalRevenue;
   final int totalBids;
   final int totalSales;
+  final double commissionRate;
+  final double netEarnings;
 
   const RecordingMetrics({
     required this.totalRevenue,
     required this.totalBids,
     required this.totalSales,
+    this.commissionRate = 0.5,
+    this.netEarnings = 0.0,
   });
 
   factory RecordingMetrics.fromJson(Map<String, dynamic> j) => RecordingMetrics(
         totalRevenue: (j['total_revenue'] as num?)?.toDouble() ?? 0.0,
         totalBids: j['total_bids'] as int? ?? 0,
         totalSales: j['total_sales'] as int? ?? 0,
+        commissionRate: (j['commission_rate'] as num?)?.toDouble() ?? 0.5,
+        netEarnings: (j['net_earnings'] as num?)?.toDouble() ?? 0.0,
       );
 
   Map<String, dynamic> toJson() => {
         'total_revenue': totalRevenue,
         'total_bids': totalBids,
         'total_sales': totalSales,
+        'commission_rate': commissionRate,
+        'net_earnings': netEarnings,
       };
 }
 

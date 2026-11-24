@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../config/app_colors.dart';
 import '../../config/theme.dart';
+import '../../core/user_tier.dart';
 import '../../models/recording.dart';
+import '../../screens/subscription_plans_screen.dart';
 import '../../services/category_service.dart';
 import '../../services/localization_service.dart';
 import 'widgets/metric_grid.dart';
@@ -87,15 +89,13 @@ class OverviewTab extends StatelessWidget {
 
         const SizedBox(height: 16),
 
+        // ── Kazanç kartı ────────────────────────────────────────────────
+        _EarningsCard(metrics: m, loc: loc),
+        const SizedBox(height: 10),
+
         // ── Metrik grid ─────────────────────────────────────────────────
         MetricGrid(
           tiles: [
-            MetricTile(
-              label: loc.t('recordingMetricRevenue'),
-              value: rdPrice(m.totalRevenue, loc.lang),
-              icon: Icons.attach_money_rounded,
-              valueColor: kPrimary,
-            ),
             MetricTile(
               label: loc.t('recordingMetricViewers'),
               value: s.peakViewerCount != null ? '${s.peakViewerCount}' : '—',
@@ -180,6 +180,163 @@ class OverviewTab extends StatelessWidget {
     final h = diff.inHours;
     final m = diff.inMinutes % 60;
     return h > 0 ? '${h}s ${m}dk' : '${m}dk';
+  }
+}
+
+class _EarningsCard extends StatelessWidget {
+  final RecordingMetrics metrics;
+  final TranslationPack loc;
+
+  const _EarningsCard({required this.metrics, required this.loc});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final rate = metrics.commissionRate;
+    final pct = (rate * 100).round();
+
+    final fomoNextTier = _fomoNextTier(rate);
+    final fomoSavings = fomoNextTier != null
+        ? metrics.totalRevenue * (fomoNextTier.$2 - rate)
+        : null;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.account_balance_wallet_outlined,
+                  size: 14, color: cs.onSurfaceVariant),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  loc.tOr('recordingNetEarnings', 'Net Kazanç'),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: cs.onSurfaceVariant,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ),
+              _CommissionBadge(pct: pct, rate: rate),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            rdPrice(metrics.netEarnings, loc.lang),
+            style: TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF16A34A),
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${loc.tOr('recordingGrossRevenue', 'Brüt Gelir')}: ${rdPrice(metrics.totalRevenue, loc.lang)}',
+            style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+          ),
+          if (fomoNextTier != null && fomoSavings != null && fomoSavings > 0) ...[
+            const SizedBox(height: 10),
+            GestureDetector(
+              onTap: () => SubscriptionPlansScreen.show(
+                context,
+                initialTier: fomoNextTier.$1,
+              ),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                decoration: BoxDecoration(
+                  color: kPrimary.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        loc
+                            .tOr(
+                              'recordingFomoLine',
+                              '{tier}\'a geçseydiniz {amount} daha kazanırdınız',
+                            )
+                            .replaceAll('{tier}', fomoNextTier.$1 == UserTier.pro
+                                ? 'PRO'
+                                : fomoNextTier.$1 == UserTier.proPlus
+                                    ? 'PRO+'
+                                    : 'PREMIUM')
+                            .replaceAll('{amount}', rdPrice(fomoSavings, loc.lang)),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: kPrimary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(Icons.arrow_forward_rounded, size: 14, color: kPrimary),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// Returns (nextTierString, nextRate) or null if already PREMIUM.
+  (String, double)? _fomoNextTier(double rate) {
+    if (rate < 0.75) return (UserTier.pro, 0.75);
+    if (rate < 0.90) return (UserTier.proPlus, 0.90);
+    if (rate < 1.00) return (UserTier.premium, 1.00);
+    return null;
+  }
+}
+
+class _CommissionBadge extends StatelessWidget {
+  final int pct;
+  final double rate;
+
+  const _CommissionBadge({required this.pct, required this.rate});
+
+  @override
+  Widget build(BuildContext context) {
+    final Color bg;
+    final Color fg;
+    if (rate >= 1.0) {
+      bg = const Color(0xFFF59E0B);
+      fg = Colors.white;
+    } else if (rate >= 0.9) {
+      bg = const Color(0xFF9333EA);
+      fg = Colors.white;
+    } else if (rate >= 0.75) {
+      bg = const Color(0xFF6366F1);
+      fg = Colors.white;
+    } else {
+      bg = Theme.of(context).colorScheme.surfaceContainerHigh;
+      fg = Theme.of(context).colorScheme.onSurfaceVariant;
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        '$pct% kom.',
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: fg,
+        ),
+      ),
+    );
   }
 }
 

@@ -6855,5 +6855,14 @@
     "placeholders": {
       "tier": {"type": "String"}
     }
+  },
+  "recordingNetEarnings": "Nettogewinn",
+  "recordingGrossRevenue": "Bruttoeinnahmen",
+  "recordingFomoLine": "Mit {tier} hättest du {amount} mehr verdient",
+  "@recordingFomoLine": {
+    "placeholders": {
+      "tier": {"type": "String"},
+      "amount": {"type": "String"}
+    }
   }
 }

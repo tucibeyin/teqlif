@@ -6783,5 +6783,14 @@
     "placeholders": {
       "tier": {"type": "String"}
     }
+  },
+  "recordingNetEarnings": "Чистый доход",
+  "recordingGrossRevenue": "Валовый доход",
+  "recordingFomoLine": "С {tier} вы бы заработали на {amount} больше",
+  "@recordingFomoLine": {
+    "placeholders": {
+      "tier": {"type": "String"},
+      "amount": {"type": "String"}
+    }
   }
 }

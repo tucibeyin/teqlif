@@ -6784,5 +6784,14 @@
     "placeholders": {
       "tier": {"type": "String"}
     }
+  },
+  "recordingNetEarnings": "Net Kazanç",
+  "recordingGrossRevenue": "Brüt Gelir",
+  "recordingFomoLine": "{tier}'a geçseydiniz {amount} daha kazanırdınız",
+  "@recordingFomoLine": {
+    "placeholders": {
+      "tier": {"type": "String"},
+      "amount": {"type": "String"}
+    }
   }
 }

@@ -6783,5 +6783,14 @@
     "placeholders": {
       "tier": {"type": "String"}
     }
+  },
+  "recordingNetEarnings": "صافي الأرباح",
+  "recordingGrossRevenue": "الإيرادات الإجمالية",
+  "recordingFomoLine": "مع {tier} كنت ستكسب {amount} أكثر",
+  "@recordingFomoLine": {
+    "placeholders": {
+      "tier": {"type": "String"},
+      "amount": {"type": "String"}
+    }
   }
 }
