@@ -75,28 +75,28 @@ CREDIT_FREE_LIMITS: dict[str, dict[str, int]] = {
         TIER_1:        10,
         TIER_2:        20,
         TIER_3:        30,
-        TIER_4:        30,
+        TIER_4:        50,
     },
     "boost": {
         TIER_STANDARD: 0,
         TIER_1:        3,
         TIER_2:        6,
         TIER_3:        10,
-        TIER_4:        10,
+        TIER_4:        15,
     },
     "ai_desc": {
         TIER_STANDARD: 0,
         TIER_1:        6,
         TIER_2:        15,
         TIER_3:        30,
-        TIER_4:        30,
+        TIER_4:        50,
     },
     "reactivation": {
         TIER_STANDARD: 0,
         TIER_1:        3,
         TIER_2:        6,
         TIER_3:        10,
-        TIER_4:        10,
+        TIER_4:        15,
     },
 }
 

@@ -533,7 +533,7 @@ class _TierBenefits extends StatelessWidget {
 
     // Kredi sayıları — tier.py CREDIT_FREE_LIMITS ile senkron
     final (int blast, int boost, int ai, int reaktivasyon) = switch (tier) {
-      UserTier.tier4 => (30, 10, 30, 10),
+      UserTier.tier4 => (50, 15, 50, 15),
       UserTier.tier3 => (30, 10, 30, 10),
       UserTier.tier2 => (20,  6, 15,  6),
       _              => (10,  3,  6,  3),  // tier1 / PRO
