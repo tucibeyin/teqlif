@@ -6288,7 +6288,7 @@ class _ProTab extends ConsumerWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        loc.tOr('membershipSubtitle', "Yayın gelirinin %95'ini al, HD yayın yap, özel araçları kullan"),
+                        loc.tOr('membershipSubtitle', 'Yüksek yayın geliri al, HD yayın yap, özel araçları kullan'),
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 13,
