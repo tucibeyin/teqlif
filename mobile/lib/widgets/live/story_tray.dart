@@ -488,7 +488,7 @@ class _StoryGroupItem extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final loc = ref.watch(localizationProvider);
     final avatarUrl =
-        group.user.profileImageThumbUrl ?? group.user.profileImageUrl;
+        group.user.profileImageUrl ?? group.user.profileImageThumbUrl;
     final resolvedUrl = avatarUrl != null ? ref.read(apiClientProvider).imgUrl(avatarUrl) : null;
 
     return GestureDetector(
@@ -535,28 +535,19 @@ class _StoryGroupItem extends ConsumerWidget {
                       color: AppColors.surface(context),
                     ),
                     padding: const EdgeInsets.all(1.5),
-                    child: ClipOval(
-                      child: resolvedUrl != null && resolvedUrl.isNotEmpty
-                          ? CachedNetworkImage(
-                              cacheKey: TeqlifCacheManager.avatarCacheKey(group.user.username, resolvedUrl), cacheManager: TeqlifCacheManager(),
-                              memCacheWidth: 400, memCacheHeight: 400, imageUrl: resolvedUrl,
-                              fit: BoxFit.cover,
-                              alignment: Alignment.topCenter,
-                              width: double.infinity,
-                              height: double.infinity,
-                              placeholder: (_, _) => _InitialAvatar(
-                                username: group.user.username,
-                                context: context,
-                              ),
-                              errorWidget: (_, _, _) => _InitialAvatar(
-                                username: group.user.username,
-                                context: context,
-                              ),
+                    child: CircleAvatar(
+                      radius: 27,
+                      backgroundColor: AppColors.surface(context),
+                      backgroundImage: resolvedUrl != null && resolvedUrl.isNotEmpty
+                          ? CachedNetworkImageProvider(
+                              resolvedUrl,
+                              cacheKey: TeqlifCacheManager.avatarCacheKey(group.user.username, resolvedUrl),
+                              cacheManager: TeqlifCacheManager(),
                             )
-                          : _InitialAvatar(
-                              username: group.user.username,
-                              context: context,
-                            ),
+                          : null,
+                      child: resolvedUrl == null || resolvedUrl.isEmpty
+                          ? _InitialAvatar(username: group.user.username, context: context)
+                          : null,
                     ),
                   ),
                 ),

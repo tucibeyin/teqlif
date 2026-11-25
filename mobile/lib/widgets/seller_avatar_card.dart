@@ -52,17 +52,17 @@ class SellerAvatarCard extends ConsumerWidget {
                       color: AppColors.surface(context),
                     ),
                     padding: const EdgeInsets.all(1.5),
-                    child: ClipOval(
-                      child: avatarUrl != null
-                          ? CachedNetworkImage(
+                    child: CircleAvatar(
+                      radius: 27,
+                      backgroundColor: AppColors.primaryBg(context),
+                      backgroundImage: avatarUrl != null
+                          ? CachedNetworkImageProvider(
+                              avatarUrl,
                               cacheKey: TeqlifCacheManager.avatarCacheKey(username, avatarUrl),
                               cacheManager: TeqlifCacheManager(),
-                              memCacheWidth: 400, memCacheHeight: 400, imageUrl: avatarUrl,
-                              fit: BoxFit.cover,
-                              placeholder: (context, url) => _buildPlaceholder(context, initial),
-                              errorWidget: (context, url, error) => _buildPlaceholder(context, initial),
                             )
-                          : _buildPlaceholder(context, initial),
+                          : null,
+                      child: avatarUrl == null ? Text(initial, style: TextStyle(color: kPrimary, fontWeight: FontWeight.w700, fontSize: 20)) : null,
                     ),
                   ),
                 ),
@@ -115,18 +115,4 @@ class SellerAvatarCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildPlaceholder(BuildContext context, String initial) {
-    return Container(
-      color: AppColors.primaryBg(context),
-      alignment: Alignment.center,
-      child: Text(
-        initial,
-        style: const TextStyle(
-          color: kPrimary,
-          fontWeight: FontWeight.w700,
-          fontSize: 20,
-        ),
-      ),
-    );
-  }
 }

@@ -638,7 +638,7 @@ class _ToolCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isLocked = UserTier.tierLevel(userType) < UserTier.tierLevel(requiredTier);
     return GestureDetector(
-      onTap: onTap,
+      onTap: isLocked ? null : onTap,
       child: Opacity(
         opacity: isLocked ? 0.75 : 1.0,
         child: Container(
