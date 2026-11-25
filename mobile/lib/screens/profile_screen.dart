@@ -510,14 +510,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 },
                               ),
                             ],
-                            // Tier crown (PRO/PRO+/PREMIUM/PREMIUM+ — standard'da gizlenir)
-                            Builder(builder: (ctx) {
-                              final tier = user?['user_type'] as String? ?? UserTier.standard;
-                              return Padding(
-                                padding: const EdgeInsetsDirectional.only(start: 6),
-                                child: _TierCrown(userType: tier),
-                              );
-                            }),
+                            // Tier avatar'da gösterilir — isim satırında tekrar gösterme
                           ],
                         ),
 
