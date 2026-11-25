@@ -1165,14 +1165,14 @@ class _CreditsSummaryCard extends ConsumerWidget {
             ),
           ),
           Divider(height: 1, color: AppColors.border(context)),
+          _StreamHoursRow(
+            userType: userType,
+            minutesUsed: monthlyStreamMinutesUsed,
+            isLoading: isLoading,
+            loc: loc,
+          ),
+          Divider(height: 1, color: AppColors.border(context)),
           if (UserTier.hasSubscription(userType)) ...[
-            _StreamHoursRow(
-              userType: userType,
-              minutesUsed: monthlyStreamMinutesUsed,
-              isLoading: isLoading,
-              loc: loc,
-            ),
-            Divider(height: 1, color: AppColors.border(context)),
             _CommissionRow(userType: userType, loc: loc),
             Divider(height: 1, color: AppColors.border(context)),
           ],
