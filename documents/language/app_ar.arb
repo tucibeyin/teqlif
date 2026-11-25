@@ -6767,9 +6767,9 @@
   "tierPremiumDesc": "100% حصة هدايا · 360 ساعة/شهر · 1080p",
   "tierPremiumPlusDesc": "100% حصة هدايا · بث غير محدود · 1080p",
 
-  "subStreamHoursTitle": "ساعات البث",
+  "subStreamHoursTitle": "مدة البث",
   "subStreamHoursUnlimited": "بث غير محدود",
-  "subStreamHoursUsed": "استُخدم {used} / {limit} ساعة",
+  "subStreamHoursUsed": "{used} / {limit} مستخدم",
   "subStreamHourAbbr": "س",
   "subStreamMinAbbr": "د",
   "liveStreamQualityLabel": "جودة البث",

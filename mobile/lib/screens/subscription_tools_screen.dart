@@ -1043,11 +1043,9 @@ int? _streamLimitMinutesFor(String userType) => UserTier.streamLimitMinutes(user
 String _fmtStreamTime(int minutes, TranslationPack loc) {
   final h = minutes ~/ 60;
   final m = minutes % 60;
-  final hA = loc.tOr('subStreamHourAbbr', 's');
-  final mA = loc.tOr('subStreamMinAbbr', 'dk');
-  if (h == 0) return '$m$mA';
-  if (m == 0) return '$h$hA';
-  return '$h$hA $m$mA';
+  final hA = loc.tOr('subStreamHourAbbr', 'Saat');
+  final mA = loc.tOr('subStreamMinAbbr', 'Dk');
+  return '$h $hA : $m $mA';
 }
 
 class _CreditsSummaryCard extends ConsumerWidget {

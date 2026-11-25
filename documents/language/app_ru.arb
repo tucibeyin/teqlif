@@ -6767,9 +6767,9 @@
   "tierPremiumDesc": "100% доля подарков · 360 ч/мес · 1080p",
   "tierPremiumPlusDesc": "100% доля подарков · Безлимитный стрим · 1080p",
 
-  "subStreamHoursTitle": "Часы трансляции",
+  "subStreamHoursTitle": "Длительность трансляции",
   "subStreamHoursUnlimited": "Безлимитный стрим",
-  "subStreamHoursUsed": "Использовано {used} / {limit} ч",
+  "subStreamHoursUsed": "{used} / {limit} использовано",
   "subStreamHourAbbr": "ч",
   "subStreamMinAbbr": "мин",
   "liveStreamQualityLabel": "Качество трансляции",
