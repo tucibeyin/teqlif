@@ -36,20 +36,12 @@ _PRODUCT_TRY_PRICES: dict[str, float] = {
     "teqlik_pack_1000":      999.99,
     # Abonelikler — try_amount=0 geldiğinde velocity hesabına girer
     "teqlif_pro_1m":               999.99,
-    "teqlif_pro_3m":              2699.99,
-    "teqlif_pro_6m":              4799.99,
     "teqlif_pro_12m":             8399.99,
     "teqlif_pro_plus_1m":         1999.99,
-    "teqlif_pro_plus_3m":         5399.99,
-    "teqlif_pro_plus_6m":         9599.99,
     "teqlif_pro_plus_12m":       16799.99,
     "teqlif_premium_1m":          2999.99,
-    "teqlif_premium_3m":          8099.99,
-    "teqlif_premium_6m":         14399.99,
     "teqlif_premium_12m":        25199.99,
     "teqlif_premium_plus_1m":     3999.99,
-    "teqlif_premium_plus_3m":    10799.99,
-    "teqlif_premium_plus_6m":    19199.99,
     "teqlif_premium_plus_12m":   33599.99,
 }
 

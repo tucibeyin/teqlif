@@ -124,40 +124,24 @@ CREDIT_COSTS_TEQLIK: dict[str, int] = {
 # Product ID → user_type (Apple/Google'da kayıtlı ID'ler değişmez)
 PRODUCT_TIER: dict[str, str] = {
     "teqlif_pro_1m":              TIER_1,
-    "teqlif_pro_3m":              TIER_1,
-    "teqlif_pro_6m":              TIER_1,
     "teqlif_pro_12m":             TIER_1,
     "teqlif_pro_plus_1m":         TIER_2,
-    "teqlif_pro_plus_3m":         TIER_2,
-    "teqlif_pro_plus_6m":         TIER_2,
     "teqlif_pro_plus_12m":        TIER_2,
     "teqlif_premium_1m":          TIER_3,
-    "teqlif_premium_3m":          TIER_3,
-    "teqlif_premium_6m":          TIER_3,
     "teqlif_premium_12m":         TIER_3,
     "teqlif_premium_plus_1m":     TIER_4,
-    "teqlif_premium_plus_3m":     TIER_4,
-    "teqlif_premium_plus_6m":     TIER_4,
     "teqlif_premium_plus_12m":    TIER_4,
 }
 
 # Product ID → plan_type (ödeme periyodu)
 PRODUCT_PLAN_TYPE: dict[str, str] = {
     "teqlif_pro_1m":              "monthly",
-    "teqlif_pro_3m":              "quarterly",
-    "teqlif_pro_6m":              "biannual",
     "teqlif_pro_12m":             "annual",
     "teqlif_pro_plus_1m":         "monthly",
-    "teqlif_pro_plus_3m":         "quarterly",
-    "teqlif_pro_plus_6m":         "biannual",
     "teqlif_pro_plus_12m":        "annual",
     "teqlif_premium_1m":          "monthly",
-    "teqlif_premium_3m":          "quarterly",
-    "teqlif_premium_6m":          "biannual",
     "teqlif_premium_12m":         "annual",
     "teqlif_premium_plus_1m":     "monthly",
-    "teqlif_premium_plus_3m":     "quarterly",
-    "teqlif_premium_plus_6m":     "biannual",
     "teqlif_premium_plus_12m":    "annual",
 }
 

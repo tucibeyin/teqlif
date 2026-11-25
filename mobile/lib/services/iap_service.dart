@@ -36,20 +36,24 @@ const kConsumableIds = {
   'teqlik_pack_1000',
 };
 
-/// Tüm abonelik ID'leri — PRO / PRO+ / PREMIUM / PREMIUM+ × 1m/3m/6m/12m
+/// Tüm abonelik ID'leri — PRO / PRO+ / PREMIUM / PREMIUM+ × 1m/12m
 const kSubscriptionIds = {
-  'teqlif_pro_1m',           'teqlif_pro_3m',           'teqlif_pro_6m',           'teqlif_pro_12m',
-  'teqlif_pro_plus_1m',      'teqlif_pro_plus_3m',      'teqlif_pro_plus_6m',      'teqlif_pro_plus_12m',
-  'teqlif_premium_1m',       'teqlif_premium_3m',       'teqlif_premium_6m',       'teqlif_premium_12m',
-  'teqlif_premium_plus_1m',  'teqlif_premium_plus_3m',  'teqlif_premium_plus_6m',  'teqlif_premium_plus_12m',
+  'teqlif_pro_1m',          'teqlif_pro_12m',
+  'teqlif_pro_plus_1m',     'teqlif_pro_plus_12m',
+  'teqlif_premium_1m',      'teqlif_premium_12m',
+  'teqlif_premium_plus_1m', 'teqlif_premium_plus_12m',
 };
 
 /// IAP ürün ID → abonelik tier eşlemesi
 const kProductTierMap = <String, String>{
-  'teqlif_pro_1m': UserTier.tier1,            'teqlif_pro_3m': UserTier.tier1,            'teqlif_pro_6m': UserTier.tier1,            'teqlif_pro_12m': UserTier.tier1,
-  'teqlif_pro_plus_1m': UserTier.tier2,       'teqlif_pro_plus_3m': UserTier.tier2,       'teqlif_pro_plus_6m': UserTier.tier2,       'teqlif_pro_plus_12m': UserTier.tier2,
-  'teqlif_premium_1m': UserTier.tier3,        'teqlif_premium_3m': UserTier.tier3,        'teqlif_premium_6m': UserTier.tier3,        'teqlif_premium_12m': UserTier.tier3,
-  'teqlif_premium_plus_1m': UserTier.tier4,   'teqlif_premium_plus_3m': UserTier.tier4,   'teqlif_premium_plus_6m': UserTier.tier4,   'teqlif_premium_plus_12m': UserTier.tier4,
+  'teqlif_pro_1m':          UserTier.tier1,
+  'teqlif_pro_12m':         UserTier.tier1,
+  'teqlif_pro_plus_1m':     UserTier.tier2,
+  'teqlif_pro_plus_12m':    UserTier.tier2,
+  'teqlif_premium_1m':      UserTier.tier3,
+  'teqlif_premium_12m':     UserTier.tier3,
+  'teqlif_premium_plus_1m': UserTier.tier4,
+  'teqlif_premium_plus_12m':UserTier.tier4,
 };
 
 final _allIds = {...kConsumableIds, ...kSubscriptionIds};
