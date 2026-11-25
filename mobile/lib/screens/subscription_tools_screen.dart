@@ -1043,7 +1043,7 @@ int? _streamLimitMinutesFor(String userType) => UserTier.streamLimitMinutes(user
 String _fmtStreamTime(int minutes, TranslationPack loc) {
   final h = minutes ~/ 60;
   final m = minutes % 60;
-  final hA = loc.tOr('subStreamHourAbbr', 'Saat');
+  final hA = loc.tOr('subStreamHourAbbr', 'S');
   final mA = loc.tOr('subStreamMinAbbr', 'Dk');
   return '$h $hA : $m $mA';
 }

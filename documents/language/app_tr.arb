@@ -6771,7 +6771,7 @@
   "subStreamHoursTitle": "Yayın Süresi",
   "subStreamHoursUnlimited": "Sınırsız yayın",
   "subStreamHoursUsed": "{used} / {limit} kullanıldı",
-  "subStreamHourAbbr": "Saat",
+  "subStreamHourAbbr": "S",
   "subStreamMinAbbr": "Dk",
   "liveStreamQualityLabel": "Yayın Kalitesi",
   "streamMonthlyLimitReached": "Aylık yayın süre limitine ulaştınız.",

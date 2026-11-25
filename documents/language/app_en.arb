@@ -6842,7 +6842,7 @@
   "subStreamHoursTitle": "Stream Duration",
   "subStreamHoursUnlimited": "Unlimited streaming",
   "subStreamHoursUsed": "{used} / {limit} used",
-  "subStreamHourAbbr": "Hr",
+  "subStreamHourAbbr": "H",
   "subStreamMinAbbr": "Min",
   "liveStreamQualityLabel": "Stream Quality",
   "streamMonthlyLimitReached": "Monthly streaming limit reached.",
