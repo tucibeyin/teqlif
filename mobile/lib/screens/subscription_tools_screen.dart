@@ -121,32 +121,6 @@ class _SubscriptionToolsScreenState extends ConsumerState<SubscriptionToolsScree
             monthlyStreamMinutesUsed: state.monthlyStreamMinutesUsed,
             isLoading: state.isLoading,
           ),
-          const SizedBox(height: 16),
-          // ── Araç erişim bilgi paneli ───────────────────────────────────────
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              color: kPrimary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: kPrimary.withValues(alpha: 0.35)),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.info_outline, color: kPrimary, size: 18),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    loc.tOr('subToolsAccessInfo', 'Bazı araçlar PRO+, diğerleri PREMIUM üyeliği gerektirir.'),
-                    style: TextStyle(
-                      color: kPrimary,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
           const SizedBox(height: 20),
           // ── Araçlar Başlığı ────────────────────────────────────────────────
           Padding(
