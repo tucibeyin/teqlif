@@ -1969,8 +1969,7 @@
   "walletAllLabel": "Всё",
   "walletTxnIapPurchase": "teqlik куплен",
   "walletTxnProMonthly": "Ежемесячная подписка PRO",
-  "walletTxnProQuarterly": "Подписка PRO на 3 месяца",
-  "walletTxnProBiannual": "Подписка PRO на 6 месяцев",
+
   "walletTxnProAnnual": "Годовая подписка PRO",
   "walletTxnProSubscription": "Подписка PRO",
   "subSheetTitle": "Выбрать план",

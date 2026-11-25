@@ -226,8 +226,7 @@
   "walletAllLabel": "All",
   "walletTxnIapPurchase": "teqlik purchased",
   "walletTxnProMonthly": "Monthly PRO Subscription",
-  "walletTxnProQuarterly": "3-Month PRO Subscription",
-  "walletTxnProBiannual": "6-Month PRO Subscription",
+
   "walletTxnProAnnual": "Annual PRO Subscription",
   "walletTxnProSubscription": "PRO Subscription",
   "subSheetTitle": "Choose Plan",

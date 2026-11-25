@@ -234,8 +234,7 @@
   "walletAllLabel": "Tamamı",
   "walletTxnIapPurchase": "teqlik satın alındı",
   "walletTxnProMonthly": "Aylık PRO Aboneliği",
-  "walletTxnProQuarterly": "3 Aylık PRO Aboneliği",
-  "walletTxnProBiannual": "6 Aylık PRO Aboneliği",
+
   "walletTxnProAnnual": "Yıllık PRO Aboneliği",
   "walletTxnProSubscription": "PRO Aboneliği",
   "subSheetTitle": "Üyelik Seç",

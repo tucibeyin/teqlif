@@ -3969,10 +3969,8 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
 
   // DB plan_type → IAP product ID dönüşümü (currentTierIndex hesabı için gerekli)
   static const _kDbToIapPlan = {
-    'monthly':   'teqlif_pro_1m',
-    'quarterly': 'teqlif_pro_3m',
-    'biannual':  'teqlif_pro_6m',
-    'annual':    'teqlif_pro_12m',
+    'monthly': 'teqlif_pro_1m',
+    'annual':  'teqlif_pro_12m',
   };
 
   // Kart 1 — tier durumu
@@ -4015,10 +4013,8 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
     'referral_bonus': loc.t('walletTxnReferralBonus'),
     'welcome_bonus': loc.t('walletTxnWelcomeBonus'),
     'iap_purchase': loc.t('walletTxnIapPurchase'),
-    'pro_subscription_monthly':   loc.t('walletTxnProMonthly'),
-    'pro_subscription_quarterly': loc.t('walletTxnProQuarterly'),
-    'pro_subscription_biannual':  loc.t('walletTxnProBiannual'),
-    'pro_subscription_annual':    loc.t('walletTxnProAnnual'),
+    'pro_subscription_monthly': loc.t('walletTxnProMonthly'),
+    'pro_subscription_annual':  loc.t('walletTxnProAnnual'),
     'pro_subscription':           loc.t('walletTxnProSubscription'),
   };
 

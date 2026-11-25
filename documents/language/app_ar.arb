@@ -206,8 +206,7 @@
   "walletAllLabel": "الكل",
   "walletTxnIapPurchase": "تم شراء teqlik",
   "walletTxnProMonthly": "اشتراك PRO الشهري",
-  "walletTxnProQuarterly": "اشتراك PRO ربع سنوي",
-  "walletTxnProBiannual": "اشتراك PRO نصف سنوي",
+
   "walletTxnProAnnual": "اشتراك PRO السنوي",
   "walletTxnProSubscription": "اشتراك PRO",
   "subSheetTitle": "اختر خطة",

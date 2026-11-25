@@ -14,10 +14,8 @@ _DB_FALLBACK_RATE = 0.50  # platform_config seed değeri
 
 # DB'deki plan_type → IAP product ID dönüşümü
 _PLAN_TYPE_TO_IAP = {
-    'monthly':   'teqlif_pro_1m',
-    'quarterly': 'teqlif_pro_3m',
-    'biannual':  'teqlif_pro_6m',
-    'annual':    'teqlif_pro_12m',
+    'monthly': 'teqlif_pro_1m',
+    'annual':  'teqlif_pro_12m',
 }
 
 
