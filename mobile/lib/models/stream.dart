@@ -1,3 +1,5 @@
+import '../core/stream_quality_profile.dart';
+
 class StreamHost {
   final int id;
   final String username;
@@ -107,7 +109,7 @@ class StreamTokenOut {
         livekitUrl: json['livekit_url'],
         token: json['token'],
         category: json['category'] ?? 'other',
-        videoQualityProfile: json['video_quality_profile'] ?? 'standard',
+        videoQualityProfile: json['video_quality_profile'] ?? StreamQualityProfile.sd,
       );
 }
 

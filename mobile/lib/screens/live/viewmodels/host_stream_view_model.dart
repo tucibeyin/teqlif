@@ -7,6 +7,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../../../core/app_exception.dart';
 import '../../../core/logger_service.dart';
+import '../../../core/stream_quality_profile.dart';
 import '../../../models/stream.dart';
 import '../../../services/analytics_service.dart';
 import '../../../services/auction_service.dart';
@@ -21,43 +22,11 @@ const int _kMaxReconnectAttempts = 7;
 const int _kTrackPollIntervalMs = 100;
 const int _kTrackPollMaxAttempts = 50;
 
-RoomOptions _roomOptionsForProfile(String profile) {
-  // premium: main=1080p (4000k) + simulcast 720p(1700k)/540p(800k)          — PiP=360p
-  // pro:     main=720p  (1700k) + simulcast 540p(800k)/360p(450k)           — PiP=360p
-  // standard: main=540p  (800k) + simulcast 360p(450k)/240p(140k)           — PiP=240p
-  final isPremium = profile == 'tier3';
-  final isPro     = profile == 'tier1' || profile == 'tier2';
-  return RoomOptions(
-    adaptiveStream: true,
-    dynacast: true,
-    defaultVideoPublishOptions: VideoPublishOptions(
-      simulcast: true,
-      backupVideoCodec: const BackupVideoCodec(codec: 'vp9'),
-      videoSimulcastLayers: isPremium
-          ? const [VideoParametersPresets.h540_169, VideoParametersPresets.h720_169]
-          : isPro
-              ? const [VideoParametersPresets.h360_169, VideoParametersPresets.h540_169]
-              : const [VideoParametersPresets.h240_43, VideoParametersPresets.h360_169],
-      videoEncoding: VideoEncoding(
-        maxBitrate: isPremium ? 4000000 : isPro ? 1700000 : 800000,
-        maxFramerate: 30,
-      ),
-      // flutter_webrtc Android toUpperCase() Türkçe locale bug: i→İ. balanced güvenli.
-      degradationPreference: DegradationPreference.balanced,
-    ),
-    defaultAudioPublishOptions: const AudioPublishOptions(audioBitrate: 64000),
-  );
-}
+RoomOptions _roomOptionsForProfile(String profile) =>
+    StreamQualityProfile.roomOptions(profile);
 
-CameraCaptureOptions _cameraOptionsForProfile(String profile) {
-  return CameraCaptureOptions(
-    params: profile == 'tier3'
-        ? VideoParametersPresets.h1080_169
-        : (profile == 'tier1' || profile == 'tier2')
-            ? VideoParametersPresets.h720_169
-            : VideoParametersPresets.h540_169,
-  );
-}
+CameraCaptureOptions _cameraOptionsForProfile(String profile) =>
+    StreamQualityProfile.cameraOptions(profile);
 
 /// Bağlantı fail olduğunda retry edilmemesi gereken dahili istisna.
 class _ConfirmLiveFailure implements Exception {

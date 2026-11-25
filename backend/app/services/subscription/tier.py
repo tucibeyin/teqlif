@@ -54,10 +54,10 @@ COMMISSION_RATE: dict[str, float] = {
 
 # ── Kalite profili ────────────────────────────────────────────────────────────
 
-# LiveKit profil sabitleri — backend/livekit config ile senkron tutulmalı.
-_QUALITY_540P  = "standard"
-_QUALITY_720P  = "tier1"
-_QUALITY_1080P = "tier3"
+# Kalite profil sabitleri — Flutter stream_quality_profile.dart ile senkron tutulmalı.
+_QUALITY_540P  = "sd"
+_QUALITY_720P  = "hd"
+_QUALITY_1080P = "fhd"
 
 QUALITY_PROFILE: dict[str, str] = {
     TIER_STANDARD: _QUALITY_540P,
