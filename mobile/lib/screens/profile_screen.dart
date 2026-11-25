@@ -5824,7 +5824,7 @@ class _ProTab extends ConsumerWidget {
     (Icons.percent_rounded,       'membershipFeatureRevenueName',    'Gelir Payı',
                                    'membershipFeatureRevenueDesc',    '%95 — Standart: %70', true),
     (Icons.verified_rounded,      'membershipFeatureBadgeName',      'Keşif Önceliği',
-                                   'membershipFeatureBadgeDesc',      'PRO rozeti ve keşif avantajı', true),
+                                   'membershipFeatureBadgeDesc',      'Üyelik rozeti ve keşif avantajı', true),
     (Icons.notifications_rounded, 'membershipFeatureNotifName',      'Takipçi Bildirimi',
                                    'membershipFeatureNotifDesc',      'Yayın başladığında bildirim gönderilir', true),
     (Icons.support_agent_rounded, 'membershipFeatureSupportName',    'Öncelikli Destek',
