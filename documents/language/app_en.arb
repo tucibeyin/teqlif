@@ -6903,5 +6903,26 @@
       "tier": {"type": "String"},
       "amount": {"type": "String"}
     }
-  }
+  },
+  "membershipBadgeLabel": "MEMBERSHIP",
+  "membershipTitle": "Earn more,\npay less",
+  "membershipSubtitle": "Get 95% of stream revenue, go HD, use exclusive tools",
+  "membershipSectionHeader": "Membership Benefits",
+  "membershipFeatureToolsName": "teqlif Tools",
+  "membershipFeatureToolsDesc": "Blast, Boost, AI description and more",
+  "membershipFeatureStreamTimeName": "Stream Time",
+  "membershipFeatureStreamTimeDesc": "Uninterrupted long-duration streaming",
+  "membershipFeatureQualityName": "Stream Quality",
+  "membershipFeatureQualityDesc": "HD streaming and low latency",
+  "membershipFeatureRevenueName": "Revenue Share",
+  "membershipFeatureRevenueDesc": "95% — Standard: 70%",
+  "membershipFeatureBadgeName": "Discovery Priority",
+  "membershipFeatureBadgeDesc": "PRO badge and discovery advantage",
+  "membershipFeatureNotifName": "Follower Notifications",
+  "membershipFeatureNotifDesc": "Notify followers when stream starts",
+  "membershipFeatureSupportName": "Priority Support",
+  "membershipFeatureSupportDesc": "24/7 priority customer support",
+  "membershipActiveLabel": "Active",
+  "membershipComingSoonLabel": "Soon",
+  "membershipCTAButton": "View Memberships"
 }

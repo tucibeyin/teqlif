@@ -5801,14 +5801,31 @@ class _ProTab extends ConsumerWidget {
     ('teqlif_pro_12m', 'subAnnualFull',   25, 1),
   ];
 
-  static const _benefits = [
-    ('% ', '%95 hediye geliri (Standart: %70)'),
-    ('📺', 'HD yayın ve düşük gecikme'),
-    ('📊', 'Gelişmiş yayın analizleri'),
-    ('⭐', 'PRO rozeti ve keşif avantajı'),
-    ('🔔', 'Takipçilere yayın bildirimi'),
-    ('🎭', 'Özel yayın araçları'),
-    ('💬', 'Öncelikli destek'),
+  static const _membershipFeatures = [
+    (Icons.build_rounded,         'membershipFeatureToolsName',      'teqlif Araçları',
+                                   'membershipFeatureToolsDesc',      'Blast, Boost, AI açıklama ve daha fazlası', true),
+    (Icons.access_time_rounded,   'membershipFeatureStreamTimeName', 'Yayın Süresi',
+                                   'membershipFeatureStreamTimeDesc', 'Kesintisiz uzun süreli yayın', true),
+    (Icons.hd_rounded,            'membershipFeatureQualityName',    'Yayın Kalitesi',
+                                   'membershipFeatureQualityDesc',    'HD yayın ve düşük gecikme', true),
+    (Icons.percent_rounded,       'membershipFeatureRevenueName',    'Gelir Payı',
+                                   'membershipFeatureRevenueDesc',    '%95 — Standart: %70', true),
+    (Icons.verified_rounded,      'membershipFeatureBadgeName',      'Keşif Önceliği',
+                                   'membershipFeatureBadgeDesc',      'PRO rozeti ve keşif avantajı', true),
+    (Icons.notifications_rounded, 'membershipFeatureNotifName',      'Takipçi Bildirimi',
+                                   'membershipFeatureNotifDesc',      'Yayın başladığında bildirim gönderilir', true),
+    (Icons.support_agent_rounded, 'membershipFeatureSupportName',    'Öncelikli Destek',
+                                   'membershipFeatureSupportDesc',    '7/24 öncelikli destek', true),
+  ];
+
+  static const _featureColors = [
+    Color(0xFFD97706), // teqlif Araçları
+    Color(0xFF8B5CF6), // Yayın Süresi
+    Color(0xFF06B6D4), // Yayın Kalitesi
+    Color(0xFF10B981), // Gelir Payı
+    Color(0xFFEC4899), // Keşif Önceliği
+    Color(0xFF3B82F6), // Takipçi Bildirimi
+    Color(0xFFEF4444), // Öncelikli Destek
   ];
 
   static String _monthName(int m) {
@@ -6230,37 +6247,30 @@ class _ProTab extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // ── Header: badge + title + subtitle ──────────────────────
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 20, 16, 14),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [
-                              Color(0xFFD97706),
-                              Color(0xFFF59E0B),
-                              Color(0xFFFFD700),
-                            ],
+                            colors: [Color(0xFFD97706), Color(0xFFF59E0B), Color(0xFFFFD700)],
                           ),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            FaIcon(FontAwesomeIcons.crown,
-                                size: 11, color: Colors.white),
-                            SizedBox(width: 5),
+                            const FaIcon(FontAwesomeIcons.crown, size: 11, color: Colors.white),
+                            const SizedBox(width: 5),
                             Text(
-                              'ÜYELİK SEÇ',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
-                                letterSpacing: 0.4,
+                              loc.tOr('membershipBadgeLabel', 'ÜYELİK'),
+                              style: const TextStyle(
+                                fontSize: 11, fontWeight: FontWeight.w800,
+                                color: Colors.white, letterSpacing: 0.4,
                               ),
                             ),
                           ],
@@ -6268,32 +6278,39 @@ class _ProTab extends ConsumerWidget {
                       ),
                       const SizedBox(height: 10),
                       Text(
-                        'Daha fazla kazan,\ndaha az öde',
+                        loc.tOr('membershipTitle', 'Daha fazla kazan,\ndaha az öde'),
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          color:
-                              isDark ? Colors.white : const Color(0xFF111827),
-                          letterSpacing: -0.5,
-                          height: 1.2,
+                          fontSize: 20, fontWeight: FontWeight.w800,
+                          color: isDark ? Colors.white : const Color(0xFF111827),
+                          letterSpacing: -0.5, height: 1.2,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        "Yayın gelirinin %95'ini al, HD yayın yap,\nözel araçları kullan",
+                        loc.tOr('membershipSubtitle', "Yayın gelirinin %95'ini al, HD yayın yap, özel araçları kullan"),
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 13,
-                          color: isDark
-                              ? const Color(0xFFA8A8A8)
-                              : const Color(0xFF6B7280),
+                          color: isDark ? const Color(0xFFA8A8A8) : const Color(0xFF6B7280),
                           height: 1.45,
                         ),
                       ),
                     ],
                   ),
                 ),
+                // ── Section header ─────────────────────────────────────────
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                  child: Text(
+                    loc.tOr('membershipSectionHeader', 'Üyelik Avantajları'),
+                    style: const TextStyle(
+                      fontSize: 12, fontWeight: FontWeight.w600,
+                      color: Color(0xFF9CA3AF), letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+                // ── Features list ──────────────────────────────────────────
                 Container(
                   margin: const EdgeInsets.symmetric(horizontal: 16),
                   decoration: BoxDecoration(
@@ -6301,49 +6318,69 @@ class _ProTab extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Column(
-                    children: _benefits.asMap().entries.map((e) {
-                      final b = e.value;
-                      final isLast = e.key == _benefits.length - 1;
+                    children: _membershipFeatures.asMap().entries.map((e) {
+                      final idx = e.key;
+                      final f = e.value;
+                      final isLast = idx == _membershipFeatures.length - 1;
+                      final color = _featureColors[idx];
                       return Container(
-                        padding:
-                            const EdgeInsets.fromLTRB(14, 11, 14, 11),
+                        padding: const EdgeInsets.fromLTRB(14, 11, 14, 11),
                         decoration: BoxDecoration(
                           border: isLast
                               ? null
-                              : Border(
-                                  bottom: BorderSide(
-                                    color: isDark
-                                        ? const Color(0xFF2A2A2A)
-                                        : const Color(0xFFE5E7EB),
-                                  ),
-                                ),
+                              : Border(bottom: BorderSide(
+                                  color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE5E7EB),
+                                )),
                         ),
                         child: Row(
                           children: [
                             Container(
-                              width: 34,
-                              height: 34,
+                              width: 36, height: 36,
                               decoration: BoxDecoration(
-                                color: const Color(0xFFD97706)
-                                    .withValues(alpha: 0.12),
+                                color: color.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(10),
                               ),
-                              child: Center(
-                                child: Text(b.$1,
-                                    style:
-                                        const TextStyle(fontSize: 16)),
-                              ),
+                              child: Center(child: Icon(f.$1, size: 18, color: color)),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    loc.tOr(f.$2, f.$3),
+                                    style: TextStyle(
+                                      fontSize: 13, fontWeight: FontWeight.w600,
+                                      color: isDark ? Colors.white : const Color(0xFF111827),
+                                    ),
+                                  ),
+                                  Text(
+                                    loc.tOr(f.$4, f.$5),
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280),
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: f.$6
+                                    ? const Color(0xFF10B981).withValues(alpha: 0.12)
+                                    : const Color(0xFF6B7280).withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
                               child: Text(
-                                b.$2,
+                                f.$6
+                                    ? loc.tOr('membershipActiveLabel', 'Aktif')
+                                    : loc.tOr('membershipComingSoonLabel', 'Yakında'),
                                 style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                  color: isDark
-                                      ? Colors.white
-                                      : const Color(0xFF111827),
+                                  fontSize: 10, fontWeight: FontWeight.w700,
+                                  color: f.$6 ? const Color(0xFF10B981) : const Color(0xFF9CA3AF),
                                 ),
                               ),
                             ),
@@ -6357,16 +6394,14 @@ class _ProTab extends ConsumerWidget {
             ),
           ),
         ),
-        // Sabit alt buton
+        // ── Sabit alt buton ────────────────────────────────────────────────
         Container(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
           decoration: BoxDecoration(
             color: isDark ? const Color(0xFF000000) : const Color(0xFFFAFAFA),
             border: Border(
               top: BorderSide(
-                color: isDark
-                    ? const Color(0xFF1C1C1C)
-                    : const Color(0xFFE5E7EB),
+                color: isDark ? const Color(0xFF1C1C1C) : const Color(0xFFE5E7EB),
               ),
             ),
           ),
@@ -6376,33 +6411,26 @@ class _ProTab extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(vertical: 15),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [
-                    Color(0xFFD97706),
-                    Color(0xFFF59E0B),
-                    Color(0xFFFFD700),
-                  ],
+                  colors: [Color(0xFFD97706), Color(0xFFF59E0B), Color(0xFFFFD700)],
                 ),
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
                     color: const Color(0xFFD97706).withValues(alpha: 0.32),
-                    blurRadius: 20,
-                    offset: const Offset(0, 5),
+                    blurRadius: 20, offset: const Offset(0, 5),
                   ),
                 ],
               ),
-              child: const Row(
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  FaIcon(FontAwesomeIcons.crown, size: 15, color: Colors.white),
-                  SizedBox(width: 8),
+                  const FaIcon(FontAwesomeIcons.crown, size: 15, color: Colors.white),
+                  const SizedBox(width: 8),
                   Text(
-                    'Üyelikleri Gör',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
-                      letterSpacing: -0.3,
+                    loc.tOr('membershipCTAButton', 'Üyelikleri Gör'),
+                    style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.w800,
+                      color: Colors.white, letterSpacing: -0.3,
                     ),
                   ),
                 ],

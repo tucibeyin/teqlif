@@ -6832,5 +6832,26 @@
       "tier": {"type": "String"},
       "amount": {"type": "String"}
     }
-  }
+  },
+  "membershipBadgeLabel": "ÜYELİK",
+  "membershipTitle": "Daha fazla kazan,\ndaha az öde",
+  "membershipSubtitle": "Yayın gelirinin %95'ini al, HD yayın yap, özel araçları kullan",
+  "membershipSectionHeader": "Üyelik Avantajları",
+  "membershipFeatureToolsName": "teqlif Araçları",
+  "membershipFeatureToolsDesc": "Blast, Boost, AI açıklama ve daha fazlası",
+  "membershipFeatureStreamTimeName": "Yayın Süresi",
+  "membershipFeatureStreamTimeDesc": "Kesintisiz uzun süreli yayın",
+  "membershipFeatureQualityName": "Yayın Kalitesi",
+  "membershipFeatureQualityDesc": "HD yayın ve düşük gecikme",
+  "membershipFeatureRevenueName": "Gelir Payı",
+  "membershipFeatureRevenueDesc": "%95 — Standart: %70",
+  "membershipFeatureBadgeName": "Keşif Önceliği",
+  "membershipFeatureBadgeDesc": "PRO rozeti ve keşif avantajı",
+  "membershipFeatureNotifName": "Takipçi Bildirimi",
+  "membershipFeatureNotifDesc": "Yayın başladığında bildirim gönderilir",
+  "membershipFeatureSupportName": "Öncelikli Destek",
+  "membershipFeatureSupportDesc": "7/24 öncelikli destek",
+  "membershipActiveLabel": "Aktif",
+  "membershipComingSoonLabel": "Yakında",
+  "membershipCTAButton": "Üyelikleri Gör"
 }

@@ -6831,5 +6831,26 @@
       "tier": {"type": "String"},
       "amount": {"type": "String"}
     }
-  }
+  },
+  "membershipBadgeLabel": "ЧЛЕНСТВО",
+  "membershipTitle": "Зарабатывай больше,\nплати меньше",
+  "membershipSubtitle": "Получай 95% дохода со стрима, стримь в HD, используй эксклюзивные инструменты",
+  "membershipSectionHeader": "Преимущества членства",
+  "membershipFeatureToolsName": "Инструменты teqlif",
+  "membershipFeatureToolsDesc": "Blast, Boost, AI-описание и многое другое",
+  "membershipFeatureStreamTimeName": "Длительность стрима",
+  "membershipFeatureStreamTimeDesc": "Непрерывный длительный стриминг",
+  "membershipFeatureQualityName": "Качество стрима",
+  "membershipFeatureQualityDesc": "HD-трансляция и низкая задержка",
+  "membershipFeatureRevenueName": "Доля дохода",
+  "membershipFeatureRevenueDesc": "95% — Стандарт: 70%",
+  "membershipFeatureBadgeName": "Приоритет в поиске",
+  "membershipFeatureBadgeDesc": "PRO-значок и преимущество в рекомендациях",
+  "membershipFeatureNotifName": "Уведомления подписчиков",
+  "membershipFeatureNotifDesc": "Уведомление при начале стрима",
+  "membershipFeatureSupportName": "Приоритетная поддержка",
+  "membershipFeatureSupportDesc": "Круглосуточная приоритетная поддержка",
+  "membershipActiveLabel": "Активно",
+  "membershipComingSoonLabel": "Скоро",
+  "membershipCTAButton": "Посмотреть членства"
 }

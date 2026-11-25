@@ -6831,5 +6831,26 @@
       "tier": {"type": "String"},
       "amount": {"type": "String"}
     }
-  }
+  },
+  "membershipBadgeLabel": "العضوية",
+  "membershipTitle": "اكسب أكثر،\nادفع أقل",
+  "membershipSubtitle": "احصل على 95% من إيرادات البث، بث بجودة عالية، استخدم أدوات حصرية",
+  "membershipSectionHeader": "مزايا العضوية",
+  "membershipFeatureToolsName": "أدوات teqlif",
+  "membershipFeatureToolsDesc": "Blast وBoost والوصف بالذكاء الاصطناعي والمزيد",
+  "membershipFeatureStreamTimeName": "مدة البث",
+  "membershipFeatureStreamTimeDesc": "بث مستمر وطويل الأمد",
+  "membershipFeatureQualityName": "جودة البث",
+  "membershipFeatureQualityDesc": "بث بجودة HD وزمن استجابة منخفض",
+  "membershipFeatureRevenueName": "حصة الإيرادات",
+  "membershipFeatureRevenueDesc": "95% — القياسي: 70%",
+  "membershipFeatureBadgeName": "أولوية الاكتشاف",
+  "membershipFeatureBadgeDesc": "شارة PRO وميزة الاكتشاف",
+  "membershipFeatureNotifName": "إشعارات المتابعين",
+  "membershipFeatureNotifDesc": "إرسال إشعار عند بدء البث",
+  "membershipFeatureSupportName": "الدعم المميز",
+  "membershipFeatureSupportDesc": "دعم عملاء مميز على مدار الساعة",
+  "membershipActiveLabel": "نشط",
+  "membershipComingSoonLabel": "قريباً",
+  "membershipCTAButton": "عرض العضويات"
 }
