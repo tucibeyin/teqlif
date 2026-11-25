@@ -6840,6 +6840,8 @@
   "tierPremiumPlusDesc": "100% gift share · Unlimited streaming · 1080p",
 
   "subStreamHoursTitle": "Stream Duration",
+  "subStreamHoursInfoTitle": "What is Stream Duration?",
+  "subStreamHoursInfoDesc": "Shows your total available live streaming time for the month. The limit is determined by your membership plan and resets at the beginning of each month.",
   "subStreamHoursUnlimited": "Unlimited streaming",
   "subStreamHourAbbr": "Hr",
   "subStreamMinAbbr": "Min",

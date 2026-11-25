@@ -926,9 +926,24 @@ class _StreamHoursRow extends ConsumerWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      loc.tOr('subStreamHoursTitle', 'Yayın Süresi'),
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary(context)),
+                    InkWell(
+                      onTap: () => _showCreditInfoSheet(
+                        context, loc,
+                        loc.tOr('subStreamHoursInfoTitle', 'Yayın Süresi'),
+                        loc.tOr('subStreamHoursInfoDesc', 'Aylık yayın süreniz tier\'ınıza göre belirlenir. Her ay yenilenir.'),
+                      ),
+                      borderRadius: BorderRadius.circular(4),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            loc.tOr('subStreamHoursTitle', 'Yayın Süresi'),
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary(context)),
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(Icons.info_outline, size: 14, color: AppColors.textSecondary(context)),
+                        ],
+                      ),
                     ),
                     if (isLoading)
                       const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
@@ -1058,6 +1073,38 @@ String _fmtStreamTime(int minutes, TranslationPack loc) {
   return '$h $hA : $m $mA';
 }
 
+void _showCreditInfoSheet(BuildContext context, TranslationPack loc, String title, String desc) {
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: AppColors.bg(context),
+    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+    builder: (_) => SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary(context))),
+            const SizedBox(height: 12),
+            Text(desc, style: TextStyle(fontSize: 14, color: AppColors.textSecondary(context), height: 1.5)),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: TeqButton(
+                onPressed: () => Navigator.pop(context),
+                text: loc.t('subHubGotIt'),
+                customColor: const Color(0xFF6366F1),
+                isExpanded: true,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
 class _CreditsSummaryCard extends ConsumerWidget {
   final Map<String, dynamic>? blastCredits;
   final Map<String, dynamic>? boostCredits;
@@ -1076,38 +1123,6 @@ class _CreditsSummaryCard extends ConsumerWidget {
     this.monthlyStreamMinutesUsed = 0,
     required this.isLoading,
   });
-
-  void _showInfoSheet(BuildContext context, TranslationPack loc, String title, String desc) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.bg(context),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary(context))),
-              const SizedBox(height: 12),
-              Text(desc, style: TextStyle(fontSize: 14, color: AppColors.textSecondary(context), height: 1.5)),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: TeqButton(
-                  onPressed: () => Navigator.pop(context),
-                  text: loc.t('subHubGotIt'),
-                  customColor: const Color(0xFF6366F1),
-                  isExpanded: true,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1204,7 +1219,7 @@ class _CreditsSummaryCard extends ConsumerWidget {
                 AbsorbPointer(
                   absorbing: isLoading,
                   child: InkWell(
-                    onTap: () => _showInfoSheet(context, loc, item.titleBuilder(loc), item.descBuilder(loc)),
+                    onTap: () => _showCreditInfoSheet(context, loc, item.titleBuilder(loc), item.descBuilder(loc)),
                     child: Padding(
                       padding: const EdgeInsets.all(16.0),
                     child: Row(

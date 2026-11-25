@@ -6768,6 +6768,8 @@
   "tierPremiumPlusDesc": "100% حصة هدايا · بث غير محدود · 1080p",
 
   "subStreamHoursTitle": "مدة البث",
+  "subStreamHoursInfoTitle": "ما هي مدة البث؟",
+  "subStreamHoursInfoDesc": "يعرض إجمالي وقت البث المباشر المتاح لك هذا الشهر. يتحدد الحد الأقصى وفقًا لخطة اشتراكك ويتجدد في بداية كل شهر.",
   "subStreamHoursUnlimited": "بث غير محدود",
   "subStreamHourAbbr": "س",
   "subStreamMinAbbr": "د",

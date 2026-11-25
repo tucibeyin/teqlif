@@ -6768,6 +6768,8 @@
   "tierPremiumPlusDesc": "100% доля подарков · Безлимитный стрим · 1080p",
 
   "subStreamHoursTitle": "Длительность трансляции",
+  "subStreamHoursInfoTitle": "Что такое длительность трансляции?",
+  "subStreamHoursInfoDesc": "Показывает общее доступное время прямых эфиров на месяц. Лимит определяется вашим планом подписки и обновляется в начале каждого месяца.",
   "subStreamHoursUnlimited": "Безлимитный стрим",
   "subStreamHourAbbr": "ч",
   "subStreamMinAbbr": "мин",

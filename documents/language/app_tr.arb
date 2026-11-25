@@ -6769,6 +6769,8 @@
   "tierPremiumPlusDesc": "%100 hediye payı · Sınırsız yayın · 1080p",
 
   "subStreamHoursTitle": "Yayın Süresi",
+  "subStreamHoursInfoTitle": "Yayın Süresi Nedir?",
+  "subStreamHoursInfoDesc": "Her ay kullanabileceğiniz toplam canlı yayın sürenizi gösterir. Süre, üyelik planınıza göre belirlenir ve her ay başında yenilenir.",
   "subStreamHoursUnlimited": "Sınırsız yayın",
   "subStreamHourAbbr": "Saat",
   "subStreamMinAbbr": "Dk",

@@ -6840,6 +6840,8 @@
   "tierPremiumPlusDesc": "100% Geschenkanteil · Unbegrenzt streamen · 1080p",
 
   "subStreamHoursTitle": "Stream-Dauer",
+  "subStreamHoursInfoTitle": "Was ist die Stream-Dauer?",
+  "subStreamHoursInfoDesc": "Zeigt deine verfügbare Live-Streaming-Zeit für den Monat. Das Limit richtet sich nach deinem Mitgliedschaftsplan und wird jeden Monat zurückgesetzt.",
   "subStreamHoursUnlimited": "Unbegrenztes Streaming",
   "subStreamHourAbbr": "Std",
   "subStreamMinAbbr": "Min",
