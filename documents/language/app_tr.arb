@@ -1241,7 +1241,7 @@
   "subWelcomeBackDesc": "Önceki üyeliğiniz: {tier}",
   "notifExpiryTitle": "Üyeliğiniz bitiyor!",
   "notifExpiryBody": "Üyeliğiniz 3 gün içinde sona eriyor. Kesmeden devam edin.",
-  "subUnlockTitle": "PRO araçları kilidi aç",
+  "subUnlockTitle": "Üyelik araçlarının kilidini aç",
   "subUnlockDesc": "Tahminle değil, verilerle sat",
   "subUnlockBtn": "Üyeliğini Yükselt",
   "subUpgradeSheetDesc": "Bu aracı kullanmak için üyelik seçmeniz gerekiyor.",

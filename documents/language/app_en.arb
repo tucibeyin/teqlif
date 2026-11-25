@@ -1240,7 +1240,7 @@
   "subWelcomeBackDesc": "Previous subscription: {tier}",
   "notifExpiryTitle": "Subscription expiring!",
   "notifExpiryBody": "Your subscription expires in 3 days. Keep it going.",
-  "subUnlockTitle": "Unlock PRO Tools",
+  "subUnlockTitle": "Unlock Membership Tools",
   "subUnlockDesc": "Sell with data, not guesswork",
   "subUnlockBtn": "Upgrade Membership",
   "subUpgradeSheetDesc": "You need a membership to use this tool.",

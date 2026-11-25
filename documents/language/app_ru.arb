@@ -2584,7 +2584,7 @@
   "subWelcomeBackDesc": "Предыдущая подписка: {tier}",
   "notifExpiryTitle": "Подписка истекает!",
   "notifExpiryBody": "Ваша подписка истекает через 3 дня. Продолжайте.",
-  "subUnlockTitle": "Разблокировать PRO",
+  "subUnlockTitle": "Разблокировать инструменты",
   "subUnlockDesc": "Продавайте, используя данные, а не догадки",
   "subUnlockBtn": "Улучшить подписку",
   "subUpgradeSheetDesc": "Для использования этого инструмента необходима подписка.",

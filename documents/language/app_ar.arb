@@ -1243,7 +1243,7 @@
   "subWelcomeBackDesc": "الاشتراك السابق: {tier}",
   "notifExpiryTitle": "اشتراكك على وشك الانتهاء!",
   "notifExpiryBody": "اشتراكك ينتهي خلال 3 أيام. استمر معنا.",
-  "subUnlockTitle": "فتح أدوات PRO",
+  "subUnlockTitle": "فتح أدوات العضوية",
   "subUnlockDesc": "بِع بالبيانات، لا بالتخمين",
   "subUnlockBtn": "ترقية العضوية",
   "subUpgradeSheetDesc": "تحتاج إلى عضوية لاستخدام هذه الأداة.",
