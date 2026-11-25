@@ -4625,6 +4625,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
                 // ── Sekme 2: teqlik Al ───────────────────────────────
                 _TeqlikPacksTab(
                   isDark: isDark,
+                  loc: loc,
                 ),
 
                 // ── Sekme 3: Hareketler ──────────────────────────────
@@ -5115,30 +5116,35 @@ class _PulsingDotState extends State<_PulsingDot>
 
 class _UseCase {
   final String icon;
+  final String nameKey;
   final String name;
+  final String descKey;
   final String desc;
   final bool isActive;
-  const _UseCase(this.icon, this.name, this.desc, this.isActive);
+  const _UseCase(
+      this.icon, this.nameKey, this.name, this.descKey, this.desc, this.isActive);
 }
 
 class _TeqlikPacksTab extends StatelessWidget {
   final bool isDark;
+  final TranslationPack loc;
 
   const _TeqlikPacksTab({
     required this.isDark,
+    required this.loc,
   });
 
   static const _useCases = [
-    _UseCase('🎁', 'Canlı yayında hediye gönder',
-        'Favori yayıncına özel hediyeler at, onları destekle', true),
-    _UseCase('🚀', 'Boost — yayınını öne çıkar',
-        "Keşfet'te daha fazla kişiye ulaş, görünürlüğünü artır", true),
-    _UseCase('💥', 'Blast — toplu bildirim gönder',
-        'Özel mesajını tüm takipçilerine anında ilet', true),
-    _UseCase('🤖', 'Yapay zeka araçlarını kullan',
-        'AI destekli içerik önerileri, metin ve görsel üretimi', true),
-    _UseCase('🌟', 'Avatar ve rozet satın al',
-        'Profilini özel tasarımlarla kişiselleştir', false),
+    _UseCase('🎁', 'teqlikUseCaseGiftTitle', 'Canlı yayında hediye gönder',
+        'teqlikUseCaseGiftDesc', 'Favori yayıncına özel hediyeler at, onları destekle', true),
+    _UseCase('🚀', 'teqlikUseCaseBoostTitle', 'Boost',
+        'teqlikUseCaseBoostDesc', "Keşfet'te daha fazla kişiye ulaş, görünürlüğünü artır", true),
+    _UseCase('💥', 'teqlikUseCaseBlastTitle', 'Blast',
+        'teqlikUseCaseBlastDesc', 'İlgilenebilecek kullanıcılara anında bildirim gönder', true),
+    _UseCase('🤖', 'teqlikUseCaseAiTitle', 'Yapay zeka araçları',
+        'teqlikUseCaseAiDesc', 'AI destekli içerik önerileri ve metin üretimi', true),
+    _UseCase('🌟', 'teqlikUseCaseAvatarTitle', 'Avatar ve rozet',
+        'teqlikUseCaseAvatarDesc', 'Profilini özel tasarımlarla kişiselleştir', false),
   ];
 
   static const _ucColors = [
@@ -5275,7 +5281,7 @@ class _TeqlikPacksTab extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    uc.name,
+                                    loc.tOr(uc.nameKey, uc.name),
                                     style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w600,
@@ -5287,7 +5293,7 @@ class _TeqlikPacksTab extends StatelessWidget {
                                   ),
                                   const SizedBox(height: 1),
                                   Text(
-                                    uc.desc,
+                                    loc.tOr(uc.descKey, uc.desc),
                                     style: TextStyle(
                                       fontSize: 11,
                                       color: isDark
@@ -5310,7 +5316,9 @@ class _TeqlikPacksTab extends StatelessWidget {
                                       borderRadius: BorderRadius.circular(5),
                                     ),
                                     child: Text(
-                                      uc.isActive ? 'Aktif' : 'Yakında',
+                                      uc.isActive
+                                          ? loc.tOr('membershipActiveLabel', 'Aktif')
+                                          : loc.tOr('membershipComingSoonLabel', 'Yakında'),
                                       style: TextStyle(
                                         fontSize: 9,
                                         fontWeight: FontWeight.w700,
@@ -5460,6 +5468,7 @@ class _TeqlikPacksSheetState extends ConsumerState<_TeqlikPacksSheet> {
   @override
   Widget build(BuildContext context) {
     final vm = ref.watch(subscriptionViewModelProvider);
+    final loc = ref.watch(localizationProvider);
 
     ref.listen<PurchaseDetails?>(
       subscriptionViewModelProvider.select((s) => s.lastPurchase),
@@ -5521,7 +5530,7 @@ class _TeqlikPacksSheetState extends ConsumerState<_TeqlikPacksSheet> {
           const SizedBox(height: 20),
 
           // Kullanım alanları
-          const _TeqlikBenefits(),
+          _TeqlikBenefits(loc: loc),
           const SizedBox(height: 20),
 
           // Paket seçim listesi
@@ -5643,15 +5652,19 @@ class _TeqlikLegalLinks extends StatelessWidget {
 }
 
 class _TeqlikBenefits extends StatelessWidget {
-  const _TeqlikBenefits();
+  final TranslationPack loc;
+  const _TeqlikBenefits({required this.loc});
 
   @override
   Widget build(BuildContext context) {
-    const benefits = [
-      (Icons.card_giftcard_rounded, 'Canlı yayında hediye gönder'),
-      (Icons.rocket_launch_rounded, "İçeriklerini boost'la, keşfedil"),
-      (Icons.smart_toy_rounded, 'Yapay zeka araçlarını kullan'),
-      (Icons.bolt_rounded, 'Blast ile tüm takipçilerine ulaş'),
+    final benefits = [
+      (Icons.card_giftcard_rounded, 'teqlikBenefitGift',
+          'Canlı yayında hediye gönder'),
+      (Icons.rocket_launch_rounded, 'teqlikBenefitBoost',
+          "İlanını Boost'la, keşfedil"),
+      (Icons.smart_toy_rounded, 'teqlikBenefitAi', 'Yapay zeka araçlarını kullan'),
+      (Icons.bolt_rounded, 'teqlikBenefitBlast',
+          'Blast ile ilgili kullanıcılara ulaş'),
     ];
     return Column(
       children: benefits
@@ -5663,7 +5676,7 @@ class _TeqlikBenefits extends StatelessWidget {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        b.$2,
+                        loc.tOr(b.$2, b.$3),
                         style: const TextStyle(
                             color: Colors.white70, fontSize: 13),
                       ),
