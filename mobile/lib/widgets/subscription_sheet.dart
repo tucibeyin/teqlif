@@ -385,8 +385,7 @@ Color _tierAccent(String tier) {
 
 IconData _tierFaIcon(String tier) {
   if (UserTier.isTier3OrAbove(tier)) return FontAwesomeIcons.gem;
-  if (tier == UserTier.tier2)        return FontAwesomeIcons.crown;
-  return FontAwesomeIcons.bolt;
+  return FontAwesomeIcons.crown;
 }
 
 // ── Tier seçici (pulse animasyonlu, her zaman 3 tab) ─────────────────────────
