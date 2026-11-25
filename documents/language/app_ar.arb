@@ -220,6 +220,7 @@
   "subSave30": "وفر 30%",
   "subSave25": "وفر 25% (3 أشهر مجانية)",
   "subCreditsTitle": "الاعتمادات الشهرية المجانية",
+  "subCreditCountSuffix": "وحدة/شهر",
   "subCreditBlast": "Blast",
   "subCreditBlastDesc": "إشعار جماعي للمتابعين",
   "subCreditBoost": "Boost",

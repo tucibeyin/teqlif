@@ -1983,6 +1983,7 @@
   "subSave30": "Сэкономьте 30%",
   "subSave25": "Сэкономьте 25% (3 месяца бесплатно)",
   "subCreditsTitle": "Ежемесячные бесплатные кредиты",
+  "subCreditCountSuffix": "шт./мес.",
   "subCreditBlast": "Blast",
   "subCreditBlastDesc": "Массовое уведомление подписчикам",
   "subCreditBoost": "Boost",

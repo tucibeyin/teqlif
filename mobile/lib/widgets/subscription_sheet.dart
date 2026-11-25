@@ -547,6 +547,7 @@ class _TierBenefits extends StatelessWidget {
       (Icons.refresh_rounded,        'subCreditReactivation', 'Reaktivasyon', reaktivasyon, 'subCreditReactivationDesc', 'Süresi dolan ilanı yeniden aktifleştirme'),
     ];
 
+    final countSuffix = loc.tOr('subCreditCountSuffix', 'adet/ay');
     return Column(
       children: [
         ...benefits.map((b) => Padding(
@@ -564,59 +565,26 @@ class _TierBenefits extends StatelessWidget {
             ],
           ),
         )),
-        const SizedBox(height: 10),
-        Container(
-          padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
-          decoration: BoxDecoration(
-            color: accent.withValues(alpha: 0.07),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: accent.withValues(alpha: 0.15)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        ...credits.map((c) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
             children: [
-              Text(
-                loc.tOr('subCreditsTitle', 'Aylık Ücretsiz Krediler'),
-                style: TextStyle(color: accent, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.3),
-              ),
-              const SizedBox(height: 6),
-              ...credits.map((c) => Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: Row(
-                  children: [
-                    Icon(c.$1, color: accent.withValues(alpha: 0.7), size: 15),
-                    const SizedBox(width: 8),
-                    Text(
-                      loc.tOr(c.$2, c.$3),
-                      style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600),
-                    ),
-                    const Spacer(),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: accent.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        '${c.$4}/ay',
-                        style: TextStyle(color: accent, fontSize: 11, fontWeight: FontWeight.w700),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      flex: 2,
-                      child: Text(
-                        loc.tOr(c.$5, c.$6),
-                        style: const TextStyle(color: Colors.white38, fontSize: 10),
-                        textAlign: TextAlign.end,
-                      ),
-                    ),
-                  ],
+              Icon(c.$1, color: accent, size: 18),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  '${loc.tOr(c.$2, c.$3)}: ${loc.tOr(c.$5, c.$6)}',
+                  style: const TextStyle(color: Colors.white70, fontSize: 13),
                 ),
-              )),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '${c.$4} $countSuffix',
+                style: TextStyle(color: accent, fontSize: 12, fontWeight: FontWeight.w700),
+              ),
             ],
           ),
-        ),
+        )),
       ],
     );
   }

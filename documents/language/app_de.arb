@@ -240,6 +240,7 @@
   "subSave30": "30% sparen",
   "subSave25": "25% sparen (3 Monate gratis)",
   "subCreditsTitle": "Monatliche Gratis-Credits",
+  "subCreditCountSuffix": "pro Mo.",
   "subCreditBlast": "Blast",
   "subCreditBlastDesc": "Massenbenachrichtigung an Follower",
   "subCreditBoost": "Boost",

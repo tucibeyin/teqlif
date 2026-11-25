@@ -248,6 +248,7 @@
   "subSave30": "%30 tasarruf",
   "subSave25": "%25 tasarruf (3 ay bedava)",
   "subCreditsTitle": "Aylık Ücretsiz Krediler",
+  "subCreditCountSuffix": "adet/ay",
   "subCreditBlast": "Blast",
   "subCreditBlastDesc": "Takipçilere toplu bildirim gönderimi",
   "subCreditBoost": "Boost",
