@@ -6772,7 +6772,7 @@
   "subStreamHoursInfoTitle": "Yayın Süresi Nedir?",
   "subStreamHoursInfoDesc": "Her ay kullanabileceğiniz toplam canlı yayın sürenizi gösterir. Süre, üyelik planınıza göre belirlenir ve her ay başında yenilenir.",
   "subStreamHoursUnlimited": "Sınırsız yayın",
-  "subStreamHourAbbr": "Saat",
+  "subStreamHourAbbr": "S",
   "subStreamMinAbbr": "Dk",
   "subStreamUsedLabel": "Kullanılan",
   "subStreamRemainingLabel": "Kalan",
@@ -6797,7 +6797,7 @@
   },
 
   "tierLabelNormal": "standart",
-  "streamHoursLeft": "Bu ay {hours} saatiniz kaldı",
+  "streamHoursLeft": "Bu ay {hours} kaldı",
   "@streamHoursLeft": {
     "placeholders": {
       "hours": {"type": "int"}

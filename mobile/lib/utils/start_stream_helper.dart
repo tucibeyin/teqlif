@@ -625,12 +625,12 @@ class _StreamQualityInfoRow extends StatelessWidget {
   }
 }
 
-String _fmtStreamTime(int minutes) {
+String _fmtStreamTime(int minutes, TranslationPack loc) {
   final h = minutes ~/ 60;
   final m = minutes % 60;
-  if (h == 0) return '${m}dk';
-  if (m == 0) return '${h}s';
-  return '${h}s ${m}dk';
+  final hA = loc.tOr('subStreamHourAbbr', 'S');
+  final mA = loc.tOr('subStreamMinAbbr', 'Dk');
+  return '$h $hA : $m $mA';
 }
 
 /// Aylık yayın süresi uyarı satırı
@@ -683,7 +683,7 @@ class _StreamHoursWarningRow extends StatelessWidget {
                   : loc.tOr(
                       'streamHoursLeft',
                       'Bu ay {hours} kaldı',
-                    ).replaceAll('{hours}', _fmtStreamTime(remainingMins)),
+                    ).replaceAll('{hours}', _fmtStreamTime(remainingMins, loc)),
               style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color),
             ),
           ),

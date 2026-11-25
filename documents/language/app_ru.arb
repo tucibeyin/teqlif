@@ -6796,7 +6796,7 @@
   },
 
   "tierLabelNormal": "стандарт",
-  "streamHoursLeft": "Осталось {hours} часов в этом месяце",
+  "streamHoursLeft": "Осталось {hours} в этом месяце",
   "@streamHoursLeft": {
     "placeholders": {
       "hours": {"type": "int"}

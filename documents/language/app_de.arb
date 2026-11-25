@@ -6868,7 +6868,7 @@
   },
 
   "tierLabelNormal": "standard",
-  "streamHoursLeft": "Noch {hours} Stunden diesen Monat",
+  "streamHoursLeft": "Noch {hours} diesen Monat",
   "@streamHoursLeft": {
     "placeholders": {
       "hours": {"type": "int"}

@@ -6796,7 +6796,7 @@
   },
 
   "tierLabelNormal": "عادي",
-  "streamHoursLeft": "تبقّى {hours} ساعة هذا الشهر",
+  "streamHoursLeft": "تبقّى {hours} هذا الشهر",
   "@streamHoursLeft": {
     "placeholders": {
       "hours": {"type": "int"}

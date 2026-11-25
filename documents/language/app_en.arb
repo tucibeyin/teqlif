@@ -6868,7 +6868,7 @@
   },
 
   "tierLabelNormal": "standard",
-  "streamHoursLeft": "{hours} hours left this month",
+  "streamHoursLeft": "{hours} left this month",
   "@streamHoursLeft": {
     "placeholders": {
       "hours": {"type": "int"}
