@@ -541,7 +541,7 @@ class _TierBenefits extends StatelessWidget {
 
     // (icon, labelKey, labelFallback, count, descKey, descFallback)
     final credits = [
-      (Icons.campaign_outlined,      'subCreditBlast',        'Blast',        blast,        'subCreditBlastDesc',        'Takipçilere toplu bildirim gönderimi'),
+      (Icons.campaign_outlined,      'subCreditBlast',        'Blast',        blast,        'subCreditBlastDesc',        'İlanla ilgilenebilecek kullanıcılara toplu bildirim'),
       (Icons.rocket_launch_outlined, 'subCreditBoost',        'Boost',        boost,        'subCreditBoostDesc',        'İlan/yayın öne çıkarma'),
       (Icons.psychology_outlined,    'subCreditAi',           'AI Danışman',  ai,           'subCreditAiDesc',           'Yapay zeka ile ilan açıklaması'),
       (Icons.refresh_rounded,        'subCreditReactivation', 'Reaktivasyon', reaktivasyon, 'subCreditReactivationDesc', 'Süresi dolan ilanı yeniden aktifleştirme'),
