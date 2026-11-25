@@ -901,9 +901,13 @@ class _StreamHoursRow extends ConsumerWidget {
                 ? const Color(0xFFF59E0B)
                 : const Color(0xFF22C55E);
 
+    final remainingMins = isUnlimited ? 0 : (limitMins! - minutesUsed).clamp(0, limitMins!);
+    final percent = isUnlimited ? null : (progress * 100).round();
+
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             width: 40,
@@ -919,63 +923,65 @@ class _StreamHoursRow extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  loc.tOr('subStreamHoursTitle', 'Yayın Saati'),
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary(context)),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      loc.tOr('subStreamHoursTitle', 'Yayın Süresi'),
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary(context)),
+                    ),
+                    if (isLoading)
+                      const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
+                    else if (isUnlimited)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF7C3AED).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text('∞', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF7C3AED))),
+                      )
+                    else
+                      Text(
+                        '%$percent',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: barColor),
+                      ),
+                  ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  isUnlimited
-                      ? loc.tOr('subStreamHoursUnlimited', 'Sınırsız yayın')
-                      : loc.t('subCreditsUsedFormat', {
-                          'used': _fmtStreamTime(minutesUsed, loc),
-                          'remaining': _fmtStreamTime((limitMins! - minutesUsed).clamp(0, limitMins!), loc),
-                        }),
-                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              if (isLoading)
-                const SizedBox(
-                  width: 16, height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              else if (isUnlimited)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF7C3AED).withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: const Text('∞', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF7C3AED))),
-                )
-              else
-                Text(
-                  loc.t('subCreditsLimitFormat', {
-                    'remaining': _fmtStreamTime((limitMins! - minutesUsed).clamp(0, limitMins!), loc),
-                    'limit': _fmtStreamTime(limitMins!, loc),
-                  }),
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: barColor),
-                ),
-              const SizedBox(height: 4),
-              SizedBox(
-                width: 60,
-                height: 4,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(2),
+                const SizedBox(height: 6),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(3),
                   child: LinearProgressIndicator(
+                    minHeight: 5,
                     value: isLoading ? null : (isUnlimited ? 1.0 : progress),
                     backgroundColor: AppColors.border(context),
                     valueColor: AlwaysStoppedAnimation<Color>(barColor),
                   ),
                 ),
-              ),
-            ],
+                if (!isUnlimited) ...[
+                  const SizedBox(height: 6),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '${loc.tOr('subStreamUsedLabel', 'Kullanılan')}: ${_fmtStreamTime(minutesUsed, loc)}',
+                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
+                      ),
+                      Text(
+                        '${loc.tOr('subStreamRemainingLabel', 'Kalan')}: ${_fmtStreamTime(remainingMins, loc)}',
+                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
+                      ),
+                    ],
+                  ),
+                ] else ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    loc.tOr('subStreamHoursUnlimited', 'Sınırsız yayın'),
+                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
+                  ),
+                ],
+              ],
+            ),
           ),
         ],
       ),

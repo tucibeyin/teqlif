@@ -6771,6 +6771,8 @@
   "subStreamHoursUnlimited": "بث غير محدود",
   "subStreamHourAbbr": "س",
   "subStreamMinAbbr": "د",
+  "subStreamUsedLabel": "المستخدم",
+  "subStreamRemainingLabel": "المتبقي",
   "liveStreamQualityLabel": "جودة البث",
   "streamMonthlyLimitReached": "وصلت إلى الحد الشهري للبث.",
   "streamMonthlyLimitDesc": "انتهت ساعات البث الشهرية لخطتك. تُجدَّد في الدورة التالية أو قم بترقية خطتك.",

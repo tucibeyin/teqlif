@@ -6770,8 +6770,10 @@
 
   "subStreamHoursTitle": "Yayın Süresi",
   "subStreamHoursUnlimited": "Sınırsız yayın",
-  "subStreamHourAbbr": "S",
+  "subStreamHourAbbr": "Saat",
   "subStreamMinAbbr": "Dk",
+  "subStreamUsedLabel": "Kullanılan",
+  "subStreamRemainingLabel": "Kalan",
   "liveStreamQualityLabel": "Yayın Kalitesi",
   "streamMonthlyLimitReached": "Aylık yayın süre limitine ulaştınız.",
   "streamMonthlyLimitDesc": "Mevcut planınızın aylık yayın hakkı doldu. Yeni dönemde otomatik sıfırlanır ya da planınızı yükseltebilirsiniz.",

@@ -6843,6 +6843,8 @@
   "subStreamHoursUnlimited": "Unbegrenztes Streaming",
   "subStreamHourAbbr": "Std",
   "subStreamMinAbbr": "Min",
+  "subStreamUsedLabel": "Verwendet",
+  "subStreamRemainingLabel": "Verbleibend",
   "liveStreamQualityLabel": "Stream-Qualität",
   "streamMonthlyLimitReached": "Monatliches Streaming-Limit erreicht.",
   "streamMonthlyLimitDesc": "Die monatlichen Streaming-Stunden Ihres Tarifs sind aufgebraucht. Zurückgesetzt im nächsten Abrechnungszeitraum oder Tarif upgraden.",

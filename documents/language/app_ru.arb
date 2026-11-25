@@ -6771,6 +6771,8 @@
   "subStreamHoursUnlimited": "Безлимитный стрим",
   "subStreamHourAbbr": "ч",
   "subStreamMinAbbr": "мин",
+  "subStreamUsedLabel": "Использовано",
+  "subStreamRemainingLabel": "Осталось",
   "liveStreamQualityLabel": "Качество трансляции",
   "streamMonthlyLimitReached": "Достигнут месячный лимит трансляций.",
   "streamMonthlyLimitDesc": "Исчерпан лимит часов трансляций по вашему тарифу. Обнуляется в следующем периоде или обновите тариф.",
