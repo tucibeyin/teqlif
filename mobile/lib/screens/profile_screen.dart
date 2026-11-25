@@ -5803,7 +5803,7 @@ class _ProTab extends ConsumerWidget {
 
   static const _membershipFeatures = [
     (Icons.build_rounded,         'membershipFeatureToolsName',      'teqlif Araçları',
-                                   'membershipFeatureToolsDesc',      'Blast, Boost, AI açıklama ve daha fazlası', true),
+                                   'membershipFeatureToolsDesc',      'Satış, piyasa ve kitle analiz araçları', true),
     (Icons.access_time_rounded,   'membershipFeatureStreamTimeName', 'Yayın Süresi',
                                    'membershipFeatureStreamTimeDesc', 'Kesintisiz uzun süreli yayın', true),
     (Icons.hd_rounded,            'membershipFeatureQualityName',    'Yayın Kalitesi',
