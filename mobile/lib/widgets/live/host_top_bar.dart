@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
+import '../../config/app_colors.dart';
 import '../../services/localization_service.dart';
 
 /// Canlı yayın host ekranı — üst bilgi çubuğu.
@@ -15,6 +16,7 @@ class HostTopBar extends ConsumerWidget {
   final bool micEnabled;
   final bool cameraEnabled;
   final ConnectionQuality? connectionQuality;
+  final String quality;
   final VoidCallback onViewersTap;
   final VoidCallback onToggleMic;
   final VoidCallback onToggleCamera;
@@ -29,6 +31,7 @@ class HostTopBar extends ConsumerWidget {
     required this.micEnabled,
     required this.cameraEnabled,
     this.connectionQuality,
+    this.quality = '540p',
     required this.onViewersTap,
     required this.onToggleMic,
     required this.onToggleCamera,
@@ -78,6 +81,15 @@ class HostTopBar extends ConsumerWidget {
                 ),
               ),
               const SizedBox(width: 6),
+
+              // Yayın kalitesi rozeti — sadece HD ve üstü tier'larda
+              if (quality == '1080p') ...[
+                _QualityBadge(isFhd: true),
+                const SizedBox(width: 6),
+              ] else if (quality == '720p') ...[
+                _QualityBadge(isFhd: false),
+                const SizedBox(width: 6),
+              ],
 
               // Bağlantı kalitesi göstergesi
               if (connectionQuality != null)
@@ -326,6 +338,44 @@ class _SignalIcon extends StatelessWidget {
     };
     return Icon(icon, color: color, size: 16,
         shadows: const [Shadow(blurRadius: 4, color: Colors.black54)]);
+  }
+}
+
+// ── Yayın kalitesi rozeti ─────────────────────────────────────────────────────
+
+/// HD (720p) → altın sarısı  |  Full HD (1080p) → teqlif cyan
+/// Sadece yayıncı görür; izleyici ekranında kullanılmaz.
+class _QualityBadge extends StatelessWidget {
+  final bool isFhd;
+  const _QualityBadge({required this.isFhd});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isFhd ? kPrimary : const Color(0xFFF59E0B);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.85),
+        borderRadius: BorderRadius.circular(5),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (isFhd)
+            const Text(
+              'F',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 9,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0,
+              ),
+            ),
+          Icon(Icons.hd, size: 15, color: Colors.white,
+              shadows: const [Shadow(blurRadius: 3, color: Colors.black45)]),
+        ],
+      ),
+    );
   }
 }
 

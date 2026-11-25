@@ -839,6 +839,7 @@ class _HostStreamScreenState extends ConsumerState<HostStreamScreen>
                   micEnabled: vm.micEnabled,
                   cameraEnabled: vm.cameraEnabled,
                   connectionQuality: vm.connectionQuality,
+                  quality: widget.quality,
                   onViewersTap: _showViewers,
                   onToggleMic: () => _vm.toggleMic(ref.read(localizationProvider)),
                   onToggleCamera: () => _vm.toggleCamera(ref.read(localizationProvider)),
