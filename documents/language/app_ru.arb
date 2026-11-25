@@ -6822,6 +6822,7 @@
   "liveQualityStandard": "Стандарт",
   "liveQualityHd": "HD",
   "liveQualityFullHd": "Full HD",
+  "liveQualityFullPrefix": "Full",
   "streamQualityLocked": "Для этого качества требуется {tier}",
   "@streamQualityLocked": {
     "placeholders": {

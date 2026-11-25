@@ -6894,6 +6894,7 @@
   "liveQualityStandard": "Standard",
   "liveQualityHd": "HD",
   "liveQualityFullHd": "Full HD",
+  "liveQualityFullPrefix": "Full",
   "streamQualityLocked": "{tier} required for this quality",
   "@streamQualityLocked": {
     "placeholders": {

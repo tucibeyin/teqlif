@@ -6822,6 +6822,7 @@
   "liveQualityStandard": "قياسي",
   "liveQualityHd": "HD",
   "liveQualityFullHd": "Full HD",
+  "liveQualityFullPrefix": "Full",
   "streamQualityLocked": "يتطلب {tier} لهذه الجودة",
   "@streamQualityLocked": {
     "placeholders": {

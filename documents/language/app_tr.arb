@@ -6823,6 +6823,7 @@
   "liveQualityStandard": "Standart",
   "liveQualityHd": "HD",
   "liveQualityFullHd": "Full HD",
+  "liveQualityFullPrefix": "Full",
   "streamQualityLocked": "Bu kalite için {tier} gerekli",
   "@streamQualityLocked": {
     "placeholders": {
