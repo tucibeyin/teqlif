@@ -237,6 +237,8 @@
 
   "walletTxnProAnnual": "Yıllık PRO Aboneliği",
   "walletTxnProSubscription": "PRO Aboneliği",
+  "walletTxnSubMonthly": "Aylık Üyelik Ücreti",
+  "walletTxnSubAnnual": "Yıllık Üyelik Ücreti",
   "subSheetTitle": "Üyelik Seç",
   "subSheetSubtitle": "%95 hediye payı, özel analizler ve daha fazlası",
   "subMonthly": "Aylık",

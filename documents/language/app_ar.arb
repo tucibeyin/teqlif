@@ -209,6 +209,8 @@
 
   "walletTxnProAnnual": "اشتراك PRO السنوي",
   "walletTxnProSubscription": "اشتراك PRO",
+  "walletTxnSubMonthly": "رسوم الاشتراك الشهري",
+  "walletTxnSubAnnual": "رسوم الاشتراك السنوي",
   "subSheetTitle": "اختر خطة",
   "subSheetSubtitle": "95% من الهدايا، تحليلات حصرية والمزيد",
   "subMonthly": "شهري",

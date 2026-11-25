@@ -4015,7 +4015,9 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
     'iap_purchase': loc.t('walletTxnIapPurchase'),
     'pro_subscription_monthly': loc.t('walletTxnProMonthly'),
     'pro_subscription_annual':  loc.t('walletTxnProAnnual'),
-    'pro_subscription':           loc.t('walletTxnProSubscription'),
+    'pro_subscription':         loc.t('walletTxnProSubscription'),
+    'subscription_monthly': '${TierBadge.tierLabel(_userType, loc)} ${loc.tOr('walletTxnSubMonthly', 'Aylık Üyelik Ücreti')}',
+    'subscription_annual':  '${TierBadge.tierLabel(_userType, loc)} ${loc.tOr('walletTxnSubAnnual', 'Yıllık Üyelik Ücreti')}',
   };
 
   @override
@@ -6219,55 +6221,33 @@ class _ProTab extends ConsumerWidget {
                 _CreditRow(label: loc.t('subCreditsBlastName'), credits: hub.blastCredits, isDark: isDark),
                 _CreditRow(label: loc.t('subCreditsBoostName'), credits: hub.boostCredits, isDark: isDark),
                 _CreditRow(label: loc.t('subCreditsAiDescName'), credits: hub.aiDescCredits, isDark: isDark),
-                _CreditRow(label: loc.t('subCreditsReactivationName'), credits: hub.reactivationCredits, isDark: isDark, isLast: true),
+                _CreditRow(label: loc.t('subCreditsReactivationName'), credits: hub.reactivationCredits, isDark: isDark),
+                const SizedBox(height: 10),
+                Divider(height: 1, thickness: 0.5, color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE5E7EB)),
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      loc.t('walletProEarningsRateLabel'),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280),
+                      ),
+                    ),
+                    Text(
+                      '%${UserTier.commissionPercent(userType)}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF10B981),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
-
-        // ── Finansal Ayrıcalık Kartı ─────────────────────────────────────
-        const SizedBox(height: 12),
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: const Color(0xFF10B981).withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.2)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.percent_rounded, color: Color(0xFF10B981), size: 18),
-                  const SizedBox(width: 6),
-                  Text(
-                    loc.t('walletProFinancialTitle'),
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF10B981),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              _PrivilegeRow(
-                label: loc.t('walletProEarningsRateLabel'),
-                value: '%${UserTier.commissionPercent(userType)}',
-                subtext: 'Standart: %${UserTier.commissionPercent(UserTier.standard)}',
-                isDark: isDark,
-              ),
-              const SizedBox(height: 6),
-              _PrivilegeRow(
-                label: loc.t('walletProCommissionLabel'),
-                value: '%${100 - UserTier.commissionPercent(userType)}',
-                subtext: loc.t('walletProCommissionNote'),
-                isDark: isDark,
-              ),
-            ],
-          ),
-        ),
       ],
     );
   }

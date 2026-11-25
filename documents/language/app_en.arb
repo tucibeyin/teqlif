@@ -229,6 +229,8 @@
 
   "walletTxnProAnnual": "Annual PRO Subscription",
   "walletTxnProSubscription": "PRO Subscription",
+  "walletTxnSubMonthly": "Monthly Membership Fee",
+  "walletTxnSubAnnual": "Annual Membership Fee",
   "subSheetTitle": "Choose Plan",
   "subSheetSubtitle": "95% gift share, exclusive analytics and more",
   "subMonthly": "Monthly",

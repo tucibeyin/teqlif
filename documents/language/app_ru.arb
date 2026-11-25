@@ -1972,6 +1972,8 @@
 
   "walletTxnProAnnual": "Годовая подписка PRO",
   "walletTxnProSubscription": "Подписка PRO",
+  "walletTxnSubMonthly": "Ежемесячный членский взнос",
+  "walletTxnSubAnnual": "Годовой членский взнос",
   "subSheetTitle": "Выбрать план",
   "subSheetSubtitle": "95% от подарков, эксклюзивная аналитика и многое другое",
   "subMonthly": "Ежемесячно",

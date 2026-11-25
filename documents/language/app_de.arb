@@ -229,6 +229,8 @@
 
   "walletTxnProAnnual": "Jährliches PRO-Abo",
   "walletTxnProSubscription": "PRO-Abonnement",
+  "walletTxnSubMonthly": "Monatlicher Mitgliedsbeitrag",
+  "walletTxnSubAnnual": "Jährlicher Mitgliedsbeitrag",
   "subSheetTitle": "Plan wählen",
   "subSheetSubtitle": "95% Geschenkanteil, exklusive Analysen und mehr",
   "subMonthly": "Monatlich",
