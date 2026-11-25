@@ -6769,7 +6769,6 @@
 
   "subStreamHoursTitle": "Длительность трансляции",
   "subStreamHoursUnlimited": "Безлимитный стрим",
-  "subStreamHoursUsed": "{used} / {limit} использовано",
   "subStreamHourAbbr": "ч",
   "subStreamMinAbbr": "мин",
   "liveStreamQualityLabel": "Качество трансляции",

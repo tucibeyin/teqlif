@@ -927,9 +927,10 @@ class _StreamHoursRow extends ConsumerWidget {
                 Text(
                   isUnlimited
                       ? loc.tOr('subStreamHoursUnlimited', 'Sınırsız yayın')
-                      : loc.tOr('subStreamHoursUsed', '{used} / {limit} kullanıldı')
-                          .replaceAll('{used}', _fmtStreamTime(minutesUsed, loc))
-                          .replaceAll('{limit}', _fmtStreamTime(limitMins ?? 0, loc)),
+                      : loc.t('subCreditsUsedFormat', {
+                          'used': _fmtStreamTime(minutesUsed, loc),
+                          'remaining': _fmtStreamTime((limitMins! - minutesUsed).clamp(0, limitMins!), loc),
+                        }),
                   style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
                 ),
               ],
@@ -955,7 +956,10 @@ class _StreamHoursRow extends ConsumerWidget {
                 )
               else
                 Text(
-                  '${_fmtStreamTime(minutesUsed, loc)} / ${_fmtStreamTime(limitMins ?? 0, loc)}',
+                  loc.t('subCreditsLimitFormat', {
+                    'remaining': _fmtStreamTime((limitMins! - minutesUsed).clamp(0, limitMins!), loc),
+                    'limit': _fmtStreamTime(limitMins!, loc),
+                  }),
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: barColor),
                 ),
               const SizedBox(height: 4),

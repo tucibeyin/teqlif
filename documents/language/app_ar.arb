@@ -6769,7 +6769,6 @@
 
   "subStreamHoursTitle": "مدة البث",
   "subStreamHoursUnlimited": "بث غير محدود",
-  "subStreamHoursUsed": "{used} / {limit} مستخدم",
   "subStreamHourAbbr": "س",
   "subStreamMinAbbr": "د",
   "liveStreamQualityLabel": "جودة البث",
