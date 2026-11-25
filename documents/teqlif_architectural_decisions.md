@@ -4,7 +4,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Kasım 2026 — §48 Subscription/Tier Model Refactor + Naming Consistency; §47 Reserved Usernames; §46 Redis Core & MinIO Yaşam Döngüsü İzolasyonu ve Edge Metrics Alarm Histerisisi; §45 node101 Offsite Felaket Kurtarma; §13 node listesi güncellendi
+**Son güncelleme:** Kasım 2026 — §48 Tier-aware plan mapping + upgrade panel + UI düzeltmeleri (496ee490–b37b6667); §47 Reserved Usernames; §46 Redis Core & MinIO Yaşam Döngüsü İzolasyonu ve Edge Metrics Alarm Histerisisi; §45 node101 Offsite Felaket Kurtarma; §13 node listesi güncellendi
 
 ---
 
@@ -3316,4 +3316,22 @@ Tüm metinler `loc.tOr(key, fallback)` ile OTA uyumlu. 21 yeni ARB key 5 dile ek
 | `mobile/lib/screens/retargeting_screen.dart` | Hardcoded `'Retargeting'` → ARB key |
 | `mobile/lib/widgets/subscription_paywall.dart` | `subUpgradeTitle` key kullanılıyor |
 | `documents/language/app_{tr,en,de,ru,ar}.arb` | 60+ key güncellendi/eklendi |
+| `mobile/lib/screens/subscription_tools_screen.dart` | Araç erişim uyarı banner'ı kaldırıldı (her araç kartı zaten gerekli tier'ı gösteriyor) |
+
+### Tier-Aware Plan Mapping Düzeltmeleri (commit `496ee490–b37b6667`)
+
+| Commit | İçerik |
+|--------|--------|
+| `496ee490` | tier4 (PREMIUM+) eksikliklerini düzelt — plan mapping, crown, data sync |
+| `061b6492` | Tier-aware subscription transaction labels + ÜYELİK tab simplification |
+| `5d1a3187` | Tier crown ikonu + purchase sonrası data sync |
+| `57864f60` | İsim satırından tier crown kaldırıldı — avatar yeterli |
+| `0b6fd8a6` | `_kDbToIapPlan` → `_planIdFor(userType, rawPlan)`: PREMIUM+ aylık için boş upgrade modal sorunu giderildi |
+| `b37b6667` | Araç erişim uyarı paneli kaldırıldı |
+
+**`_planIdFor()` pattern:** Tier ve plan_type birlikte kullanılarak doğru IAP product ID döndürülür. `_kDbToIapPlan` static map'i yalnızca PRO ürünlerini kapsıyordu; tüm tier'lar için `_planIdFor(userType, rawPlan)` kullanılmalıdır.
+
+**`isAnnual` kontrolü:** `activePlanType == 'teqlif_pro_12m'` sabit karşılaştırması yerine `activePlanType?.endsWith('12m') ?? false` kullanılmalıdır — tüm tier'lar için geçerlidir.
+
+**Upgrade panel kuralı:** tier4 (PREMIUM+) her zaman VIP gurur kartı gösterir. Diğer tier'lar için yıllık product ID tier'a göre hesaplanır (`switch (userType)` ile).
 
