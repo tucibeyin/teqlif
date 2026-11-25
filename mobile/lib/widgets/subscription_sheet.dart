@@ -521,7 +521,7 @@ class _TierBenefits extends StatelessWidget {
         (Icons.percent_rounded,             loc.tOr('pro_benefit2', '%75 gelir payı')),
         (Icons.videocam_outlined,           loc.tOr('pro_benefit3', '90 saat/ay yayın süresi')),
         (Icons.notifications_active_outlined, loc.tOr('pro_benefit4', 'Blast kredileri ve analiz araçları')),
-        (Icons.lock_outline,                loc.tOr('subBenefitToolsLocked', 'teqlif Araçları: Erişim yok')),
+        (Icons.auto_graph_outlined,         loc.tOr('subBenefitToolsPartial', 'Satış ve İlan Analizi: Dahil')),
       ],
     };
 

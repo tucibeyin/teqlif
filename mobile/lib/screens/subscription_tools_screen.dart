@@ -175,7 +175,7 @@ class _SubscriptionToolsScreenState extends ConsumerState<SubscriptionToolsScree
                 title: loc.t('subToolSalesTitle'),
                 description: loc.t('subToolSalesDesc'),
                 userType: state.userType,
-                requiredTier: UserTier.tier2,
+                requiredTier: UserTier.tier1,
                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SubInsightsScreen(userType: state.userType))),
               ),
               const SizedBox(height: 10),
@@ -185,7 +185,7 @@ class _SubscriptionToolsScreenState extends ConsumerState<SubscriptionToolsScree
                 title: loc.t('subToolListingsTitle'),
                 description: loc.t('subToolListingsDesc'),
                 userType: state.userType,
-                requiredTier: UserTier.tier2,
+                requiredTier: UserTier.tier1,
                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ListingAnalyticsScreen(userType: state.userType))),
               ),
               const SizedBox(height: 10),
@@ -584,7 +584,7 @@ class _UpgradeBanner extends ConsumerWidget {
                     Text(
                       lastTier != null && lastTier != UserTier.standard
                           ? loc.tOr('subWelcomeBack', 'Tekrar hoş geldiniz!')
-                          : loc.t('subUnlockTitle'),
+                          : loc.tOr('subUnlockTitle', 'teqlif Araçlarının kilidini aç'),
                       style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Colors.white),
                     ),
                     const SizedBox(height: 3),
@@ -928,8 +928,8 @@ class _StreamHoursRow extends ConsumerWidget {
                   isUnlimited
                       ? loc.tOr('subStreamHoursUnlimited', 'Sınırsız yayın')
                       : loc.tOr('subStreamHoursUsed', '{used} / {limit} kullanıldı')
-                          .replaceAll('{used}', _fmtStreamTime(minutesUsed))
-                          .replaceAll('{limit}', _fmtStreamTime(limitMins ?? 0)),
+                          .replaceAll('{used}', _fmtStreamTime(minutesUsed, loc))
+                          .replaceAll('{limit}', _fmtStreamTime(limitMins ?? 0, loc)),
                   style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
                 ),
               ],
@@ -955,7 +955,7 @@ class _StreamHoursRow extends ConsumerWidget {
                 )
               else
                 Text(
-                  '${_fmtStreamTime(minutesUsed)} / ${_fmtStreamTime(limitMins ?? 0)}',
+                  '${_fmtStreamTime(minutesUsed, loc)} / ${_fmtStreamTime(limitMins ?? 0, loc)}',
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: barColor),
                 ),
               const SizedBox(height: 4),
@@ -1040,12 +1040,14 @@ class _CommissionRow extends StatelessWidget {
 
 int? _streamLimitMinutesFor(String userType) => UserTier.streamLimitMinutes(userType);
 
-String _fmtStreamTime(int minutes) {
+String _fmtStreamTime(int minutes, TranslationPack loc) {
   final h = minutes ~/ 60;
   final m = minutes % 60;
-  if (h == 0) return '${m}dk';
-  if (m == 0) return '${h}s';
-  return '${h}s ${m}dk';
+  final hA = loc.tOr('subStreamHourAbbr', 's');
+  final mA = loc.tOr('subStreamMinAbbr', 'dk');
+  if (h == 0) return '$m$mA';
+  if (m == 0) return '$h$hA';
+  return '$h$hA $m$mA';
 }
 
 class _CreditsSummaryCard extends ConsumerWidget {

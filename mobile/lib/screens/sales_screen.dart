@@ -16,6 +16,7 @@ import '../../config/theme.dart';
 import 'package:teqlif/core/network/api_client.dart';
 import '../../ui_library/components/cards/teq_card.dart';
 import 'sale_detail_screen.dart';
+import 'direct_sale_detail_screen.dart';
 
 class SalesScreen extends ConsumerStatefulWidget {
   const SalesScreen({super.key});
@@ -335,6 +336,10 @@ class _DirectSaleCard extends ConsumerWidget {
       color: AppColors.card(context),
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => DirectSaleDetailScreen(saleId: saleId)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

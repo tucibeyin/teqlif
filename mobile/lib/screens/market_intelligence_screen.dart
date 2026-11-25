@@ -367,7 +367,7 @@ class _MarketIntelligenceScreenState extends ConsumerState<MarketIntelligenceScr
                       child: const Icon(Icons.insights_outlined, color: Colors.white, size: 32),
                     ),
                     const SizedBox(height: 20),
-                    Text(loc.t("proUpgradeTitle"),
+                    Text(loc.t("subUpgradeTitle"),
                         style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800,
                             color: AppColors.textPrimary(context))),
                     const SizedBox(height: 10),

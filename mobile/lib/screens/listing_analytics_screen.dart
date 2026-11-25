@@ -468,7 +468,7 @@ class _ListingAnalyticsScreenState extends ConsumerState<ListingAnalyticsScreen>
                     ),
                     const SizedBox(height: 20),
                     Text(
-                      loc.t("proUpgradeTitle"),
+                      loc.t("subUpgradeTitle"),
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w800,
