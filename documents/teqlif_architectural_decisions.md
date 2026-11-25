@@ -4,7 +4,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Kasım 2026 — §47 Reserved Usernames; §46 Redis Core & MinIO Yaşam Döngüsü İzolasyonu ve Edge Metrics Alarm Histerisisi; §45 node101 Offsite Felaket Kurtarma; §13 node listesi güncellendi
+**Son güncelleme:** Kasım 2026 — §48 Subscription/Tier Model Refactor + Naming Consistency; §47 Reserved Usernames; §46 Redis Core & MinIO Yaşam Döngüsü İzolasyonu ve Edge Metrics Alarm Histerisisi; §45 node101 Offsite Felaket Kurtarma; §13 node listesi güncellendi
 
 ---
 
@@ -40,6 +40,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 45. [Offsite Felaket Kurtarma: node101](#45--offsite-felaket-kurtarma-node101-restic-rest-server)
 46. [Redis Core & MinIO Yaşam Döngüsü İzolasyonu ve Edge Metrics Alarm Histerisisi](#46--redis-core--minio-yaşam-döngüsü-i̇zolasyonu-ve-edge-metrics-alarm-histerisisi)
 47. [Reserved Usernames — Kayıtlı Kullanıcı Adı Koruması](#47-reserved-usernames--kayıtlı-kullanıcı-adı-koruması-commit-6ddfc8a0-dd33099b)
+48. [Subscription/Tier Model Refactor + Naming Consistency](#48-subscriptiontier-model-refactor--naming-consistency)
 
 ---
 
@@ -3232,4 +3233,87 @@ Kötü IP
 | `deploy/scale/V2.1/node1/resources/crowdsec/crowdsec-cloudflare-bouncer.yaml` | `zones` bloğu kaldırıldı; WAF Custom Rule adımı belgelendi |
 | `deploy/scale/V2.1/scripts/_common.sh` | `setup_crowdsec_cloudflare_bouncer()` eklendi; `--length` → `tail -1` |
 | `deploy/scale/V2.1/scripts/bootstrap_node1.sh` | CF bouncer kurulum adımı + `apply_secrets` entegrasyonu |
+
+---
+
+## 48. Subscription/Tier Model Refactor + Naming Consistency
+
+### Commits
+
+| Commit | İçerik |
+|--------|--------|
+| `78c8d629` | Apple + Google IAP verifier whitelist — tüm 8 ürün ID eklendi |
+| `b5088ba6` | quarterly/biannual legacy kodu kaldırıldı; tier model temizlendi |
+| `9bc92592` | Subscription sheet kredi satırları yeniden tasarlandı |
+| `8026c53e` | PREMIUM+ (tier4) kredi limitleri tier3'ten farklılaştırıldı |
+| `221dc9d8` | 17 eksik ARB key 5 dile eklendi |
+| `e8d3616b` | Blast açıklaması düzeltildi — takipçiler → ilgili kullanıcılar |
+| `6adbeff7` | subSave25 sadeleştirildi — %25 hesaplama yerine "3 ay bedava" |
+| `5bcdc963` | Subscription sheet subtitle kaldırıldı |
+| `92cb0bab` | ÜYELİK tab `_buildPurchase()` → `_TeqlikPacksTab` layout'una yeniden tasarlandı |
+| `9890c0e9` | teqlif Araçları açıklaması düzeltildi (Blast değil analitik araçlar) |
+| `d0c081ee` | membershipSubtitle %95 referansı kaldırıldı |
+| `13ac6c5e` | ARB naming: Reaktivasyon→Yeniden Yayınla, Blast dialog, Bildirim Merkezi |
+| `a7e12a13` | `retargeting_screen.dart` hardcoded `'Retargeting'` → ARB key |
+| `1084735e` | `profile_screen.dart` `_TeqlikPacksTab`+`_TeqlikBenefits` → ARB-OTA uyumlu |
+| `dfae0bcf` | Paywall metinlerinde PRO referansları kaldırıldı (5 dil, 11 key) |
+| `78090be3` | subUnlockTitle PRO referansı kaldırıldı — 5 dil |
+
+### Tier Modeli
+
+```
+standard  → UserTier.standard  (ücretsiz)
+tier1     → PRO         (teqlif_pro_1m / teqlif_pro_12m)
+tier2     → PRO+        (teqlif_pro_plus_1m / teqlif_pro_plus_12m)
+tier3     → PREMIUM     (teqlif_premium_1m / teqlif_premium_12m)
+tier4     → PREMIUM+    (teqlif_premium_plus_1m / teqlif_premium_plus_12m)
+```
+
+IAP ürün ID'leri: `teqlif_{pro,pro_plus,premium,premium_plus}_{1m,12m}` — toplam 8 ürün.  
+Her iki verifier (Apple + Google) `VALID_SUBSCRIPTION_IDS` / `_SUBSCRIPTION_IDS` whitelist'inde tüm 8 ID bulunmalıdır.
+
+### Kredi Limitleri (CREDIT_FREE_LIMITS — tier.py ile subscription_sheet.dart senkron olmalı)
+
+| Özellik | standard | tier1 | tier2 | tier3 | tier4 |
+|---------|----------|-------|-------|-------|-------|
+| blast | 3 | 10 | 20 | 30 | **50** |
+| boost | 0 | 3 | 6 | 10 | **15** |
+| ai_desc | 0 | 6 | 15 | 30 | **50** |
+| reactivation | 0 | 3 | 6 | 10 | **15** |
+
+### Naming Kuralları (kullanıcıya dönük)
+
+| Teknik isim | Kullanıcıya dönük Türkçe | Not |
+|-------------|--------------------------|-----|
+| Blast | **Blast** | Yayın başlatma anında toplu push bildirimi |
+| Boost | **Boost** | İlanı "Sana Özel" akışında öne çıkarma |
+| Retargeting | **Bildirim Merkezi** | İlanı görüp almayan kişilere hatırlatma |
+| Reaktivasyon | **Yeniden Yayınla** | Süresi dolmuş ilanı tekrar yayına alma |
+| PRO Feature | **Üyeliğe Özel Araç** | Paywall başlığı |
+| PRO'ya geçin | **Üyelik Seçin** | Paywall CTA ve açıklamalar |
+| PRO araçları kilidi aç | **Üyelik araçlarının kilidini aç** | subUnlockTitle |
+
+### ÜYELİK Tab (_buildPurchase) Layout
+
+`_ProTab._buildPurchase()` artık `_TeqlikPacksTab` ile aynı yapıyı kullanır:
+- Altın gradient badge → büyük başlık + alt yazı
+- Section header ("Üyelik Avantajları")
+- 7 avantaj satırı: renkli ikon kutusu (36×36) + isim + açıklama + "Aktif" badge
+- Sabit alt CTA butonu
+
+Tüm metinler `loc.tOr(key, fallback)` ile OTA uyumlu. 21 yeni ARB key 5 dile eklendi (`membership*` prefix).
+
+### Dosyalar
+
+| Dosya | Değişiklik |
+|-------|------------|
+| `backend/app/services/store/apple_verifier.py` | `VALID_SUBSCRIPTION_IDS` — tüm 8 ürün |
+| `backend/app/services/store/google_play_verifier.py` | `_SUBSCRIPTION_IDS` — tüm 8 ürün |
+| `backend/app/services/subscription/tier.py` | `CREDIT_FREE_LIMITS` tier4 değerleri güncellendi |
+| `backend/app/use_cases/wallet/queries/get_wallet_summary_query.py` | quarterly/biannual kaldırıldı |
+| `mobile/lib/widgets/subscription_sheet.dart` | Kredi satırları yeniden tasarlandı, subtitle kaldırıldı |
+| `mobile/lib/screens/profile_screen.dart` | ÜYELİK tab yeniden tasarlandı; `_TeqlikPacksTab`+`_TeqlikBenefits` ARB-OTA uyumlu |
+| `mobile/lib/screens/retargeting_screen.dart` | Hardcoded `'Retargeting'` → ARB key |
+| `mobile/lib/widgets/subscription_paywall.dart` | `subUpgradeTitle` key kullanılıyor |
+| `documents/language/app_{tr,en,de,ru,ar}.arb` | 60+ key güncellendi/eklendi |
 
