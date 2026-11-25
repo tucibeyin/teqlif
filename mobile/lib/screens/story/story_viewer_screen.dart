@@ -150,6 +150,29 @@ class _GroupPageState extends ConsumerState<_GroupPage> with TickerProviderState
   double _verticalDragOffset = 0.0;
   AnimationController? _dragResetAnim;
 
+  void _springBackToZero() {
+    if (_verticalDragOffset == 0.0) return;
+    _dragResetAnim?.stop();
+    _dragResetAnim?.dispose();
+    final startOffset = _verticalDragOffset;
+    _dragResetAnim = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 350),
+    );
+    final anim = CurvedAnimation(parent: _dragResetAnim!, curve: Curves.elasticOut);
+    anim.addListener(() {
+      if (mounted) setState(() => _verticalDragOffset = startOffset * (1.0 - anim.value));
+    });
+    _dragResetAnim!.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        if (mounted) setState(() => _verticalDragOffset = 0.0);
+        _dragResetAnim?.dispose();
+        _dragResetAnim = null;
+      }
+    });
+    _dragResetAnim!.forward();
+  }
+
   // ── Beğeni state'i ────────────────────────────────────────────────────────
   int _currentLikesCount = 0;
   bool _currentIsLiked = false;
@@ -606,39 +629,16 @@ class _GroupPageState extends ConsumerState<_GroupPage> with TickerProviderState
       onVerticalDragUpdate: (details) {
         setState(() => _verticalDragOffset += details.delta.dy);
       },
+      // PageView yatay gesture'ı kapınca onEnd değil onCancel gelir —
+      // bu durumda offset'i spring-back ile sıfırla, yoksa ekran takılır.
+      onVerticalDragCancel: _springBackToZero,
       onVerticalDragEnd: (details) {
         if (_verticalDragOffset > 150) {
-          // _advancePending olsa bile kullanıcı istekli kapatıyor — onClose
-          // tarafında _safeClose() double-pop'u önler.
           widget.onClose();
         } else if (_verticalDragOffset < -150) {
           _goToProfile(context);
         } else {
-          // Eşiği aşmadıysa parmak bırakıldığında yerine geri dönsün
-          final startOffset = _verticalDragOffset;
-          _dragResetAnim = AnimationController(
-            vsync: this,
-            duration: const Duration(milliseconds: 350),
-          );
-          final anim = CurvedAnimation(
-            parent: _dragResetAnim!,
-            curve: Curves.elasticOut, // Spring hissi
-          );
-          anim.addListener(() {
-            if (mounted) {
-              setState(() {
-                _verticalDragOffset = startOffset * (1.0 - anim.value);
-              });
-            }
-          });
-          _dragResetAnim!.addStatusListener((status) {
-            if (status == AnimationStatus.completed) {
-              if (mounted) setState(() => _verticalDragOffset = 0.0);
-              _dragResetAnim?.dispose();
-              _dragResetAnim = null;
-            }
-          });
-          _dragResetAnim!.forward();
+          _springBackToZero();
         }
       },
       child: Transform.translate(
