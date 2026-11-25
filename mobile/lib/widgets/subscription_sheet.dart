@@ -283,6 +283,7 @@ class _SubscriptionSheetState extends ConsumerState<SubscriptionSheet>
                         price: _priceFor(plan.productId, vm.products),
                         selectedTier: _selectedTier,
                         selected: _selectedPlanId == plan.productId,
+                        isCurrentPlan: plan.productId == widget.activePlanId,
                         onTap: () => setState(() => _selectedPlanId = plan.productId),
                         loc: loc,
                       )),
@@ -596,6 +597,7 @@ class _PlanCard extends StatelessWidget {
   final String price;
   final String selectedTier;
   final bool selected;
+  final bool isCurrentPlan;
   final VoidCallback onTap;
   final TranslationPack loc;
 
@@ -606,32 +608,36 @@ class _PlanCard extends StatelessWidget {
     required this.selected,
     required this.onTap,
     required this.loc,
+    this.isCurrentPlan = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final accent = _tierAccent(selectedTier);
+    const currentColor = Color(0xFF10B981);
     return GestureDetector(
-      onTap: onTap,
+      onTap: isCurrentPlan ? null : onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: selected
-              ? accent.withValues(alpha: 0.15)
-              : Colors.white.withValues(alpha: 0.05),
+          color: isCurrentPlan
+              ? currentColor.withValues(alpha: 0.08)
+              : selected
+                  ? accent.withValues(alpha: 0.15)
+                  : Colors.white.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: selected ? accent : Colors.white12,
-            width: selected ? 2 : 1,
+            color: isCurrentPlan ? currentColor.withValues(alpha: 0.4) : (selected ? accent : Colors.white12),
+            width: (isCurrentPlan || selected) ? 2 : 1,
           ),
         ),
         child: Row(
           children: [
             Icon(
-              selected ? Icons.radio_button_checked : Icons.radio_button_off,
-              color: selected ? accent : Colors.white38,
+              isCurrentPlan ? Icons.check_circle_outline : (selected ? Icons.radio_button_checked : Icons.radio_button_off),
+              color: isCurrentPlan ? currentColor : (selected ? accent : Colors.white38),
               size: 20,
             ),
             const SizedBox(width: 12),
@@ -642,12 +648,12 @@ class _PlanCard extends StatelessWidget {
                   Text(
                     loc.t(plan.labelKey),
                     style: TextStyle(
-                      color: selected ? Colors.white : Colors.white70,
-                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                      color: isCurrentPlan ? Colors.white70 : (selected ? Colors.white : Colors.white70),
+                      fontWeight: (isCurrentPlan || selected) ? FontWeight.w700 : FontWeight.w500,
                       fontSize: 14,
                     ),
                   ),
-                  if (plan.savingKey != null)
+                  if (plan.savingKey != null && !isCurrentPlan)
                     Text(
                       loc.t(plan.savingKey!),
                       style: const TextStyle(color: Color(0xFF6EE7B7), fontSize: 11),
@@ -655,7 +661,22 @@ class _PlanCard extends StatelessWidget {
                 ],
               ),
             ),
-            if (plan.badgeLabelKey != null) ...[
+            // "Sizin planınız" badge veya normal badge
+            if (isCurrentPlan) ...[
+              Container(
+                margin: const EdgeInsets.only(right: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: currentColor.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: currentColor.withValues(alpha: 0.5)),
+                ),
+                child: Text(
+                  loc.tOr('subPlanYourPlanBadge', 'Sizin planınız'),
+                  style: const TextStyle(color: currentColor, fontSize: 9, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ] else if (plan.badgeLabelKey != null) ...[
               Container(
                 margin: const EdgeInsets.only(right: 8),
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -672,7 +693,7 @@ class _PlanCard extends StatelessWidget {
             Text(
               price,
               style: TextStyle(
-                color: selected ? accent : Colors.white54,
+                color: isCurrentPlan ? Colors.white38 : (selected ? accent : Colors.white54),
                 fontWeight: FontWeight.w700,
                 fontSize: 15,
               ),
