@@ -3960,11 +3960,17 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
   List<dynamic> _txns = [];
   bool _loading = false;
 
-  // DB plan_type → IAP product ID dönüşümü (currentTierIndex hesabı için gerekli)
-  static const _kDbToIapPlan = {
-    'monthly': 'teqlif_pro_1m',
-    'annual':  'teqlif_pro_12m',
-  };
+  // DB plan_type + tier → IAP product ID
+  static String? _planIdFor(String userType, String? rawPlan) {
+    if (rawPlan == null) return null;
+    const m = {
+      UserTier.tier1: {'monthly': 'teqlif_pro_1m',          'annual': 'teqlif_pro_12m'},
+      UserTier.tier2: {'monthly': 'teqlif_pro_plus_1m',     'annual': 'teqlif_pro_plus_12m'},
+      UserTier.tier3: {'monthly': 'teqlif_premium_1m',      'annual': 'teqlif_premium_12m'},
+      UserTier.tier4: {'monthly': 'teqlif_premium_plus_1m', 'annual': 'teqlif_premium_plus_12m'},
+    };
+    return m[userType]?[rawPlan] ?? rawPlan;
+  }
 
   // Kart 1 — tier durumu
   late String _userType;
@@ -4064,7 +4070,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
         _userType = summaryData['user_type'] as String? ?? _userType;
         _proExpiresAt   = summaryData['sub_expires_at'] as String?;
         final rawPlan   = summaryData['plan_type'] as String?;
-        _activePlanType = _kDbToIapPlan[rawPlan] ?? rawPlan;
+        _activePlanType = _planIdFor(_userType, rawPlan);
         _teqlikLocked   = summaryData['teqlik_locked'] as int? ?? 0;
         _emailVerified  = summaryData['email_verified'] as bool? ?? false;
         _phoneVerified  = summaryData['phone_verified'] as bool? ?? false;
@@ -4151,7 +4157,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
         final newPlan = sync['plan_type'] as String?;
         final newExpires = sync['expires_at'] as String?;
         setState(() {
-          if (newPlan != null) _activePlanType = _kDbToIapPlan[newPlan] ?? newPlan;
+          if (newPlan != null) _activePlanType = _planIdFor(_userType, newPlan);
           if (newExpires != null) _proExpiresAt = newExpires;
           _needsRestore = false;
         });
@@ -5802,12 +5808,6 @@ class _ProTab extends ConsumerWidget {
     required this.loc,
   });
 
-  // Yükseltme seçenekleri: (productId, ARB labelKey, tasarruf%, tierIndex)
-  static const _upgradePlans = [
-    ('teqlif_pro_1m',  'subMonthlyFull',  0,  0),
-    ('teqlif_pro_12m', 'subAnnualFull',   25, 1),
-  ];
-
   static const _membershipFeatures = [
     (Icons.build_rounded,         'membershipFeatureToolsName',      'teqlif Araçları',
                                    'membershipFeatureToolsDesc',      'Satış, piyasa ve kitle analiz araçları', true),
@@ -5883,12 +5883,7 @@ class _ProTab extends ConsumerWidget {
       } catch (_) {}
     }
 
-    // Mevcut plan tier indeksi (yükseltme paneli için)
-    final currentTierIndex = _upgradePlans
-        .where((p) => p.$1 == activePlanType)
-        .map((p) => p.$4)
-        .firstOrNull ?? 0;
-    final isAnnual = activePlanType == 'teqlif_pro_12m';
+    final isAnnual = activePlanType?.endsWith('12m') ?? false;
 
     // Kalan gün hesabı (0'ın altı 0 olarak gösterilir)
     int? daysRemaining;
@@ -6086,8 +6081,8 @@ class _ProTab extends ConsumerWidget {
 
         // ── Yükseltme veya VIP Paneli ────────────────────────────────────
         const SizedBox(height: 12),
-        if (isAnnual)
-          // Yıllık plan → VIP gurur kartı
+        if (isAnnual || UserTier.isTier4(userType))
+          // Yıllık plan veya PREMIUM+ (en yüksek tier) → VIP gurur kartı
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 16),
             padding: const EdgeInsets.all(16),
@@ -6127,61 +6122,59 @@ class _ProTab extends ConsumerWidget {
             ),
           )
         else
-          // Daha yüksek planları göster
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1C1C1C) : Colors.white,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  loc.t('walletProUpgradeTitle'),
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: isDark ? Colors.white : const Color(0xFF111827),
+          // Aylık plan + tier4 değil → yıllık geçiş seçeneği göster
+          Builder(builder: (ctx) {
+            final annualProductId = switch (userType) {
+              UserTier.tier3 => 'teqlif_premium_12m',
+              UserTier.tier2 => 'teqlif_pro_plus_12m',
+              _              => 'teqlif_pro_12m',
+            };
+            final tierPart = switch (userType) {
+              UserTier.tier3 => loc.tOr('tierLabelPremium',  'PREMIUM'),
+              UserTier.tier2 => loc.tOr('tierLabelProPlus',  'PRO+'),
+              _              => loc.tOr('tierLabelPro',      'PRO'),
+            };
+            final price = ref.watch(subscriptionViewModelProvider).products
+                .where((p) => p.id == annualProductId)
+                .firstOrNull?.price ?? '—';
+            return Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1C1C1C) : Colors.white,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    loc.t('walletProUpgradeTitle'),
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? Colors.white : const Color(0xFF111827),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  loc.t('walletProUpgradeNote'),
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280),
+                  const SizedBox(height: 4),
+                  Text(
+                    loc.t('walletProUpgradeNote'),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                ..._upgradePlans
-                    .where((p) => p.$4 > currentTierIndex)
-                    .map((p) {
-                      final product = ref.watch(subscriptionViewModelProvider).products
-                          .where((pr) => pr.id == p.$1)
-                          .firstOrNull;
-                      final price = product?.price ?? '—';
-                      final planPart = p.$1 == 'teqlif_pro_12m'
-                          ? loc.tOr('subAnnualLabel',  'Yıllık')
-                          : loc.tOr('subMonthlyLabel', 'Aylık');
-                      final tierPart = switch (userType) {
-                        UserTier.tier4 => loc.tOr('tierLabelPremiumPlus', 'PREMIUM+'),
-                        UserTier.tier3 => loc.tOr('tierLabelPremium',     'PREMIUM'),
-                        UserTier.tier2 => loc.tOr('tierLabelProPlus',     'PRO+'),
-                        _              => loc.tOr('tierLabelPro',         'PRO'),
-                      };
-                      return _UpgradePlanRow(
-                        label: '$planPart $tierPart',
-                        savingText: p.$3 > 0 ? loc.t('walletProUpgradeSaving', {'percent': '${p.$3}'}) : '',
-                        price: price,
-                        isDark: isDark,
-                        onTap: () => onUpgradeTap(p.$1),
-                      );
-                    }),
-              ],
-            ),
-          ),
+                  const SizedBox(height: 12),
+                  _UpgradePlanRow(
+                    label: '${loc.tOr('subAnnualLabel', 'Yıllık')} $tierPart',
+                    savingText: loc.t('walletProUpgradeSaving', {'percent': '25'}),
+                    price: price,
+                    isDark: isDark,
+                    onTap: () => onUpgradeTap(annualProductId),
+                  ),
+                ],
+              ),
+            );
+          }),
 
         // ── Aylık Kredi Paneli ───────────────────────────────────────────
         const SizedBox(height: 16),
