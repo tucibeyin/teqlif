@@ -904,7 +904,13 @@ class _StreamHoursRow extends ConsumerWidget {
     final remainingMins = isUnlimited ? 0 : (limitMins! - minutesUsed).clamp(0, limitMins!);
     final percent = isUnlimited ? null : (progress * 100).round();
 
-    return Padding(
+    return InkWell(
+      onTap: () => _showCreditInfoSheet(
+        context, loc,
+        loc.tOr('subStreamHoursInfoTitle', 'Yayın Süresi'),
+        loc.tOr('subStreamHoursInfoDesc', 'Aylık yayın süreniz tier\'ınıza göre belirlenir. Her ay yenilenir.'),
+      ),
+      child: Padding(
       padding: const EdgeInsets.all(16.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -926,24 +932,16 @@ class _StreamHoursRow extends ConsumerWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    InkWell(
-                      onTap: () => _showCreditInfoSheet(
-                        context, loc,
-                        loc.tOr('subStreamHoursInfoTitle', 'Yayın Süresi'),
-                        loc.tOr('subStreamHoursInfoDesc', 'Aylık yayın süreniz tier\'ınıza göre belirlenir. Her ay yenilenir.'),
-                      ),
-                      borderRadius: BorderRadius.circular(4),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            loc.tOr('subStreamHoursTitle', 'Yayın Süresi'),
-                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary(context)),
-                          ),
-                          const SizedBox(width: 4),
-                          Icon(Icons.info_outline, size: 14, color: AppColors.textSecondary(context)),
-                        ],
-                      ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          loc.tOr('subStreamHoursTitle', 'Yayın Süresi'),
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary(context)),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(Icons.info_outline, size: 14, color: AppColors.textSecondary(context)),
+                      ],
                     ),
                     if (isLoading)
                       const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
@@ -1000,7 +998,7 @@ class _StreamHoursRow extends ConsumerWidget {
           ),
         ],
       ),
-    );
+    ));
   }
 }
 
