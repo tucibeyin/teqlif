@@ -4918,17 +4918,16 @@ class _ProDaysBadge extends StatelessWidget {
   const _ProDaysBadge({this.proExpiresAt, this.userType = UserTier.tier1, required this.loc});
 
   List<Color> _gradientColors() {
-    switch (userType) {
-      case UserTier.tier3: return const [Color(0xFF0284C7), Color(0xFF38BDF8)];
-      default: return const [Color(0xFFD97706), Color(0xFFFFD700)]; // tier1 ve tier2 gold
-    }
+    if (UserTier.isTier3OrAbove(userType)) return const [Color(0xFF0284C7), Color(0xFF38BDF8)];
+    return const [Color(0xFFD97706), Color(0xFFFFD700)];
   }
 
   String _tierLabel() {
     switch (userType) {
+      case UserTier.tier4: return 'PREMIUM+';
       case UserTier.tier3: return 'PREMIUM';
       case UserTier.tier2: return 'PRO+';
-      default: return 'PRO';
+      default:             return 'PRO';
     }
   }
 
@@ -5850,10 +5849,8 @@ class _ProTab extends ConsumerWidget {
   }
 
   static List<Color> _tierCardColors(String userType) {
-    switch (userType) {
-      case UserTier.tier3: return const [Color(0xFF0284C7), Color(0xFF0EA5E9), Color(0xFF38BDF8)];
-      default: return const [Color(0xFFD97706), Color(0xFFF59E0B), Color(0xFFFFD700)]; // tier1 ve tier2 gold
-    }
+    if (UserTier.isTier3OrAbove(userType)) return const [Color(0xFF0284C7), Color(0xFF0EA5E9), Color(0xFF38BDF8)];
+    return const [Color(0xFFD97706), Color(0xFFF59E0B), Color(0xFFFFD700)];
   }
 
   @override
@@ -5980,8 +5977,12 @@ class _ProTab extends ConsumerWidget {
                   const FaIcon(FontAwesomeIcons.crown, size: 14, color: Colors.white),
                   const SizedBox(width: 7),
                   Text(
-                    _upgradePlans.where((p) => p.$1 == activePlanType).map((p) => loc.t(p.$2)).firstOrNull
-                        ?? (userType == UserTier.tier3 ? 'PREMIUM' : userType == UserTier.tier2 ? 'PRO+' : 'PRO'),
+                    switch (userType) {
+                      UserTier.tier4 => loc.tOr('tierLabelPremiumPlus', 'PREMIUM+'),
+                      UserTier.tier3 => loc.tOr('tierLabelPremium',     'PREMIUM'),
+                      UserTier.tier2 => loc.tOr('tierLabelProPlus',     'PRO+'),
+                      _              => loc.tOr('tierLabelPro',         'PRO'),
+                    },
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 18,
@@ -6166,8 +6167,17 @@ class _ProTab extends ConsumerWidget {
                           .where((pr) => pr.id == p.$1)
                           .firstOrNull;
                       final price = product?.price ?? '—';
+                      final planPart = p.$1 == 'teqlif_pro_12m'
+                          ? loc.tOr('subAnnualLabel',  'Yıllık')
+                          : loc.tOr('subMonthlyLabel', 'Aylık');
+                      final tierPart = switch (userType) {
+                        UserTier.tier4 => loc.tOr('tierLabelPremiumPlus', 'PREMIUM+'),
+                        UserTier.tier3 => loc.tOr('tierLabelPremium',     'PREMIUM'),
+                        UserTier.tier2 => loc.tOr('tierLabelProPlus',     'PRO+'),
+                        _              => loc.tOr('tierLabelPro',         'PRO'),
+                      };
                       return _UpgradePlanRow(
-                        label: loc.t(p.$2),
+                        label: '$planPart $tierPart',
                         savingText: p.$3 > 0 ? loc.t('walletProUpgradeSaving', {'percent': '${p.$3}'}) : '',
                         price: price,
                         isDark: isDark,
@@ -6205,6 +6215,7 @@ class _ProTab extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
+                _WalletStreamRow(userType: userType, minutesUsed: hub.monthlyStreamMinutesUsed, isDark: isDark, loc: loc),
                 _CreditRow(label: loc.t('subCreditsBlastName'), credits: hub.blastCredits, isDark: isDark),
                 _CreditRow(label: loc.t('subCreditsBoostName'), credits: hub.boostCredits, isDark: isDark),
                 _CreditRow(label: loc.t('subCreditsAiDescName'), credits: hub.aiDescCredits, isDark: isDark),
@@ -6241,9 +6252,19 @@ class _ProTab extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 10),
-              _PrivilegeRow(label: loc.t('walletProEarningsRateLabel'), value: '%95', subtext: 'Standart: %70', isDark: isDark),
+              _PrivilegeRow(
+                label: loc.t('walletProEarningsRateLabel'),
+                value: '%${UserTier.commissionPercent(userType)}',
+                subtext: 'Standart: %${UserTier.commissionPercent(UserTier.standard)}',
+                isDark: isDark,
+              ),
               const SizedBox(height: 6),
-              _PrivilegeRow(label: loc.t('walletProCommissionLabel'), value: '%0', subtext: loc.t('walletProCommissionNote'), isDark: isDark),
+              _PrivilegeRow(
+                label: loc.t('walletProCommissionLabel'),
+                value: '%${100 - UserTier.commissionPercent(userType)}',
+                subtext: loc.t('walletProCommissionNote'),
+                isDark: isDark,
+              ),
             ],
           ),
         ),
@@ -6512,6 +6533,89 @@ class _CreditRow extends StatelessWidget {
                   ? const Color(0xFF2A2A2A)
                   : const Color(0xFFE5E7EB),
               color: const Color(0xFFD97706),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Yayın Süresi satırı (Aylık Krediler paneli) ────────────────────────────
+
+class _WalletStreamRow extends StatelessWidget {
+  final String userType;
+  final int minutesUsed;
+  final bool isDark;
+  final TranslationPack loc;
+
+  const _WalletStreamRow({
+    required this.userType,
+    required this.minutesUsed,
+    required this.isDark,
+    required this.loc,
+  });
+
+  String _fmt(int minutes) {
+    final h = minutes ~/ 60;
+    final m = minutes % 60;
+    return '$h ${loc.tOr("subStreamHourAbbr", "S")} : $m ${loc.tOr("subStreamMinAbbr", "Dk")}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final limitMins = UserTier.streamLimitMinutes(userType);
+    final isUnlimited = limitMins == null;
+    final limit = limitMins ?? 0;
+    final remaining = isUnlimited ? 0 : (limit - minutesUsed).clamp(0, limit);
+    final ratio = isUnlimited ? 1.0 : (limit > 0 ? minutesUsed / limit : 0.0).clamp(0.0, 1.0);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                loc.tOr('subStreamHoursTitle', 'Yayın Süresi'),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280),
+                ),
+              ),
+              isUnlimited
+                  ? Text(
+                      '∞  ${loc.tOr("subStreamHoursUnlimited", "Sınırsız")}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF7C3AED),
+                      ),
+                    )
+                  : Text(
+                      '${_fmt(remaining)} / ${_fmt(limit)}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: isDark ? Colors.white : const Color(0xFF111827),
+                      ),
+                    ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: ratio.clamp(0.0, 1.0),
+              minHeight: 4,
+              backgroundColor: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE5E7EB),
+              color: isUnlimited
+                  ? const Color(0xFF7C3AED)
+                  : ratio >= 0.8
+                      ? const Color(0xFFF59E0B)
+                      : const Color(0xFF22C55E),
             ),
           ),
         ],

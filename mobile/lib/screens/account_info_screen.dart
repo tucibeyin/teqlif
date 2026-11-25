@@ -557,9 +557,10 @@ class _SubscriptionSectionCard extends ConsumerWidget {
 
   String _tierLabel(String userType, TranslationPack loc) {
     switch (userType) {
-      case UserTier.tier1: return loc.t('tierLabelPro');
-      case UserTier.tier2: return loc.t('tierLabelProPlus');
+      case UserTier.tier4: return loc.tOr('tierLabelPremiumPlus', 'PREMIUM+');
       case UserTier.tier3: return loc.t('tierLabelPremium');
+      case UserTier.tier2: return loc.t('tierLabelProPlus');
+      case UserTier.tier1: return loc.t('tierLabelPro');
       default: return loc.t('tierLabelStandard');
     }
   }

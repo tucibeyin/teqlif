@@ -19,25 +19,22 @@ class TierBadge extends ConsumerWidget {
   });
 
   static Color tierColor(String userType) {
-    switch (userType) {
-      case UserTier.tier3: return const Color(0xFF0891B2);
-      default:             return const Color(0xFFD97706); // tier1 ve tier2 gold
-    }
+    if (UserTier.isTier3OrAbove(userType)) return const Color(0xFF0891B2);
+    return const Color(0xFFD97706);
   }
 
   static List<Color> tierGradient(String userType) {
-    switch (userType) {
-      case UserTier.tier3: return const [Color(0xFF0891B2), Color(0xFF06B6D4)];
-      default:             return const [Color(0xFFD97706), Color(0xFFFFD700)]; // tier1 ve tier2 gold
-    }
+    if (UserTier.isTier3OrAbove(userType)) return const [Color(0xFF0891B2), Color(0xFF06B6D4)];
+    return const [Color(0xFFD97706), Color(0xFFFFD700)];
   }
 
   static String tierLabel(String userType, dynamic loc) {
     switch (userType) {
+      case UserTier.tier4: return loc.tOr('tierLabelPremiumPlus', 'PREMIUM+');
       case UserTier.tier3: return loc.tOr('tierLabelPremium', 'PREMIUM');
       case UserTier.tier2: return loc.tOr('tierLabelProPlus', 'PRO+');
-      case UserTier.tier1:     return loc.tOr('tierLabelPro', 'PRO');
-      default:               return loc.tOr('tierLabelNormal', 'Normal');
+      case UserTier.tier1: return loc.tOr('tierLabelPro', 'PRO');
+      default:             return loc.tOr('tierLabelNormal', 'Normal');
     }
   }
 
