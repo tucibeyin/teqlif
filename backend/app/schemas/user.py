@@ -66,6 +66,7 @@ class UserMiniOut(BaseModel):
     profile_image_url: Optional[str] = None
     profile_image_thumb_url: Optional[str] = None
     is_verified: bool = False
+    user_type: str = 'standard'
 
     model_config = {"from_attributes": True}
 

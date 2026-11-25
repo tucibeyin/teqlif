@@ -9,6 +9,7 @@ class StoryAuthor {
   final String fullName;
   final String? profileImageUrl;
   final String? profileImageThumbUrl;
+  final String userType;
 
   StoryAuthor({
     required this.id,
@@ -16,6 +17,7 @@ class StoryAuthor {
     required this.fullName,
     this.profileImageUrl,
     this.profileImageThumbUrl,
+    this.userType = 'standard',
   });
 
   factory StoryAuthor.fromJson(Map<String, dynamic> json) => StoryAuthor(
@@ -24,6 +26,7 @@ class StoryAuthor {
         fullName: json['full_name'] as String,
         profileImageUrl: json['profile_image_url'] as String?,
         profileImageThumbUrl: json['profile_image_thumb_url'] as String?,
+        userType: json['user_type'] as String? ?? 'standard',
       );
 
   Map<String, dynamic> toJson() => {
@@ -32,6 +35,7 @@ class StoryAuthor {
         'full_name': fullName,
         'profile_image_url': profileImageUrl,
         'profile_image_thumb_url': profileImageThumbUrl,
+        'user_type': userType,
       };
 }
 

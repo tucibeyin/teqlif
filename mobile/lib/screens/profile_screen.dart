@@ -4211,9 +4211,11 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
       builder: (_) => SubscriptionSheet(
         loc: loc,
         currentUserType: UserTier.hasSubscription(_userType) ? _userType : null,
+        activePlanId: _activePlanType,
         initialPlanId: targetPlanId,
         onPurchaseSuccess: () {
           _load();
+          ref.read(profileViewModelProvider.notifier).load(bypassCache: true);
         },
       ),
     );

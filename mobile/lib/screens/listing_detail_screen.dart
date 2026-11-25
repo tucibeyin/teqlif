@@ -1424,8 +1424,8 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                               child: Container(
                                 padding: const EdgeInsets.all(3),
                                 decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    colors: [Color(0xFF0891B2), Color(0xFF06B6D4)],
+                                  gradient: LinearGradient(
+                                    colors: UserTier.crownGradient(user['user_type'] as String? ?? UserTier.standard),
                                   ),
                                   shape: BoxShape.circle,
                                   border: Border.all(

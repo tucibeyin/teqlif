@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../services/image_cache_manager.dart';
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:flutter/material.dart";
@@ -591,7 +592,8 @@ class _StreamerAvatarCard extends ConsumerWidget {
     final rawUrl = (streamer['profile_image_url'] as String?) ?? '';
     final imageUrl = rawUrl.isNotEmpty ? ref.read(apiClientProvider).imgUrl(rawUrl) : null;
     final isVerified = streamer['is_verified'] == true;
-    final isPremium = UserTier.hasSubscription(streamer['user_type'] as String? ?? UserTier.standard);
+    final streamerUserType = streamer['user_type'] as String? ?? UserTier.standard;
+    final isPremium = UserTier.hasSubscription(streamerUserType);
     final isLive = streamer['is_live'] == true;
     final username = streamer['username'] as String? ?? '';
     final initial = username.isNotEmpty ? username[0].toUpperCase() : '?';
@@ -654,24 +656,27 @@ class _StreamerAvatarCard extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  // Premium badge
+                  // Tier tacı
                   if (isPremium)
                     Positioned(
                       bottom: 0,
                       right: 0,
                       child: Container(
-                        width: 20,
-                        height: 20,
+                        padding: const EdgeInsets.all(3),
                         decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: UserTier.crownGradient(streamerUserType),
+                          ),
                           shape: BoxShape.circle,
-                          color: const Color(0xFFF59E0B),
                           border: Border.all(
                             color: AppColors.surface(context),
                             width: 1.5,
                           ),
                         ),
-                        child: const Center(
-                          child: Text('👑', style: TextStyle(fontSize: 10)),
+                        child: const FaIcon(
+                          FontAwesomeIcons.crown,
+                          size: 9,
+                          color: Colors.white,
                         ),
                       ),
                     )

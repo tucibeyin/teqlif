@@ -868,6 +868,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
 
     if (!isPremium) return avatarWidget;
 
+    final userType = _user?['user_type'] as String? ?? UserTier.standard;
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -878,8 +879,8 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
           child: Container(
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFFD97706), Color(0xFFFFD700)],
+              gradient: LinearGradient(
+                colors: UserTier.crownGradient(userType),
               ),
               shape: BoxShape.circle,
               border: Border.all(

@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:shimmer/shimmer.dart';
@@ -9,6 +10,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:teqlif/core/network/api_client.dart';
 import '../../config/app_colors.dart';
 import '../../config/theme.dart';
+import '../../core/user_tier.dart';
 import '../../services/media_compressor.dart';
 import '../../models/story.dart';
 import '../../providers/story_provider.dart';
@@ -558,7 +560,7 @@ class _StoryGroupItem extends ConsumerWidget {
                     ),
                   ),
                 ),
-                // Canlı yayın badge'i
+                // Canlı yayın badge'i veya tier tacı
                 if (_hasLive)
                   Positioned(
                     bottom: 0,
@@ -584,6 +586,29 @@ class _StoryGroupItem extends ConsumerWidget {
                           fontWeight: FontWeight.w800,
                           letterSpacing: 0.3,
                         ),
+                      ),
+                    ),
+                  )
+                else if (UserTier.hasSubscription(group.user.userType))
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: UserTier.crownGradient(group.user.userType),
+                        ),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AppColors.surface(context),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: const FaIcon(
+                        FontAwesomeIcons.crown,
+                        size: 8,
+                        color: Colors.white,
                       ),
                     ),
                   ),

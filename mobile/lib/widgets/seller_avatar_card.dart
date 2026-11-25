@@ -21,7 +21,8 @@ class SellerAvatarCard extends ConsumerWidget {
     final username = seller['username'] as String? ?? '';
     final initial = username.isNotEmpty ? username[0].toUpperCase() : '?';
     final isVerified = seller['is_verified'] == true;
-    final isPremium = UserTier.hasSubscription(seller['user_type'] as String? ?? UserTier.standard);
+    final sellerUserType = seller['user_type'] as String? ?? UserTier.standard;
+    final isPremium = UserTier.hasSubscription(sellerUserType);
 
     return GestureDetector(
       onTap: onTap,
@@ -72,8 +73,8 @@ class SellerAvatarCard extends ConsumerWidget {
                     child: Container(
                       padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF0891B2), Color(0xFF06B6D4)],
+                        gradient: LinearGradient(
+                          colors: UserTier.crownGradient(sellerUserType),
                         ),
                         shape: BoxShape.circle,
                         border: Border.all(color: AppColors.surface(context), width: 1.5),

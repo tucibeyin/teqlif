@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 /// Kullanıcı tier sabitleri ve yardımcıları — Flutter karşılığı: backend/tier.py
 ///
 /// TEK KAYNAK: Tüm tier mantığı buradan okunur.
@@ -90,5 +92,13 @@ abstract class UserTier {
       case tier1: return 75;
       default:    return 50;
     }
+  }
+
+  /// Tier'a göre kral tacı renk gradyanı.
+  /// PREMIUM / PREMIUM+ → teqlif cyan; PRO / PRO+ → altın sarı.
+  static List<Color> crownGradient(String userType) {
+    return isTier3OrAbove(userType)
+        ? const [Color(0xFF0284C7), Color(0xFF38BDF8)]
+        : const [Color(0xFFD97706), Color(0xFFFFD700)];
   }
 }

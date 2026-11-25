@@ -58,6 +58,7 @@ class SubscriptionSheet extends ConsumerStatefulWidget {
   final VoidCallback? onPurchaseSuccess;
   final String? currentUserType;
   final String? initialPlanId;
+  final String? activePlanId;
 
   const SubscriptionSheet({
     super.key,
@@ -65,6 +66,7 @@ class SubscriptionSheet extends ConsumerStatefulWidget {
     this.onPurchaseSuccess,
     this.currentUserType,
     this.initialPlanId,
+    this.activePlanId,
   });
 
   @override
@@ -186,7 +188,11 @@ class _SubscriptionSheetState extends ConsumerState<SubscriptionSheet>
     final isUpgradeMode = widget.currentUserType != null && UserTier.hasSubscription(widget.currentUserType!);
     final isVip = UserTier.isTier4(widget.currentUserType ?? UserTier.standard);
     final currentPlans = _plansByTier[_selectedTier] ?? _plansByTier[UserTier.tier1]!;
-    final isCurrent = widget.currentUserType == _selectedTier;
+    // Mevcut plan kontrolü: aynı tier VE yıllık plana sahipse "mevcut" sayılır.
+    // Aylık + aynı tier durumunda yıllık seçenek gösterilmelidir.
+    final isCurrent = widget.currentUserType == _selectedTier &&
+        (widget.activePlanId == null ||
+            (widget.activePlanId?.endsWith('12m') ?? false));
     final isLower = (_tierRank[widget.currentUserType ?? UserTier.standard] ?? 0) >
         (_tierRank[_selectedTier] ?? 0);
 
