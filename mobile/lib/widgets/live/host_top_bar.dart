@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
-import '../../config/app_colors.dart';
 import '../../services/localization_service.dart';
 
 /// Canlı yayın host ekranı — üst bilgi çubuğu.
@@ -351,7 +350,7 @@ class _QualityBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isFhd ? kPrimary : const Color(0xFFF59E0B);
+    final color = isFhd ? const Color(0xFF06B6D4) : const Color(0xFFF59E0B);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
       decoration: BoxDecoration(
