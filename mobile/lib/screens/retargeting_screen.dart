@@ -503,13 +503,13 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
         initialIndex: widget.initialIndex,
         child: Column(
           children: [
-            const TabBar(
-              indicatorColor: Color(0xFF14B8A6),
-              labelColor: Color(0xFF14B8A6),
+            TabBar(
+              indicatorColor: const Color(0xFF14B8A6),
+              labelColor: const Color(0xFF14B8A6),
               unselectedLabelColor: Colors.grey,
               tabs: [
-                Tab(icon: Icon(Icons.touch_app), text: 'Retargeting'),
-                Tab(icon: Icon(Icons.auto_graph), text: 'Raporlar'),
+                Tab(icon: const Icon(Icons.touch_app), text: loc.t('subToolRetargetingTitle')),
+                Tab(icon: const Icon(Icons.auto_graph), text: loc.t('tabReports')),
               ],
             ),
             Expanded(
@@ -539,8 +539,8 @@ class _RetargetingScreenState extends ConsumerState<RetargetingScreen> {
             labelColor: const Color(0xFF14B8A6),
             unselectedLabelColor: Colors.grey,
             tabs: [
-              const Tab(icon: Icon(Icons.touch_app), text: 'Retargeting'),
-              Tab(icon: const Icon(Icons.auto_graph), text: loc.t("tabReports")),
+              Tab(icon: const Icon(Icons.touch_app), text: loc.t('subToolRetargetingTitle')),
+              Tab(icon: const Icon(Icons.auto_graph), text: loc.t('tabReports')),
             ],
           ),
         ),
