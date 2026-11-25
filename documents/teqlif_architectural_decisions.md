@@ -3335,3 +3335,26 @@ Tüm metinler `loc.tOr(key, fallback)` ile OTA uyumlu. 21 yeni ARB key 5 dile ek
 
 **Upgrade panel kuralı:** tier4 (PREMIUM+) her zaman VIP gurur kartı gösterir. Diğer tier'lar için yıllık product ID tier'a göre hesaplanır (`switch (userType)` ile).
 
+## §49 — Edge Ingress ve Arama Motoru İzolasyonu: Nginx Sitemap Proxy & MinIO Robots Disallow (2026-11-25)
+
+### Bağlam
+
+1. **`sitemap.xml` 404:** `teqlif.com/robots.txt` endpoint'i (FastAPI `backend/main.py`) arama motorlarına `Sitemap: https://teqlif.com/sitemap.xml` direktifi veriyordu. Ancak Nginx `teqlif.conf` dosyasında `location = /ads.txt` ve `location = /robots.txt` için proxy tanımları varken `location = /sitemap.xml` eksikti. Bu nedenle crawler'lar Nginx `try_files` üzerinden 404 alıyordu; oysa FastAPI backend'inde Redis önbellekli ve dinamik ilanları çeken `/sitemap.xml` motoru zaten mevcuttu.
+2. **`uploads.teqlif.com` 403 (MinIO Bot Gürültüsü):** Web tarayıcıları ve botlar `uploads.teqlif.com/robots.txt` adresini taradığında Nginx isteği MinIO'ya (`:9000`) iletiyordu. MinIO `/robots.txt` yolunu bir S3 bucket adı olarak algılayıp `403 AccessDenied` (299 byte XML) dönüyordu. Bu durum Loki loglarında sahte alarm ve log kirliliği yaratıyordu.
+
+### Karar
+
+1. **FastAPI-Owned Sitemap Proxy:** `teqlif.conf` (node1), `teqlif-staging.conf` (node5) ve `teqlif-dr.conf` (node2) yapılandırmalarındaki `# FastAPI-owned root-level files` bloğuna `location = /sitemap.xml` eklendi. İstekler doğrudan FastAPI'ye yönlendirilerek mevcut dinamik sitemap devreye alındı.
+2. **MinIO Edge Ingress Koruması:** `minio.conf` (node1) ve `teqlif-staging.conf` (node5 staging uploads) bloklarına `location = /robots.txt { default_type text/plain; return 200 "User-agent: *\nDisallow: /\n"; }` eklendi. Botlar MinIO nesne depolama katmanına hiç iletilmeden Nginx Ingress seviyesinde karşılandı; medya dosyalarının taranması engellendi ve 403 alarmları sıfırlandı.
+
+### Dosyalar
+
+| Dosya | Değişiklik |
+|-------|------------|
+| `deploy/scale/V2.1/node1/resources/nginx/conf.d/teqlif.conf` | `location = /sitemap.xml` proxy kuralı eklendi |
+| `deploy/scale/V2.1/node1/resources/nginx/conf.d/minio.conf` | `uploads.teqlif.com` için `location = /robots.txt` (Disallow: /) eklendi |
+| `deploy/scale/V2.1/node5/resources/nginx/conf.d/teqlif-staging.conf` | Staging için sitemap proxy ve staging.uploads için robots disallow eklendi |
+| `deploy/scale/V2.1/node2/resources/nginx/conf.d/teqlif-dr.conf` | DR standby için sitemap proxy eklendi |
+| `documents/teqlif_architectural_decisions.md` | ADR §49 belgelendi |
+
+
