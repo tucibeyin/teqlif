@@ -4353,7 +4353,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
     try {
       final d = DateTime.parse(dateStr).toLocal();
       formattedTime =
-          '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+          '${d.day.toString().padLeft(2, '0')}.${d.month.toString().padLeft(2, '0')}.${d.year}  ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
     } catch (_) {}
     final meta = t['counterpart_username'] as String? ??
         t['gift_name'] as String? ??
