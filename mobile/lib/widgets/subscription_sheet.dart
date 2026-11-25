@@ -238,12 +238,6 @@ class _SubscriptionSheetState extends ConsumerState<SubscriptionSheet>
                   ),
                 ],
               ),
-              const SizedBox(height: 6),
-              Text(
-                isUpgradeMode ? loc.t('subUpgradeSheetSubtitle') : loc.t('subSheetSubtitle'),
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white54, fontSize: 13),
-              ),
               const SizedBox(height: 20),
 
               // ── Tier seçici (her zaman 3 tab, en üstte) ──
