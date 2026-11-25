@@ -633,7 +633,7 @@ class _StreamerAvatarCard extends ConsumerWidget {
                                 imageUrl: imageUrl,
                                 cacheKey: TeqlifCacheManager.avatarCacheKey(username, imageUrl),
                                 cacheManager: TeqlifCacheManager(),
-                                memCacheWidth: 128,
+                                memCacheWidth: 400,
                                 fit: BoxFit.cover,
                                 alignment: Alignment.topCenter,
                                 width: double.infinity,

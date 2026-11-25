@@ -820,7 +820,7 @@ class _GroupPageState extends ConsumerState<_GroupPage> with TickerProviderState
                             imageUrl: resolved,
                             cacheKey: TeqlifCacheManager.avatarCacheKey(user.username, resolved),
                             cacheManager: TeqlifCacheManager(),
-                            memCacheWidth: 80,
+                            memCacheWidth: 400,
                             fit: BoxFit.cover,
                             alignment: Alignment.topCenter,
                             errorWidget: (_, _, _) =>
@@ -1076,7 +1076,7 @@ class _GroupPageState extends ConsumerState<_GroupPage> with TickerProviderState
                       imageUrl: resolved,
                       cacheKey: TeqlifCacheManager.avatarCacheKey(user.username, resolved),
                       cacheManager: TeqlifCacheManager(),
-                      memCacheWidth: 80,
+                      memCacheWidth: 400,
                       fit: BoxFit.cover,
                       alignment: Alignment.topCenter,
                       errorWidget: (_, _, _) =>
