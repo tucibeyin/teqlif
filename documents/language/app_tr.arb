@@ -6820,6 +6820,9 @@
   "streamQuality540p": "540p · Standart",
   "streamQuality720p": "720p · HD",
   "streamQuality1080p": "1080p · Full HD",
+  "liveQualityStandard": "Standart",
+  "liveQualityHd": "HD",
+  "liveQualityFullHd": "Full HD",
   "streamQualityLocked": "Bu kalite için {tier} gerekli",
   "@streamQualityLocked": {
     "placeholders": {

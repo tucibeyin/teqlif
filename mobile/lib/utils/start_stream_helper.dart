@@ -17,7 +17,6 @@ import '../ui_library/components/overlays/teq_toast.dart';
 import '../screens/live/host_stream_screen.dart';
 import '../services/permission_service.dart';
 import '../core/user_tier.dart';
-import '../screens/profile_screen.dart';
 
 /// Canlı yayın başlatma dialog'unu gösterir.
 /// [onStreamStarted]: yayın ekranından geri dönüldüğünde çağrılır (opsiyonel).
@@ -283,11 +282,9 @@ Future<void> showStartStreamDialog(
               ),
             ],
             const SizedBox(height: 10),
-            _StreamQualitySelector(
+            _StreamQualityInfoRow(
               userType: userType,
-              selectedQuality: selectedQuality,
               loc: loc,
-              onQualitySelected: (q) => setStateDialog(() => selectedQuality = q),
             ),
             const SizedBox(height: 8),
             _StreamHoursWarningRow(
@@ -526,93 +523,99 @@ String _mapCaptchaError(AppException e, TranslationPack loc) {
   return e.message;
 }
 
-/// Yayın kalite seçici — tier'a göre 540p/720p/1080p chip'leri
-class _StreamQualitySelector extends StatelessWidget {
+/// Kullanıcının tier'ına göre sabit yayın kalitesi bilgi satırı.
+/// Standart → Standart, PRO/PRO+ → HD (Icons.hd), PREMIUM/PREMIUM+ → Full HD (gradient).
+class _StreamQualityInfoRow extends StatelessWidget {
   final String userType;
-  final String selectedQuality;
   final TranslationPack loc;
-  final void Function(String quality) onQualitySelected;
 
-  const _StreamQualitySelector({
+  const _StreamQualityInfoRow({
     required this.userType,
-    required this.selectedQuality,
     required this.loc,
-    required this.onQualitySelected,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    final quality = UserTier.maxStreamQuality(userType);
+    final isFhd = quality == '1080p';
+    final isHd  = quality == '720p';
+
+    return Row(
       children: [
-        Row(
-          children: [
-            const Icon(Icons.hd_outlined, size: 16),
-            const SizedBox(width: 6),
-            Text(
-              loc.tOr('liveStreamQualityLabel', 'Yayın Kalitesi'),
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-            ),
-          ],
+        Icon(
+          Icons.videocam_outlined,
+          size: 16,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
         ),
-        const SizedBox(height: 6),
-        Row(
-          children: UserTier.allStreamQualities.map((q) {
-            final locked = UserTier.isQualityLocked(userType, q);
-            final selected = !locked && selectedQuality == q;
-            return Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: GestureDetector(
-                onTap: locked
-                    ? () => Navigator.of(context, rootNavigator: true).push(
-                          MaterialPageRoute(builder: (_) => const WalletScreen()),
-                        )
-                    : () => onQualitySelected(q),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: locked
-                        ? Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5)
-                        : selected
-                            ? kPrimary
-                            : Theme.of(context).colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: locked
-                          ? Theme.of(context).dividerColor
-                          : selected
-                              ? kPrimary
-                              : Theme.of(context).colorScheme.outline,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (locked) ...[
-                        Icon(Icons.lock_outline, size: 11,
-                            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
-                        const SizedBox(width: 3),
-                      ],
-                      Text(
-                        q,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: locked
-                              ? Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)
-                              : selected
-                                  ? Colors.white
-                                  : Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                    ],
+        const SizedBox(width: 6),
+        Text(
+          loc.tOr('liveStreamQualityLabel', 'Yayın Kalitesi'),
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+        const Spacer(),
+        if (isFhd)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF7C3AED), Color(0xFF0891B2)],
+              ),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              loc.tOr('liveQualityFullHd', 'Full HD'),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.3,
+              ),
+            ),
+          )
+        else if (isHd)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0891B2),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.hd, size: 16, color: Colors.white),
+                const SizedBox(width: 4),
+                Text(
+                  loc.tOr('liveQualityHd', 'HD'),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.3,
                   ),
                 ),
+              ],
+            ),
+          )
+        else
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFF64748B),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              loc.tOr('liveQualityStandard', 'Standart'),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
               ),
-            );
-          }).toList(),
-        ),
+            ),
+          ),
       ],
     );
   }

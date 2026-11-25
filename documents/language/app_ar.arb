@@ -6819,6 +6819,9 @@
   "streamQuality540p": "540p · قياسي",
   "streamQuality720p": "720p · HD",
   "streamQuality1080p": "1080p · Full HD",
+  "liveQualityStandard": "قياسي",
+  "liveQualityHd": "HD",
+  "liveQualityFullHd": "Full HD",
   "streamQualityLocked": "يتطلب {tier} لهذه الجودة",
   "@streamQualityLocked": {
     "placeholders": {

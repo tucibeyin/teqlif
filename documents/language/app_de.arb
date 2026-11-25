@@ -6891,6 +6891,9 @@
   "streamQuality540p": "540p · Standard",
   "streamQuality720p": "720p · HD",
   "streamQuality1080p": "1080p · Full HD",
+  "liveQualityStandard": "Standard",
+  "liveQualityHd": "HD",
+  "liveQualityFullHd": "Full HD",
   "streamQualityLocked": "{tier} erforderlich für diese Qualität",
   "@streamQualityLocked": {
     "placeholders": {
