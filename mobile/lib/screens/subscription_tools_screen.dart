@@ -347,14 +347,21 @@ class _ProStatusCard extends ConsumerWidget {
     return const Color(0xFFD97706); // tier1, tier2 → altın
   }
 
+  List<Color> _getTierGradient(String type) {
+    if (UserTier.isTier3OrAbove(type)) {
+      return const [Color(0xFF0C4A6E), Color(0xFF075985)]; // PREMIUM/PREMIUM+ → derin teqlif cyan
+    }
+    return const [Color(0xFF451A03), Color(0xFF78350F)]; // PRO/PRO+ → derin altın-amber
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final loc = ref.watch(localizationProvider);
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF1E1B4B), Color(0xFF312E81)],
+        gradient: LinearGradient(
+          colors: _getTierGradient(userType),
           begin: AlignmentDirectional.topStart,
           end: AlignmentDirectional.bottomEnd,
         ),
