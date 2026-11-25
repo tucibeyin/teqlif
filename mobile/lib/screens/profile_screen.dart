@@ -299,7 +299,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                     initialHistory: state.teqlikHistory,
                   ),
                 ),
-              );
+              ).then((_) => ref.read(profileViewModelProvider.notifier).load(bypassCache: true));
             },
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 6),
@@ -510,13 +510,12 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 },
                               ),
                             ],
-                            // Tier rozeti (PRO/PRO+/PREMIUM — standard'da gizlenir)
+                            // Tier crown (PRO/PRO+/PREMIUM/PREMIUM+ — standard'da gizlenir)
                             Builder(builder: (ctx) {
                               final tier = user?['user_type'] as String? ?? UserTier.standard;
-                              if (!UserTier.hasSubscription(tier)) return const SizedBox.shrink();
                               return Padding(
                                 padding: const EdgeInsetsDirectional.only(start: 6),
-                                child: TierBadge(userType: tier),
+                                child: _TierCrown(userType: tier),
                               );
                             }),
                           ],
@@ -1735,12 +1734,12 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                 icon: Icons.workspace_premium_outlined,
                 iconColor: const Color(0xFFD97706),
                 label: loc.t('subHubTitle'),
-                trailing: TierBadge(userType: _userType),
+                trailing: _TierCrown(userType: _userType),
                 onTap: () => _proHubGuard.run(() async {
                   // StorageService'ten güncel is_premium oku — widget.user stale olabilir
                   final freshInfo = await StorageService.getUserInfo();
                   if (!context.mounted) return;
-                  Navigator.push(
+                  await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (_) => SubscriptionToolsScreen(
@@ -1748,6 +1747,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                       ),
                     ),
                   );
+                  if (mounted) _loadPremiumStatus();
                 }),
               ),
             ],
@@ -6601,6 +6601,22 @@ class _WalletStreamRow extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// Tier crown ikonu — sadece abonelik varsa gösterilir, standart için SizedBox.shrink().
+/// PRO/PRO+: altın rengi  |  PREMIUM/PREMIUM+: teqlif cyan
+class _TierCrown extends StatelessWidget {
+  final String userType;
+  const _TierCrown({required this.userType});
+
+  @override
+  Widget build(BuildContext context) {
+    if (!UserTier.hasSubscription(userType)) return const SizedBox.shrink();
+    final color = UserTier.isTier3OrAbove(userType)
+        ? const Color(0xFF0891B2)
+        : const Color(0xFFD97706);
+    return FaIcon(FontAwesomeIcons.crown, size: 14, color: color);
   }
 }
 
