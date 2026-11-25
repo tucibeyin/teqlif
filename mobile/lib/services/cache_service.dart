@@ -216,16 +216,28 @@ class CacheService {
   ///
   /// [etag] verilirse zarfa `_e` alanı olarak eklenir; sonraki isteklerde
   /// If-None-Match header'ı için [getEtag] ile okunur.
+  ///
+  /// [keepFor]: verinin fiziksel olarak Hive'da ne kadar tutulacağı.
+  /// Varsayılan: `max(ttl × 7, 24 saat)`.  SWR sözleşmesi — TTL dolunca
+  /// veri "bayat" sayılır ama hâlâ silinmez; arka plan yenilemesi başarısız
+  /// olursa [getWithStaleness] stale veriyi döndürmeye devam eder.
   Future<void> saveData(
     String key,
     dynamic data, {
     Duration ttl = const Duration(minutes: 5),
+    Duration? keepFor,
     String? etag,
   }) async {
+    final int ttlMs = ttl.inMilliseconds;
+    const int _24h = 86400000;
+    final int keepMs = keepFor != null
+        ? keepFor.inMilliseconds
+        : (ttlMs * 7 > _24h ? ttlMs * 7 : _24h);
     final wrapper = <String, dynamic>{
       '_d': data,
       '_t': DateTime.now().millisecondsSinceEpoch,
-      '_x': ttl.inMilliseconds,
+      '_x': ttlMs,
+      '_k': keepMs,
     };
     if (etag != null) wrapper['_e'] = etag;
     await _box.put(key, jsonEncode(wrapper));
@@ -248,11 +260,16 @@ class CacheService {
   }) async {
     final now = DateTime.now().millisecondsSinceEpoch;
 
+    final int ttlMs = ttl.inMilliseconds;
+    const int _24h = 86400000;
+    final int keepMs = ttlMs * 7 > _24h ? ttlMs * 7 : _24h;
+
     // L1: warm entry — Hive okuma ve jsonDecode maliyeti sıfır.
     final mem = _memCache[key];
     if (mem != null) {
       mem['_t'] = now;
-      mem['_x'] = ttl.inMilliseconds;
+      mem['_x'] = ttlMs;
+      mem['_k'] = keepMs;
       if (newEtag != null) mem['_e'] = newEtag;
       await _box.put(key, jsonEncode(mem));
       _lastRead[key] = now;
@@ -266,7 +283,8 @@ class CacheService {
       final decoded = jsonDecode(raw);
       if (decoded is! Map<String, dynamic>) return;
       decoded['_t'] = now;
-      decoded['_x'] = ttl.inMilliseconds;
+      decoded['_x'] = ttlMs;
+      decoded['_k'] = keepMs;
       if (newEtag != null) decoded['_e'] = newEtag;
       await _box.put(key, jsonEncode(decoded));
       _memCache[key] = decoded;
@@ -341,14 +359,17 @@ class CacheService {
       // CACHE-11: single-pass — TTL + LRU adaylarını tek geçişte topla; Phase 2 re-scan yok.
       final lruCandidates = <MapEntry<String, int>>[];
 
+      const int _24h = 86400000;
       for (final key in _box.keys.cast<String>()) {
         // L1: warm entry — Hive okuma ve jsonDecode maliyeti sıfır.
         final mem = _memCache[key];
         if (mem != null) {
           if (mem.containsKey('_t')) {
             final age = now - (mem['_t'] as num).toInt();
-            final ttl = (mem['_x'] as num?)?.toInt() ?? 300000;
-            if (age > ttl) {
+            final ttlMs = (mem['_x'] as num?)?.toInt() ?? 300000;
+            // _k: fiziksel saklama süresi (SWR — TTL dolunca silinmez, keepFor'a kadar kalır)
+            final keepMs = (mem['_k'] as num?)?.toInt() ?? (ttlMs * 7 > _24h ? ttlMs * 7 : _24h);
+            if (age > keepMs) {
               toDelete.add(key);
             } else {
               final lruTime = _lastRead[key] ?? (mem['_t'] as num).toInt();
@@ -364,8 +385,9 @@ class CacheService {
           final decoded = jsonDecode(raw);
           if (decoded is Map && decoded.containsKey('_t')) {
             final age = now - (decoded['_t'] as num).toInt();
-            final ttl = (decoded['_x'] as num?)?.toInt() ?? 300000;
-            if (age > ttl) {
+            final ttlMs = (decoded['_x'] as num?)?.toInt() ?? 300000;
+            final keepMs = (decoded['_k'] as num?)?.toInt() ?? (ttlMs * 7 > _24h ? ttlMs * 7 : _24h);
+            if (age > keepMs) {
               toDelete.add(key);
             } else {
               final lruTime = _lastRead[key] ?? (decoded['_t'] as num).toInt();
