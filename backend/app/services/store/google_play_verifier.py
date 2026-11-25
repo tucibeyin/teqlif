@@ -29,10 +29,10 @@ _PLAY_BASE   = "https://androidpublisher.googleapis.com/androidpublisher/v3"
 
 # product_id → subscription
 _SUBSCRIPTION_IDS: frozenset[str] = frozenset({
-    "teqlif_pro_1m",
-    "teqlif_pro_3m",
-    "teqlif_pro_6m",
-    "teqlif_pro_12m",
+    "teqlif_pro_1m",         "teqlif_pro_12m",
+    "teqlif_pro_plus_1m",    "teqlif_pro_plus_12m",
+    "teqlif_premium_1m",     "teqlif_premium_12m",
+    "teqlif_premium_plus_1m","teqlif_premium_plus_12m",
 })
 
 _CONSUMABLE_IDS: frozenset[str] = frozenset({

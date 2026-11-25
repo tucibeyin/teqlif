@@ -26,10 +26,10 @@ VALID_CONSUMABLE_IDS: frozenset[str] = frozenset({
 })
 
 VALID_SUBSCRIPTION_IDS: frozenset[str] = frozenset({
-    "teqlif_pro_1m",
-    "teqlif_pro_3m",
-    "teqlif_pro_6m",
-    "teqlif_pro_12m",
+    "teqlif_pro_1m",         "teqlif_pro_12m",
+    "teqlif_pro_plus_1m",    "teqlif_pro_plus_12m",
+    "teqlif_premium_1m",     "teqlif_premium_12m",
+    "teqlif_premium_plus_1m","teqlif_premium_plus_12m",
 })
 
 VALID_PRODUCT_IDS: frozenset[str] = VALID_CONSUMABLE_IDS | VALID_SUBSCRIPTION_IDS
