@@ -27,28 +27,20 @@ class _PlanOption {
 
 const _plansByTier = <String, List<_PlanOption>>{
   UserTier.tier1: [
-    _PlanOption(productId: 'teqlif_pro_1m',  labelKey: 'subMonthly'),
-    _PlanOption(productId: 'teqlif_pro_3m',  labelKey: 'subQuarterly', savingKey: 'subSave10', highlighted: true, badgeLabelKey: 'subPopularBadge'),
-    _PlanOption(productId: 'teqlif_pro_6m',  labelKey: 'subBiannual',  savingKey: 'subSave20'),
-    _PlanOption(productId: 'teqlif_pro_12m', labelKey: 'subAnnual',    savingKey: 'subSave30', badgeLabelKey: 'subPlanBadgeBest'),
+    _PlanOption(productId: 'teqlif_pro_1m',   labelKey: 'subMonthly'),
+    _PlanOption(productId: 'teqlif_pro_12m',  labelKey: 'subAnnual', savingKey: 'subSave25', highlighted: true, badgeLabelKey: 'subPlanBadgeBest'),
   ],
   UserTier.tier2: [
-    _PlanOption(productId: 'teqlif_pro_plus_1m',  labelKey: 'subMonthly'),
-    _PlanOption(productId: 'teqlif_pro_plus_3m',  labelKey: 'subQuarterly', savingKey: 'subSave10', highlighted: true, badgeLabelKey: 'subPopularBadge'),
-    _PlanOption(productId: 'teqlif_pro_plus_6m',  labelKey: 'subBiannual',  savingKey: 'subSave20'),
-    _PlanOption(productId: 'teqlif_pro_plus_12m', labelKey: 'subAnnual',    savingKey: 'subSave30', badgeLabelKey: 'subPlanBadgeBest'),
+    _PlanOption(productId: 'teqlif_pro_plus_1m',   labelKey: 'subMonthly'),
+    _PlanOption(productId: 'teqlif_pro_plus_12m',  labelKey: 'subAnnual', savingKey: 'subSave25', highlighted: true, badgeLabelKey: 'subPlanBadgeBest'),
   ],
   UserTier.tier3: [
-    _PlanOption(productId: 'teqlif_premium_1m',  labelKey: 'subMonthly'),
-    _PlanOption(productId: 'teqlif_premium_3m',  labelKey: 'subQuarterly', savingKey: 'subSave10', highlighted: true, badgeLabelKey: 'subPopularBadge'),
-    _PlanOption(productId: 'teqlif_premium_6m',  labelKey: 'subBiannual',  savingKey: 'subSave20'),
-    _PlanOption(productId: 'teqlif_premium_12m', labelKey: 'subAnnual',    savingKey: 'subSave30', badgeLabelKey: 'subPlanBadgeBest'),
+    _PlanOption(productId: 'teqlif_premium_1m',   labelKey: 'subMonthly'),
+    _PlanOption(productId: 'teqlif_premium_12m',  labelKey: 'subAnnual', savingKey: 'subSave25', highlighted: true, badgeLabelKey: 'subPlanBadgeBest'),
   ],
   UserTier.tier4: [
-    _PlanOption(productId: 'teqlif_premium_plus_1m',  labelKey: 'subMonthly'),
-    _PlanOption(productId: 'teqlif_premium_plus_3m',  labelKey: 'subQuarterly', savingKey: 'subSave10', highlighted: true, badgeLabelKey: 'subPopularBadge'),
-    _PlanOption(productId: 'teqlif_premium_plus_6m',  labelKey: 'subBiannual',  savingKey: 'subSave20'),
-    _PlanOption(productId: 'teqlif_premium_plus_12m', labelKey: 'subAnnual',    savingKey: 'subSave30', badgeLabelKey: 'subPlanBadgeBest'),
+    _PlanOption(productId: 'teqlif_premium_plus_1m',   labelKey: 'subMonthly'),
+    _PlanOption(productId: 'teqlif_premium_plus_12m',  labelKey: 'subAnnual', savingKey: 'subSave25', highlighted: true, badgeLabelKey: 'subPlanBadgeBest'),
   ],
 };
 
@@ -422,67 +414,75 @@ class _TierSelector extends StatelessWidget {
     required this.loc,
   });
 
+  Widget _buildBtn(String tier, double p) {
+    final sel    = selected == tier;
+    final accent = _tierAccent(tier);
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => onTierChanged(tier),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(vertical: 11),
+          decoration: BoxDecoration(
+            color: sel
+                ? accent.withValues(alpha: 0.22)
+                : accent.withValues(alpha: 0.04 + 0.08 * p),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: sel ? accent : accent.withValues(alpha: 0.2 + 0.4 * p),
+              width: sel ? 2 : 1,
+            ),
+            boxShadow: sel
+                ? [BoxShadow(color: accent.withValues(alpha: 0.35), blurRadius: 8, offset: const Offset(0, 2))]
+                : null,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              FaIcon(
+                _tierFaIcon(tier),
+                size: 10,
+                color: sel ? accent : accent.withValues(alpha: 0.4 + 0.5 * p),
+              ),
+              const SizedBox(width: 5),
+              Text(
+                _tierLabel(loc, tier),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: sel ? accent : accent.withValues(alpha: 0.4 + 0.5 * p),
+                  fontWeight: sel ? FontWeight.w800 : FontWeight.w500,
+                  fontSize: 13,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: pulseCtrl,
       builder: (context, _) {
         final p = pulseCtrl.value;
-        return Row(
-          children: tiers.asMap().entries.map((entry) {
-            final i    = entry.key;
-            final tier = entry.value;
-            final sel  = selected == tier;
-            final accent = _tierAccent(tier);
-
-            return Expanded(
-              child: GestureDetector(
-                onTap: () => onTierChanged(tier),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  margin: EdgeInsetsDirectional.only(end: i < tiers.length - 1 ? 6 : 0),
-                  padding: const EdgeInsets.symmetric(vertical: 11),
-                  decoration: BoxDecoration(
-                    color: sel
-                        ? accent.withValues(alpha: 0.22)
-                        : accent.withValues(alpha: 0.04 + 0.08 * p),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: sel
-                          ? accent
-                          : accent.withValues(alpha: 0.2 + 0.4 * p),
-                      width: sel ? 2 : 1,
-                    ),
-                    boxShadow: sel
-                        ? [BoxShadow(color: accent.withValues(alpha: 0.35), blurRadius: 8, offset: const Offset(0, 2))]
-                        : null,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      FaIcon(
-                        _tierFaIcon(tier),
-                        size: 10,
-                        color: sel ? accent : accent.withValues(alpha: 0.4 + 0.5 * p),
-                      ),
-                      const SizedBox(width: 5),
-                      Text(
-                        _tierLabel(loc, tier),
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: sel ? accent : accent.withValues(alpha: 0.4 + 0.5 * p),
-                          fontWeight: sel ? FontWeight.w800 : FontWeight.w500,
-                          fontSize: 13,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
+        return Column(
+          children: [
+            Row(children: [
+              _buildBtn(tiers[0], p), // PRO
+              const SizedBox(width: 6),
+              _buildBtn(tiers[1], p), // PRO+
+            ]),
+            const SizedBox(height: 6),
+            Row(children: [
+              _buildBtn(tiers[2], p), // PREMIUM
+              const SizedBox(width: 6),
+              _buildBtn(tiers[3], p), // PREMIUM+
+            ]),
+          ],
         );
       },
     );
@@ -531,22 +531,93 @@ class _TierBenefits extends StatelessWidget {
       ],
     };
 
+    // Kredi sayıları — tier.py CREDIT_FREE_LIMITS ile senkron
+    final (int blast, int boost, int ai, int reaktivasyon) = switch (tier) {
+      UserTier.tier4 => (30, 10, 30, 10),
+      UserTier.tier3 => (30, 10, 30, 10),
+      UserTier.tier2 => (20,  6, 15,  6),
+      _              => (10,  3,  6,  3),  // tier1 / PRO
+    };
+
+    // (icon, labelKey, labelFallback, count, descKey, descFallback)
+    final credits = [
+      (Icons.campaign_outlined,      'subCreditBlast',        'Blast',        blast,        'subCreditBlastDesc',        'Takipçilere toplu bildirim gönderimi'),
+      (Icons.rocket_launch_outlined, 'subCreditBoost',        'Boost',        boost,        'subCreditBoostDesc',        'İlan/yayın öne çıkarma'),
+      (Icons.psychology_outlined,    'subCreditAi',           'AI Danışman',  ai,           'subCreditAiDesc',           'Yapay zeka ile ilan açıklaması'),
+      (Icons.refresh_rounded,        'subCreditReactivation', 'Reaktivasyon', reaktivasyon, 'subCreditReactivationDesc', 'Süresi dolan ilanı yeniden aktifleştirme'),
+    ];
+
     return Column(
-      children: benefits.map((b) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Row(
-          children: [
-            Icon(b.$1, color: accent, size: 18),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                b.$2,
-                style: const TextStyle(color: Colors.white70, fontSize: 13),
+      children: [
+        ...benefits.map((b) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            children: [
+              Icon(b.$1, color: accent, size: 18),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  b.$2,
+                  style: const TextStyle(color: Colors.white70, fontSize: 13),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
+        )),
+        const SizedBox(height: 10),
+        Container(
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+          decoration: BoxDecoration(
+            color: accent.withValues(alpha: 0.07),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: accent.withValues(alpha: 0.15)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                loc.tOr('subCreditsTitle', 'Aylık Ücretsiz Krediler'),
+                style: TextStyle(color: accent, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.3),
+              ),
+              const SizedBox(height: 6),
+              ...credits.map((c) => Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  children: [
+                    Icon(c.$1, color: accent.withValues(alpha: 0.7), size: 15),
+                    const SizedBox(width: 8),
+                    Text(
+                      loc.tOr(c.$2, c.$3),
+                      style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: accent.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        '${c.$4}/ay',
+                        style: TextStyle(color: accent, fontSize: 11, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        loc.tOr(c.$5, c.$6),
+                        style: const TextStyle(color: Colors.white38, fontSize: 10),
+                        textAlign: TextAlign.end,
+                      ),
+                    ),
+                  ],
+                ),
+              )),
+            ],
+          ),
         ),
-      )).toList(),
+      ],
     );
   }
 }

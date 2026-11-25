@@ -5801,10 +5801,8 @@ class _ProTab extends ConsumerWidget {
 
   // Yükseltme seçenekleri: (productId, ARB labelKey, tasarruf%, tierIndex)
   static const _upgradePlans = [
-    ('teqlif_pro_1m',  'subMonthlyFull',   0,  0),
-    ('teqlif_pro_3m',  'subQuarterlyFull', 10, 1),
-    ('teqlif_pro_6m',  'subBiannualFull',  20, 2),
-    ('teqlif_pro_12m', 'subAnnualFull',    30, 3),
+    ('teqlif_pro_1m',  'subMonthlyFull',  0,  0),
+    ('teqlif_pro_12m', 'subAnnualFull',   25, 1),
   ];
 
   static const _benefits = [
