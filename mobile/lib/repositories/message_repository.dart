@@ -4,45 +4,47 @@ import 'package:http/http.dart' as http;
 import '../core/network/api_client.dart';
 import '../models/direct_message.dart';
 import '../services/api_service.dart';
-import '../services/cache_service.dart';
+import '../services/dm_database.dart';
 import '../services/offline_queue_service.dart';
 import '../services/storage_service.dart';
 
 class MessageRepository {
   final ApiClient _client;
   final ApiService _api;
-  final CacheService _cache;
+  final DmDatabase _db;
 
-  MessageRepository(this._client, this._api, this._cache);
-
-  // Thread cache 7 gün — WS olayları (append/remove/markRead) veriyi canlı
-  // tutuyor; TTL yalnızca "uygulama kapalıyken" veriyi ne kadar tutacağımızı belirler.
-  static const _kThreadCacheTtl = Duration(days: 7);
+  MessageRepository(this._client, this._api, this._db);
 
   // ── Okuma ────────────────────────────────────────────────────────────────
 
-  /// Hive cache + OfflineQueue → DirectMessage listesi, senkron.
-  List<DirectMessage>? getCachedThread(int otherUserId, int myUserId) {
-    final raw = _cache.getWithStaleness(StorageService.cacheThreadKey(otherUserId))?.data;
-    final cached = raw != null ? (raw as List).cast<Map<String, dynamic>>() : null;
-    return _mergePending(cached, otherUserId, myUserId)
-        ?.map(DirectMessage.fromJson)
-        .toList();
+  /// SQLite'tan senkron değil — async okuma. null → thread hiç açılmamış.
+  Future<List<DirectMessage>?> getCachedThread(int otherUserId, int myUserId) async {
+    final rows = await _db.getThread(otherUserId);
+    if (rows.isEmpty) return null;
+    return _buildList(rows, otherUserId, myUserId);
   }
 
-  /// SWR stream — son 50 mesaj + OfflineQueue, DirectMessage döner.
-  Stream<List<DirectMessage>> getThread(int otherUserId, int myUserId) =>
-      _api.get<List<Map<String, dynamic>>>(
-        url: '${_client.config.baseUrl}/messages/$otherUserId',
-        cacheKey: StorageService.cacheThreadKey(otherUserId),
-        fromJson: (raw) => (raw as List).cast<Map<String, dynamic>>(),
-        cacheTtl: _kThreadCacheTtl,
-      ).map((maps) =>
-          (_mergePending(maps, otherUserId, myUserId) ?? maps)
-              .map(DirectMessage.fromJson)
-              .toList());
+  /// async* stream: DB'den anında emit, ardından ağdan upsert + emit.
+  Stream<List<DirectMessage>> getThread(int otherUserId, int myUserId) async* {
+    final dbRows = await _db.getThread(otherUserId);
+    yield _buildList(dbRows, otherUserId, myUserId);
 
-  /// Önceki sayfa — cache'siz, DirectMessage döner.
+    try {
+      await for (final maps in _api.get<List<Map<String, dynamic>>>(
+        url: '${_client.config.baseUrl}/messages/$otherUserId',
+        cacheKey: null,
+        fromJson: (raw) => (raw as List).cast<Map<String, dynamic>>(),
+      )) {
+        await _db.upsertMessages(otherUserId, maps);
+        yield _buildList(maps, otherUserId, myUserId);
+      }
+    } catch (_) {
+      if (dbRows.isEmpty) rethrow;
+      // DB zaten emit edildi — ağ hatası sessizce geçer
+    }
+  }
+
+  /// Önceki sayfa — SQLite'a da yazar (offline scroll için).
   Future<List<DirectMessage>> getPage(int otherUserId, int beforeId) async {
     final body = await _client.callList(
       () async => http.get(
@@ -52,37 +54,24 @@ class MessageRepository {
         headers: await _buildHeaders(),
       ),
     );
-    return body
-        .cast<Map<String, dynamic>>()
-        .map(DirectMessage.fromJson)
-        .toList();
+    final maps = body.cast<Map<String, dynamic>>();
+    await _db.upsertMessages(otherUserId, maps);
+    return maps.map(DirectMessage.fromJson).toList();
   }
 
   // ── WS cache güncellemeleri ──────────────────────────────────────────────
 
-  /// Yeni mesaj: cache'e ekle, sliding window 50 koru.
-  Future<void> appendToCache(int otherUserId, Map<String, dynamic> msg) async {
-    await _patchCache(otherUserId, (msgs) {
-      final updated = [...msgs, msg];
-      return updated.length > 50 ? updated.sublist(updated.length - 50) : updated;
-    });
-  }
+  /// Yeni mesaj: SQLite'a ekle.
+  Future<void> appendToCache(int otherUserId, Map<String, dynamic> msg) =>
+      _db.appendMessage(otherUserId, msg);
 
-  /// Mesaj silindi: cache'ten kaldır.
-  Future<void> removeFromCache(int otherUserId, int messageId) async {
-    await _patchCache(
-      otherUserId,
-      (msgs) => msgs..removeWhere((m) => m['id'] == messageId),
-    );
-  }
+  /// Mesaj silindi: SQLite'tan kaldır.
+  Future<void> removeFromCache(int otherUserId, int messageId) =>
+      _db.deleteMessage(messageId);
 
   /// Karşı taraf okudu: benim gönderdiğim mesajlarda is_read=true yap.
-  Future<void> markReadInCache(int otherUserId, int myUserId) async {
-    await _patchCache(otherUserId, (msgs) => msgs
-        .map((m) =>
-            (m['sender_id'] as int?) == myUserId ? {...m, 'is_read': true} : m)
-        .toList());
-  }
+  Future<void> markReadInCache(int otherUserId, int myUserId) =>
+      _db.markReadByThread(otherUserId, myUserId);
 
   // ── Mutasyonlar ──────────────────────────────────────────────────────────
 
@@ -113,7 +102,7 @@ class MessageRepository {
           headers: await _buildHeaders(),
         ),
       );
-      await removeFromCache(otherUserId, messageId);
+      await _db.deleteMessage(messageId);
       return true;
     } catch (_) {
       return false;
@@ -122,11 +111,10 @@ class MessageRepository {
 
   // ── Ön Isıtma ────────────────────────────────────────────────────────────
 
-  /// Cache boşsa thread'i arka planda sessizce fetch edip ısıtır.
-  /// Bağlantı yoksa veya hata oluşursa sessizce geçer — best-effort.
+  /// SQLite boşsa thread'i arka planda sessizce fetch edip ısıtır.
   Future<void> preWarmThread(int otherUserId, int myUserId) async {
-    final existing = _cache.getWithStaleness(StorageService.cacheThreadKey(otherUserId));
-    if (existing != null) return;
+    final existing = await _db.getThread(otherUserId);
+    if (existing.isNotEmpty) return;
     try {
       await getThread(otherUserId, myUserId).drain<void>();
     } catch (_) {}
@@ -134,8 +122,15 @@ class MessageRepository {
 
   // ── Yardımcılar ──────────────────────────────────────────────────────────
 
-  /// OfflineQueue bekleyen mesajları ham Map listesine ekler.
-  /// Map seviyesinde çalışır — Hive serileştirme sınırı burada kalır.
+  List<DirectMessage> _buildList(
+    List<Map<String, dynamic>> rows,
+    int otherUserId,
+    int myUserId,
+  ) {
+    final merged = _mergePending(rows, otherUserId, myUserId) ?? rows;
+    return merged.map(DirectMessage.fromJson).toList();
+  }
+
   List<Map<String, dynamic>>? _mergePending(
     List<Map<String, dynamic>>? base,
     int otherUserId,
@@ -169,36 +164,6 @@ class MessageRepository {
     return merged;
   }
 
-  // CACHE-08: Konuşma başına sıralı yazma kilidi.
-  // Dart tek thread'li olsa da await noktasında event loop başka async işlemi
-  // çalıştırabilir; iki eşzamanlı _patchCache çağrısı aynı Hive snapshot'ını
-  // okuyup birbirini ezerek sessiz mesaj kaybına neden olur.
-  static final Map<int, Future<void>> _patchLocks = {};
-
-  /// oku → değiştir → kaydet; aynı konuşma için sıralı çalışır (serial queue).
-  Future<void> _patchCache(
-    int otherUserId,
-    List<Map<String, dynamic>> Function(List<Map<String, dynamic>>) fn,
-  ) async {
-    final prev = _patchLocks[otherUserId] ?? Future<void>.value();
-    final completer = Completer<void>();
-    _patchLocks[otherUserId] = completer.future;
-
-    try {
-      await prev;
-      final raw = _cache.getWithStaleness(StorageService.cacheThreadKey(otherUserId))?.data;
-      if (raw == null) return;
-      final current = (raw as List).cast<Map<String, dynamic>>();
-      await _cache.saveData(
-        StorageService.cacheThreadKey(otherUserId),
-        fn(List.from(current)),
-        ttl: _kThreadCacheTtl,
-      );
-    } finally {
-      completer.complete();
-    }
-  }
-
   Future<Map<String, String>> _buildHeaders() async {
     final token = await StorageService.getToken();
     return _client.buildApiHeaders(token, json: true);
@@ -209,5 +174,5 @@ final messageRepositoryProvider = Provider<MessageRepository>((ref) =>
     MessageRepository(
       ref.watch(apiClientProvider),
       ref.watch(apiServiceProvider),
-      ref.watch(cacheServiceProvider),
+      ref.watch(dmDatabaseProvider),
     ));

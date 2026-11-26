@@ -23,6 +23,7 @@ import 'services/push_notification_service.dart';
 import 'services/background_audio_handler.dart';
 import 'services/localization_service.dart';
 import 'services/catalog_service.dart';
+import 'services/dm_database.dart';
 import 'services/iap_service.dart';
 import 'ui_library/components/overlays/teq_toast.dart';
 import 'widgets/global_keyboard_accessory.dart';
@@ -110,6 +111,8 @@ void main() async {
       debugPrint('[STARTUP][${DateTime.now().toIso8601String()}] StorageService.restoreAvatarUrl done | ${sw.elapsedMilliseconds}ms');
       await OfflineQueueService.init();
       debugPrint('[STARTUP][${DateTime.now().toIso8601String()}] OfflineQueueService.init done | ${sw.elapsedMilliseconds}ms');
+      await DmDatabase.init();
+      debugPrint('[STARTUP][${DateTime.now().toIso8601String()}] DmDatabase.init done | ${sw.elapsedMilliseconds}ms');
       OfflineQueueService.startDrainOnReconnect();
       await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
       debugPrint('[STARTUP][${DateTime.now().toIso8601String()}] Firebase.initializeApp done | ${sw.elapsedMilliseconds}ms');

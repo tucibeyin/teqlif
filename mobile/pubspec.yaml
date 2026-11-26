@@ -65,6 +65,8 @@ dependencies:
 
   flutter_cache_manager: ">=3.3.1 <4.0.0"
   in_app_purchase: ^3.2.0
+  sqflite: ^2.3.3
+  path: ^1.9.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

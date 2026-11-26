@@ -2107,7 +2107,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
             child: CachedNetworkImage(
               imageUrl: ref.read(apiClientProvider).imgUrl(thumbUrl ?? mediaUrl ?? ''),
               cacheManager: TeqlifCacheManager(),
-              cacheKey: StorageService.cacheDmImageKey(msgId),
+              cacheKey: 'dm_img_$msgId',
               memCacheWidth: 200,
               memCacheHeight: 200,
               width: 200,
@@ -2144,7 +2144,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen>
                     ? CachedNetworkImage(
                         imageUrl: ref.read(apiClientProvider).imgUrl(thumbUrl),
                         cacheManager: TeqlifCacheManager(),
-                        cacheKey: StorageService.cacheDmThumbKey(msgId),
+                        cacheKey: 'dm_thumb_$msgId',
                         memCacheWidth: 200,
                         memCacheHeight: 200,
                         width: 200,

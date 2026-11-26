@@ -41,8 +41,8 @@ class MessageThreadViewModel
   int get _myId => StorageService.currentUserIdSync ?? 0;
 
   @override
-  MessageThreadState build(int otherUserId) {
-    final cached = ref.read(messageRepositoryProvider).getCachedThread(otherUserId, _myId);
+  Future<MessageThreadState> build(int otherUserId) async {
+    final cached = await ref.read(messageRepositoryProvider).getCachedThread(otherUserId, _myId);
 
     ref.onDispose(() => _sub?.cancel());
     Future.microtask(() => _startStream(otherUserId));

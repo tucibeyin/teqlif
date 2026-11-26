@@ -63,19 +63,6 @@ class StorageService {
   static String get cacheBlockedUsers          => userScopedKey('cache_blocked_users');
   static String get cacheWalletData            => userScopedKey('user_wallet_data');
 
-  // DM thread cache — dinamik anahtarlar (currentUserId + otherUserId) (CACHE-02)
-  static String cacheThreadKey(int otherUserId) {
-    final uid = currentUserIdSync ?? 'anon';
-    return 'u_${uid}_chat_$otherUserId';
-  }
-  static String cacheDmImageKey(int msgId) {
-    final uid = currentUserIdSync ?? 'anon';
-    return 'u_${uid}_dm_img_$msgId';
-  }
-  static String cacheDmThumbKey(int msgId) {
-    final uid = currentUserIdSync ?? 'anon';
-    return 'u_${uid}_dm_thumb_$msgId';
-  }
 
   /// JWT payload'dan userId ayrıştırır — tek parse noktası.
   static int? _parseUserIdFromToken(String token) {
