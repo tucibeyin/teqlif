@@ -500,12 +500,24 @@ class _GroupPageState extends ConsumerState<_GroupPage> with TickerProviderState
     _heartAnimCtrl = null;
   }
 
+  // ── Duraklatma / Sürdürme ─────────────────────────────────────────────────
+
+  void _pauseStory() {
+    _videoCtrl?.pause();
+    _liveTimerAnim?.stop();
+  }
+
+  void _resumeStory() {
+    if (!mounted) return;
+    _videoCtrl?.play();
+    _liveTimerAnim?.forward();
+  }
+
   // ── Kim Gördü? ────────────────────────────────────────────────────────────
 
   Future<void> _showViewersSheet() async {
     final item = _currentItem;
-    // Videoyu durdur (sheet açıkken devam etmesin)
-    _videoCtrl?.pause();
+    _pauseStory();
 
     await showModalBottomSheet<void>(
       context: context,
@@ -514,17 +526,14 @@ class _GroupPageState extends ConsumerState<_GroupPage> with TickerProviderState
       builder: (_) => _ViewersSheet(storyId: item.id),
     );
 
-    // Sheet kapandığında videoyu sürdür
-    _videoCtrl?.play();
+    _resumeStory();
   }
 
   // ── Hikaye Sil ────────────────────────────────────────────────────────────
 
   Future<void> _confirmDeleteStory() async {
-    // View isteği sunucuda işleniyorken DELETE gönderilmesini önlemek için
-    // önce videoyu durdur, kısa süre bekle
     final loc = ref.watch(localizationProvider);
-    _videoCtrl?.pause();
+    _pauseStory();
     await Future.delayed(const Duration(milliseconds: 300));
 
     if (!mounted) return;
@@ -548,8 +557,7 @@ class _GroupPageState extends ConsumerState<_GroupPage> with TickerProviderState
     );
     if (!mounted) return;
     if (confirmed != true) {
-      // İptal → videoyu sürdür
-      _videoCtrl?.play();
+      _resumeStory();
       return;
     }
     try {
@@ -578,7 +586,7 @@ class _GroupPageState extends ConsumerState<_GroupPage> with TickerProviderState
       await Sentry.captureException(e, stackTrace: st);
       if (mounted) {
         TeqToast.error(loc.t('storyDeleteFailed'));
-        _videoCtrl?.play();
+        _resumeStory();
       }
     }
   }
@@ -895,8 +903,6 @@ class _GroupPageState extends ConsumerState<_GroupPage> with TickerProviderState
   Widget _buildTapNav() {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      // onTapDown: position'ı sakla; onTap bunu kullanır (onDoubleTap ile birlikte
-      // onTapUp yerine onTap kullanılıyor — ~300ms gecikme kabul edilebilir).
       onTapDown: (details) => _lastTapPosition = details.localPosition,
       onTap: () {
         final pos = _lastTapPosition;
@@ -909,6 +915,9 @@ class _GroupPageState extends ConsumerState<_GroupPage> with TickerProviderState
         }
       },
       onDoubleTap: _triggerHeartAnimation,
+      onLongPressStart: (_) => _pauseStory(),
+      onLongPressEnd: (_) => _resumeStory(),
+      onLongPressCancel: () => _resumeStory(),
       child: const SizedBox.expand(),
     );
   }
@@ -917,9 +926,8 @@ class _GroupPageState extends ConsumerState<_GroupPage> with TickerProviderState
 
   void _goToProfile(BuildContext context) {
     final user = widget.group.user;
-    _videoCtrl?.pause();
+    _pauseStory();
     if (_isMine) {
-      // Kendi profili → normal profil ekranı
       Navigator.of(context).pop();
       return;
     }
@@ -930,7 +938,7 @@ class _GroupPageState extends ConsumerState<_GroupPage> with TickerProviderState
             userId: user.id,
           ),
         ))
-        .then((_) => _videoCtrl?.play());
+        .then((_) => _resumeStory());
   }
 
   // ── Üst progress barlar ───────────────────────────────────────────────────
