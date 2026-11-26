@@ -4,7 +4,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Kasım 2026 — §52 AntiBotDefender CG-NAT + LiveList double-init (1df60b6c–a45c5327); §51 Android ConnectionService + native FCM receiver (1c985668); §50 Subscription cross-screen sync + Apple S2S downgrade bug fix; §49 Nginx sitemap proxy & MinIO robots disallow; §48 Tier-aware plan mapping + upgrade panel + UI düzeltmeleri (496ee490–b37b6667); §47 Reserved Usernames; §13 node listesi güncellendi
+**Son güncelleme:** Kasım 2026 — §53 Açık artırma teklif hız sınırı sliding window (63d64a40); Android TeqlifIncomingConnection extras→callData JVM fix (e90b64a6); §52 AntiBotDefender CG-NAT + LiveList double-init (1df60b6c–a45c5327); §51 Android ConnectionService + native FCM receiver (1c985668); §50 Subscription cross-screen sync + Apple S2S downgrade bug fix; §49 Nginx sitemap proxy & MinIO robots disallow; §48 Tier-aware plan mapping + upgrade panel + UI düzeltmeleri (496ee490–b37b6667); §47 Reserved Usernames; §13 node listesi güncellendi
 
 ---
 
@@ -44,6 +44,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 50. [Subscription Cross-Screen Sync + Apple S2S Downgrade Bug Fix](#50--subscription-cross-screen-sync--apple-s2s-downgrade-bug-fix)
 51. [Android ConnectionService + Native FCM Receiver — Pil Optimizasyonuna Karşı Dayanıklı Çağrı](#51-android-connectionservice--native-fcm-receiver--pil-optimizasyonuna-karşı-dayanıklı-çağrı-commit-1c985668)
 52. [AntiBotDefender CG-NAT Eşiği + LiveList Double-Init Race Condition](#52-antibotdefender-cg-nat-eşiği--livelist-double-init-race-condition-commit-1df60b6c-a45c5327)
+53. [Açık Artırma Teklif Hız Sınırı — Sliding Window + Auction-Scoped](#53-açık-artırma-teklif-hız-sınırı--sliding-window--auction-scoped-commit-63d64a40)
 
 ---
 
@@ -3522,5 +3523,66 @@ Zombie logic yaşıyor — yalnızca gerçek offline→online geçişi için ça
 | `backend/app/config.py` | `defender_ip_limit: int = 1500` — env-configurable, CG-NAT-safe default |
 | `backend/app/core/defender.py` | `_GLOBAL_IP_LIMIT = settings.defender_ip_limit` |
 | `mobile/lib/screens/live/viewmodels/live_list_view_model.dart` | `_startedOffline` flag + guard koşulu |
+
+---
+
+## 53. Açık Artırma Teklif Hız Sınırı — Sliding Window + Auction-Scoped (commit 63d64a40)
+
+### Problem
+
+Açık artırma teklif endpoint'i (`POST /api/auction/{stream_id}/bid`) iki yapısal sorun taşıyordu:
+
+1. **Fixed-window burst**: `@limiter.limit("10/minute")` — pencere başında 10 teklif 1 saniyede verilebiliyor, ardından ~59 saniye bloke. Rekabetçi bir açık artırmada gerçek kullanıcılar anlamsız 429 alıyordu.
+2. **Global key**: Rate limit key'i `user_id:bid` — farklı açık artırmalardaki teklifler birbirini tüketiyor. A artırmasında 10 teklif versen B artırmasında hiç teklif veremiyorsun.
+3. **İdempotency TTL 30 saniye**: Kullanıcı aynı X-Idempotency-Key ile 30 saniye boyunca bloklanıyordu. Rekabetçi teklifte 30 saniye uzun.
+
+### Karar
+
+**Sliding window + auction-scoped rate limit**, backend'de direkt uygulandı:
+
+- `check_sliding_window_rate(user_id, "bid", limit=20, window=60, scope=str(stream_id))` — Redis sorted set, mikrosaniye üyeler
+- Limit: 20 teklif/dakika (eski 10'dan 2× artırıldı)
+- Scope: `stream_id` — her açık artırma bağımsız sayaç
+- idempotency TTL: 30 → 2 saniye
+
+Flutter tarafında ek kısıtlama **eklenmedi**. `_placeBid()` fonksiyonundaki `if (_loading) return;` guard'ı in-flight istek sırasında çift tıklamayı zaten engeller. Ekstra cooldown = gereksiz engel.
+
+### Sliding Window Mekanizması
+
+```
+Redis sorted set: slide_rate:{user_id}:bid:{stream_id}
+Üye: mikrosaniye timestamp (str) — üye çakışmasını önler
+Score: mikrosaniye timestamp (float)
+
+Her istekte (pipeline, atomik):
+  ZREMRANGEBYSCORE key "-inf" (now - 60s)  → eski kayıtları temizle
+  ZADD key {now_us: now_us}                 → yeni kaydı ekle
+  ZCARD key                                 → penceredeki toplam
+  EXPIRE key 61                             → TTL garantisi
+
+count > 20 ise:
+  ZREM key str(now_us)                      → eklediğimizi geri al
+  ZRANGE key 0 0 WITHSCORES                → en eski kayıt
+  retry_after = (oldest_us + 60s - now_us) / 1_000_000
+```
+
+Fixed-window farkı: kullanıcı her zaman son 60 saniyedeki teklif sayısına göre değerlendirilir. Pencere sıfırlamasında burst yok.
+
+### WhatNot Karşılaştırması
+
+| Özellik | Önce | Sonra | WhatNot |
+|---------|------|-------|---------|
+| Algoritma | Fixed-window | Sliding window | Token bucket |
+| Limit | 10/dak | 20/dak | ~30/dak (tahmin) |
+| Scope | Global | Auction-scoped | Auction-scoped |
+| İdempotency TTL | 30 s | 2 s | ~1-3 s |
+| Client debounce | Yok | `_loading` guard | 300-500 ms |
+
+### Dosyalar
+
+| Dosya | Değişiklik |
+|-------|------------|
+| `backend/app/core/action_guard.py` | `check_sliding_window_rate()` eklendi (sorted set, microsecond precision) |
+| `backend/app/routers/auction.py` | `@limiter.limit` kaldırıldı; sliding window + scope + TTL 2s |
 
 
