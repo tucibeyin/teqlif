@@ -144,6 +144,23 @@ async def push_notification(
         logger.info("[PUSH] Sessiz saat — push bastırıldı | user_id=%s", user_id)
         return
 
+    # Foreground guard: notif WS bağlıysa uygulama ön plandadır.
+    # DB kaydı zaten yukarıda yazıldı; WS broadcast aşağıda da yapılacak.
+    # FCM kısmını atla — in-app banner WS üzerinden gösterilir.
+    if await ws_manager.is_notif_online(user_id):
+        logger.info("[PUSH] Notif WS aktif — FCM atlandı (in-app banner) | user_id=%s", user_id)
+        notif_payload = {
+            "type": "notification",
+            "id": n.id,
+            "notif_type": n.type,
+            "title": n.title,
+            "body": n.body,
+            "related_id": n.related_id,
+            "created_at": n.created_at.isoformat() if n.created_at else None,
+        }
+        await ws_manager.broadcast_local(f"notif:{user_id}", notif_payload)
+        return
+
     # FCM push — kullanıcının tüm aktif cihazlarına gönder
     async with AsyncSessionLocal() as db:
         from app.models.user_device import UserDevice

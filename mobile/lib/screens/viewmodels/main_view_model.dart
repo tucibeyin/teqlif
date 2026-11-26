@@ -12,6 +12,7 @@ import '../../../services/push_notification_service.dart';
 import '../../../services/storage_service.dart';
 import '../../../services/stream_service.dart';
 import '../../../services/ws_service.dart';
+import '../../../services/notif_ws_service.dart';
 import '../../../services/call_service.dart';
 
 enum MainNavigationEvent {
@@ -89,6 +90,8 @@ class MainViewModel extends AutoDisposeAsyncNotifier<MainState> {
       }
     });
 
+    ref.read(notifWsServiceProvider).connect();
+
     ref.onDispose(() {
       _badgeTimer?.cancel();
       _fcmSub?.cancel();
@@ -97,6 +100,7 @@ class MainViewModel extends AutoDisposeAsyncNotifier<MainState> {
       _badgeRefreshSub?.cancel();
       _deepLinkSub?.cancel();
       _authFailedSub?.cancel();
+      ref.read(notifWsServiceProvider).disconnect();
     });
     
     return const MainState();

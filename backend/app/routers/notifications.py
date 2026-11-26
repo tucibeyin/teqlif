@@ -165,6 +165,7 @@ async def notifications_ws(websocket: WebSocket):
         return
 
     ws_manager.connect(websocket, f"notif:{user_id}")
+    await ws_manager.mark_notif_online(user_id)
     logger.info("[NOTIF WS] BAĞLANDI | user_id=%s", user_id)
 
     try:
@@ -197,5 +198,6 @@ async def notifications_ws(websocket: WebSocket):
         logger.error("[NOTIF WS] HATA | user_id=%s | %s", user_id, exc)
     finally:
         ws_manager.disconnect(websocket, f"notif:{user_id}")
+        await ws_manager.mark_notif_offline(user_id)
         await release_ws_session(user_id)
         logger.info("[NOTIF WS] AYRILDI | user_id=%s", user_id)

@@ -308,6 +308,37 @@ class GlobalWSManager:
             logger.warning("[WS GATEWAY] is_dm_online failed | user=%d | %s", user_id, exc)
             return False  # safe fallback: push gönder
 
+    # ── Notification WS online tracking (foreground banner guard) ────────
+    # Mirrors the dm_online pattern: skip FCM if notif WS is connected so
+    # the app shows an in-app banner instead of a system notification.
+
+    _WS_NOTIF_TTL = 90  # same as DM: covers ping-timeout reconnect window
+
+    async def mark_notif_online(self, user_id: int) -> None:
+        try:
+            r = await get_redis()
+            await r.setex(f"ws_notif_online:{user_id}", self._WS_NOTIF_TTL, 1)
+        except Exception as exc:
+            logger.warning("[WS GATEWAY] mark_notif_online failed | user=%d | %s", user_id, exc)
+
+    async def mark_notif_offline(self, user_id: int) -> None:
+        try:
+            r = await get_redis()
+            await r.delete(f"ws_notif_online:{user_id}")
+        except Exception as exc:
+            logger.warning("[WS GATEWAY] mark_notif_offline failed | user=%d | %s", user_id, exc)
+
+    async def is_notif_online(self, user_id: int) -> bool:
+        """Local check first (fast path), then Redis for cross-worker accuracy."""
+        if self.subscriber_count(f"notif:{user_id}") > 0:
+            return True
+        try:
+            r = await get_redis()
+            return bool(await r.exists(f"ws_notif_online:{user_id}"))
+        except Exception as exc:
+            logger.warning("[WS GATEWAY] is_notif_online failed | user=%d | %s", user_id, exc)
+            return False  # safe fallback: FCM gönder
+
     # ── Call Incoming ACK (iOS double-UI guard) ───────────────────────────
     #
     # Client sends call_incoming_ack over WS as soon as it receives call_incoming.

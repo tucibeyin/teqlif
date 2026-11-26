@@ -28,6 +28,7 @@ import 'ui_library/components/overlays/teq_toast.dart';
 import 'widgets/global_keyboard_accessory.dart';
 import 'widgets/global_call_overlay.dart';
 import 'widgets/incoming_call_overlay.dart';
+import 'widgets/in_app_notif_banner.dart';
 import 'utils/call_route_observer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -114,9 +115,9 @@ void main() async {
       debugPrint('[STARTUP][${DateTime.now().toIso8601String()}] Firebase.initializeApp done | ${sw.elapsedMilliseconds}ms');
       await ThemeProvider.instance.load();
       debugPrint('[STARTUP][${DateTime.now().toIso8601String()}] ThemeProvider.load done | ${sw.elapsedMilliseconds}ms');
-      // Background handler kaydı senkron çalışır; geri kalanı (foreground options,
-      // getInitialMessage) non-blocking olarak başlat — runApp'i bloke etme
-      PushNotificationService.initEarly();
+      // await: setForegroundNotificationPresentationOptions(alert:false) iOS'ta
+      // ilk bildirimden önce aktif olmalı — race condition kapanıyor.
+      await PushNotificationService.initEarly();
       debugPrint('[STARTUP][${DateTime.now().toIso8601String()}] PushNotificationService.initEarly done | ${sw.elapsedMilliseconds}ms');
       FeedTelemetryService.instance.init();
       await IAPService().init();
@@ -191,11 +192,13 @@ class _TeqlifAppState extends ConsumerState<TeqlifApp> {
         navigatorKey: TeqlifApp.navigatorKey,
         navigatorObservers: [_routeObserver, _callRouteObserver],
         builder: (context, child) {
-          return IncomingCallOverlay(
-            navigatorKey: TeqlifApp.navigatorKey,
-            child: GlobalCallOverlay(
+          return InAppNotifBanner(
+            child: IncomingCallOverlay(
               navigatorKey: TeqlifApp.navigatorKey,
-              child: GlobalKeyboardAccessory(child: child!),
+              child: GlobalCallOverlay(
+                navigatorKey: TeqlifApp.navigatorKey,
+                child: GlobalKeyboardAccessory(child: child!),
+              ),
             ),
           );
         },
