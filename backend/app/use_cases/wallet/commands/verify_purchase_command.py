@@ -133,7 +133,7 @@ class VerifyPurchaseCommand:
                 user_key = f"rate:iap:user:{user_id}"
                 await _check_velocity(redis_client, user_key, effective_try_amount)
                 vel_keys_checked.append(user_key)
-            except (BadRequestException, ConflictException):
+            except (BadRequestException, ConflictException, TooManyRequestsException):
                 raise
             except Exception as exc:
                 logger.error("[VerifyPurchase] Redis velocity check başarısız | %s", exc)
