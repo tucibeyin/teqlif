@@ -18,9 +18,26 @@ import '../screens/live/host_stream_screen.dart';
 import '../services/permission_service.dart';
 import '../core/user_tier.dart';
 
+/// Birden fazla dialog açılmasını önleyen modül-seviyesi kilit.
+bool _dialogActive = false;
+
 /// Canlı yayın başlatma dialog'unu gösterir.
+/// Eşzamanlı çağrılara karşı korumalıdır: dialog zaten açıksa yeni çağrı yok sayılır.
 /// [onStreamStarted]: yayın ekranından geri dönüldüğünde çağrılır (opsiyonel).
 Future<void> showStartStreamDialog(
+  BuildContext context, {
+  VoidCallback? onStreamStarted,
+}) async {
+  if (_dialogActive) return;
+  _dialogActive = true;
+  try {
+    await _showStartStreamDialogImpl(context, onStreamStarted: onStreamStarted);
+  } finally {
+    _dialogActive = false;
+  }
+}
+
+Future<void> _showStartStreamDialogImpl(
   BuildContext context, {
   VoidCallback? onStreamStarted,
 }) async {
