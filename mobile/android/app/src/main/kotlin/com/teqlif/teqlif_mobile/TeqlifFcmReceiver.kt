@@ -5,7 +5,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
-import com.google.firebase.messaging.RemoteMessage
 
 /**
  * FCM mesajlarını FlutterFirebaseMessagingReceiver'dan ÖNCE yakalar (android:priority="1").
@@ -19,6 +18,9 @@ import com.google.firebase.messaging.RemoteMessage
  * bu flag'i okuyarak çift bildirim ve çift ACK'ı önler.
  *
  * Diğer mesaj tipleri için hiçbir şey yapmaz — Flutter devam eder.
+ *
+ * Not: RemoteMessage(Bundle) app kodunda erişilebilir değil — FCM data payload
+ * key'leri intent extra olarak doğrudan eklenir, getStringExtra() ile okunur.
  */
 class TeqlifFcmReceiver : BroadcastReceiver() {
 
@@ -33,9 +35,7 @@ class TeqlifFcmReceiver : BroadcastReceiver() {
     }
 
     override fun onReceive(context: Context, intent: Intent) {
-        val extras = intent.extras ?: return
-        val message = RemoteMessage(extras)
-        val type = message.data["type"] ?: return
+        val type = intent.getStringExtra("type") ?: return
 
         if (type != "incoming_call") return
         if (isAppForeground(context)) {
@@ -43,7 +43,7 @@ class TeqlifFcmReceiver : BroadcastReceiver() {
             return
         }
 
-        val callId = message.data["call_id"] ?: ""
+        val callId = intent.getStringExtra("call_id") ?: ""
         if (callId.isEmpty()) {
             Log.w(TAG, "incoming_call — call_id boş, atlıyorum")
             return
@@ -63,13 +63,13 @@ class TeqlifFcmReceiver : BroadcastReceiver() {
             context,
             mapOf(
                 "call_id"          to callId,
-                "caller_id"        to (message.data["caller_id"]        ?: ""),
-                "caller_username"  to (message.data["caller_username"]  ?: ""),
-                "caller_avatar"    to (message.data["caller_avatar"]    ?: ""),
-                "room_name"        to (message.data["room_name"]        ?: ""),
-                "livekit_url"      to (message.data["livekit_url"]      ?: ""),
-                "callee_token"     to (message.data["callee_token"]     ?: ""),
-                "ack_token"        to (message.data["ack_token"]        ?: ""),
+                "caller_id"        to (intent.getStringExtra("caller_id")        ?: ""),
+                "caller_username"  to (intent.getStringExtra("caller_username")  ?: ""),
+                "caller_avatar"    to (intent.getStringExtra("caller_avatar")    ?: ""),
+                "room_name"        to (intent.getStringExtra("room_name")        ?: ""),
+                "livekit_url"      to (intent.getStringExtra("livekit_url")      ?: ""),
+                "callee_token"     to (intent.getStringExtra("callee_token")     ?: ""),
+                "ack_token"        to (intent.getStringExtra("ack_token")        ?: ""),
             )
         )
     }
