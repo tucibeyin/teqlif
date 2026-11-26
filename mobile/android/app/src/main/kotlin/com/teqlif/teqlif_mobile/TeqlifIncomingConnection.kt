@@ -6,7 +6,7 @@ import android.telecom.DisconnectCause
 import android.util.Log
 import java.util.concurrent.atomic.AtomicBoolean
 
-class TeqlifIncomingConnection(val extras: Bundle) : Connection() {
+class TeqlifIncomingConnection(val callData: Bundle) : Connection() {
 
     companion object {
         private const val TAG = "TeqlifIncomingConn"
