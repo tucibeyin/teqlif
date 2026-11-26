@@ -1,3 +1,4 @@
+import '../ui_library/components/tiles/teq_settings_tile.dart';
 import '../ui_library/components/overlays/teq_snackbar.dart';
 import '../ui_library/components/overlays/teq_toast.dart';
 import '../ui_library/components/overlays/credit_gate_sheet.dart';
@@ -1729,10 +1730,10 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
           const SizedBox(height: 8),
 
           // ── Pro Araçlar ───────────────────────────────────────────────────
-          _SettingsSection(
+          TeqSettingsSection(
             title: loc.t('settingsProTools'),
             items: [
-              _SettingsTile(
+              TeqSettingsTile(
                 icon: Icons.workspace_premium_outlined,
                 iconColor: const Color(0xFFD97706),
                 label: loc.t('subHubTitle'),
@@ -1755,7 +1756,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
             ],
           ),
           const SizedBox(height: 8),
-          _SettingsSection(
+          TeqSettingsSection(
             title: loc.t('profileInviteAndEarn'),
             items: [
               ListTile(
@@ -1791,10 +1792,10 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
             ],
           ),
           const SizedBox(height: 8),
-          _SettingsSection(
+          TeqSettingsSection(
             title: loc.t('profileMyListings'),
             items: [
-              _SettingsTile(
+              TeqSettingsTile(
                 icon: Icons.list_alt_outlined,
                 label: loc.t('profileActiveListings'),
                 onTap: () => Navigator.push(
@@ -1804,7 +1805,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                   ),
                 ),
               ),
-              _SettingsTile(
+              TeqSettingsTile(
                 icon: Icons.archive_outlined,
                 label: loc.t('profilePassiveListings'),
                 onTap: () => Navigator.push(
@@ -1814,7 +1815,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                   ),
                 ),
               ),
-              _SettingsTile(
+              TeqSettingsTile(
                 icon: Icons.favorite_outline,
                 label: loc.t('profileFavorites'),
                 onTap: () => Navigator.push(
@@ -1822,7 +1823,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                   MaterialPageRoute(builder: (_) => const _FavoritesScreen()),
                 ),
               ),
-              _SettingsTile(
+              TeqSettingsTile(
                 icon: Icons.shopping_bag_outlined,
                 label: loc.t('settingsMyPurchases'),
                 onTap: () => Navigator.push(
@@ -1830,7 +1831,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                   MaterialPageRoute(builder: (_) => const PurchasesScreen()),
                 ),
               ),
-              _SettingsTile(
+              TeqSettingsTile(
                 icon: Icons.sell_outlined,
                 label: loc.t('settingsMySales'),
                 onTap: () => Navigator.push(
@@ -1838,7 +1839,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                   MaterialPageRoute(builder: (_) => const SalesScreen()),
                 ),
               ),
-              _SettingsTile(
+              TeqSettingsTile(
                 icon: Icons.videocam_outlined,
                 label: loc.t('settingsMyRecordings'),
                 onTap: () => Navigator.push(
@@ -1854,10 +1855,10 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
             ],
           ),
           const SizedBox(height: 8),
-          _SettingsSection(
+          TeqSettingsSection(
             title: loc.t('profileActivitySection'),
             items: [
-              _SettingsTile(
+              TeqSettingsTile(
                 icon: Icons.person_add_outlined,
                 label: loc.t('followRequests'),
                 trailing: _pendingRequestCount > 0
@@ -1884,7 +1885,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                   ),
                 ).then((_) => _loadPendingRequests()),
               ),
-              _SettingsTile(
+              TeqSettingsTile(
                 icon: Icons.call_outlined,
                 label: loc.t('callHistoryTitle'),
                 onTap: () => Navigator.push(
@@ -1892,7 +1893,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                   MaterialPageRoute(builder: (_) => const CallHistoryScreen()),
                 ),
               ),
-              _SettingsTile(
+              TeqSettingsTile(
                 icon: Icons.star_outline,
                 label: loc.t('settingsMyRatings'),
                 trailing: _unreadRatingCount > 0
@@ -1924,7 +1925,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
             ],
           ),
           const SizedBox(height: 8),
-          _SettingsSection(
+          TeqSettingsSection(
             title: loc.t('profilePrivacySection'),
             items: [
               ListTile(
@@ -1984,7 +1985,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                   onChanged: _togglePrivateAccount,
                 ),
               ),
-              _SettingsTile(
+              TeqSettingsTile(
                 icon: Icons.block_outlined,
                 label: loc.t('profileBlockedUsers'),
                 onTap: () => Navigator.push(
@@ -2036,10 +2037,10 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
             ],
           ),
           const SizedBox(height: 8),
-          _SettingsSection(
+          TeqSettingsSection(
             title: loc.t('profileAccountSection'),
             items: [
-              _SettingsTile(
+              TeqSettingsTile(
                 icon: Icons.manage_accounts_outlined,
                 label: loc.t('accountInfoMenuLabel'),
                 onTap: () => Navigator.push(
@@ -2047,7 +2048,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                   MaterialPageRoute(builder: (_) => const AccountInfoScreen()),
                 ),
               ),
-              _SettingsTile(
+              TeqSettingsTile(
                 icon: Icons.lock_outline,
                 label: loc.t('profileChangePassword'),
                 onTap: () => _showChangePasswordDialog(context),
@@ -2079,7 +2080,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                     onChanged: _toggleBiometric,
                   ),
                 ),
-              _SettingsTile(
+              TeqSettingsTile(
                 icon: Icons.notifications_outlined,
                 label: loc.t('profileNotificationSettings'),
                 onTap: () => Navigator.push(
@@ -2141,10 +2142,10 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
             ],
           ),
           const SizedBox(height: 8),
-          _SettingsSection(
+          TeqSettingsSection(
             title: loc.t('profileSupportSection'),
             items: [
-              _SettingsTile(
+              TeqSettingsTile(
                 icon: Icons.help_outline,
                 label: loc.t('profileSupportCenter'),
                 onTap: () => _urlGuard.run(() async {
@@ -2154,7 +2155,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                   }
                 }),
               ),
-              _SettingsTile(
+              TeqSettingsTile(
                 icon: Icons.question_answer_outlined,
                 label: loc.t('profileFaq'),
                 onTap: () {
@@ -2164,7 +2165,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                   );
                 },
               ),
-              _SettingsTile(
+              TeqSettingsTile(
                 icon: Icons.description_outlined,
                 label: loc.t('profileTerms'),
                 onTap: () => _urlGuard.run(() async {
@@ -2176,7 +2177,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                   }
                 }),
               ),
-              _SettingsTile(
+              TeqSettingsTile(
                 icon: Icons.lock_outline,
                 label: loc.t('profilePrivacy'),
                 onTap: () => _urlGuard.run(() async {
@@ -2238,75 +2239,6 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
   }
 }
 
-class _SettingsSection extends ConsumerWidget {
-  final String title;
-  final List<Widget> items;
-  const _SettingsSection({required this.title, required this.items});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Material(
-      color: AppColors.surface(context),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsetsDirectional.fromSTEB(16, 12, 16, 4),
-            child: Text(
-              title.toUpperCase(),
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textTertiary(context),
-                letterSpacing: 0.5,
-              ),
-            ),
-          ),
-          ...items,
-        ],
-      ),
-    );
-  }
-}
-
-class _SettingsTile extends ConsumerWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final Widget? trailing;
-  final Color? iconColor;
-
-  const _SettingsTile({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.trailing,
-    this.iconColor,
-  });
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final pressColor = AppColors.textPrimary(context)
-        .withValues(alpha: AppColors.isDark(context) ? 0.12 : 0.08);
-    return Theme(
-      data: Theme.of(context).copyWith(
-        splashColor: pressColor,
-        highlightColor: pressColor,
-      ),
-      child: ListTile(
-        leading: Icon(icon, color: iconColor ?? AppColors.iconColor(context)),
-        title: Text(
-          label,
-          style: TextStyle(fontSize: 14, color: AppColors.textPrimary(context)),
-        ),
-        trailing:
-            trailing ??
-            Icon(Icons.chevron_right, color: AppColors.border(context), size: 20),
-        onTap: onTap,
-      ),
-    );
-  }
-}
 
 // ── Profil düzenle ekranı ──────────────────────────────────────────────────
 

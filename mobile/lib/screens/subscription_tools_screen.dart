@@ -637,59 +637,69 @@ class _ToolCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isLocked = UserTier.tierLevel(userType) < UserTier.tierLevel(requiredTier);
-    return GestureDetector(
-      onTap: onTap,
-      child: Opacity(
-        opacity: isLocked ? 0.75 : 1.0,
+    final pressColor = AppColors.textPrimary(context)
+        .withValues(alpha: AppColors.isDark(context) ? 0.12 : 0.08);
+    return Opacity(
+      opacity: isLocked ? 0.75 : 1.0,
+      child: Material(
+        color: AppColors.card(context),
+        borderRadius: BorderRadius.circular(14),
+        clipBehavior: Clip.antiAlias,
         child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.card(context),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.border(context)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: iconColor.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(11),
-              ),
-              child: Icon(icon, color: iconColor, size: 22),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          decoration: BoxDecoration(
+            border: Border.all(color: AppColors.border(context)),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: InkWell(
+            onTap: onTap,
+            splashColor: pressColor,
+            highlightColor: pressColor,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
                 children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary(context),
+                  Container(
+                    width: 44,
+                    height: 44,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: iconColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(11),
+                    ),
+                    child: Icon(icon, color: iconColor, size: 22),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary(context),
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          description,
+                          style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 3),
-                  Text(
-                    description,
-                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
-                  ),
+                  const SizedBox(width: 8),
+                  if (isLocked)
+                    _TierBadge(requiredTier: requiredTier, loc: ref.read(localizationProvider))
+                  else
+                    Icon(Icons.chevron_right, color: AppColors.textSecondary(context), size: 20),
                 ],
               ),
             ),
-            const SizedBox(width: 8),
-            if (isLocked)
-              _TierBadge(requiredTier: requiredTier, loc: ref.read(localizationProvider))
-            else
-              Icon(Icons.chevron_right, color: AppColors.textSecondary(context), size: 20),
-          ],
+          ),
         ),
       ),
-        ),
     );
   }
 }
