@@ -13,9 +13,26 @@ class MainActivity : AudioServiceActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+
+        // PhoneAccount kaydı — ConnectionService için gerekli.
+        // Activity context'i üzerinden çağrılmalı (Application context yeterli ama burada güvenli).
+        TelecomHelper.registerPhoneAccount(this)
+
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "teqlif/native")
             .setMethodCallHandler { call, result ->
                 when (call.method) {
+                    "setBaseUrl" -> {
+                        // Flutter başlarken baseUrl'i SharedPreferences'a yazar.
+                        // TeqlifCallHandlerService background'da bunu okur.
+                        val url = call.argument<String>("url") ?: ""
+                        if (url.isNotEmpty()) {
+                            getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
+                                .edit()
+                                .putString("flutter.native_base_url", url)
+                                .apply()
+                        }
+                        result.success(null)
+                    }
                     "dismissIncomingCall" -> {
                         // flutter_callkit_incoming's clearIncomingNotification sends
                         // ACTION_ENDED_CALL_INCOMING with setClassName(Activity), which prevents

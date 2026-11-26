@@ -59,13 +59,31 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       debugPrint('[FCM][BG][${DateTime.now().toIso8601String()}] incoming_call on iOS ignored. VoIP PushKit handles it natively.');
       return;
     }
-    debugPrint('[FCM][BG][${DateTime.now().toIso8601String()}] incoming_call işleniyor | call_id=${message.data['call_id']}');
+
+    final callId = message.data['call_id'] ?? '';
+    debugPrint('[FCM][BG][${DateTime.now().toIso8601String()}] incoming_call | callId=$callId');
+
+    // Android: TeqlifFcmReceiver (Kotlin) bu mesajı yüksek öncelikle yakaladı.
+    //   - HTTP ACK zaten gönderildi (synchronous, native thread)
+    //   - Callkit bildirimi zaten gösterildi
+    //   - TeqlifFcmReceiver SharedPreferences'a "native_handled_<callId>" yazdı
+    // Bu isolate çalışıyorsa, native işlemenin gerçekleşip gerçekleşmediğini kontrol et.
+    if (Platform.isAndroid && callId.isNotEmpty) {
+      final prefs = await SharedPreferences.getInstance();
+      final handledAt = prefs.getInt('native_handled_$callId') ?? 0;
+      final now = DateTime.now().millisecondsSinceEpoch;
+      if (now - handledAt < 30000) {
+        debugPrint('[FCM][BG] Native zaten işledi — Dart handler atlıyor | callId=$callId');
+        return;
+      }
+      // Native işlemedi (ör. pil kısıtlaması receiver'ı da bloke etti) → Dart fallback
+      debugPrint('[FCM][BG] Native işlemedi — Dart fallback devreye giriyor | callId=$callId');
+    }
+
     // Flutter binding'i background isolate için başlat
     WidgetsFlutterBinding.ensureInitialized();
-    final callId = message.data['call_id'] ?? '';
-    // ACK önce gönderilir — backend 8s penceresi içinde kalmak için.
-    // _showCallNotification() Hive init + CallKit foreground service başlatır (2-4s),
-    // bu yüzden ACK ondan önce gitmelidir.
+
+    // ACK önce gönderilir — backend 12 s timeout'u karşılamak için.
     if (callId.isNotEmpty) {
       final ackToken = message.data['ack_token'] ?? '';
       try {
@@ -74,7 +92,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({'ack_token': ackToken}),
         ).timeout(const Duration(seconds: 5));
-        debugPrint('[FCM][BG] HTTP ACK sent | callId=$callId');
+        debugPrint('[FCM][BG] HTTP ACK sent (Dart fallback) | callId=$callId');
       } catch (e) {
         debugPrint('[FCM][BG] HTTP ACK failed (non-fatal) | callId=$callId | $e');
       }
@@ -400,6 +418,19 @@ class PushNotificationService {
     if (_earlyDone) return;
     _earlyDone = true;
     debugPrint('[FCM] initEarly başladı');
+
+    // Android: baseUrl'i native tarafa ilet — TeqlifCallHandlerService ACK için kullanır.
+    if (Platform.isAndroid) {
+      try {
+        const _nativeChannel = MethodChannel('teqlif/native');
+        await _nativeChannel.invokeMethod('setBaseUrl', {
+          'url': AppConfig.fromEnvironment().baseUrl,
+        });
+        debugPrint('[FCM] baseUrl native\'e yazıldı: ${AppConfig.fromEnvironment().baseUrl}');
+      } catch (e) {
+        debugPrint('[FCM] baseUrl native yazma hatası (non-fatal): $e');
+      }
+    }
 
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 

@@ -1,4 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.CAMERA"/>
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <uses-permission android:name="android.permission.INTERNET"/>
@@ -13,6 +14,9 @@
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <!-- FCM yüksek öncelikli mesajların OEM pil optimizasyonu tarafından engellenmesini önlemek için -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
+    <!-- ConnectionService — OS telefon altyapısı (pil optimizasyonundan muaf) -->
+    <uses-permission android:name="android.permission.MANAGE_OWN_CALLS"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_PHONE_CALL"/>
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
     <application
         android:label="teqlif"
@@ -77,6 +81,34 @@
                 <action android:name="android.intent.action.MEDIA_BUTTON" />
             </intent-filter>
         </receiver>
+
+        <!-- FCM receiver: FlutterFirebaseMessagingReceiver'dan önce (priority="1") çalışır.
+             incoming_call → native ACK + TelecomManager + callkit bildirimi.
+             com.google.android.c2dm.permission.SEND: yalnızca Google Play Services gönderebilir. -->
+        <receiver
+            android:name=".TeqlifFcmReceiver"
+            android:exported="true"
+            android:permission="com.google.android.c2dm.permission.SEND">
+            <intent-filter android:priority="1">
+                <action android:name="com.google.android.c2dm.intent.RECEIVE"/>
+            </intent-filter>
+        </receiver>
+
+        <!-- FCM veri işleme FGS: ACK gönderir, callkit UI gösterir -->
+        <service
+            android:name=".TeqlifCallHandlerService"
+            android:exported="false"
+            android:foregroundServiceType="phoneCall"/>
+
+        <!-- ConnectionService: OS telefon altyapısı — pil optimizasyonundan sistem düzeyinde muaf -->
+        <service
+            android:name=".TeqlifConnectionService"
+            android:exported="true"
+            android:permission="android.permission.BIND_TELECOM_CONNECTION_SERVICE">
+            <intent-filter>
+                <action android:name="android.telecom.ConnectionService"/>
+            </intent-filter>
+        </service>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
