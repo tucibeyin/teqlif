@@ -1090,13 +1090,6 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
     }
   }
 
-  String? _settingsPlanType;
-
-  static String _planLabel(TranslationPack loc, String? type) {
-    if (type == null || type.isEmpty) return loc.t('settingsProActive');
-    final key = 'pro${type[0].toUpperCase()}${type.substring(1)}';
-    return loc.tOr(key, loc.t('settingsProActive'));
-  }
 
   Future<void> _loadPremiumStatus() async {
     // Cache-first: anlık gösterim
@@ -1105,7 +1098,6 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
       setState(() {
         _userType = info['user_type'] as String? ?? UserTier.standard;
         _isPrivate = info['is_private'] == true;
-        _settingsPlanType = info['plan_type'] as String?;
       });
     }
     // Ağdan tazele: plan_type/user_type admin panelinden değişmiş olabilir
@@ -1114,7 +1106,6 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
       if (mounted) {
         setState(() {
           _userType = user.userType;
-          _settingsPlanType = user.planType;
         });
         await StorageService.saveUserInfo(
           id: user.id,
@@ -2284,7 +2275,6 @@ class _SettingsTile extends ConsumerWidget {
   final VoidCallback onTap;
   final Widget? trailing;
   final Color? iconColor;
-  final Widget? leadingWidget;
 
   const _SettingsTile({
     required this.icon,
@@ -2292,15 +2282,12 @@ class _SettingsTile extends ConsumerWidget {
     required this.onTap,
     this.trailing,
     this.iconColor,
-    this.leadingWidget,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return ListTile(
-      leading:
-          leadingWidget ??
-          Icon(icon, color: iconColor ?? AppColors.iconColor(context)),
+      leading: Icon(icon, color: iconColor ?? AppColors.iconColor(context)),
       title: Text(
         label,
         style: TextStyle(fontSize: 14, color: AppColors.textPrimary(context)),
@@ -4004,8 +3991,6 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
   bool _phoneVerified = false;
 
   late TabController _tabController;
-  bool _iapLoading = false;
-
   Map<String, String> _typeLabels(TranslationPack loc) => {
     'airdrop': loc.t('walletTxnAirdrop'),
     'churn_airdrop': loc.t('walletTxnChurnAirdrop'),
@@ -4219,22 +4204,12 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
       );
       return;
     }
-    setState(() => _iapLoading = false);
     if (purchase.status == PurchaseStatus.purchased ||
         purchase.status == PurchaseStatus.restored) {
       _load();
       if (kSubscriptionIds.contains(purchase.productID)) {
         _load();
       }
-    }
-  }
-
-  Future<void> _buyPack(ProductDetails product) async {
-    setState(() => _iapLoading = true);
-    try {
-      await ref.read(subscriptionViewModelProvider.notifier).buy(product);
-    } catch (_) {
-      if (mounted) setState(() => _iapLoading = false);
     }
   }
 
@@ -4392,7 +4367,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  hasTry ? _formatTryPrice(tryAmount!) : '${isPos ? '+' : ''}$amount',
+                  hasTry ? _formatTryPrice(tryAmount) : '${isPos ? '+' : ''}$amount',
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
@@ -6429,13 +6404,10 @@ class _CreditRow extends StatelessWidget {
   final String label;
   final Map<String, dynamic>? credits;
   final bool isDark;
-  final bool isLast;
-
   const _CreditRow({
     required this.label,
     required this.credits,
     required this.isDark,
-    this.isLast = false,
   });
 
   @override
@@ -6445,7 +6417,7 @@ class _CreditRow extends StatelessWidget {
     final ratio = limit > 0 ? remaining / limit : 0.0;
 
     return Padding(
-      padding: EdgeInsets.only(bottom: isLast ? 0 : 10),
+      padding: const EdgeInsets.only(bottom: 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -6583,53 +6555,6 @@ class _TierCrown extends StatelessWidget {
         ? const Color(0xFF0891B2)
         : const Color(0xFFD97706);
     return FaIcon(FontAwesomeIcons.crown, size: 14, color: color);
-  }
-}
-
-class _PrivilegeRow extends StatelessWidget {
-  final String label;
-  final String value;
-  final String subtext;
-  final bool isDark;
-
-  const _PrivilegeRow({
-    required this.label,
-    required this.value,
-    required this.subtext,
-    required this.isDark,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            color: isDark ? Colors.white70 : const Color(0xFF374151),
-          ),
-        ),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF10B981),
-              ),
-            ),
-            Text(
-              subtext,
-              style: const TextStyle(fontSize: 10, color: Color(0x9010B981)),
-            ),
-          ],
-        ),
-      ],
-    );
   }
 }
 
@@ -6991,7 +6916,6 @@ class _EarningsCard extends StatelessWidget {
 class _EarningsRow extends StatelessWidget {
   final String label;
   final String value;
-  final String? sub;
   final IconData icon;
   final Color? iconColor;
   final bool highlight;
@@ -7003,7 +6927,6 @@ class _EarningsRow extends StatelessWidget {
   const _EarningsRow({
     required this.label,
     required this.value,
-    this.sub,
     required this.icon,
     this.iconColor,
     this.highlight = false,
@@ -7021,21 +6944,14 @@ class _EarningsRow extends StatelessWidget {
         const SizedBox(width: 6),
         Text(label, style: TextStyle(color: textSecondary, fontSize: 12)),
         const Spacer(),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              value,
-              style: TextStyle(
-                color: highlight ? highlightColor : textPrimary,
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
-            ),
-            if (sub != null)
-              Text(sub!, style: TextStyle(color: textMuted, fontSize: 11)),
-          ],
+        Text(
+          value,
+          style: TextStyle(
+            color: highlight ? highlightColor : textPrimary,
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
         ),
       ],
     );
