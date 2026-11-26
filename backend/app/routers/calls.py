@@ -20,7 +20,7 @@ from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_, union_all, text, update as sa_update
+from sqlalchemy import select, or_, text, update as sa_update
 
 from app.database import get_db, AsyncSessionLocal
 from app.models.call import Call, CallParticipant
@@ -1179,13 +1179,10 @@ async def get_call_history(
     offset = (page - 1) * per_page
 
     if filter == "all":
-        # UNION ALL: her dal kendi bileşik indeksini kullanır
-        # (ix_calls_caller_started + ix_calls_callee_started) → Merge Append, disk sort yok
+        filter_where = or_(Call.caller_id == uid, Call.callee_id == uid)
         stmt = (
-            union_all(
-                select(Call).where(Call.caller_id == uid),
-                select(Call).where(Call.callee_id == uid),
-            )
+            select(Call)
+            .where(filter_where)
             .order_by(Call.started_at.desc())
             .limit(per_page)
             .offset(offset)
