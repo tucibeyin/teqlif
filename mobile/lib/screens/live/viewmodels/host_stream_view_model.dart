@@ -15,6 +15,7 @@ import '../../../services/client_logger.dart';
 import '../../../services/localization_service.dart';
 import '../../../services/moderation_service.dart';
 import '../../../services/stream_service.dart';
+import '../../../services/wallet_service.dart';
 import '../../../ui_library/components/overlays/teq_toast.dart';
 
 const int _kMaxInitialConnectAttempts = 3;
@@ -497,6 +498,11 @@ class HostStreamViewModel extends ChangeNotifier {
     room = null;
     localVideoTrack = null;
     _notify();
+
+    // Yayın bitince backend monthly_stream_minutes_used ve wallet'ı günceller.
+    // CreditsChangedEvent + wallet cache invalidation ile ilgili ekranlar anında güncellenir.
+    WalletService.invalidateBalance(fireEvent: true);
+
     onNavigateToReport?.call(streamId, title);
   }
 
