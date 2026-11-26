@@ -1971,8 +1971,11 @@
   "walletTxnProMonthly": "Ежемесячная подписка PRO",
 
   "walletTxnProAnnual": "Годовая подписка PRO",
+  "walletTxnProBiannual": "Подписка PRO на 6 месяцев",
   "walletTxnProSubscription": "Подписка PRO",
   "walletTxnSubMonthly": "Ежемесячный членский взнос",
+  "walletTxnConvertToTeqlik": "Доход конвертирован в teqlik",
+  "walletTxnBonusMint": "Бонус за конвертацию (+10%)",
   "walletTxnSubAnnual": "Годовой членский взнос",
   "subSheetTitle": "Выбрать план",
   "subSheetSubtitle": "95% от подарков, эксклюзивная аналитика и многое другое",

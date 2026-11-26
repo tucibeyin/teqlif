@@ -4011,12 +4011,15 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
     'referral_bonus': loc.t('walletTxnReferralBonus'),
     'welcome_bonus': loc.t('walletTxnWelcomeBonus'),
     'iap_purchase': loc.t('walletTxnIapPurchase'),
-    'pro_subscription_monthly': loc.t('walletTxnProMonthly'),
-    'pro_subscription_annual':  loc.t('walletTxnProAnnual'),
-    'pro_subscription':         loc.t('walletTxnProSubscription'),
+    'pro_subscription_monthly':  loc.t('walletTxnProMonthly'),
+    'pro_subscription_annual':   loc.t('walletTxnProAnnual'),
+    'pro_subscription_biannual': loc.t('walletTxnProBiannual'),
+    'pro_subscription':          loc.t('walletTxnProSubscription'),
     // Eski format (tier bilgisi yok — generic label)
     'subscription_monthly': loc.tOr('walletTxnSubMonthly', 'Aylık Üyelik Ücreti'),
     'subscription_annual':  loc.tOr('walletTxnSubAnnual', 'Yıllık Üyelik Ücreti'),
+    'convert_to_teqlik':    loc.t('walletTxnConvertToTeqlik'),
+    'bonus_mint':           loc.t('walletTxnBonusMint'),
   };
 
   @override

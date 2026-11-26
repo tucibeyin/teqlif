@@ -70,19 +70,22 @@ async def store_notifications(
     return {"ok": True}
 
 _TYPE_LABELS = {
-    "airdrop":            "Hoş geldin hediyesi",
-    "spend_lead_gen":     "Sıcak Talep bildirimi",
-    "spend_ad_campaign":  "İlan sponsorluğu",
-    "spend_ai":           "Yapay Zeka fiyatlama",
-    "web_topup":          "Web yükleme",
-    "send_gift":          "Canlı hediye gönderildi",
-    "receive_gift":       "Canlı hediye alındı",
-    "referral_bonus":     "Davet ödülü",
-    "welcome_bonus":      "Davet kodu bonusu",
-    "spend_retargeting":  "Retargeting bildirimi",
-    "spend_boost":        "Öne çıkarma",
-    "spend_boost_paid":   "Öne çıkarma (ücretli)",
-    "spend_reactivation": "Yeniden yayına alma",
+    "airdrop":                      "Hoş geldin hediyesi",
+    "spend_lead_gen":               "Sıcak Talep bildirimi",
+    "spend_ad_campaign":            "İlan sponsorluğu",
+    "spend_ai":                     "Yapay Zeka fiyatlama",
+    "web_topup":                    "Web yükleme",
+    "send_gift":                    "Canlı hediye gönderildi",
+    "receive_gift":                 "Canlı hediye alındı",
+    "referral_bonus":               "Davet ödülü",
+    "welcome_bonus":                "Davet kodu bonusu",
+    "spend_retargeting":            "Retargeting bildirimi",
+    "spend_boost":                  "Öne çıkarma",
+    "spend_boost_paid":             "Öne çıkarma (ücretli)",
+    "spend_reactivation":           "Yeniden yayına alma",
+    "convert_to_teqlik":            "Kazanç teqlik'e dönüştürüldü",
+    "bonus_mint":                   "Dönüşüm bonusu",
+    "pro_subscription_biannual":    "6 Aylık PRO Aboneliği",
 }
 
 

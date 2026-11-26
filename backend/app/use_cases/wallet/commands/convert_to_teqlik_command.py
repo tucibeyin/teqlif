@@ -86,6 +86,16 @@ class ConvertToTeqlikCommand:
             {"delta": -bonus_teqlik, "bal": sys_balance_after},
         )
 
+        # teqlik_transactions — kullanıcı "Hareketler" listesinde görünsün
+        await self._session.execute(
+            text(
+                "INSERT INTO teqlik_transactions "
+                "(user_id, amount, transaction_type) "
+                "VALUES (:uid, :amt, 'convert_to_teqlik')"
+            ),
+            {"uid": user_id, "amt": total_teqlik},
+        )
+
         logger.info(
             "[ConvertToTeqlik] user=%s amount=%s bonus=%s total=%s new_balance=%s",
             user_id, teqlik_amount, bonus_teqlik, total_teqlik, new_balance,

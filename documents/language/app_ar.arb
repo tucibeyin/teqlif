@@ -208,8 +208,11 @@
   "walletTxnProMonthly": "اشتراك PRO الشهري",
 
   "walletTxnProAnnual": "اشتراك PRO السنوي",
+  "walletTxnProBiannual": "اشتراك PRO لـ 6 أشهر",
   "walletTxnProSubscription": "اشتراك PRO",
   "walletTxnSubMonthly": "رسوم الاشتراك الشهري",
+  "walletTxnConvertToTeqlik": "تحويل الأرباح إلى teqlik",
+  "walletTxnBonusMint": "مكافأة التحويل (+10%)",
   "walletTxnSubAnnual": "رسوم الاشتراك السنوي",
   "subSheetTitle": "اختر خطة",
   "subSheetSubtitle": "95% من الهدايا، تحليلات حصرية والمزيد",

@@ -228,9 +228,12 @@
   "walletTxnProMonthly": "Monthly PRO Subscription",
 
   "walletTxnProAnnual": "Annual PRO Subscription",
+  "walletTxnProBiannual": "6-Month PRO Subscription",
   "walletTxnProSubscription": "PRO Subscription",
   "walletTxnSubMonthly": "Monthly Membership Fee",
   "walletTxnSubAnnual": "Annual Membership Fee",
+  "walletTxnConvertToTeqlik": "Earnings converted to teqlik",
+  "walletTxnBonusMint": "Conversion bonus (+10%)",
   "subSheetTitle": "Choose Plan",
   "subSheetSubtitle": "95% gift share, exclusive analytics and more",
   "subMonthly": "Monthly",

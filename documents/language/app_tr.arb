@@ -236,9 +236,12 @@
   "walletTxnProMonthly": "Aylık PRO Aboneliği",
 
   "walletTxnProAnnual": "Yıllık PRO Aboneliği",
+  "walletTxnProBiannual": "6 Aylık PRO Aboneliği",
   "walletTxnProSubscription": "PRO Aboneliği",
   "walletTxnSubMonthly": "Aylık Üyelik Ücreti",
   "walletTxnSubAnnual": "Yıllık Üyelik Ücreti",
+  "walletTxnConvertToTeqlik": "Kazanç teqlik'e dönüştürüldü",
+  "walletTxnBonusMint": "Dönüşüm bonusu (+%10)",
   "subSheetTitle": "Üyelik Seç",
   "subSheetSubtitle": "%95 hediye payı, özel analizler ve daha fazlası",
   "subMonthly": "Aylık",
