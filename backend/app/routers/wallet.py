@@ -27,7 +27,6 @@ class PurchaseVerifyRequest(BaseModel):
     platform: str = Field(..., pattern="^(apple|google|web)$")
     payload: str
     product_id: str
-    device_id: str | None = None
     try_amount: float = 0.0
 
 
@@ -43,7 +42,6 @@ async def verify_purchase(
         platform=body.platform,
         payload=body.payload,
         product_id=body.product_id,
-        device_id=body.device_id,
         try_amount=body.try_amount,
     )
     await db.commit()

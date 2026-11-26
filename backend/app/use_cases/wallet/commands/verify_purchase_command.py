@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from sqlalchemy.exc import IntegrityError
 
-from app.core.exceptions import BadRequestException, ConflictException, TooManyRequestsException
+from app.core.exceptions import BadRequestException, ConflictException
 from app.core.logger import get_logger
 from app.services.store.base import PurchaseResult
 from app.services.store.apple_verifier import VALID_CONSUMABLE_IDS
@@ -23,10 +23,6 @@ _CONSUMABLE_AMOUNTS: dict[str, int] = {
     "teqlik_pack_1000": 1200,  # 1000 + 200 bonus
 }
 
-# Redis velocity key: rate:iap:{device_id}  |  fixed 24h window (₺5.000/gün)
-_IAP_VELOCITY_LIMIT_TRY = 5000.0
-_IAP_VELOCITY_TTL_SEC   = 86400  # 24 saat
-
 # Mobil try_amount <= 0 gelirse fallback fiyat tablosu kullanılır
 # — direkt API çağrılarında client manipülasyonu önlenir
 _PRODUCT_TRY_PRICES: dict[str, float] = {
@@ -34,7 +30,7 @@ _PRODUCT_TRY_PRICES: dict[str, float] = {
     "teqlik_pack_250":       349.99,
     "teqlik_pack_500":       599.99,
     "teqlik_pack_1000":      999.99,
-    # Abonelikler — try_amount=0 geldiğinde velocity hesabına girer
+    # Abonelikler
     "teqlif_pro_1m":               999.99,
     "teqlif_pro_12m":             8999.99,   # 999.99 × 12 × 0.75
     "teqlif_pro_plus_1m":         1999.99,
@@ -44,37 +40,6 @@ _PRODUCT_TRY_PRICES: dict[str, float] = {
     "teqlif_premium_plus_1m":     3999.99,
     "teqlif_premium_plus_12m":   35999.99,   # 3999.99 × 12 × 0.75
 }
-
-# Atomik Lua: GET+limit kontrolü+INCRBYFLOAT+TTL guard tek round-trip'te
-# TTL < 0 kontrolü: key expire/yaratılma arasında race ile TTL=-1 olan key'leri onarır
-_VELOCITY_LUA = """
-local cur = tonumber(redis.call('GET', KEYS[1]) or '0')
-local add = tonumber(ARGV[1])
-local lim = tonumber(ARGV[2])
-if cur + add > lim then
-    return -1
-end
-redis.call('INCRBYFLOAT', KEYS[1], add)
-if redis.call('TTL', KEYS[1]) < 0 then
-    redis.call('EXPIRE', KEYS[1], tonumber(ARGV[3]))
-end
-return 1
-"""
-
-
-async def _check_velocity(redis, key: str, try_amount: float) -> None:
-    """Atomik Lua velocity limiti — Fail-Closed."""
-    if redis is None:
-        raise BadRequestException(code="IAP_VELOCITY_UNAVAILABLE")
-    result = await redis.eval(
-        _VELOCITY_LUA, 1, key,
-        str(try_amount),
-        str(_IAP_VELOCITY_LIMIT_TRY),
-        str(_IAP_VELOCITY_TTL_SEC),
-    )
-    if result == -1:
-        logger.warning("[VerifyPurchase] Velocity limit aşıldı | key=%s", key)
-        raise TooManyRequestsException(code="IAP_VELOCITY_LIMIT_EXCEEDED")
 
 
 class VerifyPurchaseCommand:
@@ -89,7 +54,6 @@ class VerifyPurchaseCommand:
         platform: str,
         payload: str,
         product_id: str,
-        device_id: str | None = None,
         try_amount: float = 0.0,
     ) -> dict:
         verifier = StoreVerifierFactory.get(platform)
@@ -113,58 +77,20 @@ class VerifyPurchaseCommand:
             )
             raise ConflictException(code="IAP_ALREADY_PROCESSED")
 
-        # Velocity limiti — sadece consumable pack'lere uygulanır.
-        # Abonelikler: Apple/Google ödeme yetkisi vermiş; tekrar saldırısı zaten
-        # store_transaction_id unique constraint ile engelleniyor.
-        # try_amount <= 0 gelirse product_id bazlı fallback fiyat tablosu kullanılır
-        # — direkt API çağrısıyla velocity bypass'ı önlenir.
-        redis_client = None
-        vel_keys_checked: list[str] = []
-        is_consumable = result.product_id in VALID_CONSUMABLE_IDS
-        effective_try_amount = (
-            try_amount if try_amount > 0
-            else _PRODUCT_TRY_PRICES.get(result.product_id, 0.0)
-        )
-        if is_consumable and effective_try_amount > 0:
-            try:
-                from app.utils.redis_client import get_redis
-                redis_client = await get_redis()
-                if device_id:
-                    dev_key = f"rate:iap:{device_id}"
-                    await _check_velocity(redis_client, dev_key, effective_try_amount)
-                    vel_keys_checked.append(dev_key)
-                user_key = f"rate:iap:user:{user_id}"
-                await _check_velocity(redis_client, user_key, effective_try_amount)
-                vel_keys_checked.append(user_key)
-            except (BadRequestException, ConflictException, TooManyRequestsException):
-                raise
-            except Exception as exc:
-                logger.error("[VerifyPurchase] Redis velocity check başarısız | %s", exc)
-                raise BadRequestException(code="IAP_VELOCITY_UNAVAILABLE")
-
-        try:
-            if result.product_id in VALID_CONSUMABLE_IDS:
-                return await self._handle_consumable(user_id, platform, result)
-            else:
-                if result.expires_at is None:
-                    logger.error(
-                        "[VerifyPurchase] Abonelik için expiresDate eksik | product=%s tx=%s",
-                        result.product_id, result.transaction_id,
-                    )
-                    raise BadRequestException(code="IAP_MISSING_EXPIRY")
-                stored_try_amount = (
-                    try_amount if try_amount > 0
-                    else _PRODUCT_TRY_PRICES.get(result.product_id, 0.0)
+        if result.product_id in VALID_CONSUMABLE_IDS:
+            return await self._handle_consumable(user_id, platform, result)
+        else:
+            if result.expires_at is None:
+                logger.error(
+                    "[VerifyPurchase] Abonelik için expiresDate eksik | product=%s tx=%s",
+                    result.product_id, result.transaction_id,
                 )
-                return await self._handle_subscription(user_id, platform, result, stored_try_amount)
-        except Exception:
-            if redis_client and vel_keys_checked and effective_try_amount > 0:
-                for vk in vel_keys_checked:
-                    try:
-                        await redis_client.incrbyfloat(vk, -effective_try_amount)
-                    except Exception:
-                        pass
-            raise
+                raise BadRequestException(code="IAP_MISSING_EXPIRY")
+            stored_try_amount = (
+                try_amount if try_amount > 0
+                else _PRODUCT_TRY_PRICES.get(result.product_id, 0.0)
+            )
+            return await self._handle_subscription(user_id, platform, result, stored_try_amount)
 
     async def _handle_consumable(
         self, user_id: int, platform: str, result: PurchaseResult
