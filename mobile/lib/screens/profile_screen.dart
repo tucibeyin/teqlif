@@ -425,6 +425,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                               ),
                               GestureDetector(
                                 key: const Key('profile_stat_takipci'),
+                                behavior: HitTestBehavior.opaque,
                                 onTap: user?['id'] != null
                                     ? () => Navigator.push(
                                         context,
@@ -445,6 +446,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                               ),
                               GestureDetector(
                                 key: const Key('profile_stat_takip'),
+                                behavior: HitTestBehavior.opaque,
                                 onTap: user?['id'] != null
                                     ? () => Navigator.push(
                                         context,
@@ -756,25 +758,28 @@ class _StatItem extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Column(
-      children: [
-        Text(
-          '$count',
-          style: TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary(context),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      child: Column(
+        children: [
+          Text(
+            '$count',
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary(context),
+            ),
           ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: AppColors.textSecondary(context),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: AppColors.textSecondary(context),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
