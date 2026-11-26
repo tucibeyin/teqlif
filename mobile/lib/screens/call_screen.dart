@@ -34,6 +34,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
   bool _isNear = false;
   bool _hasPopped = false;
   late StreamSubscription<int> _proximitySubscription;
+  late final CallService _cs;
 
   bool _isTogglingMic = false;
   bool _isTogglingCamera = false;
@@ -75,19 +76,20 @@ class _CallScreenState extends ConsumerState<CallScreen> {
   @override
   void initState() {
     super.initState();
-    _cpLog('UI', 'CallScreen initState | callId=${ref.read(callServiceProvider).state.value.callId} status=${ref.read(callServiceProvider).state.value.status.name}');
-    _uiLog('CALL_SCREEN', 'OPEN', 'callId=${ref.read(callServiceProvider).state.value.callId} status=${ref.read(callServiceProvider).state.value.status.name}');
+    _cs = ref.read(callServiceProvider);
+    _cpLog('UI', 'CallScreen initState | callId=${_cs.state.value.callId} status=${_cs.state.value.status.name}');
+    _uiLog('CALL_SCREEN', 'OPEN', 'callId=${_cs.state.value.callId} status=${_cs.state.value.status.name}');
     // isCallScreenVisible → CallRouteObserver yönetir (call_route_observer.dart).
     // initState'den set etmek observer'a ihtiyaç bırakmaz ve frame gecikmesi yaratırdı.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _onStateChange();
     });
-    ref.read(callServiceProvider).state.addListener(_onStateChange);
-    ref.read(callServiceProvider).state.addListener(_onParticipantStateChange);
+    _cs.state.addListener(_onStateChange);
+    _cs.state.addListener(_onParticipantStateChange);
     // D-7: adapter notifier'ları doğrudan dinle — isSpeaker/video artık CallState'te değil.
-    ref.read(callServiceProvider).isSpeaker.addListener(_onAdapterStateChange);
-    ref.read(callServiceProvider).localVideoEnabled.addListener(_onAdapterStateChange);
-    ref.read(callServiceProvider).remoteVideoEnabled.addListener(_onAdapterStateChange);
+    _cs.isSpeaker.addListener(_onAdapterStateChange);
+    _cs.localVideoEnabled.addListener(_onAdapterStateChange);
+    _cs.remoteVideoEnabled.addListener(_onAdapterStateChange);
     _proximitySubscription = ProximitySensor.events.listen((int event) {
       if (mounted) {
         final isNear = event > 0;
@@ -173,8 +175,8 @@ class _CallScreenState extends ConsumerState<CallScreen> {
 
   @override
   void dispose() {
-    _cpLog('UI', 'CallScreen dispose | callId=${ref.read(callServiceProvider).state.value.callId}');
-    _uiLog('CALL_SCREEN', 'CLOSE', 'callId=${ref.read(callServiceProvider).state.value.callId} status=${ref.read(callServiceProvider).state.value.status.name}');
+    _cpLog('UI', 'CallScreen dispose | callId=${_cs.state.value.callId}');
+    _uiLog('CALL_SCREEN', 'CLOSE', 'callId=${_cs.state.value.callId} status=${_cs.state.value.status.name}');
     try {
       _proximitySubscription.cancel().catchError((e) {
         _cpLog('UI', 'CallScreen proximity cancel error | $e');
@@ -182,11 +184,11 @@ class _CallScreenState extends ConsumerState<CallScreen> {
     } catch (e) {
       _cpLog('UI', 'CallScreen proximity cancel sync error | $e');
     }
-    ref.read(callServiceProvider).state.removeListener(_onStateChange);
-    ref.read(callServiceProvider).state.removeListener(_onParticipantStateChange);
-    ref.read(callServiceProvider).isSpeaker.removeListener(_onAdapterStateChange);
-    ref.read(callServiceProvider).localVideoEnabled.removeListener(_onAdapterStateChange);
-    ref.read(callServiceProvider).remoteVideoEnabled.removeListener(_onAdapterStateChange);
+    _cs.state.removeListener(_onStateChange);
+    _cs.state.removeListener(_onParticipantStateChange);
+    _cs.isSpeaker.removeListener(_onAdapterStateChange);
+    _cs.localVideoEnabled.removeListener(_onAdapterStateChange);
+    _cs.remoteVideoEnabled.removeListener(_onAdapterStateChange);
     _toastTimer?.cancel();
     _autoHideTimer?.cancel();
     // isCallScreenVisible → Navigator.pop tetikler didPop → CallRouteObserver false set eder.

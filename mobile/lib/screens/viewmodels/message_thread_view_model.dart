@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/direct_message.dart';
 import '../../repositories/message_repository.dart';
@@ -42,7 +43,9 @@ class MessageThreadViewModel
 
   @override
   Future<MessageThreadState> build(int otherUserId) async {
+    debugPrint('[ThreadVM] build start | other=$otherUserId');
     final cached = await ref.read(messageRepositoryProvider).getCachedThread(otherUserId, _myId);
+    debugPrint('[ThreadVM] build cached=${cached?.length} | other=$otherUserId');
 
     ref.onDispose(() => _sub?.cancel());
     Future.microtask(() => _startStream(otherUserId));
@@ -54,6 +57,7 @@ class MessageThreadViewModel
   }
 
   void _startStream(int otherUserId) {
+    debugPrint('[ThreadVM] _startStream | other=$otherUserId');
     _sub?.cancel();
     _sub = ref
         .read(messageRepositoryProvider)

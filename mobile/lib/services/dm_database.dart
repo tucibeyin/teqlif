@@ -68,6 +68,7 @@ class DmDatabase {
   // ── Okuma ────────────────────────────────────────────────────────────────
 
   /// thread_id'ye ait tüm mesajları created_at ASC sıralamasıyla döner.
+  /// SQLite int (0/1) → bool + is_pending/is_failed → _pending/_failed dönüşümü yapılır.
   Future<List<Map<String, dynamic>>> getThread(int threadId) async {
     final rows = await _database.query(
       'dm_messages',
@@ -75,7 +76,7 @@ class DmDatabase {
       whereArgs: [threadId],
       orderBy: 'created_at ASC',
     );
-    return rows.map((r) => Map<String, dynamic>.from(r)).toList();
+    return rows.map(_fromRow).toList();
   }
 
   // ── Yazma ────────────────────────────────────────────────────────────────
@@ -139,6 +140,19 @@ class DmDatabase {
   }
 
   // ── Yardımcı ─────────────────────────────────────────────────────────────
+
+  /// SQLite satırını DirectMessage.fromJson uyumlu Map'e dönüştürür.
+  /// SQLite boolean'ları int (0/1) olarak saklar; is_pending/is_failed → _pending/_failed.
+  Map<String, dynamic> _fromRow(Map<String, dynamic> row) {
+    final map = Map<String, dynamic>.from(row);
+    map['is_read']   = (map['is_read']   as int?) == 1;
+    map['_pending']  = (map.remove('is_pending') as int?) == 1;
+    map['_failed']   = (map.remove('is_failed')  as int?) == 1;
+    if (map['_pending'] == false) map.remove('_pending');
+    if (map['_failed']  == false) map.remove('_failed');
+    map.remove('thread_id');
+    return map;
+  }
 
   Map<String, dynamic> _toRow(int threadId, Map<String, dynamic> msg) {
     return {

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import '../core/network/api_client.dart';
@@ -26,22 +27,28 @@ class MessageRepository {
 
   /// async* stream: DB'den anında emit, ardından ağdan upsert + emit.
   Stream<List<DirectMessage>> getThread(int otherUserId, int myUserId) async* {
+    debugPrint('[DmRepo] getThread start | other=$otherUserId');
     final dbRows = await _db.getThread(otherUserId);
+    debugPrint('[DmRepo] getThread DB rows=${dbRows.length}');
     yield _buildList(dbRows, otherUserId, myUserId);
 
     try {
+      debugPrint('[DmRepo] getThread network start | other=$otherUserId');
       await for (final maps in _api.get<List<Map<String, dynamic>>>(
         url: '${_client.config.baseUrl}/messages/$otherUserId',
         cacheKey: null,
         fromJson: (raw) => (raw as List).cast<Map<String, dynamic>>(),
       )) {
+        debugPrint('[DmRepo] getThread network got ${maps.length} msgs');
         await _db.upsertMessages(otherUserId, maps);
         yield _buildList(maps, otherUserId, myUserId);
       }
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[DmRepo] getThread network error: $e | dbEmpty=${dbRows.isEmpty}');
       if (dbRows.isEmpty) rethrow;
       // DB zaten emit edildi — ağ hatası sessizce geçer
     }
+    debugPrint('[DmRepo] getThread done');
   }
 
   /// Önceki sayfa — SQLite'a da yazar (offline scroll için).
