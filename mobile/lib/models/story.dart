@@ -58,6 +58,9 @@ class StoryItem {
   final int likesCount;
   final bool isLiked;
 
+  // ── Görüntülenme (yalnızca kendi hikayelerinde dolu) ──────────────────────
+  final int viewsCount;
+
   bool get isVideo => storyType == 'video';
   bool get isImage => storyType == 'image';
   bool get isLiveRedirect => storyType == 'live_redirect';
@@ -72,6 +75,7 @@ class StoryItem {
     this.streamId,
     this.likesCount = 0,
     this.isLiked = false,
+    this.viewsCount = 0,
   });
 
   factory StoryItem.fromJson(Map<String, dynamic> json) => StoryItem(
@@ -88,6 +92,7 @@ class StoryItem {
         streamId: json['stream_id'] as int?,
         likesCount: json['likes_count'] as int? ?? 0,
         isLiked: json['is_liked'] as bool? ?? false,
+        viewsCount: json['views_count'] as int? ?? 0,
       );
 
   Map<String, dynamic> toJson() => {
@@ -100,6 +105,7 @@ class StoryItem {
         'stream_id': streamId,
         'likes_count': likesCount,
         'is_liked': isLiked,
+        'views_count': viewsCount,
       };
 }
 

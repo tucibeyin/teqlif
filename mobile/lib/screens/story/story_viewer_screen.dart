@@ -176,6 +176,7 @@ class _GroupPageState extends ConsumerState<_GroupPage> with TickerProviderState
   // ── Beğeni state'i ────────────────────────────────────────────────────────
   int _currentLikesCount = 0;
   bool _currentIsLiked = false;
+  int _currentViewsCount = 0;
   bool _heartVisible = false;
   AnimationController? _heartAnimCtrl;
 
@@ -261,6 +262,7 @@ class _GroupPageState extends ConsumerState<_GroupPage> with TickerProviderState
       _heartVisible = false;
       _currentLikesCount = item.likesCount;
       _currentIsLiked = item.isLiked;
+      _currentViewsCount = item.viewsCount;
     });
     if (item.isVideo) {
       await _loadVideo(item);
@@ -658,8 +660,6 @@ class _GroupPageState extends ConsumerState<_GroupPage> with TickerProviderState
               if (!isLive) _buildTapNav(),
               _buildProgressBars(context),
               _buildUserOverlay(context),
-              // Kendi hikayesindeyse altta "Kim Gördü?" butonu göster
-              if (_isMine && !isLive) _buildViewersButton(context),
               // Beğeni butonu — yalnızca video/fotoğraf öğelerinde, sağ alt
               if (!isLive) _buildLikeButton(context),
               // Çift tıklama kalp animasyonu
@@ -972,78 +972,70 @@ class _GroupPageState extends ConsumerState<_GroupPage> with TickerProviderState
 
   // ── "Kim Gördü?" altta ortalanmış buton ──────────────────────────────────
 
-  Widget _buildViewersButton(BuildContext context) {
-    final loc = ref.watch(localizationProvider);
-    final bottomPad = MediaQuery.of(context).padding.bottom + 24;
-    return Positioned(
-      bottom: bottomPad,
-      left: 0,
-      right: 0,
-      child: Center(
-        child: GestureDetector(
-          onTap: _showViewersSheet,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
-            decoration: BoxDecoration(
-              color: Colors.black54,
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.remove_red_eye_outlined,
-                    color: Colors.white, size: 18),
-                const SizedBox(width: 7),
-                Text(
-                  loc.t('storyWhoViewed'),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   // ── Beğeni butonu — sağ alt ──────────────────────────────────────────────
 
   Widget _buildLikeButton(BuildContext context) {
     final bottomPad = MediaQuery.of(context).padding.bottom + 24;
-    // "Kim Gördü?" butonu varsa biraz yukarı kaydır
-    final bottom = _isMine ? bottomPad + 56.0 : bottomPad;
     return Positioned(
-      bottom: bottom,
+      bottom: bottomPad,
       right: 16,
-      child: GestureDetector(
-        onTap: _toggleStoryLike,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              _currentIsLiked ? Icons.favorite : Icons.favorite_border,
-              color: _currentIsLiked ? Colors.red : Colors.white,
-              size: 28,
-              shadows: const [Shadow(color: Colors.black54, blurRadius: 8)],
-            ),
-            if (_currentLikesCount > 0) ...[
-              const SizedBox(height: 3),
-              Text(
-                '$_currentLikesCount',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  shadows: [Shadow(color: Colors.black54, blurRadius: 6)],
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          GestureDetector(
+            onTap: _toggleStoryLike,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  _currentIsLiked ? Icons.favorite : Icons.favorite_border,
+                  color: _currentIsLiked ? Colors.red : Colors.white,
+                  size: 28,
+                  shadows: const [Shadow(color: Colors.black54, blurRadius: 8)],
                 ),
+                if (_currentLikesCount > 0) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    '$_currentLikesCount',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      shadows: [Shadow(color: Colors.black54, blurRadius: 6)],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          if (_isMine) ...[
+            const SizedBox(height: 10),
+            GestureDetector(
+              onTap: _showViewersSheet,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.remove_red_eye_outlined,
+                    color: Colors.white,
+                    size: 24,
+                    shadows: [Shadow(color: Colors.black54, blurRadius: 8)],
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    '$_currentViewsCount',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      shadows: [Shadow(color: Colors.black54, blurRadius: 6)],
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ],
-        ),
+        ],
       ),
     );
   }

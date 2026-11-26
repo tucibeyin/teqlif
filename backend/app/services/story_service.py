@@ -175,6 +175,23 @@ class StoryService:
             self.db, all_story_ids, current_user_id
         )
 
+        # ── Batch view counts (yalnızca kendi hikayeler için) ─────────────────
+        my_story_ids = [
+            s.id for g in sorted_groups for s in g["video_stories"]
+            if g["user"] is not None and g["user"].id == current_user_id
+        ]
+        view_counts: dict[int, int] = {}
+        if my_story_ids:
+            try:
+                vc_result = await self.db.execute(
+                    select(StoryView.story_id, func.count().label("cnt"))
+                    .where(StoryView.story_id.in_(my_story_ids))
+                    .group_by(StoryView.story_id)
+                )
+                view_counts = {row.story_id: row.cnt for row in vc_result}
+            except Exception as exc:
+                logger.warning("[STORY] View count batch başarısız | %s", exc)
+
         # ── Response inşası ───────────────────────────────────────────────────
         response: List[UserStoryGroupResponse] = []
         for g in sorted_groups:
@@ -194,6 +211,7 @@ class StoryService:
                         stream_id=None,
                         likes_count=like_counts.get(story.id, 0),
                         is_liked=story.id in liked_set,
+                        views_count=view_counts.get(story.id, 0),
                     )
                 )
 
@@ -333,6 +351,19 @@ class StoryService:
             capture_exception(exc)
             raise DatabaseException(code="STORY_LOAD_FAILED")
 
+        story_ids = [s.id for s in stories]
+        vc_map: dict[int, int] = {}
+        if story_ids:
+            try:
+                vc_res = await self.db.execute(
+                    select(StoryView.story_id, func.count().label("cnt"))
+                    .where(StoryView.story_id.in_(story_ids))
+                    .group_by(StoryView.story_id)
+                )
+                vc_map = {row.story_id: row.cnt for row in vc_res}
+            except Exception as exc:
+                logger.warning("[STORY] get_my_stories view count batch başarısız | %s", exc)
+
         items = [
             StoryItemOut(
                 id=s.id,
@@ -343,6 +374,7 @@ class StoryService:
                 created_at=s.created_at,
                 stream_id=None,
                 status=s.status,
+                views_count=vc_map.get(s.id, 0),
             )
             for s in stories
         ]

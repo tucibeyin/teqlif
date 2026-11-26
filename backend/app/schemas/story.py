@@ -27,6 +27,7 @@ class StoryItemOut(BaseModel):
     stream_id: Optional[int] = None
     likes_count: int = 0
     is_liked: bool = False
+    views_count: int = 0
     status: str = "ready"  # 'processing' | 'ready'
 
     model_config = {"from_attributes": True}
