@@ -6389,6 +6389,8 @@
   ],
   "notifSettingsRatingsTitle": "Rating Notifications",
   "notifSettingsRatingsDesc": "When a rating is updated or replied to",
+  "notifSettingsGiftReceivedTitle": "Gift Notifications",
+  "notifSettingsGiftReceivedDesc": "When you receive a gift during a stream",
   "extraField_listing_type": "Listing Status",
   "opt_for_sale": "For Sale",
   "opt_for_rent": "For Rent",

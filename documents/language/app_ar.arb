@@ -6317,6 +6317,8 @@
   ],
   "notifSettingsRatingsTitle": "إشعارات التقييم",
   "notifSettingsRatingsDesc": "عند تحديث تقييم أو الرد عليه",
+  "notifSettingsGiftReceivedTitle": "إشعارات الهدايا",
+  "notifSettingsGiftReceivedDesc": "عند استلام هدية أثناء البث",
   "extraField_listing_type": "حالة الإعلان",
   "opt_for_sale": "للبيع",
   "opt_for_rent": "للإيجار",

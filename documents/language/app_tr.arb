@@ -6318,6 +6318,8 @@
   ],
   "notifSettingsRatingsTitle": "Değerlendirme Bildirimleri",
   "notifSettingsRatingsDesc": "Değerlendirme güncellendiğinde veya yanıtlandığında",
+  "notifSettingsGiftReceivedTitle": "Hediye Bildirimleri",
+  "notifSettingsGiftReceivedDesc": "Yayında hediye aldığında",
   "extraField_listing_type": "İlan Durumu",
   "opt_for_sale": "Satılık",
   "opt_for_rent": "Kiralık",

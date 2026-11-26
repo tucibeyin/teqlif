@@ -6317,6 +6317,8 @@
   ],
   "notifSettingsRatingsTitle": "Уведомления об оценках",
   "notifSettingsRatingsDesc": "При обновлении оценки или ответе на неё",
+  "notifSettingsGiftReceivedTitle": "Уведомления о подарках",
+  "notifSettingsGiftReceivedDesc": "Когда вы получаете подарок во время трансляции",
   "extraField_listing_type": "Статус объявления",
   "opt_for_sale": "Продажа",
   "opt_for_rent": "Аренда",

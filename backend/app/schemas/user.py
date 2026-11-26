@@ -161,6 +161,7 @@ DEFAULT_NOTIF_PREFS = {
     "outbid": True,
     "smart_alert": True,
     "ratings": True,
+    "gift_received": True,
     "bid_threshold_tl": 0,
     "quiet_hours_enabled": False,
     "quiet_from": "22:00",
@@ -181,6 +182,7 @@ class NotificationPrefs(BaseModel):
     outbid: bool = True
     smart_alert: bool = True
     ratings: bool = True
+    gift_received: bool = True
     bid_threshold_tl: int = Field(default=0, ge=0, le=50000)
     quiet_hours_enabled: bool = False
     quiet_from: str = "22:00"

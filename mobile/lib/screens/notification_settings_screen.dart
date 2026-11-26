@@ -54,6 +54,11 @@ class NotificationSettingsScreen extends ConsumerWidget {
       loc.t("notifSettingsRatingsDesc"),
       Icons.star_outline,
     ),
+    'gift_received': (
+      loc.t("notifSettingsGiftReceivedTitle"),
+      loc.t("notifSettingsGiftReceivedDesc"),
+      Icons.card_giftcard_outlined,
+    ),
   };
 
   void _showUpgradeSheet(BuildContext context, WidgetRef ref, TranslationPack loc) {
