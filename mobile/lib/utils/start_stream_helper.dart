@@ -27,10 +27,8 @@ Future<void> showStartStreamDialog(
   final locale = context.mounted
       ? Localizations.localeOf(context).languageCode
       : 'tr';
-  final categories = await providerContainer.read(categoryServiceProvider).getCategories(
-    locale: locale,
-    forStream: true,
-  );
+
+  // Hızlı / zorunlu ön kontroller — dialog bu adımlardan sonra açılır.
   final token = await StorageService.getToken();
   if (!context.mounted) return;
   final loc = ProviderScope.containerOf(context, listen: false).read(localizationProvider);
@@ -42,20 +40,11 @@ Future<void> showStartStreamDialog(
     return;
   }
 
-  // ── YENİ: İzin Kontrolü Dialog Öncesine Taşındı ──────────────────────────
   final hasPermission = await PermissionService.requestLiveStreamPermissions(context);
   if (!hasPermission) return;
-  // ──────────────────────────────────────────────────────────────────────────
 
   final userInfo = await StorageService.getUserInfo();
   final userType = userInfo?['user_type'] as String? ?? UserTier.standard;
-
-  // Aylık stream kullanımı — blast-credits endpoint'inden gelir
-  final blastCreditsData = await providerContainer
-      .read(analyticsServiceProvider)
-      .getBlastCredits();
-  final streamMinutesUsed =
-      (blastCreditsData?['monthly_stream_minutes_used'] as num?)?.toInt() ?? 0;
 
   if (!context.mounted) return;
 
@@ -69,6 +58,37 @@ Future<void> showStartStreamDialog(
   bool audienceLoading = false;
   Timer? debounceTimer;
   String selectedQuality = UserTier.maxStreamQuality(userType);
+
+  // Asenkron veri — dialog açıldıktan sonra paralel yüklenir.
+  bool dataLoading = true;
+  bool loadStarted = false;
+  List<(String, String)> categories = [];
+  int streamMinutesUsed = 0;
+
+  Future<void> loadDialogData(void Function(void Function()) setS) async {
+    try {
+      List<(String, String)> loadedCategories = [];
+      Map<String, dynamic>? blastData;
+      await Future.wait([
+        providerContainer
+            .read(categoryServiceProvider)
+            .getCategories(locale: locale, forStream: true)
+            .then((v) => loadedCategories = v),
+        providerContainer
+            .read(analyticsServiceProvider)
+            .getBlastCredits()
+            .then((v) => blastData = v),
+      ]);
+      setS(() {
+        categories = loadedCategories;
+        streamMinutesUsed =
+            (blastData?['monthly_stream_minutes_used'] as num?)?.toInt() ?? 0;
+        dataLoading = false;
+      });
+    } catch (_) {
+      setS(() => dataLoading = false);
+    }
+  }
 
   Future<void> fetchAudience(
     String title,
@@ -103,7 +123,15 @@ Future<void> showStartStreamDialog(
   final result = await showDialog<(String, String, String, bool, int, String)?>(
     context: context,
     builder: (ctx) => StatefulBuilder(
-      builder: (ctx, setStateDialog) => AlertDialog(
+      builder: (ctx, setStateDialog) {
+        // İlk render'da veri yüklemesini başlat (post-frame ile build içinde async çağrıdan kaçın).
+        if (!loadStarted) {
+          loadStarted = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            loadDialogData(setStateDialog);
+          });
+        }
+        return AlertDialog(
         title: Text(loc.t('liveStartStreamDialogTitle')),
         content: SingleChildScrollView(
           child: Column(
@@ -128,6 +156,25 @@ Future<void> showStartStreamDialog(
               },
             ),
             const SizedBox(height: 12),
+            if (dataLoading)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: [
+                    const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      loc.tOr('loadingCategories', 'Yükleniyor...'),
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                  ],
+                ),
+              )
+            else
             DropdownButtonFormField<String>(
               key: const Key('live_dialog_select_kategori'),
               // ignore: deprecated_member_use
@@ -313,13 +360,14 @@ Future<void> showStartStreamDialog(
           ),
           Builder(builder: (ctx2) {
             final limitMins = UserTier.streamLimitMinutes(userType);
-            final limitReached = limitMins != null && streamMinutesUsed >= limitMins;
+            final limitReached = !dataLoading && limitMins != null && streamMinutesUsed >= limitMins;
+            final blocked = dataLoading || limitReached;
             return ElevatedButton(
               key: const Key('live_dialog_btn_baslat'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: limitReached ? Colors.grey : kPrimary,
+                backgroundColor: blocked ? Colors.grey : kPrimary,
               ),
-              onPressed: limitReached ? null : () {
+              onPressed: blocked ? null : () {
                 final t = titleController.text.trim();
                 if (t.isEmpty) {
                   setStateDialog(() => errorText = loc.t('liveStreamTitleRequired'));
@@ -343,18 +391,28 @@ Future<void> showStartStreamDialog(
                   false, 0, selectedQuality,
                 ));
               },
-              child: Text(
-                limitReached
-                    ? loc.tOr('streamLimitReached', 'Limit Doldu')
-                    : audienceSize > 0
-                        ? loc.t('btnStartNormal')
-                        : loc.t('liveStartBtn'),
-                style: const TextStyle(color: Colors.white),
-              ),
+              child: dataLoading
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Text(
+                      limitReached
+                          ? loc.tOr('streamLimitReached', 'Limit Doldu')
+                          : audienceSize > 0
+                              ? loc.t('btnStartNormal')
+                              : loc.t('liveStartBtn'),
+                      style: const TextStyle(color: Colors.white),
+                    ),
             );
           }),
         ],
-      ),
+        );
+      },
     ),
   );
 
