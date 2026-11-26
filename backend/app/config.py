@@ -88,6 +88,7 @@ class Settings(BaseSettings):
     ios_bundle_id: str = "teqlif"
     apns_use_sandbox: bool = False
     iap_allow_sandbox: bool = False  # True yalnızca test/staging — production'da False zorunlu
+    defender_ip_limit: int = 300    # dakikada IP başına max istek; staging'de artırılabilir (ör. 2000)
 
     # App Store Server API (subscription reconciliation için — App Store Connect API key)
     # App Store Connect → Users and Access → Integrations → App Store Connect API

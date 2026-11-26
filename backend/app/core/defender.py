@@ -40,11 +40,12 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.utils.redis_client import get_redis
 from app.core.logger import get_logger, capture_exception
+from app.config import settings
 
 logger = get_logger(__name__)
 
 # ── Sabitler (tüm eşikler tek yerden yönetilir) ────────────────────────────
-_GLOBAL_IP_LIMIT   = 300   # Bir dakikada IP başına max istek
+_GLOBAL_IP_LIMIT   = settings.defender_ip_limit   # Bir dakikada IP başına max istek
 _GLOBAL_IP_WINDOW  = 60    # saniye — fixed-window boyutu
 _IP_BLOCK_TTL      = 600   # saniye (10 dk) — limit aşılınca blok süresi
 
