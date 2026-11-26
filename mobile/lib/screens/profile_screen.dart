@@ -1166,6 +1166,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
   }
 
   bool _shareLoading = false;
+  bool _proToolsLoading = false;
   final GlobalKey _shareTileKey = GlobalKey();
 
   // Çift tıklama guard'ları
@@ -1737,10 +1738,20 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                 icon: Icons.workspace_premium_outlined,
                 iconColor: const Color(0xFFD97706),
                 label: loc.t('subHubTitle'),
-                trailing: _TierCrown(userType: _userType),
+                trailing: _proToolsLoading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator.adaptive(strokeWidth: 2),
+                      )
+                    : _TierCrown(userType: _userType),
                 onTap: () => _proHubGuard.run(() async {
+                  if (!mounted) return;
+                  setState(() => _proToolsLoading = true);
                   // StorageService'ten güncel is_premium oku — widget.user stale olabilir
                   final freshInfo = await StorageService.getUserInfo();
+                  if (!mounted) return;
+                  setState(() => _proToolsLoading = false);
                   if (!context.mounted) return;
                   await Navigator.push(
                     context,
