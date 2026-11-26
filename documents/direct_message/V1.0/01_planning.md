@@ -357,7 +357,8 @@ WS patch metodları:
 // appendToCache   → _db.appendMessage(otherUserId, msg)
 // removeFromCache → _db.deleteMessage(messageId)
 // markReadInCache → _db.markReadByThread(otherUserId, myUserId)
-// _patchCache     → kaldırılır (artık gerekli değil)
+// _patchCache     → tamamen silinir
+// _patchLocks     → tamamen silinir (SQLite upsert atomik, serial queue gerekmez)
 ```
 
 ### 7.3 `MessageThreadViewModel` Değişikliği
@@ -411,7 +412,8 @@ Future<void> preWarmThread(int otherUserId, int myUserId) async {
 |-------|-------------|------|
 | `mobile/pubspec.yaml` | Güncelleme | `sqflite`, `path` bağımlılıkları |
 | **`mobile/lib/services/dm_database.dart`** | **Yeni** | SQLite erişim katmanı |
-| `mobile/lib/repositories/message_repository.dart` | Refactor | Hive → SQLite; `getPage` DB'ye yazar |
+| `mobile/lib/repositories/message_repository.dart` | Refactor | Hive tamamen kaldırılır; `_patchCache`/`_patchLocks` silinir; `getPage` DB'ye yazar |
+| `mobile/lib/services/storage_service.dart` | Küçük | `cacheThreadKey`, `cacheDmImageKey`, `cacheDmThumbKey` kaldırılır |
 | `mobile/lib/screens/viewmodels/message_thread_view_model.dart` | Küçük | `build()` → `async` |
 | `mobile/lib/main.dart` | Küçük | `DmDatabase.init()` eklenir |
 
@@ -443,17 +445,22 @@ Future<void> preWarmThread(int otherUserId, int myUserId) async {
    - `appendToCache()` → `_db.appendMessage()`
    - `removeFromCache()` → `_db.deleteMessage()`
    - `markReadInCache()` → `_db.markReadByThread()`
-   - `_patchCache()` → kaldır
+   - `_patchCache()` ve `_patchLocks` → tamamen sil
    - `preWarmThread()` → SQLite kontrolü
    - `messageRepositoryProvider` → `DmDatabase` inject et
 
+5. `storage_service.dart`:
+   - `cacheThreadKey()` → sil
+   - `cacheDmImageKey()` → sil
+   - `cacheDmThumbKey()` → sil
+
 ### Faz 3: ViewModel
 
-5. `message_thread_view_model.dart`: `build()` → `async`
+6. `message_thread_view_model.dart`: `build()` → `async`
 
 ### Faz 4: Test
 
-6. Staging'de manuel test:
+7. Staging'de manuel test:
    - Thread aç → kapat → uçak modu → tekrar aç → mesajlar görünmeli
    - Yeni mesaj gönder → uçak modunda gönder → online ol → deliver olmalı
    - Scroll up (pagination) → uçak moduna geç → eski mesajlar hâlâ görünmeli
@@ -461,17 +468,17 @@ Future<void> preWarmThread(int otherUserId, int myUserId) async {
 
 ### Faz 5: Deploy
 
-7. `git commit` + `git push` + `sudo teqlif-restart` (node1, node5)
+8. `git commit` + `git push` + `sudo teqlif-restart` (node1, node5)
 
 ---
 
 ## 10. Migration Stratejisi
 
-**Sıfır migration.** SQLite başlangıçta boş açılır.
+**Sıfır migration. Backward compatibility gerekmez** — sistem henüz gerçek kullanıcıya açık değildir.
 
-- Mevcut kullanıcılar: Hive cache'leri kullanılmaz hale gelir; uygulama güncellendiğinde SQLite boş başlar. Kullanıcı her konuşmayı açtığında SQLite dolar.
+- SQLite başlangıçta boş açılır; kullanıcı her konuşmayı açtığında dolar.
 - `preWarmThread`: En son 5 konuşma background'da otomatik ısıtılır — kullanıcı hiç dokunmasa bile offline erişilebilir olur.
-- Hive thread cache'leri (`u_{uid}_chat_{otherId}`): artık okunmaz/yazılmaz; mevcut TTL'leriyle kendi kendine eriyip gider.
+- Hive thread cache kodu **tamamen kaldırılır** — `StorageService.cacheThreadKey`, `cacheDmImageKey`, `cacheDmThumbKey` ve tüm ilgili Hive okuma/yazma çağrıları silinir. Kullanılmaz kod bırakılmaz.
 
 ---
 
