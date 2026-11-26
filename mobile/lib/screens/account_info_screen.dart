@@ -12,6 +12,7 @@ import '../core/app_exception.dart';
 import 'viewmodels/account_info_view_model.dart';
 import 'subscription_tools_screen.dart';
 import '../core/user_tier.dart';
+import '../core/event_bus.dart';
 
 class AccountInfoScreen extends ConsumerStatefulWidget {
   const AccountInfoScreen({super.key});
@@ -23,16 +24,22 @@ class AccountInfoScreen extends ConsumerStatefulWidget {
 class _AccountInfoScreenState extends ConsumerState<AccountInfoScreen> with WidgetsBindingObserver {
   static const _kResumeDebounceDuration = Duration(minutes: 5);
   DateTime? _lastReload;
+  StreamSubscription<UserTypeChangedEvent>? _userTypeSub;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // Satın alma / iptal sonrası debounce'u bypass ederek anında güncelle
+    _userTypeSub = eventBus.on<UserTypeChangedEvent>().listen((_) {
+      if (mounted) ref.read(accountInfoProvider.notifier).reload(silent: true);
+    });
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _userTypeSub?.cancel();
     super.dispose();
   }
 

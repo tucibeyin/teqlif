@@ -4,7 +4,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Kasım 2026 — §48 Tier-aware plan mapping + upgrade panel + UI düzeltmeleri (496ee490–b37b6667); §47 Reserved Usernames; §46 Redis Core & MinIO Yaşam Döngüsü İzolasyonu ve Edge Metrics Alarm Histerisisi; §45 node101 Offsite Felaket Kurtarma; §13 node listesi güncellendi
+**Son güncelleme:** Kasım 2026 — §50 Subscription cross-screen sync + Apple S2S downgrade bug fix; §49 Nginx sitemap proxy & MinIO robots disallow; §48 Tier-aware plan mapping + upgrade panel + UI düzeltmeleri (496ee490–b37b6667); §47 Reserved Usernames; §13 node listesi güncellendi
 
 ---
 
@@ -41,6 +41,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 46. [Redis Core & MinIO Yaşam Döngüsü İzolasyonu ve Edge Metrics Alarm Histerisisi](#46--redis-core--minio-yaşam-döngüsü-i̇zolasyonu-ve-edge-metrics-alarm-histerisisi)
 47. [Reserved Usernames — Kayıtlı Kullanıcı Adı Koruması](#47-reserved-usernames--kayıtlı-kullanıcı-adı-koruması-commit-6ddfc8a0-dd33099b)
 48. [Subscription/Tier Model Refactor + Naming Consistency](#48-subscriptiontier-model-refactor--naming-consistency)
+50. [Subscription Cross-Screen Sync + Apple S2S Downgrade Bug Fix](#50--subscription-cross-screen-sync--apple-s2s-downgrade-bug-fix)
 
 ---
 
@@ -3356,5 +3357,47 @@ Tüm metinler `loc.tOr(key, fallback)` ile OTA uyumlu. 21 yeni ARB key 5 dile ek
 | `deploy/scale/V2.1/node5/resources/nginx/conf.d/teqlif-staging.conf` | Staging için sitemap proxy ve staging.uploads için robots disallow eklendi |
 | `deploy/scale/V2.1/node2/resources/nginx/conf.d/teqlif-dr.conf` | DR standby için sitemap proxy eklendi |
 | `documents/teqlif_architectural_decisions.md` | ADR §49 belgelendi |
+
+## §50 — Subscription Cross-Screen Sync + Apple S2S Downgrade Bug Fix
+
+### Bağlam
+
+1. **Cross-screen sync eksikliği:** Kullanıcı üyelik satın aldığında "teqlif Cüzdanım", "Profilim", "Ayarlar" ve "teqlif Araçları" ekranları anında güncellenmiyordu. Kullanıcı üyeliğini yükseltememiş hissi yaşıyordu.
+2. **Apple S2S DOWNGRADE dead code:** `apple_handler.py`'de `DID_CHANGE_RENEWAL_PREF + DOWNGRADE` koşulu iki kez yazılmıştı. İlk eşleşme sadece `logger.info` çağırıp dönüyordu; `_handle_downgrade_pref` çağrısı (pending_tier kayıt) dead code'da kalıyordu. Bu durumda kullanıcı Apple'dan downgrade seçtiğinde `pending_tier` sütunu hiç güncellenmiyordu, bir sonraki `DID_RENEW`'da tier düşmüyordu.
+
+### Kararlar
+
+**1. EventBus `UserTypeChangedEvent` — Cross-Screen Sync**
+
+`eventBus.fire(UserTypeChangedEvent(userType))` pattern'i benimsendi. `_WalletScreenState._load()` tier değişikliğini algılayıp event yayınlar; 4 ekran dinler:
+
+| Dinleyici | Aksiyon |
+|-----------|---------|
+| `ProfileScreenState` | `profileViewModelProvider.load(bypassCache: true)` |
+| `_SettingsScreenState` | `_loadPremiumStatus()` |
+| `_AccountInfoScreenState` | `accountInfoProvider.notifier.reload(silent: true)` — 5 dk debounce'u bypass eder |
+| `SubscriptionToolsViewModel` | `verifyPremium()` + `cleanup()`'ta cancel |
+
+Tüm `StreamSubscription` nesneleri `dispose()`/`cleanup()`'ta iptal edilir.
+
+**2. Backend `transaction_type` — Tier Bilgisi**
+
+`verify_purchase_command.py`'de `subscription_{plan_type}` → `subscription_{tier}_{plan_type}` (örn. `subscription_tier4_monthly`). Flutter `_resolveTxnLabel()` hem eski (`subscription_monthly`) hem yeni (`subscription_tier4_monthly`) formatı destekler.
+
+**3. Apple S2S Downgrade Bug Fix**
+
+`apple_handler.py` satır 82-84: `elif notification_type == "DID_CHANGE_RENEWAL_PREF" and subtype == "DOWNGRADE"` bloğu `logger.info` yerine `_handle_downgrade_pref(user_id, tx_claims)` çağrısına düzeltildi. Duplicate dead code elif bloğu (satır 94-96) kaldırıldı.
+
+### Dosyalar
+
+| Dosya | Değişiklik |
+|-------|------------|
+| `mobile/lib/core/event_bus.dart` | `UserTypeChangedEvent` eklendi |
+| `mobile/lib/screens/profile_screen.dart` | `_WalletScreenState` event yayınlar; `ProfileScreenState` + `_SettingsScreenState` dinler; `_resolveTxnLabel()` + `_formatTryPrice()` |
+| `mobile/lib/screens/account_info_screen.dart` | `_userTypeSub` ile debounce bypass |
+| `mobile/lib/screens/viewmodels/subscription_tools_view_model.dart` | `_userTypeSub` → `verifyPremium()` |
+| `backend/app/use_cases/wallet/commands/verify_purchase_command.py` | `tx_type` → `subscription_{tier}_{plan}` |
+| `backend/app/services/store/notifications/apple_handler.py` | DOWNGRADE dead code bug fix |
+| `documents/language/app_{tr,en,de,ru,ar}.arb` | `notifRecordingUpsellBody` PRO referansı kaldırıldı |
 
 

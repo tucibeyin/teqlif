@@ -80,8 +80,8 @@ class AppleNotificationHandler(StoreNotificationHandler):
             await self._handle_upgrade(user_id, tx_claims)
 
         elif notification_type == "DID_CHANGE_RENEWAL_PREF" and subtype == "DOWNGRADE":
-            # Mevcut dönem üst planda devam eder; plan değişimi bir sonraki DID_RENEW'da gerçekleşir
-            logger.info("[AppleNotif] DOWNGRADE (pending, işlem yok) | user=%s", user_id)
+            # Mevcut dönem üst planda devam eder; pending_tier kaydedilir, geçiş DID_RENEW'da olur
+            await self._handle_downgrade_pref(user_id, tx_claims)
 
         elif notification_type == "DID_FAIL_TO_RENEW" and subtype == "GRACE_PERIOD":
             # Grace period aktif — DID_RENEW+BILLING_RETRY ile aynı mantık
@@ -90,9 +90,6 @@ class AppleNotificationHandler(StoreNotificationHandler):
         elif notification_type == "DID_FAIL_TO_RENEW":
             # Fatura başarısız, grace period yok; abonelik expiresDate'e kadar hala geçerli
             logger.info("[AppleNotif] DID_FAIL_TO_RENEW (billing retry, işlem yok) | user=%s", user_id)
-
-        elif notification_type == "DID_CHANGE_RENEWAL_PREF" and subtype == "DOWNGRADE":
-            await self._handle_downgrade_pref(user_id, tx_claims)
 
         elif notification_type == "DID_CHANGE_RENEWAL_STATUS":
             await self._handle_renewal_status(user_id, subtype)

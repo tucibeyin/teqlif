@@ -3864,7 +3864,7 @@
   "notifRecordingAvailableTitle": "Canlı Yayın Tekrarın Hazır 🎬",
   "notifRecordingAvailableBody": "{title} · Tekrarı izle, satış ve izleyici istatistiklerini gör.",
   "notifRecordingUpsellTitle": "Yayın Kaydın Hazır 🎬",
-  "notifRecordingUpsellBody": "PRO'ya geç ve yayın tekrarına 24 saat boyunca eriş.",
+  "notifRecordingUpsellBody": "Üyeliğini yükselt ve yayın tekrarına 24 saat boyunca eriş.",
   "notifStreamStarted": "@{username} canlı yayın açtı",
   "@notifStreamStarted": [
     [

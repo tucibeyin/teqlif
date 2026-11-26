@@ -89,12 +89,16 @@ class ProfileScreen extends ConsumerStatefulWidget {
 class ProfileScreenState extends ConsumerState<ProfileScreen> {
   final _websiteGuard = OnceGuard(); // Çift tıklama engeli
   StreamSubscription<CreditsChangedEvent>? _creditsSub;
+  StreamSubscription<UserTypeChangedEvent>? _userTypeSub;
 
   @override
   void initState() {
     super.initState();
     _creditsSub = eventBus.on<CreditsChangedEvent>().listen((_) {
       _loadWallet(bypassCache: true);
+    });
+    _userTypeSub = eventBus.on<UserTypeChangedEvent>().listen((_) {
+      ref.read(profileViewModelProvider.notifier).load(bypassCache: true);
     });
   }
 
@@ -105,6 +109,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   void dispose() {
     _creditsSub?.cancel();
+    _userTypeSub?.cancel();
     super.dispose();
   }
 
@@ -960,6 +965,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
   bool _consentGiven = false;
   DateTime? _consentAt;
   String? _consentLocale;
+  StreamSubscription<UserTypeChangedEvent>? _userTypeSub;
 
   @override
   void initState() {
@@ -973,6 +979,13 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
     _loadPendingRequests();
     _loadUnreadRatings();
     _loadConsentStatus();
+    _userTypeSub = eventBus.on<UserTypeChangedEvent>().listen((_) => _loadPremiumStatus());
+  }
+
+  @override
+  void dispose() {
+    _userTypeSub?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadConsentStatus() async {
@@ -4015,8 +4028,9 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
     'pro_subscription_monthly': loc.t('walletTxnProMonthly'),
     'pro_subscription_annual':  loc.t('walletTxnProAnnual'),
     'pro_subscription':         loc.t('walletTxnProSubscription'),
-    'subscription_monthly': '${TierBadge.tierLabel(_userType, loc)} ${loc.tOr('walletTxnSubMonthly', 'Aylık Üyelik Ücreti')}',
-    'subscription_annual':  '${TierBadge.tierLabel(_userType, loc)} ${loc.tOr('walletTxnSubAnnual', 'Yıllık Üyelik Ücreti')}',
+    // Eski format (tier bilgisi yok — generic label)
+    'subscription_monthly': loc.tOr('walletTxnSubMonthly', 'Aylık Üyelik Ücreti'),
+    'subscription_annual':  loc.tOr('walletTxnSubAnnual', 'Yıllık Üyelik Ücreti'),
   };
 
   @override
@@ -4054,6 +4068,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
     final balanceData = results[0];
     final summaryData = results[1];
 
+    final previousUserType = _userType;
     setState(() {
       _loading = false;
       if (balanceData != null) {
@@ -4076,6 +4091,11 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
         _phoneVerified  = summaryData['phone_verified'] as bool? ?? false;
       }
     });
+
+    // Tier değişti → diğer ekranları (Profile, Ayarlar, Araçlar) uyar
+    if (_userType != previousUserType) {
+      eventBus.fire(UserTypeChangedEvent(_userType));
+    }
 
     // Ücretli tier kullanıcılar için Apple Server API üzerinden sessiz reconciliation
     if (UserTier.hasSubscription(_userType)) {
@@ -4340,14 +4360,44 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
   }
 
   String _formatTryPrice(double v) {
-    if (v == v.truncateToDouble()) return '₺${v.toInt()}';
-    return '₺${v.toStringAsFixed(2).replaceAll('.', ',')}';
+    final intPart = v.truncate();
+    String intStr = intPart.toString();
+    final segments = <String>[];
+    while (intStr.length > 3) {
+      segments.insert(0, intStr.substring(intStr.length - 3));
+      intStr = intStr.substring(0, intStr.length - 3);
+    }
+    if (intStr.isNotEmpty) segments.insert(0, intStr);
+    final formatted = segments.join('.');
+    if (v == v.truncateToDouble()) return '₺$formatted';
+    final dec = v.toStringAsFixed(2).split('.')[1];
+    return '₺$formatted,$dec';
+  }
+
+  String _resolveTxnLabel(String type, int amount, TranslationPack loc) {
+    // Yeni format: subscription_tier1_monthly, subscription_tier4_annual vb.
+    final subMatch = RegExp(r'^subscription_(tier\d)_(monthly|annual)$').firstMatch(type);
+    if (subMatch != null) {
+      final tierStr = subMatch.group(1)!;
+      final planStr = subMatch.group(2)!;
+      final tierLabel = TierBadge.tierLabel(tierStr, loc);
+      final planLabel = planStr == 'monthly'
+          ? loc.tOr('walletTxnSubMonthly', 'Aylık Üyelik Ücreti')
+          : loc.tOr('walletTxnSubAnnual', 'Yıllık Üyelik Ücreti');
+      return '$tierLabel $planLabel';
+    }
+    // iap_purchase: miktarı etikete dahil et
+    if (type == 'iap_purchase' && amount > 0) {
+      return '$amount teqlik satın alındı';
+    }
+    return _typeLabels(loc)[type] ?? type;
   }
 
   Widget _buildTxnRow(dynamic t, TranslationPack loc) {
     final amount = t['amount'] as int? ?? 0;
     final type = t['transaction_type'] as String? ?? '';
-    final label = _typeLabels(loc)[type] ?? (t['label'] as String? ?? type);
+    final resolved = _resolveTxnLabel(type, amount, loc);
+    final label = resolved.isNotEmpty ? resolved : (t['label'] as String? ?? type);
     final tryAmount = (t['try_amount'] as num?)?.toDouble();
     final hasTry = tryAmount != null && tryAmount > 0;
     final isPos = hasTry ? false : amount > 0;
@@ -4447,9 +4497,11 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
   ) {
     final txnId = t['id'] as int?;
     final amount = t['amount'] as int? ?? 0;
-    final label =
-        _typeLabels(loc)[t['transaction_type'] as String? ?? ''] ??
-        (t['label'] as String? ?? t['transaction_type'] as String? ?? '');
+    final txnType = t['transaction_type'] as String? ?? '';
+    final resolvedLabel = _resolveTxnLabel(txnType, amount, loc);
+    final label = resolvedLabel.isNotEmpty
+        ? resolvedLabel
+        : (t['label'] as String? ?? txnType);
     final tryAmount = (t['try_amount'] as num?)?.toDouble();
     final isPos = (tryAmount != null && tryAmount > 0) ? false : amount > 0;
     final dateStr = t['created_at'] as String? ?? '';

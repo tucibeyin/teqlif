@@ -261,7 +261,7 @@ class VerifyPurchaseCommand:
                 ),
                 {
                     "uid": user_id,
-                    "tx_type": f"subscription_{plan_type}",
+                    "tx_type": f"subscription_{new_tier}_{plan_type}",
                     "platform": platform,
                     "tx_id": result.transaction_id,
                     "raw": result.raw_payload,
@@ -281,7 +281,7 @@ class VerifyPurchaseCommand:
             {
                 "uid": user_id,
                 "bal": sub_balance_after,
-                "tx_type": f"subscription_{plan_type}",
+                "tx_type": f"subscription_{new_tier}_{plan_type}",
                 "ref_id": sub_tx_id,
             },
         )

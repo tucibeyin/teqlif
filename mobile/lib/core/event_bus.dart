@@ -54,3 +54,11 @@ class ListingStatusChangedEvent {
   final bool isActive;
   const ListingStatusChangedEvent({required this.listingId, required this.isActive});
 }
+
+/// Kullanıcı tier'ı değiştiğinde (satın alma / iptal) fırlatılır.
+/// Profile, Ayarlar ve teqlif Araçları ekranları bu event'i dinleyerek
+/// anlık güncelleme yapar.
+class UserTypeChangedEvent {
+  final String userType;
+  const UserTypeChangedEvent(this.userType);
+}

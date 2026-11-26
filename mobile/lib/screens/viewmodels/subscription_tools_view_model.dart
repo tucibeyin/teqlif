@@ -62,10 +62,12 @@ class SubscriptionToolsState {
 
 class SubscriptionToolsViewModel extends AutoDisposeFamilyNotifier<SubscriptionToolsState, String> {
   StreamSubscription<CreditsChangedEvent>? _creditsSub;
+  StreamSubscription<UserTypeChangedEvent>? _userTypeSub;
 
   @override
   SubscriptionToolsState build(String arg) {
     _creditsSub = eventBus.on<CreditsChangedEvent>().listen((_) => loadCredits());
+    _userTypeSub = eventBus.on<UserTypeChangedEvent>().listen((_) => verifyPremium());
     Future.microtask(() {
       loadLocalPlanType();
       verifyPremium();
@@ -126,6 +128,7 @@ class SubscriptionToolsViewModel extends AutoDisposeFamilyNotifier<SubscriptionT
 
   void cleanup() {
     _creditsSub?.cancel();
+    _userTypeSub?.cancel();
   }
 }
 
