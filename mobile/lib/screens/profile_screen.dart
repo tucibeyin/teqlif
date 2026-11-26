@@ -2245,7 +2245,7 @@ class _SettingsSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Container(
+    return Material(
       color: AppColors.surface(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2286,16 +2286,23 @@ class _SettingsTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return ListTile(
-      leading: Icon(icon, color: iconColor ?? AppColors.iconColor(context)),
-      title: Text(
-        label,
-        style: TextStyle(fontSize: 14, color: AppColors.textPrimary(context)),
+    final pressColor = AppColors.textPrimary(context).withValues(alpha: 0.07);
+    return Theme(
+      data: Theme.of(context).copyWith(
+        splashColor: pressColor,
+        highlightColor: pressColor,
       ),
-      trailing:
-          trailing ??
-          Icon(Icons.chevron_right, color: AppColors.border(context), size: 20),
-      onTap: onTap,
+      child: ListTile(
+        leading: Icon(icon, color: iconColor ?? AppColors.iconColor(context)),
+        title: Text(
+          label,
+          style: TextStyle(fontSize: 14, color: AppColors.textPrimary(context)),
+        ),
+        trailing:
+            trailing ??
+            Icon(Icons.chevron_right, color: AppColors.border(context), size: 20),
+        onTap: onTap,
+      ),
     );
   }
 }
