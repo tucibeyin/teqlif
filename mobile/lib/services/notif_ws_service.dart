@@ -89,7 +89,7 @@ class NotifWsService with WidgetsBindingObserver {
         .replaceFirst('http://', 'ws://');
 
     try {
-      final uri = Uri.parse('$wsBase/api/notifications/ws');
+      final uri = Uri.parse('$wsBase/notifications/ws');
       _channel = WebSocketChannel.connect(uri);
       _channel!.sink.add(jsonEncode({'token': token}));
 
