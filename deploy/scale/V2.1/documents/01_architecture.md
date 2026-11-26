@@ -68,6 +68,7 @@ node1 ←───────────────────────�
 | MinIO (node1) | 0.0.0.0 | 9000/9001 | nginx + WG |
 | LiveKit (node3/4) | 0.0.0.0 | 7880/7881/443 | İnternet + WG |
 | LiveKit staging (node5) | 127.0.0.1 | 7890 | nginx proxy → live-staging.teqlif.com |
+| TURN staging (node5) | 0.0.0.0 | 5349/tcp, 3478/udp, relay 55000-60000/udp | İnternet — DNS only (live-staging.teqlif.com) |
 | AI Proxy (node5/6) | 0.0.0.0 | 8001 | WG mesh |
 | ClickHouse (node2) | 127.0.0.1 + 10.10.0.2 | 8123/9000 | WG mesh |
 | ClickHouse (node5) | 127.0.0.1 | 8123/9000 | staging dahili — WG mesh'e kapalı |

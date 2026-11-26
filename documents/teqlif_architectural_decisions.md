@@ -1114,7 +1114,7 @@ Kullanıcı → Cloudflare Edge → node1 (prod) veya node5 (staging)
 | `staging.teqlif.com` | A | 45.146.252.165 | Proxied | node5 |
 | `api-staging.teqlif.com` | A | 45.146.252.165 | Proxied | node5 |
 | `staging.uploads.teqlif.com` | A | 45.146.252.165 | DNS only | node5 (MinIO staging) |
-| `live-staging.teqlif.com` | A | 45.146.252.165 | DNS only | node5 (LiveKit) |
+| `live-staging.teqlif.com` | A | 45.146.252.165 | DNS only | node5 (LiveKit + TURN staging) |
 | `live1.teqlif.com` | A | 135.125.175.223 | DNS only | node4 (LiveKit) |
 | `live2.teqlif.com` | A | 51.75.74.124 | DNS only | node3 (LiveKit) |
 | `stream3.teqlif.com` | A | 51.75.74.124 | DNS only | node3 (TURN/STUN) |
@@ -1133,7 +1133,8 @@ Kullanıcı → Cloudflare Edge → node1 (prod) veya node5 (staging)
 
 **node5** (`deploy/scale/V2.1/node5/resources/nginx/`):
 - `cloudflare-real-ip.conf` — aynı CF IP blokları
-- `staging.teqlif.com.conf` — `staging.teqlif.com`, `api-staging.teqlif.com` → `10.10.0.5:8000` (staging FastAPI, WireGuard IP)
+- `teqlif-staging.conf` — `staging.teqlif.com`, `api-staging.teqlif.com` → `10.10.0.5:8000` (staging FastAPI, WireGuard IP); `live-staging.teqlif.com` → `127.0.0.1:7890` (LiveKit staging, DNS only, Let's Encrypt); `staging.uploads.teqlif.com` → `127.0.0.1:9100` (MinIO staging, DNS only, Let's Encrypt)
+- **TURN staging:** `live-staging.teqlif.com:5349/tcp + 3478/udp`, relay `55000-60000/udp` — DNS only, Let's Encrypt cert, UFW açık
 
 ### Kural
 
