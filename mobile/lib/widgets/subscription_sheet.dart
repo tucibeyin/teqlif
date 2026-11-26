@@ -368,9 +368,9 @@ class _SubscriptionSheetState extends ConsumerState<SubscriptionSheet>
 
 String _tierLabel(TranslationPack loc, String tier) {
   switch (tier) {
-    case UserTier.tier4: return loc.tOr('tierLabelPremiumPlus', 'PREMIUM+');
+    case UserTier.tier4: return loc.tOr('tierLabelPremiumPlus', 'PREMIUM +');
     case UserTier.tier3: return loc.tOr('tierLabelPremium', 'PREMIUM');
-    case UserTier.tier2: return loc.tOr('tierLabelProPlus', 'PRO+');
+    case UserTier.tier2: return loc.tOr('tierLabelProPlus', 'PRO +');
     case UserTier.tier1: return loc.tOr('tierLabelPro', 'PRO');
     default:             return tier.toUpperCase();
   }
@@ -474,13 +474,13 @@ class _TierSelector extends StatelessWidget {
             Row(children: [
               _buildBtn(tiers[0], p), // PRO
               const SizedBox(width: 6),
-              _buildBtn(tiers[1], p), // PRO+
+              _buildBtn(tiers[2], p), // PREMIUM
             ]),
             const SizedBox(height: 6),
             Row(children: [
-              _buildBtn(tiers[2], p), // PREMIUM
+              _buildBtn(tiers[1], p), // PRO +
               const SizedBox(width: 6),
-              _buildBtn(tiers[3], p), // PREMIUM+
+              _buildBtn(tiers[3], p), // PREMIUM +
             ]),
           ],
         );
