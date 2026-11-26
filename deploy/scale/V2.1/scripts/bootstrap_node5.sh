@@ -87,10 +87,15 @@ ufw_node5() {
     ufw default deny incoming
     ufw default allow outgoing
     ufw allow 22/tcp
-    ufw allow 51820/udp
+    # WireGuard: node5'te Zap-Hosting 51820'i engelliyor; 443/UDP kullanılır
+    ufw allow 443/udp
     # Staging HTTP(S) — Cloudflare proxied üzerinden gelir
     ufw allow 80/tcp
     ufw allow 443/tcp
+    # LiveKit TURN staging (live-staging.teqlif.com, DNS only)
+    ufw allow 5349/tcp
+    ufw allow 3478/udp
+    ufw allow 55000:60000/udp
     # AI Proxy sadece WG mesh'ten
     ufw allow in on wg0 from 10.10.0.0/24 to any port 8001 proto tcp
     # Prometheus scrape: FastAPI staging /metrics sadece WG mesh'ten (nodeMonitor → SRE-116)
@@ -189,21 +194,13 @@ install_livekit_staging() {
         | tar xz -C /tmp/
     mv /tmp/livekit-server /usr/local/bin/livekit-server
     chmod +x /usr/local/bin/livekit-server
-    cat > /project/teqlif/config/livekit-staging.yaml <<'EOF'
-port: 7890
-rtc:
-  tcp_port: 7891
-  use_external_ip: true
-redis:
-  address: 127.0.0.1:6379
-  db: 2
-  password: <staging_redis_pass>
-keys:
-  <livekit_staging_api_key>: <livekit_staging_api_secret>
-logging:
-  level: debug
-  json: true
-EOF
+    mkdir -p /project/teqlif/config /project/teqlif/logs/livekit
+    chown tucibeyin:tucibeyin /project/teqlif/logs/livekit
+    # Repo'daki canonical config kullan (TURN bloğu dahil)
+    cp "${NODE_DIR}/resources/livekit/livekit-staging.yaml" /project/teqlif/config/livekit-staging.yaml
+    chown tucibeyin:tucibeyin /project/teqlif/config/livekit-staging.yaml
+    # Certbot renewal hook — TURN cert'ini LiveKit dizinine kopyalar
+    setup_certbot_hook "${NODE_DIR}"
     cat > /etc/systemd/system/teqlif-livekit-staging.service <<'EOF'
 [Unit]
 Description=teqlif LiveKit Staging
@@ -221,6 +218,17 @@ EOF
     systemctl daemon-reload
     systemctl enable teqlif-livekit-staging
     log_ok "teqlif-livekit-staging enable edildi"
+}
+
+setup_certbot_hook() {
+    local node_dir="${1}"
+    log_step "Certbot renewal hook (LiveKit cert sync)"
+    local hook_dir="/etc/letsencrypt/renewal-hooks/deploy"
+    mkdir -p "${hook_dir}"
+    cp "${node_dir}/resources/certbot/renewal-hooks/deploy/copy-livekit-certs.sh" \
+        "${hook_dir}/copy-livekit-certs.sh"
+    chmod 755 "${hook_dir}/copy-livekit-certs.sh"
+    log_ok "Certbot hook kuruldu: ${hook_dir}/copy-livekit-certs.sh"
 }
 
 setup_staging_services() {

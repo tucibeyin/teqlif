@@ -44,6 +44,7 @@ main() {
     install_livekit
     setup_livekit      "${NODE_DIR}"
     install_certbot
+    setup_certbot_hook "${NODE_DIR}"
     install_nginx
     setup_nginx        "${NODE_DIR}"
     install_promtail
@@ -105,6 +106,17 @@ setup_livekit() {
 
 install_certbot() {
     apt-get install -y -qq certbot
+}
+
+setup_certbot_hook() {
+    local node_dir="${1}"
+    log_step "Certbot renewal hook (LiveKit cert sync)"
+    local hook_dir="/etc/letsencrypt/renewal-hooks/deploy"
+    mkdir -p "${hook_dir}"
+    cp "${node_dir}/resources/certbot/renewal-hooks/deploy/copy-livekit-certs.sh" \
+        "${hook_dir}/copy-livekit-certs.sh"
+    chmod 755 "${hook_dir}/copy-livekit-certs.sh"
+    log_ok "Certbot hook kuruldu: ${hook_dir}/copy-livekit-certs.sh"
 }
 
 install_nginx() {
