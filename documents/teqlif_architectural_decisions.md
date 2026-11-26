@@ -4,7 +4,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Kasım 2026 — §50 Subscription cross-screen sync + Apple S2S downgrade bug fix; §49 Nginx sitemap proxy & MinIO robots disallow; §48 Tier-aware plan mapping + upgrade panel + UI düzeltmeleri (496ee490–b37b6667); §47 Reserved Usernames; §13 node listesi güncellendi
+**Son güncelleme:** Kasım 2026 — §51 Android ConnectionService + native FCM receiver (1c985668); §50 Subscription cross-screen sync + Apple S2S downgrade bug fix; §49 Nginx sitemap proxy & MinIO robots disallow; §48 Tier-aware plan mapping + upgrade panel + UI düzeltmeleri (496ee490–b37b6667); §47 Reserved Usernames; §13 node listesi güncellendi
 
 ---
 
@@ -42,6 +42,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 47. [Reserved Usernames — Kayıtlı Kullanıcı Adı Koruması](#47-reserved-usernames--kayıtlı-kullanıcı-adı-koruması-commit-6ddfc8a0-dd33099b)
 48. [Subscription/Tier Model Refactor + Naming Consistency](#48-subscriptiontier-model-refactor--naming-consistency)
 50. [Subscription Cross-Screen Sync + Apple S2S Downgrade Bug Fix](#50--subscription-cross-screen-sync--apple-s2s-downgrade-bug-fix)
+51. [Android ConnectionService + Native FCM Receiver — Pil Optimizasyonuna Karşı Dayanıklı Çağrı](#51-android-connectionservice--native-fcm-receiver--pil-optimizasyonuna-karşı-dayanıklı-çağrı-commit-1c985668)
 
 ---
 
@@ -3400,5 +3401,66 @@ Tüm `StreamSubscription` nesneleri `dispose()`/`cleanup()`'ta iptal edilir.
 | `backend/app/use_cases/wallet/commands/verify_purchase_command.py` | `tx_type` → `subscription_{tier}_{plan}` |
 | `backend/app/services/store/notifications/apple_handler.py` | DOWNGRADE dead code bug fix |
 | `documents/language/app_{tr,en,de,ru,ar}.arb` | `notifRecordingUpsellBody` PRO referansı kaldırıldı |
+
+---
+
+## 51. Android ConnectionService + Native FCM Receiver — Pil Optimizasyonuna Karşı Dayanıklı Çağrı (commit 1c985668)
+
+### Problem
+
+Samsung, Xiaomi/MIUI ve diğer OEM cihazlarda "pil optimizasyonu" veya "MIUI pil tasarrufu" etkin olduğunda Android, `FlutterFirebaseMessagingBackgroundService`'in Flutter Dart isolate'ini başlatmasını engeller. FCM yüksek öncelikli mesaj sistem düzeyinde teslim edilir; ancak OEM katmanı FGS'yi başlatmadan önce öldürür. Sonuç:
+
+- ACK (12 saniye timeout) gönderilmez → backend `call_unreachable` döner
+- Kullanıcı gelen arama bildirimi almaz
+- `setForegroundServiceBehavior(FOREGROUND_SERVICE_IMMEDIATE)` ilgisizdir (flutter_callkit_incoming v3.1.3 bunu kullanmaz)
+
+**Neden önceden çalışıyordu?** Çalışmıyordu — pil optimizasyonu her zaman sorunluydu. Ağustos 2026'da commit `2a854e7e` muafiyet isteği ekledi; kullanıcılar bunu reddedince sorun görünür hale geldi.
+
+### Karar
+
+Android'in yerleşik telefon altyapısını (`ConnectionService` / `TelecomManager`) kullanarak çağrıyı OS düzeyinde kayıt altına al. OEM pil optimizasyonu bu API'yi engelleyemez çünkü sistem kendi yerleşik arama altyapısı ile aynı zinciri kullanır.
+
+**Mimari:** `TeqlifFcmReceiver` (öncelik=1, `BroadcastReceiver`) → `TeqlifCallHandlerService` (kısa ömürlü FGS) → ACK + `TelecomManager.addNewIncomingCall()` + callkit bildirimi. Dart isolate yedek olarak çalışır; flag kontrol ederek çift bildirim önlenir.
+
+### Mimari Özeti
+
+```
+FCM yüksek öncelikli mesaj
+        │
+        ▼
+TeqlifFcmReceiver (priority=1, önce çalışır)
+        │  incoming_call + app background?
+        │  → SharedPreferences'a flag yaz (FlutterSharedPreferences, flutter.native_handled_<id>)
+        ▼
+TeqlifCallHandlerService (FGS, foregroundServiceType=phoneCall)
+        │
+        ├─ Thread: HTTP ACK → /call/<id>/ack (12s timeout'u karşılar)
+        ├─ MainLooper: TelecomManager.addNewIncomingCall()
+        │        └─→ TeqlifConnectionService.onCreateIncomingConnection()
+        │                └─→ TeqlifIncomingConnection (setRinging)
+        └─ MainLooper: CallkitNotificationManager.showIncomingNotification()
+
+Flutter Dart isolate (yedek)
+        │  SharedPreferences.getInt('native_handled_<id>') kontrol
+        │  < 30s → return (native halletti)
+        └─ ≥ 30s veya yoksa → Dart fallback (orijinal akış)
+```
+
+**SharedPreferences köprüsü:** Kotlin `FlutterSharedPreferences` dosyasına `"flutter.native_handled_<callId>"` key'i ile `Long` (timestamp ms) yazar (`.commit()` — sync). Dart `SharedPreferences.getInt('native_handled_<callId>')` ile okur; Flutter tüm key'lere `"flutter."` prefix ekler, bu yüzden eşleşir.
+
+**baseUrl kalıcılığı:** Flutter `initEarly()`'de `setBaseUrl` MethodChannel çağrısı yapar → `MainActivity` `"flutter.native_base_url"` key'i ile `FlutterSharedPreferences`'a yazar → `TelecomHelper.baseUrl()` bu değeri okur, fallback `"https://api.teqlif.com/api"`.
+
+### Dosyalar
+
+| Dosya | Değişiklik |
+|-------|------------|
+| `mobile/android/app/src/main/kotlin/.../TeqlifFcmReceiver.kt` | YENİ — FCM BroadcastReceiver, priority=1; flag yazar; `TeqlifCallHandlerService.start()` çağırır |
+| `mobile/android/app/src/main/kotlin/.../TeqlifCallHandlerService.kt` | YENİ — kısa ömürlü FGS (phoneCall); background thread: ACK + TelecomManager + callkit |
+| `mobile/android/app/src/main/kotlin/.../TelecomHelper.kt` | YENİ — PhoneAccount kaydı, `addNewIncomingCall()`, `sendAck()`, `baseUrl()` singleton |
+| `mobile/android/app/src/main/kotlin/.../TeqlifConnectionService.kt` | YENİ — `ConnectionService` impl; `onCreateIncomingConnection()` → `TeqlifIncomingConnection` |
+| `mobile/android/app/src/main/kotlin/.../TeqlifIncomingConnection.kt` | YENİ — `Connection` impl; `onAnswer/onReject/onDisconnect`; `AtomicBoolean` guard |
+| `mobile/android/app/src/main/AndroidManifest.xml` | `MANAGE_OWN_CALLS`, `FOREGROUND_SERVICE_PHONE_CALL` izinleri; 4 bileşen kaydı |
+| `mobile/android/app/src/main/kotlin/.../MainActivity.kt` | `TelecomHelper.registerPhoneAccount()`; `setBaseUrl` MethodChannel |
+| `mobile/lib/services/push_notification_service.dart` | `initEarly()`: `setBaseUrl` çağrısı; background handler: flag kontrol + yedek akış |
 
 
