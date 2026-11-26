@@ -2286,7 +2286,8 @@ class _SettingsTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final pressColor = AppColors.textPrimary(context).withValues(alpha: 0.07);
+    final pressColor = AppColors.textPrimary(context)
+        .withValues(alpha: AppColors.isDark(context) ? 0.12 : 0.08);
     return Theme(
       data: Theme.of(context).copyWith(
         splashColor: pressColor,
