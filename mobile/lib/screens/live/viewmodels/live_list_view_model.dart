@@ -50,6 +50,9 @@ class LiveListViewModel extends AsyncNotifier<LiveListState> {
   int _gen = 0;
   // Eş zamanlı refresh() çağrılarını engeller.
   bool _refreshing = false;
+  // true → _loadInitial offline başladı; network gelince yeniden yükle.
+  // false → online başladıysa iOS network-interface transition event'i zombie tetiklemesin.
+  bool _startedOffline = false;
 
   @override
   FutureOr<LiveListState> build() async {
@@ -62,9 +65,10 @@ class LiveListViewModel extends AsyncNotifier<LiveListState> {
     // cancel edilmiş subscription'ı görür ve yeni listener oluşturmaz (sessiz ölür).
     StreamSubscription<bool>? connectSub;
     connectSub = _connectSvc.onConnectivityChanged.listen((online) {
-      if (online && state.isLoading && !state.hasValue) {
-        // Initial load takılmış (iOS WiFi→mobile): zombie temizle, yeniden yükle.
-        // cancel() önce: bu build'in listener'ı bitti, invalidateSelf yeni build'de taze listener açar.
+      if (online && _startedOffline && state.isLoading && !state.hasValue) {
+        // Initial load offline başlamış ve ağ geldi: zombie temizle, yeniden yükle.
+        // _startedOffline guard: iOS network-interface transition event'i online başlayan
+        // load'ı yanlışlıkla yeniden başlatmaz (gen×2 → ~86 istek yerine ~43 istek).
         debugPrint('[LiveList] network online during load — zombie temizleniyor, yenileniyor');
         ApiService.clearInFlight('/streams/');
         if (_pendingCompleter != null && !_pendingCompleter!.isCompleted) {
@@ -99,6 +103,7 @@ class LiveListViewModel extends AsyncNotifier<LiveListState> {
     final token = await StorageService.getToken();
     final isLoggedIn = token != null;
     final isOnline = await _connectSvc.isConnected;
+    _startedOffline = !isOnline;
     debugPrint('[LiveList] token+conn done | isLoggedIn=$isLoggedIn isOnline=$isOnline gen=$gen');
 
     // ── Active streams: hemen başlat — SWR cache varsa ilk yield anlık olur ──
