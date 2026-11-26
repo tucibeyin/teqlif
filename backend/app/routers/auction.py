@@ -23,6 +23,8 @@ from app.core.logger import get_logger
 from app.core.log_context import user_id_var
 from app.core.rate_limit import limiter, get_user_id_or_ip
 from app.core.idempotency import idempotency_key, store_idempotency_result
+from app.core.action_guard import check_sliding_window_rate
+from app.core.exceptions import TooManyRequestsException
 from app.core.auction_outbox import outbox_replay
 from app.core.commerce_outbox import ds_outbox_replay
 from app.use_cases.stream.commerce_snapshot import get_stream_commerce_snapshot
@@ -101,15 +103,22 @@ async def end_auction(
 
 
 @router.post("/{stream_id}/bid", response_model=AuctionStateOut)
-@limiter.limit("10/minute", key_func=get_user_id_or_ip)
 async def place_bid(
     request: Request,
     stream_id: int,
     data: BidIn,
     uow: SqlAlchemyUnitOfWork = Depends(get_uow),
     current_user: User = Depends(get_current_user),
-    _idem=Depends(idempotency_key("bid", ttl=30)),
+    _idem=Depends(idempotency_key("bid", ttl=2)),
 ):
+    # Sliding-window: 20 teklif/dakika, açık artırma bazlı izolasyon.
+    # Fixed-window'un burst sorununu önler; farklı açık artırmalar birbirini etkilemez.
+    allowed, retry_after = await check_sliding_window_rate(
+        current_user.id, "bid", limit=20, window=60, scope=str(stream_id)
+    )
+    if not allowed:
+        raise TooManyRequestsException(code="BID_RATE_LIMIT", retry_after=retry_after)
+
     bidder_ip = mask_ip(request.client.host if request.client else None)
     result = await AuctionCommands(uow).place_bid(stream_id, data, current_user, bidder_ip=bidder_ip)
     asyncio.create_task(buffer_user_event(
