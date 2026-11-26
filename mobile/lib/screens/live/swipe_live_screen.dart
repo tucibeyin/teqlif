@@ -1216,7 +1216,9 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
       }
     }
 
-    if (widget.session.room == null && widget.session.error == null) {
+    if (widget.session.room == null) {
+      // room == null: ya bağlanıyor ya da bağlantı başarısız (retry bekliyor).
+      // Her iki durumda da loading göster — siyah ekran yerine thumbnail+spinner.
       debugPrint('[${DateTime.now().toString()}] [EVENT: LIVE_UI_LOADING] Showing FullScreenLoading for stream: ${widget.stream.id}');
       return _buildStreamLoadingScreen(context, hasThumbnail);
     }

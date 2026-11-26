@@ -277,6 +277,21 @@ class StreamConnectionManager with WidgetsBindingObserver {
       session.error = e;
       session.update();
       debugPrint('[StreamConnectionManager] Connect failed for ${session.streamId}: $e');
+      // İlk bağlantı başarısız oldu — aynı backoff mekanizmasıyla retry yap.
+      // _scheduleViewerReconnect room != null varsayar; burada _connectRoom'u doğrudan schedule ediyoruz.
+      if (session.state != SessionState.none && !session.isDisposed) {
+        final attempts = _reconnectAttempts[session.streamId] ?? 0;
+        if (attempts < _maxViewerReconnectAttempts) {
+          _reconnectAttempts[session.streamId] = attempts + 1;
+          final delay = Duration(milliseconds: 500 * (1 << attempts));
+          _reconnectTimers[session.streamId]?.cancel();
+          _reconnectTimers[session.streamId] = Timer(delay, () {
+            if (session.state != SessionState.none && !session.isDisposed) {
+              _connectRoom(session);
+            }
+          });
+        }
+      }
     } finally {
       _connectionLocks.remove(session.streamId);
     }
