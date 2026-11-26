@@ -74,6 +74,7 @@ ufw_streaming() {
     ufw allow 80/tcp
     ufw allow 443/tcp
     ufw allow 443/udp
+    ufw allow 5349/tcp
     ufw allow 3478/udp
     ufw allow 50000:60000/udp
     # LiveKit API sadece WG'den

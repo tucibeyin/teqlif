@@ -274,7 +274,7 @@ node1 PostgreSQL ──pg_basebackup→ node2 /project/teqlif/backups/pg_basebac
 | Disk | 99GB SSD | ~1GB/s |
 | SFU | LiveKit Server | v1.13.7 |
 | Flutter SDK | livekit_client | v2.5.4 (pubspec: ^2.3.0) |
-| TURN proxy | nginx | UDP 443 |
+| TURN | LiveKit built-in (5349/tcp TLS, 3478/udp) | nginx proxy değil — LiveKit doğrudan dinler |
 | Redis client | → node1:6379 | koordinasyon |
 
 **Kritik OS ayarları (UDP-yoğun):**
@@ -287,13 +287,17 @@ node1 PostgreSQL ──pg_basebackup→ node2 /project/teqlif/backups/pg_basebac
 
 **UFW:**
 ```
-22/tcp     SSH
-51820/udp  WireGuard
-443/tcp    TURN/TLS
-443/udp    TURN/DTLS
-7880/tcp   LiveKit API    (WG only: 10.10.0.0/24)
-7881/tcp   LiveKit RTC    (WG only)
-50000:60000/udp  WebRTC media
+22/tcp           SSH
+51820/udp        WireGuard
+80/tcp           HTTP (nginx → HTTPS redirect, certbot webroot)
+443/tcp          nginx (LiveKit WSS proxy → 127.0.0.1:7880)
+443/udp          LiveKit RTC UDP (doğrudan, nginx geçmez)
+5349/tcp         TURN TLS (LiveKit built-in)
+3478/udp         TURN UDP (LiveKit built-in)
+50000:60000/udp  WebRTC media + TURN relay
+7880/tcp         LiveKit API    (WG only: 10.10.0.0/24)
+7881/tcp         LiveKit RTC    (WG only)
+6789/tcp         LiveKit Prometheus (WG only: 10.10.0.0/24)
 ```
 
 ---
@@ -312,6 +316,10 @@ node1 PostgreSQL ──pg_basebackup→ node2 /project/teqlif/backups/pg_basebac
 
 **Kritik OS ayarları:**
 - `vm.swappiness=20` (7.8GB kısıtlı)
+- `net.core.somaxconn=32768`
+- `net.core.rmem_max=8388608` / `wmem_max=8388608` (TURN UDP buffer)
+- `net.ipv4.ip_local_port_range=1024 54999` (TURN relay 55000-60000 ephemeral'dan çıkarılır)
+- `net.netfilter.nf_conntrack_max=65536`
 - THP = `never`
 
 **Staging nginx blokları:**
@@ -320,15 +328,19 @@ node1 PostgreSQL ──pg_basebackup→ node2 /project/teqlif/backups/pg_basebac
 - `staging.uploads.teqlif.com` → MinIO staging :9100 (DNS Only, Let's Encrypt)
 - `live-staging.teqlif.com` → LiveKit staging :7890 (DNS Only, Let's Encrypt)
 
-**WireGuard:** ListenPort = **443** (Zap-Hosting DDoS filtresi UDP 51821'i engelliyor)
+**WireGuard:** ListenPort = **443** (Zap-Hosting DDoS filtresi UDP 51820'i engelliyor; UDP 443/QUIC geçiyor)
 
 **UFW:**
 ```
-22/tcp     SSH
-80/tcp     HTTP (nginx → HTTPS redirect, certbot webroot)
-443/tcp    HTTPS nginx (staging stack)
-443/udp    WireGuard (Zap-Hosting DDoS bypass — UDP 443/QUIC)
-8001/tcp   AI Proxy  (WG only: 10.10.0.0/24)
+22/tcp           SSH
+80/tcp           HTTP (nginx → HTTPS redirect, certbot webroot)
+443/tcp          HTTPS nginx (staging + uploads + live-staging WSS proxy)
+443/udp          WireGuard (Zap-Hosting DDoS bypass — UDP 443/QUIC)
+5349/tcp         TURN TLS staging (LiveKit built-in, live-staging.teqlif.com)
+3478/udp         TURN UDP staging (LiveKit built-in)
+55000:60000/udp  TURN relay staging
+8001/tcp         AI Proxy  (WG only: 10.10.0.0/24)
+8000/tcp         FastAPI staging metrics (WG only: 10.10.0.0/24)
 ```
 
 ---

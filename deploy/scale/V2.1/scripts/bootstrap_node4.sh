@@ -74,6 +74,7 @@ ufw_streaming() {
     ufw allow 80/tcp
     ufw allow 443/tcp
     ufw allow 443/udp
+    ufw allow 5349/tcp
     ufw allow 3478/udp
     ufw allow 50000:60000/udp
     ufw allow in on wg0 from 10.10.0.0/24 to any port 7880 proto tcp
