@@ -50,52 +50,6 @@ class WalletRepository {
     }
   }
 
-  Future<Map<String, dynamic>> requestWithdrawal({
-    required int teqlikAmount,
-    required String iban,
-    required String accountHolderName,
-    String currency = 'TRY',
-  }) async {
-    final token = await StorageService.getToken();
-    if (token == null) return {'ok': false, 'error': 'Oturum bulunamadı.'};
-    final headers = await _client.buildApiHeaders(token, json: true);
-    try {
-      final result = await _client.call(
-        () => http.post(
-          Uri.parse('${_client.config.baseUrl}/wallet/withdraw'),
-          headers: headers,
-          body: jsonEncode({
-            'teqlik_amount': teqlikAmount,
-            'currency': currency,
-            'iban': iban,
-            'account_holder_name': accountHolderName,
-          }),
-        ),
-      );
-      return {'ok': true, ...result};
-    } on AppException catch (e) {
-      return {'ok': false, 'error': e.message, 'status_code': e.statusCode};
-    } catch (_) {
-      return {'ok': false, 'error': 'Bağlantı hatası.'};
-    }
-  }
-
-  Future<bool> cancelWithdrawal(int requestId) async {
-    try {
-      final token = await StorageService.getToken();
-      final headers = await _client.buildApiHeaders(token);
-      await _client.call(
-        () => http.delete(
-          Uri.parse('${_client.config.baseUrl}/wallet/withdraw/$requestId'),
-          headers: headers,
-        ),
-      );
-      return true;
-    } catch (_) {
-      return false;
-    }
-  }
-
   Future<Map<String, dynamic>> sendGift({
     required int streamId,
     required String receiverUsername,
