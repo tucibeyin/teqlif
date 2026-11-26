@@ -4,7 +4,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Kasım 2026 — §51 Android ConnectionService + native FCM receiver (1c985668); §50 Subscription cross-screen sync + Apple S2S downgrade bug fix; §49 Nginx sitemap proxy & MinIO robots disallow; §48 Tier-aware plan mapping + upgrade panel + UI düzeltmeleri (496ee490–b37b6667); §47 Reserved Usernames; §13 node listesi güncellendi
+**Son güncelleme:** Kasım 2026 — §52 AntiBotDefender CG-NAT + LiveList double-init (1df60b6c–a45c5327); §51 Android ConnectionService + native FCM receiver (1c985668); §50 Subscription cross-screen sync + Apple S2S downgrade bug fix; §49 Nginx sitemap proxy & MinIO robots disallow; §48 Tier-aware plan mapping + upgrade panel + UI düzeltmeleri (496ee490–b37b6667); §47 Reserved Usernames; §13 node listesi güncellendi
 
 ---
 
@@ -43,6 +43,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 48. [Subscription/Tier Model Refactor + Naming Consistency](#48-subscriptiontier-model-refactor--naming-consistency)
 50. [Subscription Cross-Screen Sync + Apple S2S Downgrade Bug Fix](#50--subscription-cross-screen-sync--apple-s2s-downgrade-bug-fix)
 51. [Android ConnectionService + Native FCM Receiver — Pil Optimizasyonuna Karşı Dayanıklı Çağrı](#51-android-connectionservice--native-fcm-receiver--pil-optimizasyonuna-karşı-dayanıklı-çağrı-commit-1c985668)
+52. [AntiBotDefender CG-NAT Eşiği + LiveList Double-Init Race Condition](#52-antibotdefender-cg-nat-eşiği--livelist-double-init-race-condition-commit-1df60b6c-a45c5327)
 
 ---
 
@@ -3462,5 +3463,64 @@ Flutter Dart isolate (yedek)
 | `mobile/android/app/src/main/AndroidManifest.xml` | `MANAGE_OWN_CALLS`, `FOREGROUND_SERVICE_PHONE_CALL` izinleri; 4 bileşen kaydı |
 | `mobile/android/app/src/main/kotlin/.../MainActivity.kt` | `TelecomHelper.registerPhoneAccount()`; `setBaseUrl` MethodChannel |
 | `mobile/lib/services/push_notification_service.dart` | `initEarly()`: `setBaseUrl` çağrısı; background handler: flag kontrol + yedek akış |
+
+---
+
+## 52. AntiBotDefender CG-NAT Eşiği + LiveList Double-Init Race Condition (commit 1df60b6c–a45c5327)
+
+### Problem
+
+**1. AntiBotDefender IP eşiği (backend)**
+
+`AntiBotMiddleware` dakikada 300 istek IP eşiği production'da CG-NAT kullanıcılarını bloke ediyordu. Flutter uygulaması açılışta ~43 paralel API isteği atar. Türkiye'de Türk Telekom, Vodafone TR ve Türkcell mobil aboneleri CG-NAT arkasında olduğundan aynı IP'yi yüzlerce kullanıcı paylaşır.
+
+```
+7 kullanıcı eş zamanlı app açışı: 7 × 43 = 301 istek → IP 10 dakika bloke 🔴
+```
+
+Bloke edilen IP'den gelen tüm istekler (kimlik doğrulamalı dahil) `[guest]` olarak loglanır çünkü `AntiBotMiddleware` Starlette middleware katmanında JWT decode'dan önce çalışır.
+
+**2. LiveList Double-Init Race Condition (mobile)**
+
+iOS network-interface activation event'i uygulama açılışında her zaman atılır. `ConnectivityService.onConnectivityChanged` → `online=true` geldiği anda `LiveListViewModel.build()` hâlâ `state.isLoading && !state.hasValue` durumundaysa (`_loadInitial` gen=1 Riverpod state'i henüz çözümlememişken) zombie guard tetiklenir → gen=2 başlar → ~43 istek daha.
+
+```
+Normal açılış: ~43 istek (gen=1)
+Bug durumu:  ~86 istek (gen=1 + gen=2) — DEFENDER eşiğine 2× hızlı ulaşılır
+```
+
+### Kararlar
+
+**1. `defender_ip_limit` env-configurable + default 1500**
+
+`Settings.defender_ip_limit` eklendi; `AntiBotMiddleware` bu değeri kullanır. Default 300'den 1500'e yükseltildi.
+
+```
+1500/dk = CG-NAT'ta 34 kullanıcının eş zamanlı açılışını kaldırır
+DDoS botu > 5000/dk atar → hâlâ bloke edilir ✅
+Staging: DEFENDER_IP_LIMIT=2000 (.env.staging)
+```
+
+**2. `_startedOffline` guard**
+
+`LiveListViewModel._loadInitial()` başında `_startedOffline = !isOnline` set edilir. Connectivity listener yalnızca `_startedOffline == true` iken `invalidateSelf()` çağırır.
+
+```dart
+// Önce (bug): her network event restart tetikliyordu
+if (online && state.isLoading && !state.hasValue)
+
+// Sonra (fix): yalnızca offline başlayan load yeniden başlar
+if (online && _startedOffline && state.isLoading && !state.hasValue)
+```
+
+Zombie logic yaşıyor — yalnızca gerçek offline→online geçişi için çalışır.
+
+### Dosyalar
+
+| Dosya | Değişiklik |
+|-------|------------|
+| `backend/app/config.py` | `defender_ip_limit: int = 1500` — env-configurable, CG-NAT-safe default |
+| `backend/app/core/defender.py` | `_GLOBAL_IP_LIMIT = settings.defender_ip_limit` |
+| `mobile/lib/screens/live/viewmodels/live_list_view_model.dart` | `_startedOffline` flag + guard koşulu |
 
 
