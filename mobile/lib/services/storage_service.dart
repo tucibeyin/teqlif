@@ -90,6 +90,23 @@ class StorageService {
     }
   }
 
+  /// JWT `exp` alanını okuyup token'ın süresi dolmuş mu diye kontrol eder.
+  /// Parse başarısız olursa false döner (güvenli taraf: isteği durdurma).
+  static bool isTokenExpired(String token) {
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return true;
+      final payload = utf8.decode(base64Url.decode(base64Url.normalize(parts[1])));
+      final map = jsonDecode(payload) as Map<String, dynamic>;
+      final exp = map['exp'];
+      if (exp == null) return false;
+      final expiry = DateTime.fromMillisecondsSinceEpoch((exp as int) * 1000, isUtc: true);
+      return DateTime.now().toUtc().isAfter(expiry);
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Mevcut oturumdaki kullanıcının ID'sini döner; gerekirse token'ı diskten yükler.
   static Future<int?> getCurrentUserId() async {
     if (_cachedUserId != null) return _cachedUserId;

@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from sqlalchemy.exc import IntegrityError
 
-from app.core.exceptions import BadRequestException, ConflictException
+from app.core.exceptions import BadRequestException, ConflictException, TooManyRequestsException
 from app.core.logger import get_logger
 from app.services.store.base import PurchaseResult
 from app.services.store.apple_verifier import VALID_CONSUMABLE_IDS
@@ -74,7 +74,7 @@ async def _check_velocity(redis, key: str, try_amount: float) -> None:
     )
     if result == -1:
         logger.warning("[VerifyPurchase] Velocity limit aşıldı | key=%s", key)
-        raise BadRequestException(code="IAP_VELOCITY_LIMIT_EXCEEDED")
+        raise TooManyRequestsException(code="IAP_VELOCITY_LIMIT_EXCEEDED")
 
 
 class VerifyPurchaseCommand:

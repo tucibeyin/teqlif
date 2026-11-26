@@ -74,6 +74,12 @@ class IAPService {
   /// Store ürünleri — loadProducts() sonrası dolu
   List<ProductDetails> products = [];
 
+  // Startup'ta iOS birden fazla pending purchase basabilir.
+  // Hepsini 1,5 sn debounce ile birleştirip sırayla işliyoruz — burst engellemek için.
+  Timer? _startupDebounce;
+  final List<PurchaseDetails> _pendingQueue = [];
+  bool _processingQueue = false;
+
   Future<void> init() async {
     final available = await _iap.isAvailable();
     if (!available) return;
@@ -110,36 +116,56 @@ class IAPService {
   }
 
   Future<void> _onPurchaseUpdates(List<PurchaseDetails> purchases) async {
-    for (final purchase in purchases) {
-      if (purchase.status == PurchaseStatus.purchased ||
-          purchase.status == PurchaseStatus.restored) {
-        final ok = await _verifyWithBackend(purchase);
-        if (ok) {
-          if (purchase.pendingCompletePurchase) {
-            await _iap.completePurchase(purchase);
-          }
-          WalletService.invalidateBalance();
-          _purchaseController.add(purchase);
-        } else {
-          _purchaseController.addError(Exception('IAP_BACKEND_FAILED'));
-        }
-      } else {
-        if (purchase.pendingCompletePurchase &&
-            purchase.status != PurchaseStatus.pending) {
+    // Startup'ta iOS tüm pending satın alımları aynı anda basabilir.
+    // 1,5 sn debounce ile toplayıp tek bir sıralı kuyrukta işliyoruz.
+    _pendingQueue.addAll(purchases);
+    _startupDebounce?.cancel();
+    _startupDebounce = Timer(const Duration(milliseconds: 1500), _drainQueue);
+  }
+
+  Future<void> _drainQueue() async {
+    if (_processingQueue || _pendingQueue.isEmpty) return;
+    _processingQueue = true;
+    final toProcess = List<PurchaseDetails>.from(_pendingQueue);
+    _pendingQueue.clear();
+
+    for (final purchase in toProcess) {
+      await _processSinglePurchase(purchase);
+    }
+    _processingQueue = false;
+  }
+
+  Future<void> _processSinglePurchase(PurchaseDetails purchase) async {
+    if (purchase.status == PurchaseStatus.purchased ||
+        purchase.status == PurchaseStatus.restored) {
+      final ok = await _verifyWithBackend(purchase);
+      if (ok) {
+        if (purchase.pendingCompletePurchase) {
           await _iap.completePurchase(purchase);
         }
-        if (purchase.status == PurchaseStatus.error) {
-          debugPrint('[IAP] purchase error: ${purchase.error}');
-        }
+        WalletService.invalidateBalance();
         _purchaseController.add(purchase);
+      } else {
+        _purchaseController.addError(Exception('IAP_BACKEND_FAILED'));
       }
+    } else {
+      if (purchase.pendingCompletePurchase &&
+          purchase.status != PurchaseStatus.pending) {
+        await _iap.completePurchase(purchase);
+      }
+      if (purchase.status == PurchaseStatus.error) {
+        debugPrint('[IAP] purchase error: ${purchase.error}');
+      }
+      _purchaseController.add(purchase);
     }
   }
 
   Future<bool> _verifyWithBackend(PurchaseDetails purchase, {int attempt = 1}) async {
     try {
       final token = await StorageService.getToken();
-      if (token == null) return false;
+      // Null veya expired (JWT süresi dolmuş) token ile istek atmıyoruz.
+      // Backend 401 döndürmesi CrowdSec'in http-generic-401-bf senaryosunu tetikler.
+      if (token == null || StorageService.isTokenExpired(token)) return false;
 
       final payload = purchase.verificationData.serverVerificationData;
       final productId = purchase.productID;
@@ -167,6 +193,12 @@ class IAPService {
       if (resp.statusCode == 200) return true;
       // 409 = replay (zaten işlendi) — başarılı say
       if (resp.statusCode == 409) return true;
+      // 429 = velocity limit — backend artık 429 döndürüyor (eski 400 → CrowdSec tetiklerdi)
+      // İlk denemede 30 sn bekleyip tekrar dene; ikinci denemede bırak.
+      if (resp.statusCode == 429 && attempt == 1) {
+        await Future.delayed(const Duration(seconds: 30));
+        return _verifyWithBackend(purchase, attempt: 2);
+      }
       // 5xx hatası ve ilk deneme — 2 saniye bekle, bir kez daha dene
       if (resp.statusCode >= 500 && attempt == 1) {
         await Future.delayed(const Duration(seconds: 2));
@@ -186,6 +218,8 @@ class IAPService {
   }
 
   void dispose() {
+    _startupDebounce?.cancel();
+    _pendingQueue.clear();
     _subscription?.cancel();
     _purchaseController.close();
   }
