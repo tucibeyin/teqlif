@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 import '../main.dart' show providerContainer;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -30,9 +31,27 @@ Future<void> showStartStreamDialog(
 }) async {
   if (_dialogActive) return;
   _dialogActive = true;
+
+  // Butona basıldığında hemen blur+spinner overlay'i göster.
+  OverlayEntry? loadingOverlay;
+  if (context.mounted) {
+    loadingOverlay = OverlayEntry(builder: (_) => const _StreamLoadingOverlay());
+    Overlay.of(context).insert(loadingOverlay);
+  }
+
   try {
-    await _showStartStreamDialogImpl(context, onStreamStarted: onStreamStarted);
+    await _showStartStreamDialogImpl(
+      context,
+      onStreamStarted: onStreamStarted,
+      onReadyToShow: () {
+        // showDialog çağrılmadan hemen önce overlay kaldırılır.
+        loadingOverlay?.remove();
+        loadingOverlay = null;
+      },
+    );
   } finally {
+    // Early-return veya hata durumunda overlay hâlâ açıksa kapat.
+    loadingOverlay?.remove();
     _dialogActive = false;
   }
 }
@@ -40,6 +59,7 @@ Future<void> showStartStreamDialog(
 Future<void> _showStartStreamDialogImpl(
   BuildContext context, {
   VoidCallback? onStreamStarted,
+  VoidCallback? onReadyToShow,
 }) async {
   final locale = context.mounted
       ? Localizations.localeOf(context).languageCode
@@ -137,6 +157,8 @@ Future<void> _showStartStreamDialogImpl(
   }
 
   if (!context.mounted) return;
+  // Pre-check'ler tamamlandı — overlay'i kaldır, modal'ı aç.
+  onReadyToShow?.call();
   final result = await showDialog<(String, String, String, bool, int, String)?>(
     context: context,
     builder: (ctx) => StatefulBuilder(
@@ -763,6 +785,28 @@ class _StreamHoursWarningRow extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Yayın başlatma ön kontrolleri (izin, token) sırasında gösterilen
+/// geçici tam-ekran blur+spinner overlay'i.
+class _StreamLoadingOverlay extends StatelessWidget {
+  const _StreamLoadingOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+        child: ColoredBox(
+          color: Colors.black.withValues(alpha: 0.25),
+          child: const Center(
+            child: CircularProgressIndicator(color: kPrimary),
+          ),
+        ),
       ),
     );
   }
