@@ -988,6 +988,7 @@ class _NotificationsTabState extends ConsumerState<_NotificationsTab> {
       case 'follow_accepted':
       case 'follow':
       case 'call_missed':
+      case 'story_liked':
         final username =
             (body != null && body.isNotEmpty && !body.contains(' '))
             ? body
