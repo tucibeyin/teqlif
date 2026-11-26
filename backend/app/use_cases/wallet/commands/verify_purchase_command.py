@@ -113,16 +113,19 @@ class VerifyPurchaseCommand:
             )
             raise ConflictException(code="IAP_ALREADY_PROCESSED")
 
-        # Velocity limiti (Fail-Closed — Redis yoksa reddet)
+        # Velocity limiti — sadece consumable pack'lere uygulanır.
+        # Abonelikler: Apple/Google ödeme yetkisi vermiş; tekrar saldırısı zaten
+        # store_transaction_id unique constraint ile engelleniyor.
         # try_amount <= 0 gelirse product_id bazlı fallback fiyat tablosu kullanılır
-        # — direkt API çağrısıyla velocity bypass'ı önlenir
+        # — direkt API çağrısıyla velocity bypass'ı önlenir.
         redis_client = None
         vel_keys_checked: list[str] = []
+        is_consumable = result.product_id in VALID_CONSUMABLE_IDS
         effective_try_amount = (
             try_amount if try_amount > 0
             else _PRODUCT_TRY_PRICES.get(result.product_id, 0.0)
         )
-        if effective_try_amount > 0:
+        if is_consumable and effective_try_amount > 0:
             try:
                 from app.utils.redis_client import get_redis
                 redis_client = await get_redis()

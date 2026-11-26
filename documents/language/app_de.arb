@@ -6831,6 +6831,7 @@
   "iapProductsNotLoaded": "Produktinformationen werden geladen, bitte warten.",
   "iapPurchasePending": "Kauf wartet auf Genehmigung…",
   "iapVerifyFailed": "Kauf konnte nicht verifiziert werden. Bitte versuche 'Käufe wiederherstellen'.",
+  "iapPackVerifyFailed": "Kauf konnte nicht abgeschlossen werden. Bitte versuche es erneut.",
   "walletProManageGooglePlay": "In Google Play verwalten",
   "walletProManageWeb": "Abonnement verwalten",
   "walletNegativeBalanceNote": "Negatives Guthaben durch Rückerstattung",

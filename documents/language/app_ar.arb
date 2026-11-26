@@ -6759,6 +6759,7 @@
   "iapProductsNotLoaded": "جارٍ تحميل معلومات المنتج، يرجى الانتظار.",
   "iapPurchasePending": "الشراء في انتظار الموافقة…",
   "iapVerifyFailed": "تعذّر التحقق من الشراء. يرجى تجربة 'استعادة المشتريات'.",
+  "iapPackVerifyFailed": "تعذّر إتمام الشراء. يرجى المحاولة مرة أخرى.",
   "walletProManageGooglePlay": "إدارة في Google Play",
   "walletProManageWeb": "إدارة الاشتراك",
   "walletNegativeBalanceNote": "رصيد سالب بسبب الاسترداد",

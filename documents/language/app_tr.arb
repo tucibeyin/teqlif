@@ -6760,6 +6760,7 @@
   "iapProductsNotLoaded": "Ürün bilgileri yükleniyor, lütfen bekleyin.",
   "iapPurchasePending": "Satın alma onay bekliyor…",
   "iapVerifyFailed": "Satın alma doğrulanamadı. Lütfen 'Satın Alımları Geri Yükle' seçeneğini deneyin.",
+  "iapPackVerifyFailed": "Satın alma tamamlanamadı. Lütfen tekrar deneyin.",
   "walletProManageGooglePlay": "Google Play'de Yönet",
   "walletProManageWeb": "Aboneliği Yönet",
   "walletNegativeBalanceNote": "İade sebebiyle negatif bakiye",

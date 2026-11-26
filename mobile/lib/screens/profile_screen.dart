@@ -5387,6 +5387,14 @@ class _TeqlikPacksSheetState extends ConsumerState<_TeqlikPacksSheet> {
       },
     );
 
+    ref.listen<String?>(
+      subscriptionViewModelProvider.select((s) => s.error),
+      (_, error) {
+        if (error == null || !mounted) return;
+        TeqToast.error(ref.read(localizationProvider).t('iapPackVerifyFailed'));
+      },
+    );
+
     final loading = vm.isPurchasing;
     final selected = _packOptions.firstWhere((p) => p.$1 == _selectedPackId);
 
