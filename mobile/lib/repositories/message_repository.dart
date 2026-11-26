@@ -15,6 +15,10 @@ class MessageRepository {
 
   MessageRepository(this._client, this._api, this._cache);
 
+  // Thread cache 7 gün — WS olayları (append/remove/markRead) veriyi canlı
+  // tutuyor; TTL yalnızca "uygulama kapalıyken" veriyi ne kadar tutacağımızı belirler.
+  static const _kThreadCacheTtl = Duration(days: 7);
+
   // ── Okuma ────────────────────────────────────────────────────────────────
 
   /// Hive cache + OfflineQueue → DirectMessage listesi, senkron.
@@ -32,7 +36,7 @@ class MessageRepository {
         url: '${_client.config.baseUrl}/messages/$otherUserId',
         cacheKey: StorageService.cacheThreadKey(otherUserId),
         fromJson: (raw) => (raw as List).cast<Map<String, dynamic>>(),
-        cacheTtl: const Duration(minutes: 30),
+        cacheTtl: _kThreadCacheTtl,
       ).map((maps) =>
           (_mergePending(maps, otherUserId, myUserId) ?? maps)
               .map(DirectMessage.fromJson)
@@ -116,6 +120,18 @@ class MessageRepository {
     }
   }
 
+  // ── Ön Isıtma ────────────────────────────────────────────────────────────
+
+  /// Cache boşsa thread'i arka planda sessizce fetch edip ısıtır.
+  /// Bağlantı yoksa veya hata oluşursa sessizce geçer — best-effort.
+  Future<void> preWarmThread(int otherUserId, int myUserId) async {
+    final existing = _cache.getWithStaleness(StorageService.cacheThreadKey(otherUserId));
+    if (existing != null) return;
+    try {
+      await getThread(otherUserId, myUserId).drain<void>();
+    } catch (_) {}
+  }
+
   // ── Yardımcılar ──────────────────────────────────────────────────────────
 
   /// OfflineQueue bekleyen mesajları ham Map listesine ekler.
@@ -176,7 +192,7 @@ class MessageRepository {
       await _cache.saveData(
         StorageService.cacheThreadKey(otherUserId),
         fn(List.from(current)),
-        ttl: const Duration(minutes: 30),
+        ttl: _kThreadCacheTtl,
       );
     } finally {
       completer.complete();

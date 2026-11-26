@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../repositories/message_repository.dart';
 import '../../services/cache_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/push_notification_service.dart';
@@ -113,6 +114,14 @@ class ConversationsUiState {
 
 class MessagesTabViewModel extends AutoDisposeAsyncNotifier<ConversationsUiState> {
   CacheService get _cache => ref.read(cacheServiceProvider);
+
+  // Conversation listesi ve thread içerikleri 7 gün tutulur.
+  // WS olayları (_updateConversationInMemory, appendToCache vb.) veriyi canlı
+  // tutuduğu için TTL yalnızca "uygulama kapalıyken" saklama süresidir.
+  static const _kConvCacheTtl = Duration(days: 7);
+
+  // İlk N konuşmayı açılışta arka planda ısıtır (offline erişim için).
+  static const _kPreWarmCount = 5;
   StreamSubscription<Map<String, dynamic>>? _fcmSub;
   StreamSubscription<Map<String, dynamic>>? _wsSub;
   bool _loadInProgress = false;
@@ -156,13 +165,14 @@ class MessagesTabViewModel extends AutoDisposeAsyncNotifier<ConversationsUiState
 
     try {
       final data = await ref.read(notificationServiceProvider).getConversations();
-      await _cache.saveData(StorageService.cacheMessages, data, ttl: const Duration(hours: 1));
+      await _cache.saveData(StorageService.cacheMessages, data, ttl: _kConvCacheTtl);
       state = AsyncValue.data(state.value!.copyWith(
         conversations: data,
         loading: false,
         hasError: false,
         myUserId: state.value!.myUserId ?? StorageService.currentUserIdSync,
       ));
+      _preWarmTopThreads(data);
     } catch (e) {
       state = AsyncValue.data(state.value!.copyWith(
         hasError: true,
@@ -211,7 +221,19 @@ class MessagesTabViewModel extends AutoDisposeAsyncNotifier<ConversationsUiState
     }
     updated..removeAt(idx)..insert(0, conv);
     state = AsyncValue.data(currentState.copyWith(conversations: updated));
-    _cache.saveData(StorageService.cacheMessages, updated, ttl: const Duration(hours: 1)).ignore();
+    _cache.saveData(StorageService.cacheMessages, updated, ttl: _kConvCacheTtl).ignore();
+  }
+
+  /// İlk [_kPreWarmCount] konuşmayı arka planda cache'ler.
+  /// Cache zaten doluysa [MessageRepository.preWarmThread] erken çıkar — 0 ağ isteği.
+  void _preWarmTopThreads(List<dynamic> conversations) {
+    final repo = ref.read(messageRepositoryProvider);
+    final myId = StorageService.currentUserIdSync ?? 0;
+    conversations
+        .take(_kPreWarmCount)
+        .map((c) => c['user_id'] as int?)
+        .whereType<int>()
+        .forEach((userId) => repo.preWarmThread(userId, myId).ignore());
   }
 
   Future<bool> deleteConversation(int otherId) async {
