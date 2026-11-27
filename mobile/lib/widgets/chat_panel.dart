@@ -1082,49 +1082,18 @@ class _HistorySheet extends ConsumerWidget {
                   final msg = history[i];
                   return Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Text.rich(
-                      TextSpan(
-                        children: [
-                          WidgetSpan(
-                            alignment: PlaceholderAlignment.middle,
-                            child: _ChatAvatar(
-                              username: msg.username,
-                              imageUrl: msg.profileImageUrl,
-                            ),
+                    child: _MessageItem(
+                      msg,
+                      onUsernameTap: (username) {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                PublicProfileScreen(username: username),
                           ),
-                          const WidgetSpan(
-                            alignment: PlaceholderAlignment.middle,
-                            child: SizedBox(width: 4),
-                          ),
-                          TextSpan(
-                            text: '@${msg.username} ',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: usernameColor(msg.username),
-                              fontWeight: FontWeight.w700,
-                            ),
-                            recognizer: TapGestureRecognizer()
-                              ..onTap = () {
-                                Navigator.pop(context);
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => PublicProfileScreen(
-                                      username: msg.username,
-                                    ),
-                                  ),
-                                );
-                              },
-                          ),
-                          TextSpan(
-                            text: msg.content,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: Colors.white70,
-                            ),
-                          ),
-                        ],
-                      ),
+                        );
+                      },
                     ),
                   );
                 },
