@@ -82,7 +82,7 @@ import 'package:in_app_purchase/in_app_purchase.dart';
 import '../services/iap_service.dart';
 import 'wallet/teqlik_donusum_tab.dart';
 import 'wallet/convert_minutes_sheet.dart';
-import 'viewmodels/wallet_conversion_view_model.dart';;
+import 'viewmodels/wallet_conversion_view_model.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
