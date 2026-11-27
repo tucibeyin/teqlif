@@ -11,6 +11,7 @@ class NotificationSettingsState {
   final TimeOfDay quietTo;
   final bool receiveBlastNotifications;
   final bool analyticsOptOut;
+  final bool blockCallsWhileLive;
 
   const NotificationSettingsState({
     this.prefs = const {
@@ -29,6 +30,7 @@ class NotificationSettingsState {
     this.quietTo = const TimeOfDay(hour: 8, minute: 0),
     this.receiveBlastNotifications = true,
     this.analyticsOptOut = false,
+    this.blockCallsWhileLive = true,
   });
 
   NotificationSettingsState copyWith({
@@ -39,6 +41,7 @@ class NotificationSettingsState {
     TimeOfDay? quietTo,
     bool? receiveBlastNotifications,
     bool? analyticsOptOut,
+    bool? blockCallsWhileLive,
   }) {
     return NotificationSettingsState(
       prefs: prefs ?? this.prefs,
@@ -48,6 +51,7 @@ class NotificationSettingsState {
       quietTo: quietTo ?? this.quietTo,
       receiveBlastNotifications: receiveBlastNotifications ?? this.receiveBlastNotifications,
       analyticsOptOut: analyticsOptOut ?? this.analyticsOptOut,
+      blockCallsWhileLive: blockCallsWhileLive ?? this.blockCallsWhileLive,
     );
   }
 }
@@ -82,6 +86,7 @@ class NotificationSettingsViewModel
       quietTo: _parseTime(data['quiet_to'] as String? ?? '08:00'),
       receiveBlastNotifications: (data['receive_blast_notifications'] as bool?) ?? true,
       analyticsOptOut: (data['analytics_opt_out'] as bool?) ?? false,
+      blockCallsWhileLive: (data['block_calls_while_live'] as bool?) ?? true,
     );
   }
 
@@ -93,6 +98,7 @@ class NotificationSettingsViewModel
         'quiet_to': _formatTime(s.quietTo),
         'receive_blast_notifications': s.receiveBlastNotifications,
         'analytics_opt_out': s.analyticsOptOut,
+        'block_calls_while_live': s.blockCallsWhileLive,
       };
 
   @override
@@ -179,6 +185,20 @@ class NotificationSettingsViewModel
     final newState = current.copyWith(analyticsOptOut: value);
     state = AsyncValue.data(newState);
     await _patch(newState);
+  }
+
+  Future<void> setBlockCallsWhileLive(bool value) async {
+    final current = state.value;
+    if (current == null) return;
+    final newState = current.copyWith(blockCallsWhileLive: value);
+    state = AsyncValue.data(newState);
+    try {
+      await ref
+          .read(notificationPrefsRepositoryProvider)
+          .patchPrefs(_toPayload(newState));
+    } catch (_) {
+      state = AsyncValue.data(current);
+    }
   }
 }
 

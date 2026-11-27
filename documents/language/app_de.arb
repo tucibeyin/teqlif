@@ -4447,6 +4447,8 @@
   "notifProUpgradeDesc": "Gebotsschwellen- und Ruhezeit-Einstellungen sind exklusiv für Abonnenten.\nUpgrade deine Mitgliedschaft, um irrelevante Benachrichtigungen zu stoppen.",
   "notifBidThresholdTitle": "Gebotsschwelle",
   "notifBidThresholdDesc": "Nur über Gebote über einem bestimmten Betrag benachrichtigen",
+  "notifCallsWhileLiveTitle": "Anrufe im Live sperren",
+  "notifCallsWhileLiveDesc": "Eingehende Anrufe während des Livestreams automatisch ablehnen",
   "notifQuietHoursTitle": "Ruhezeiten",
   "notifQuietHoursDesc": "Benachrichtigungen zu diesen Zeiten verzögern, morgens anzeigen",
   "quickAuctionBtn": "Schnell",

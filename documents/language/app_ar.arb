@@ -4378,6 +4378,8 @@
   "notifProUpgradeDesc": "إعدادات حد العرض والساعات الهادئة حصرية للمشتركين.\nرقِّ عضويتك للتخلص من الإشعارات غير الضرورية.",
   "notifBidThresholdTitle": "حد العرض",
   "notifBidThresholdDesc": "إشعار فقط بالعروض التي تتجاوز مبلغاً معيناً",
+  "notifCallsWhileLiveTitle": "حظر المكالمات أثناء البث",
+  "notifCallsWhileLiveDesc": "رفض المكالمات الواردة تلقائياً أثناء البث المباشر",
   "notifQuietHoursTitle": "الساعات الهادئة",
   "notifQuietHoursDesc": "تأجيل الإشعارات خلال هذه الساعات، وعرضها في الصباح",
   "quickAuctionBtn": "سريع",

@@ -74,6 +74,13 @@ class ConfirmLiveCommand:
         except Exception:
             pass
 
+        # Host meşgul presence — yayın sırasında gelen aramaları CallPolicy engeller
+        try:
+            from app.services.call_presence import set_presence
+            await set_presence(stream.host_id, "live_streaming", stream.id, [])
+        except Exception as _exc:
+            logger.warning("[STREAMS] call_presence set hatası | stream_id=%s | %s", stream.id, _exc)
+
         from app.use_cases.streams.stream_utils import notify_followers_task
         background_tasks.add_task(
             notify_followers_task,

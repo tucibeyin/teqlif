@@ -4376,6 +4376,8 @@
   "notifProUpgradeDesc": "Teklif eşiği ve sessiz saat ayarları üyelere özel.\nÜyeliğini yükselterek gereksiz bildirimlerden kurtul.",
   "notifBidThresholdTitle": "Teklif Eşiği",
   "notifBidThresholdDesc": "Sadece belirli tutarın üzerindeki teklifleri bildir",
+  "notifCallsWhileLiveTitle": "Canlı Yayında Arama Engelle",
+  "notifCallsWhileLiveDesc": "Canlı yayın sırasında gelen aramaları otomatik reddet",
   "notifQuietHoursTitle": "Sessiz Saatler",
   "notifQuietHoursDesc": "Bu saatler arası bildirimleri ertele, sabah göster",
   "quickAuctionBtn": "Hızlı",

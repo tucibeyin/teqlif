@@ -169,6 +169,13 @@ async def finalize_stream(stream: LiveStream, db: AsyncSession) -> None:
     except Exception:
         logger.warning("finalize_stream: Hype state temizlenemedi | stream_id=%s", stream.id, exc_info=True)
 
+    # 6c. Host call presence temizle — yayın bitince aramalara açık olsun
+    try:
+        from app.services.call_presence import clear_presence
+        await clear_presence(stream.host_id)
+    except Exception:
+        logger.warning("finalize_stream: call_presence clear hatası | stream_id=%s", stream.id, exc_info=True)
+
     # 7. pro_insights ve pro_metrics cache'i invalidate et (yayıncı raporunu güncel görsün)
     try:
         keys = [k async for k in redis.scan_iter(f"cache:sub_insights:{stream.host_id}:*")]

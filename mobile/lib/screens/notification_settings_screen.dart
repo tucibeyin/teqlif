@@ -174,11 +174,13 @@ class NotificationSettingsScreen extends ConsumerWidget {
                 quietFrom: state.quietFrom,
                 quietTo: state.quietTo,
                 receiveBlastNotifications: state.receiveBlastNotifications,
+                blockCallsWhileLive: state.blockCallsWhileLive,
                 onBidThreshold: UserTier.hasSubscription(userType) ? (v) => ref.read(notificationSettingsProvider.notifier).setBidThreshold(v) : null,
                 onQuietEnabled: UserTier.hasSubscription(userType) ? (v) => ref.read(notificationSettingsProvider.notifier).setQuietEnabled(v) : null,
                 onPickFrom: UserTier.hasSubscription(userType) ? () => _pickTime(context, ref, state, isFrom: true) : null,
                 onPickTo: UserTier.hasSubscription(userType) ? () => _pickTime(context, ref, state, isFrom: false) : null,
                 onBlastNotifChanged: UserTier.hasSubscription(userType) ? (v) => ref.read(notificationSettingsProvider.notifier).setBlastNotifications(v) : null,
+                onBlockCallsWhileLiveChanged: UserTier.hasSubscription(userType) ? (v) => ref.read(notificationSettingsProvider.notifier).setBlockCallsWhileLive(v) : null,
                 onUpgradeTap: () => _showUpgradeSheet(context, ref, loc),
               ),
               const SizedBox(height: 12),
@@ -237,11 +239,13 @@ class _ProSection extends ConsumerWidget {
   final TimeOfDay quietFrom;
   final TimeOfDay quietTo;
   final bool receiveBlastNotifications;
+  final bool blockCallsWhileLive;
   final ValueChanged<int>? onBidThreshold;
   final ValueChanged<bool>? onQuietEnabled;
   final VoidCallback? onPickFrom;
   final VoidCallback? onPickTo;
   final ValueChanged<bool>? onBlastNotifChanged;
+  final ValueChanged<bool>? onBlockCallsWhileLiveChanged;
   final VoidCallback onUpgradeTap;
 
   static const _thresholds = [0, 100, 250, 500, 1000, 2500];
@@ -254,11 +258,13 @@ class _ProSection extends ConsumerWidget {
     required this.quietFrom,
     required this.quietTo,
     required this.receiveBlastNotifications,
+    required this.blockCallsWhileLive,
     required this.onBidThreshold,
     required this.onQuietEnabled,
     required this.onPickFrom,
     required this.onPickTo,
     required this.onBlastNotifChanged,
+    required this.onBlockCallsWhileLiveChanged,
     required this.onUpgradeTap,
   });
 
@@ -436,6 +442,62 @@ class _ProSection extends ConsumerWidget {
                       value: receiveBlastNotifications,
                       activeThumbColor: kPrimary,
                       onChanged: onBlastNotifChanged,
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          // Canlı yayın arama engelleme toggle kartı
+          GestureDetector(
+            onTap: isPremium ? null : onUpgradeTap,
+            child: _proCard(
+              context,
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.phone_missed_outlined,
+                    size: 20,
+                    color: isPremium
+                        ? (blockCallsWhileLive
+                              ? kPrimary
+                              : AppColors.iconColor(context))
+                        : AppColors.iconColor(context),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          loc.t("notifCallsWhileLiveTitle"),
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary(context),
+                          ),
+                        ),
+                        Text(
+                          loc.t("notifCallsWhileLiveDesc"),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary(context),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (!isPremium)
+                    Icon(
+                      Icons.lock_outline,
+                      size: 16,
+                      color: AppColors.textTertiary(context),
+                    )
+                  else
+                    Switch(
+                      value: blockCallsWhileLive,
+                      activeThumbColor: kPrimary,
+                      onChanged: onBlockCallsWhileLiveChanged,
                     ),
                 ],
               ),

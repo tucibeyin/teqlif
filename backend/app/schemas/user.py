@@ -168,6 +168,7 @@ DEFAULT_NOTIF_PREFS = {
     "quiet_to": "08:00",
     "receive_blast_notifications": True,
     "analytics_opt_out": False,
+    "block_calls_while_live": True,
 }
 
 
@@ -189,6 +190,7 @@ class NotificationPrefs(BaseModel):
     quiet_to: str = "08:00"
     receive_blast_notifications: bool = True
     analytics_opt_out: bool = False
+    block_calls_while_live: bool = True
 
 
 class ChangePasswordConfirm(BaseModel):

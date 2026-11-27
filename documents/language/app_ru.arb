@@ -4378,6 +4378,8 @@
   "notifProUpgradeDesc": "Порог ставки и тихие часы доступны только для подписчиков.\nУлучшите подписку, чтобы избавиться от лишних уведомлений.",
   "notifBidThresholdTitle": "Порог ставки",
   "notifBidThresholdDesc": "Уведомлять только о ставках выше определённой суммы",
+  "notifCallsWhileLiveTitle": "Блокировать звонки в эфире",
+  "notifCallsWhileLiveDesc": "Автоматически отклонять входящие звонки во время прямого эфира",
   "notifQuietHoursTitle": "Тихие часы",
   "notifQuietHoursDesc": "Откладывать уведомления на эти часы, показывать утром",
   "quickAuctionBtn": "Быстро",

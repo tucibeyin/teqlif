@@ -71,6 +71,11 @@ async def get_presence(uid: int) -> Optional[dict]:
         return None
 
 
+async def is_live_streaming(uid: int) -> bool:
+    p = await get_presence(uid)
+    return p is not None and p.get("status") == "live_streaming"
+
+
 async def is_busy(uid: int) -> bool:
     p = await get_presence(uid)
-    return p is not None and p.get("status") in ("ringing", "in_call")
+    return p is not None and p.get("status") in ("ringing", "in_call", "live_streaming")

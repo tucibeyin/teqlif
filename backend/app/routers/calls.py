@@ -39,6 +39,7 @@ from app.utils.call_redis import (
 )
 from app.services.call_ws import broadcast_to_call_participants, send_to_user
 from app.services.call_presence import set_presence, clear_presence
+from app.services.call_policy import CallPolicy
 from app.constants import ws_types
 from app.core.ws_manager import ws_manager
 from app.core.logger import get_logger
@@ -630,6 +631,9 @@ async def start_call(
             logger.warning("[CALL_PROCESS][OUT] start_call REJECTED | reason=CALLER_BUSY caller=%d busy_call_id=%d role=%s",
                            current_user.id, caller_busy.id, "caller" if is_caller_role else "callee")
             raise AppException(status_code=409, message="Already in a call", code="CALLER_BUSY")
+
+    # Callee'nin aranamaz durumda olup olmadığını kontrol et (ör. canlı yayın)
+    await CallPolicy().check_callee_callable(callee)
 
     # Serialize concurrent start_call between this user pair at DB level.
     # Canonical ordering (min, max) ensures A→B and B→A fight for the exact same lock,

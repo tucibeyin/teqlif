@@ -1221,6 +1221,11 @@ async def update_notification_prefs(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    from app.services.subscription.tier import SUBSCRIPTION_TIERS
+    from app.core.exceptions import ForbiddenException
+    if data.model_fields_set & {"block_calls_while_live"}:
+        if current_user.user_type not in SUBSCRIPTION_TIERS:
+            raise ForbiddenException(code="FEATURE_REQUIRES_SUBSCRIPTION")
     current_user.notification_prefs = data.model_dump()
     await db.commit()
     await db.refresh(current_user)
