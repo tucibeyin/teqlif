@@ -30,7 +30,6 @@ enum MainNavigationEvent {
   toMyRecordings,
   toWallet,
   toPurchaseDetail,
-  toPurchasesScreen,
 }
 
 class MainNavigationData {
@@ -269,10 +268,9 @@ class MainViewModel extends AutoDisposeAsyncNotifier<MainState> {
       case 'auction_won':
         final auctionId = int.tryParse(data['auction_id']?.toString() ?? '');
         if (auctionId != null) {
-          _navigate(MainNavigationEvent.toPurchaseDetail, auctionId);
+          _navigate(MainNavigationEvent.toPurchaseDetail, {'id': auctionId, 'type': 'auction'});
         } else {
-          // auction_id yoksa (eski bildirim) → alışverişler listesi
-          _navigate(MainNavigationEvent.toPurchasesScreen, null);
+          _navigate(MainNavigationEvent.toNotificationsTab, null);
         }
         break;
 
@@ -371,8 +369,7 @@ class MainViewModel extends AutoDisposeAsyncNotifier<MainState> {
         if (orderId != null) {
           _navigate(MainNavigationEvent.toPurchaseDetail, {'id': orderId, 'type': 'direct'});
         } else {
-          // order_id yoksa (eski bildirim) alışverişler listesini aç
-          _navigate(MainNavigationEvent.toPurchasesScreen, null);
+          _navigate(MainNavigationEvent.toNotificationsTab, null);
         }
         break;
 
