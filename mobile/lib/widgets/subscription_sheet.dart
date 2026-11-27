@@ -391,7 +391,6 @@ Color _tierAccent(String tier) {
 }
 
 IconData _tierFaIcon(String tier) {
-  if (UserTier.isTier3OrAbove(tier)) return FontAwesomeIcons.gem;
   return FontAwesomeIcons.crown;
 }
 

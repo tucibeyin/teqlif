@@ -8,6 +8,7 @@ import '../config/app_colors.dart';
 import '../config/theme.dart';
 import 'package:teqlif/core/network/api_client.dart';
 import '../core/user_tier.dart';
+import '../ui_library/components/badges/tier_crown_badge.dart';
 
 class StreamerAvatarCard extends ConsumerWidget {
   final Map<String, dynamic> streamer;
@@ -79,20 +80,10 @@ class StreamerAvatarCard extends ConsumerWidget {
                     Positioned(
                       bottom: 0,
                       right: 0,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF0891B2), Color(0xFF06B6D4)],
-                          ),
-                          shape: BoxShape.circle,
-                          border: Border.all(color: AppColors.surface(context), width: 1.5),
-                        ),
-                        child: const FaIcon(
-                          FontAwesomeIcons.crown,
-                          size: 9,
-                          color: Colors.white,
-                        ),
+                      child: TierCrownBadge(
+                        userType: streamer['user_type'] as String? ?? UserTier.standard,
+                        iconSize: 9,
+                        padding: 4,
                       ),
                     ),
 

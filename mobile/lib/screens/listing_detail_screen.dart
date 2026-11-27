@@ -45,6 +45,7 @@ import '../ui_library/components/overlays/credit_gate_sheet.dart';
 import '../ui_library/components/inputs/teq_text_field.dart';
 import '../ui_library/components/buttons/teq_button.dart';
 import '../ui_library/components/buttons/teq_async_button.dart';
+import '../ui_library/components/badges/tier_crown_badge.dart';
 import '../models/credit_gate_data.dart';
 import '../core/event_bus.dart';
 import '../services/cache_service.dart';
@@ -1417,29 +1418,15 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                                   : null,
                             );
                           }),
-                          if (UserTier.hasSubscription(user['user_type'] as String? ?? UserTier.standard))
-                            Positioned(
-                              bottom: 0,
-                              right: 0,
-                              child: Container(
-                                padding: const EdgeInsets.all(3),
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: UserTier.crownGradient(user['user_type'] as String? ?? UserTier.standard),
-                                  ),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: AppColors.surface(context),
-                                    width: 2,
-                                  ),
-                                ),
-                                child: const FaIcon(
-                                  FontAwesomeIcons.crown,
-                                  size: 10,
-                                  color: Colors.white,
-                                ),
-                              ),
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: TierCrownBadge(
+                              userType: user['user_type'] as String? ?? UserTier.standard,
+                              iconSize: 10,
+                              borderWidth: 2,
                             ),
+                          ),
                         ],
                       ),
                       const SizedBox(width: 12),

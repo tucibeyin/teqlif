@@ -872,8 +872,8 @@ class _GridItemState extends ConsumerState<_GridItem> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF0891B2), Color(0xFF06B6D4)],
+                    gradient: LinearGradient(
+                      colors: UserTier.crownGradient(widget.listing['user']?['user_type'] as String? ?? UserTier.standard),
                     ),
                     borderRadius: BorderRadius.circular(4),
                   ),

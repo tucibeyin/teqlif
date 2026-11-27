@@ -22,6 +22,7 @@ import 'viewmodels/live_list_view_model.dart';
 import 'swipe_live_screen.dart';
 import '../public_profile_screen.dart';
 import '../../core/user_tier.dart';
+import '../../ui_library/components/badges/tier_crown_badge.dart';
 
 class LiveListScreen extends ConsumerStatefulWidget {
   const LiveListScreen({super.key});
@@ -661,24 +662,7 @@ class _StreamerAvatarCard extends ConsumerWidget {
                     Positioned(
                       bottom: 0,
                       right: 0,
-                      child: Container(
-                        padding: const EdgeInsets.all(3),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: UserTier.crownGradient(streamerUserType),
-                          ),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: AppColors.surface(context),
-                            width: 1.5,
-                          ),
-                        ),
-                        child: const FaIcon(
-                          FontAwesomeIcons.crown,
-                          size: 9,
-                          color: Colors.white,
-                        ),
-                      ),
+                      child: TierCrownBadge(userType: streamerUserType),
                     )
                   // Verified badge
                   else if (isVerified)

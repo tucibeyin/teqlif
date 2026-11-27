@@ -76,6 +76,7 @@ import '../utils/snackbar_helper.dart';
 import '../widgets/consent_settings_modal.dart';
 import '../services/media_compressor.dart';
 import '../widgets/subscription_sheet.dart';
+import '../ui_library/components/badges/tier_crown_badge.dart';
 import '../widgets/tier_badge.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import '../services/iap_service.dart';
@@ -389,29 +390,16 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 ),
                               ),
                             ),
-                            if (UserTier.hasSubscription(user?['user_type'] as String? ?? UserTier.standard))
-                              Positioned(
-                                bottom: 0,
-                                right: 0,
-                                child: Container(
-                                  padding: const EdgeInsets.all(4),
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: _tierBadgeColors(user?['user_type'] as String? ?? UserTier.tier1),
-                                    ),
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: AppColors.surface(context),
-                                      width: 2,
-                                    ),
-                                  ),
-                                  child: const FaIcon(
-                                    FontAwesomeIcons.crown,
-                                    size: 12,
-                                    color: Colors.white,
-                                  ),
-                                ),
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: TierCrownBadge(
+                                userType: user?['user_type'] as String? ?? UserTier.standard,
+                                iconSize: 12,
+                                padding: 4,
+                                borderWidth: 2,
                               ),
+                            ),
                           ],
                         ),
                         const SizedBox(width: 20),
@@ -2063,6 +2051,29 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
           TeqSettingsSection(
             title: loc.t('profileAccountSection'),
             items: [
+              ListTile(
+                leading: FaIcon(
+                  FontAwesomeIcons.crown,
+                  size: 18,
+                  color: UserTier.hasSubscription(_userType)
+                      ? UserTier.crownGradient(_userType)[0]
+                      : AppColors.iconColor(context),
+                ),
+                title: Text(
+                  TierBadge.tierLabel(_userType, loc),
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppColors.textPrimary(context),
+                  ),
+                ),
+                trailing: Icon(Icons.chevron_right, color: AppColors.border(context), size: 20),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => SubscriptionToolsScreen(userType: _userType),
+                  ),
+                ),
+              ),
               TeqSettingsTile(
                 icon: Icons.manage_accounts_outlined,
                 label: loc.t('accountInfoMenuLabel'),

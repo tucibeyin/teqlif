@@ -7,6 +7,7 @@ import '../config/theme.dart';
 import 'package:teqlif/core/network/api_client.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/user_tier.dart';
+import '../ui_library/components/badges/tier_crown_badge.dart';
 
 class SellerAvatarCard extends ConsumerWidget {
   final Map<String, dynamic> seller;
@@ -70,21 +71,7 @@ class SellerAvatarCard extends ConsumerWidget {
                   Positioned(
                     bottom: 0,
                     right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: UserTier.crownGradient(sellerUserType),
-                        ),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.surface(context), width: 1.5),
-                      ),
-                      child: const FaIcon(
-                        FontAwesomeIcons.crown,
-                        size: 9,
-                        color: Colors.white,
-                      ),
-                    ),
+                    child: TierCrownBadge(userType: sellerUserType, iconSize: 9, padding: 4),
                   ),
               ],
             ),

@@ -20,6 +20,7 @@ import '../../services/storage_service.dart';
 import '../../services/story_service.dart';
 import '../../services/localization_service.dart';
 import '../../utils/snackbar_helper.dart';
+import '../../ui_library/components/badges/tier_crown_badge.dart';
 
 /// Takip edilen kullanıcıların hybrid hikaye tepsisini Instagram stilinde gösterir.
 ///
@@ -584,24 +585,7 @@ class _StoryGroupItem extends ConsumerWidget {
                   Positioned(
                     bottom: 0,
                     right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(3),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: UserTier.crownGradient(group.user.userType),
-                        ),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: AppColors.surface(context),
-                          width: 1.5,
-                        ),
-                      ),
-                      child: const FaIcon(
-                        FontAwesomeIcons.crown,
-                        size: 8,
-                        color: Colors.white,
-                      ),
-                    ),
+                    child: TierCrownBadge(userType: group.user.userType, iconSize: 8),
                   ),
               ],
             ),
