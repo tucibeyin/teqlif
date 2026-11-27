@@ -6534,6 +6534,7 @@
     ]
   ],
   "directSaleBuySheetConfirm": "Buy",
+  "directSaleSwipeToPurchase": "اسحب للشراء",
   "directSaleProofDialogTitle": "Starting Your Sale",
   "directSaleProofDialogBody": "Show the product on camera before starting the sale and take a proof photo.",
   "directSaleNotActive": "Sale is no longer active.",

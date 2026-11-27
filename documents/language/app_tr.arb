@@ -6535,6 +6535,7 @@
     ]
   ],
   "directSaleBuySheetConfirm": "Satın Al",
+  "directSaleSwipeToPurchase": "Satın almak için sürükle",
   "directSaleProofDialogTitle": "Satışa Başlıyorsunuz",
   "directSaleProofDialogBody": "Satışa başlamadan önce ürünü kameraya gösterin ve onay fotoğrafını çekin.",
   "directSaleNotActive": "Satış artık aktif değil.",

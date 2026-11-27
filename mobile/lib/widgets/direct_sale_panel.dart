@@ -20,6 +20,7 @@ import 'fullscreen_image_viewer.dart';
 import 'proof_capture_sheet.dart';
 import 'shimmer_loading.dart';
 import 'swipe_paginated_list.dart';
+import 'swipe_to_bid_button.dart';
 
 final _listingDetailProvider = FutureProvider.family.autoDispose<Map<String, dynamic>?, int>(
   (ref, listingId) => ref.read(listingServiceProvider).getListingById(listingId),
@@ -1511,8 +1512,23 @@ class _PurchaseSheet extends ConsumerStatefulWidget {
 
 class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
   int _qty = 1;
-  bool _awaitingConfirm = false;
   bool _purchased = false;
+
+  Future<void> _executePurchase() async {
+    await ref
+        .read(directSaleViewerProvider(widget.streamId).notifier)
+        .purchase(
+          widget.state.saleId,
+          _qty,
+          ref.read(localizationProvider),
+        );
+    if (!mounted) return;
+    if (ref.read(directSaleViewerProvider(widget.streamId)).isPurchaseSuccess) {
+      _purchased = true;
+      widget.onWin?.call();
+      if (context.mounted) Navigator.pop(context);
+    }
+  }
 
   @override
   void dispose() {
@@ -1615,7 +1631,7 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
               _QtyBtn(
                 icon: Icons.remove,
                 onTap: _qty > 1
-                    ? () => setState(() { _qty--; _awaitingConfirm = false; })
+                    ? () => setState(() => _qty--)
                     : null,
               ),
               Padding(
@@ -1632,7 +1648,7 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
               _QtyBtn(
                 icon: Icons.add,
                 onTap: _qty < maxQty
-                    ? () => setState(() { _qty++; _awaitingConfirm = false; })
+                    ? () => setState(() => _qty++)
                     : null,
               ),
             ],
@@ -1706,133 +1722,13 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
               ),
             ),
           const SizedBox(height: 16),
-          if (_awaitingConfirm) ...[
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                color: kPrimary.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: kPrimary.withValues(alpha: 0.3)),
-              ),
-              child: Text(
-                loc.tOr(
-                  'directSaleBuyConfirmHint',
-                  '$_qty adet · ₺${TeqNumberFormatter.format(_qty * widget.state.price, fieldKey: 'price', forceDecimals: true)} — satın almak istediğine emin misin?',
-                ),
-                style: const TextStyle(color: Colors.white70, fontSize: 12),
-                textAlign: TextAlign.center,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => setState(() => _awaitingConfirm = false),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.white24),
-                      ),
-                      child: Text(
-                        loc.tOr('directSaleDialogCancel', 'Vazgeç'),
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: canBuyNow
-                        ? () async {
-                            await ref
-                                .read(directSaleViewerProvider(widget.streamId)
-                                    .notifier)
-                                .purchase(
-                                  widget.state.saleId,
-                                  _qty,
-                                  ref.read(localizationProvider),
-                                );
-                            if (ref
-                                .read(directSaleViewerProvider(widget.streamId))
-                                .isPurchaseSuccess) {
-                              _purchased = true;
-                              widget.onWin?.call();
-                              if (context.mounted) Navigator.pop(context);
-                            }
-                          }
-                        : null,
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      decoration: BoxDecoration(
-                        color: canBuyNow ? kPrimary : kPrimary.withValues(alpha: 0.4),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: viewerState.isLoading
-                          ? const Center(
-                              child: SizedBox(
-                                height: 18,
-                                width: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            )
-                          : Text(
-                              loc.t('directSaleBuySheetConfirm'),
-                              style: TextStyle(
-                                color: canBuyNow
-                                    ? Colors.white
-                                    : Colors.white.withValues(alpha: 0.5),
-                                fontWeight: FontWeight.w700,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ] else
-            GestureDetector(
-              onTap: canBuyNow
-                  ? () {
-                      ref.read(analyticsServiceProvider).logInteraction(
-                        itemId: widget.state.saleId,
-                        itemType: 'direct_sale',
-                        interactionType: 'purchase_confirm_intent',
-                        pricePoint: widget.state.price,
-                      );
-                      setState(() => _awaitingConfirm = true);
-                    }
-                  : null,
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                decoration: BoxDecoration(
-                  color: canBuyNow ? kPrimary : kPrimary.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  loc.t('directSaleBuySheetConfirm'),
-                  style: TextStyle(
-                    color: canBuyNow
-                        ? Colors.white
-                        : Colors.white.withValues(alpha: 0.5),
-                    fontWeight: FontWeight.w700,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
+          if (canBuyNow || viewerState.isLoading)
+            SwipeToBidButton(
+              text: loc.tOr('directSaleSwipeToPurchase', 'Satın almak için sürükle'),
+              onSwipeComplete: () => _executePurchase(),
+              isLoading: viewerState.isLoading,
+              itemId: widget.state.saleId,
+              pricePoint: widget.state.price,
             ),
         ],
       ),

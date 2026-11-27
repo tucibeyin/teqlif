@@ -6606,6 +6606,7 @@
     ]
   ],
   "directSaleBuySheetConfirm": "Kaufen",
+  "directSaleSwipeToPurchase": "Zum Kaufen wischen",
   "directSaleProofDialogTitle": "Start deines Verkaufs",
   "directSaleProofDialogBody": "Zeige das Produkt vor Beginn des Verkaufs in die Kamera und mache ein Beweisfoto.",
   "directSaleNotActive": "Verkauf ist nicht mehr aktiv.",

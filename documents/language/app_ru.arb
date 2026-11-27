@@ -6534,6 +6534,7 @@
     ]
   ],
   "directSaleBuySheetConfirm": "Купить",
+  "directSaleSwipeToPurchase": "Проведите для покупки",
   "directSaleProofDialogTitle": "Начало продажи",
   "directSaleProofDialogBody": "Покажите товар на камеру и сделайте фото перед началом продажи.",
   "directSaleNotActive": "Продажа больше не активна.",
