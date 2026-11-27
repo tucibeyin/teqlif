@@ -218,6 +218,7 @@ class AppleNotificationHandler(StoreNotificationHandler):
             ),
             {"tier": TIER_STANDARD, "uid": user_id},
         )
+        await self._invalidate_cache(user_id)
         logger.info("[AppleNotif] EXPIRED | user=%s → standard", user_id)
 
     async def _handle_revoke(self, user_id: int) -> None:
@@ -231,4 +232,13 @@ class AppleNotificationHandler(StoreNotificationHandler):
             ),
             {"tier": TIER_STANDARD, "uid": user_id},
         )
+        await self._invalidate_cache(user_id)
         logger.info("[AppleNotif] REVOKE | user=%s → standard", user_id)
+
+    @staticmethod
+    async def _invalidate_cache(user_id: int) -> None:
+        try:
+            from app.utils.auth import invalidate_user_session_cache
+            await invalidate_user_session_cache(user_id)
+        except Exception as exc:
+            logger.warning("[AppleNotif] session cache invalidate başarısız | user=%s | %s", user_id, exc)

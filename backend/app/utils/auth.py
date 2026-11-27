@@ -98,6 +98,27 @@ def _decode_token_version(token: str) -> int:
 _USER_SESSION_TTL = 900  # 15 dakika
 
 
+def _effective_user_type(user_type: str, sub_expires_at: Optional[datetime], sub_grace_until: Optional[datetime]) -> str:
+    """
+    Abonelik süresini göz önünde bulundurarak efektif tier döner.
+
+    sub_expires_at geçmişte ve grace period da dolmuşsa 'standard' döner.
+    Bu sayede cron task çalışmadan önce de auth/me doğru tier'ı yansıtır.
+    """
+    from app.services.subscription.tier import TIER_STANDARD, SUBSCRIPTION_TIERS
+    if user_type not in SUBSCRIPTION_TIERS:
+        return user_type
+    if sub_expires_at is None:
+        return user_type
+    now = datetime.now(timezone.utc)
+    if sub_expires_at > now:
+        return user_type
+    # Süresi dolmuş — grace period aktif mi?
+    if sub_grace_until and sub_grace_until > now:
+        return user_type
+    return TIER_STANDARD
+
+
 def _serialize_user(user) -> dict:
     data = {}
     for col in user.__table__.columns:
@@ -153,10 +174,16 @@ async def _fetch_and_cache_user(db: AsyncSession, user_id: int) -> "CurrentUserD
         try:
             redis = await get_redis()
             data = _serialize_user(user)
+            # Efektif tier — süresi dolmuş subscription DB güncellemesini beklemeden doğru döner
+            data["user_type"] = _effective_user_type(user.user_type, user.sub_expires_at, user.sub_grace_until)
             await redis.setex(f"session:user:{user_id}", _USER_SESSION_TTL, json.dumps(data, ensure_ascii=False))
         except Exception as exc:
             get_logger(__name__).debug("[AUTH] Redis session cache write error for user_id=%s: %s", user_id, exc)
-    return CurrentUserDTO.model_validate(user, from_attributes=True)
+    dto = CurrentUserDTO.model_validate(user, from_attributes=True)
+    effective = _effective_user_type(user.user_type, user.sub_expires_at, user.sub_grace_until)
+    if effective != user.user_type:
+        return dto.model_copy(update={"user_type": effective})
+    return dto
 
 
 async def invalidate_user_session_cache(user_id: int) -> None:
