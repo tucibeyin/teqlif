@@ -972,6 +972,9 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
   DateTime? _consentAt;
   String? _consentLocale;
   StreamSubscription<UserTypeChangedEvent>? _userTypeSub;
+  StreamSubscription<UserVerificationChangedEvent>? _verificationSub;
+  late bool _emailVerified;
+  late bool _phoneVerified;
 
   @override
   void initState() {
@@ -979,6 +982,8 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
     // widget.user'dan ön değer al (anlık gösterim için)
     _userType = widget.user?['user_type'] as String? ?? UserTier.standard;
     _isPrivate = widget.user?['is_private'] == true;
+    _emailVerified = widget.user?['is_verified'] == true;
+    _phoneVerified = widget.user?['phone_verified'] == true;
     _displayedLang = ref.read(localeProvider).languageCode;
     _loadBiometricState();
     _loadPremiumStatus();
@@ -986,11 +991,18 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
     _loadUnreadRatings();
     _loadConsentStatus();
     _userTypeSub = eventBus.on<UserTypeChangedEvent>().listen((_) => _loadPremiumStatus());
+    _verificationSub = eventBus.on<UserVerificationChangedEvent>().listen((e) {
+      if (mounted) setState(() {
+        _emailVerified = e.emailVerified;
+        _phoneVerified = e.phoneVerified;
+      });
+    });
   }
 
   @override
   void dispose() {
     _userTypeSub?.cancel();
+    _verificationSub?.cancel();
     super.dispose();
   }
 
@@ -2054,6 +2066,23 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
               TeqSettingsTile(
                 icon: Icons.manage_accounts_outlined,
                 label: loc.t('accountInfoMenuLabel'),
+                trailing: () {
+                  return Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (!_emailVerified || !_phoneVerified)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 4),
+                          child: Icon(
+                            Icons.warning_amber_rounded,
+                            color: Colors.amber.shade300,
+                            size: 18,
+                          ),
+                        ),
+                      Icon(Icons.chevron_right, color: AppColors.border(context), size: 20),
+                    ],
+                  );
+                }(),
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const AccountInfoScreen()),

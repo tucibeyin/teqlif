@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import '../../core/event_bus.dart';
 import '../../core/network/api_client.dart';
 import '../../services/auth_service.dart';
 import '../../services/storage_service.dart';
@@ -23,6 +24,7 @@ class AccountInfoViewModel extends AutoDisposeAsyncNotifier<AccountInfoState> {
       'username': u.username,
       'full_name': u.fullName,
       'phone': u.phone,
+      'is_verified': u.isVerified,
       'phone_verified': u.phoneVerified,
       'user_type': u.userType,
       'plan_type': u.planType,
@@ -37,6 +39,10 @@ class AccountInfoViewModel extends AutoDisposeAsyncNotifier<AccountInfoState> {
     final prev = state;
     if (!silent) state = const AsyncValue.loading();
     try {
+      final prevUser = prev.valueOrNull?.user;
+      final prevEmailVerified = prevUser?['is_verified'] as bool? ?? false;
+      final prevPhoneVerified = prevUser?['phone_verified'] as bool? ?? false;
+
       final u = await ref.read(authServiceProvider).me();
       state = AsyncValue.data(AccountInfoState(user: {
         'id': u.id,
@@ -44,12 +50,20 @@ class AccountInfoViewModel extends AutoDisposeAsyncNotifier<AccountInfoState> {
         'username': u.username,
         'full_name': u.fullName,
         'phone': u.phone,
+        'is_verified': u.isVerified,
         'phone_verified': u.phoneVerified,
         'user_type': u.userType,
         'plan_type': u.planType,
         'auto_renew_enabled': u.autoRenewEnabled,
         'pending_tier': u.pendingTier,
       }));
+
+      if (u.isVerified != prevEmailVerified || u.phoneVerified != prevPhoneVerified) {
+        eventBus.fire(UserVerificationChangedEvent(
+          emailVerified: u.isVerified,
+          phoneVerified: u.phoneVerified,
+        ));
+      }
     } catch (e, st) {
       if (silent && prev is AsyncData) {
         state = prev; // eski veriyi koru, ekranı değiştirme

@@ -62,3 +62,15 @@ class UserTypeChangedEvent {
   final String userType;
   const UserTypeChangedEvent(this.userType);
 }
+
+/// E-posta veya telefon doğrulama durumu değiştiğinde fırlatılır.
+/// Ayarlar ekranındaki "Bilgilerim" satırı bu event'i dinleyerek
+/// uyarı ikonunu anlık gösterir/gizler.
+class UserVerificationChangedEvent {
+  final bool emailVerified;
+  final bool phoneVerified;
+  const UserVerificationChangedEvent({
+    required this.emailVerified,
+    required this.phoneVerified,
+  });
+}
