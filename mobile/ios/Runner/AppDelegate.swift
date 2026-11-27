@@ -333,20 +333,26 @@ import StoreKit
       }
   }
 
-  // Uygulama açıkken gelen bildirimleri banner + badge + ses olarak göster
+  // Uygulama açıkken gelen bildirimleri yönet.
   override func userNotificationCenter(
     _ center: UNUserNotificationCenter,
     willPresent notification: UNNotification,
     withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
   ) {
-    // Suppress incoming_call FCM notification — VoIP PushKit / CallKit handles it natively.
-    // Prevents a duplicate banner from appearing alongside the CallKit UI (or IncomingCallBar).
     let userInfo = notification.request.content.userInfo
-    if (userInfo["type"] as? String) == "incoming_call" {
-      print("[PUSH] willPresent: incoming_call FCM suppressed (VoIP handles it)")
-      completionHandler([])
+    let notifType = userInfo["type"] as? String ?? ""
+
+    // incoming_call: VoIP PushKit / CallKit zaten yönetir — FCM banner çift gösterir.
+    // Diğer tüm uygulama bildirimleri (stream_started, new_bid, vb.): uygulama açıkken
+    // Flutter in-app UI (InAppNotifBanner / feed) gösterir; sistem banner'ı gürültü olur.
+    // Sadece badge güncellemesine izin ver — ses ve banner yok.
+    if !notifType.isEmpty {
+      print("[PUSH] willPresent: type=\(notifType) suppressed (in-app UI handles it)")
+      completionHandler([.badge])
       return
     }
+
+    // Tipi bilinmeyen bildirimler (sistem düzeyinde olanlar) normal gösterim.
     if #available(iOS 14.0, *) {
       completionHandler([.banner, .badge, .sound])
     } else {
