@@ -81,3 +81,5 @@ class User(Base):
     last_tier: Mapped[str | None] = mapped_column(String(20), nullable=True)
     monthly_stream_minutes_used: Mapped[int] = mapped_column(Integer, default=0, nullable=False, server_default="0")
     monthly_stream_reset_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Teqlik ile satın alınan bonus yayın dakikaları — aylık reset'e dahil değil.
+    stream_minutes_bonus: Mapped[int] = mapped_column(Integer, default=0, nullable=False, server_default="0")

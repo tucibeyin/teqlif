@@ -129,4 +129,43 @@ class WalletService {
     await providerContainer.read(cacheServiceProvider).clearData(StorageService.cacheWalletData);
     if (fireEvent) eventBus.fire(const CreditsChangedEvent());
   }
+
+  /// GET /api/wallet/conversion-rates — teqlik maliyet listesi (1 sa cache backend'de)
+  static Future<Map<String, dynamic>?> getConversionRates() async {
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return null;
+      final resp = await http.get(
+        Uri.parse('${providerContainer.read(apiClientProvider).config.baseUrl}/wallet/conversion-rates'),
+        headers: await _headers(token),
+      );
+      if (resp.statusCode == 200) {
+        return jsonDecode(resp.body) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// POST /api/wallet/stream-minutes/convert — teqlik'i bonus yayın dakikasına dönüştür
+  static Future<Map<String, dynamic>> convertToStreamMinutes(int minutes) async {
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return {'ok': false, 'error_code': 'AUTH_ERROR'};
+      final resp = await http.post(
+        Uri.parse('${providerContainer.read(apiClientProvider).config.baseUrl}/wallet/stream-minutes/convert'),
+        headers: await _headers(token, json: true),
+        body: jsonEncode({'minutes': minutes}),
+      );
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body) as Map<String, dynamic>;
+        return {'ok': true, ...data};
+      }
+      final body = jsonDecode(resp.body) as Map<String, dynamic>?;
+      final errMap = body?['error'] as Map?;
+      final code = errMap?['code'] as String? ?? 'UNKNOWN_ERROR';
+      return {'ok': false, 'error_code': code};
+    } catch (_) {
+      return {'ok': false, 'error_code': 'NETWORK_ERROR'};
+    }
+  }
 }

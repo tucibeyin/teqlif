@@ -80,6 +80,9 @@ import '../ui_library/components/badges/tier_crown_badge.dart';
 import '../widgets/tier_badge.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import '../services/iap_service.dart';
+import 'wallet/teqlik_donusum_tab.dart';
+import 'wallet/convert_minutes_sheet.dart';
+import 'viewmodels/wallet_conversion_view_model.dart';;
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -3980,8 +3983,11 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
   int _teqlikLocked = 0;
   bool _emailVerified = false;
   bool _phoneVerified = false;
+  int _bonusMinutes = 0;
 
   late TabController _tabController;
+  // İŞLEMLER sekmesi içindeki alt tab controller
+  late TabController _txnTabController;
   Map<String, String> _typeLabels(TranslationPack loc) => {
     'airdrop': loc.t('walletTxnAirdrop'),
     'churn_airdrop': loc.t('walletTxnChurnAirdrop'),
@@ -4017,8 +4023,9 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    // PRO kullanıcı için bakiye/hareketler sekmesiyle aç; standart için PRO upsell
+    // PRO kullanıcı için teqlik AL sekmesiyle aç; standart için PRO upsell
     _tabController = TabController(length: 3, vsync: this, initialIndex: UserTier.hasSubscription(widget.userType) ? 1 : 0);
+    _txnTabController = TabController(length: 2, vsync: this);
     _userType = widget.userType;
     _balance = widget.initialBalance;
     _txns = List.from(widget.initialHistory);
@@ -4029,6 +4036,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _tabController.dispose();
+    _txnTabController.dispose();
     super.dispose();
   }
 
@@ -4066,6 +4074,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
         _teqlikLocked   = summaryData['teqlik_locked'] as int? ?? 0;
         _emailVerified  = summaryData['email_verified'] as bool? ?? false;
         _phoneVerified  = summaryData['phone_verified'] as bool? ?? false;
+        _bonusMinutes   = summaryData['stream_minutes_bonus'] as int? ?? 0;
       }
     });
 
@@ -4547,14 +4556,14 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
               Tab(
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
-                  children: const [
-                    Icon(Icons.diamond_rounded, size: 13),
-                    SizedBox(width: 5),
-                    Text('teqlik Al'),
+                  children: [
+                    const Icon(Icons.diamond_rounded, size: 13),
+                    const SizedBox(width: 5),
+                    Text(loc.t('walletTabBuy')),
                   ],
                 ),
               ),
-              const Tab(text: 'Hareketler'),
+              Tab(text: loc.t('walletTabTransactions')),
             ],
           ),
 
@@ -4581,72 +4590,104 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
                   loc: loc,
                 ),
 
-                // ── Sekme 3: Hareketler ──────────────────────────────
-                RefreshIndicator(
-                  onRefresh: _load,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.only(bottom: 32),
-                    itemCount:
-                        _txns.isEmpty && !_loading ? 1 : _txns.length,
-                    itemBuilder: (context, i) {
-                      if (_txns.isEmpty) {
-                        return Padding(
-                          padding: const EdgeInsets.all(32),
-                          child: Center(
-                            child: Text(
-                              loc.t('walletNoTxns'),
-                              style: TextStyle(
-                                color: isDark
-                                    ? const Color(0xFF737373)
-                                    : const Color(0xFF9CA3AF),
-                              ),
+                // ── Sekme 3: İŞLEMLER — alt tab: teqlik DÖNÜŞÜM + HAREKETLER ────
+                Column(
+                  children: [
+                    TabBar(
+                      controller: _txnTabController,
+                      indicatorColor: const Color(0xFF06B6D4),
+                      indicatorWeight: 2,
+                      indicatorSize: TabBarIndicatorSize.label,
+                      labelColor: isDark ? Colors.white : const Color(0xFF111827),
+                      unselectedLabelColor:
+                          isDark ? const Color(0xFF737373) : const Color(0xFF9CA3AF),
+                      labelStyle: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -0.1,
+                      ),
+                      tabs: [
+                        Tab(text: loc.t('walletTabConversion')),
+                        Tab(text: loc.t('walletTabMovements')),
+                      ],
+                    ),
+                    Expanded(
+                      child: TabBarView(
+                        controller: _txnTabController,
+                        children: [
+                          // ── Alt Sekme 1: teqlik DÖNÜŞÜM ───────────────
+                          TeqlikDonusumTab(currentBalance: _balance ?? 0),
+
+                          // ── Alt Sekme 2: HAREKETLER ───────────────────
+                          RefreshIndicator(
+                            onRefresh: _load,
+                            child: ListView.builder(
+                              padding: const EdgeInsets.only(bottom: 32),
+                              itemCount: _txns.isEmpty && !_loading ? 1 : _txns.length,
+                              itemBuilder: (context, i) {
+                                if (_txns.isEmpty) {
+                                  return Padding(
+                                    padding: const EdgeInsets.all(32),
+                                    child: Center(
+                                      child: Text(
+                                        loc.t('walletNoTxns'),
+                                        style: TextStyle(
+                                          color: isDark
+                                              ? const Color(0xFF737373)
+                                              : const Color(0xFF9CA3AF),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }
+                                final t = _txns[i];
+                                final thisGroup = _txnDateGroup(
+                                    t['created_at'] as String? ?? '');
+                                String? groupHeader;
+                                if (i == 0) {
+                                  groupHeader = thisGroup;
+                                } else {
+                                  final prevGroup = _txnDateGroup(
+                                      _txns[i - 1]['created_at'] as String? ?? '');
+                                  if (thisGroup != prevGroup) groupHeader = thisGroup;
+                                }
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (groupHeader != null && groupHeader.isNotEmpty)
+                                      Padding(
+                                        padding: const EdgeInsets.fromLTRB(20, 14, 20, 6),
+                                        child: Text(
+                                          groupHeader.toUpperCase(),
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w700,
+                                            letterSpacing: 0.9,
+                                            color: isDark
+                                                ? const Color(0xFF737373)
+                                                : const Color(0xFF9CA3AF),
+                                          ),
+                                        ),
+                                      ),
+                                    _buildTxnRow(t, loc),
+                                    if (i < _txns.length - 1)
+                                      Divider(
+                                        height: 1,
+                                        color: isDark
+                                            ? const Color(0xFF2A2A2A)
+                                            : const Color(0xFFE5E7EB),
+                                        indent: 72,
+                                        endIndent: 20,
+                                      ),
+                                  ],
+                                );
+                              },
                             ),
                           ),
-                        );
-                      }
-                      final t = _txns[i];
-                      final thisGroup = _txnDateGroup(
-                          t['created_at'] as String? ?? '');
-                      String? groupHeader;
-                      if (i == 0) {
-                        groupHeader = thisGroup;
-                      } else {
-                        final prevGroup = _txnDateGroup(
-                            _txns[i - 1]['created_at'] as String? ?? '');
-                        if (thisGroup != prevGroup) groupHeader = thisGroup;
-                      }
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (groupHeader != null && groupHeader.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(20, 14, 20, 6),
-                              child: Text(
-                                groupHeader.toUpperCase(),
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 0.9,
-                                  color: isDark
-                                      ? const Color(0xFF737373)
-                                      : const Color(0xFF9CA3AF),
-                                ),
-                              ),
-                            ),
-                          _buildTxnRow(t, loc),
-                          if (i < _txns.length - 1)
-                            Divider(
-                              height: 1,
-                              color: isDark
-                                  ? const Color(0xFF2A2A2A)
-                                  : const Color(0xFFE5E7EB),
-                              indent: 72,
-                              endIndent: 20,
-                            ),
                         ],
-                      );
-                    },
-                  ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

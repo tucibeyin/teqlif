@@ -28,7 +28,7 @@ class GetWalletSummaryQuery:
             text(
                 "SELECT teqlik_balance, sub_expires_at, plan_type, "
                 "       pending_referred_by, email_verified, phone_verified, "
-                "       teqlik_locked_balance "
+                "       teqlik_locked_balance, stream_minutes_bonus "
                 "FROM users WHERE id = :uid"
             ),
             {"uid": user_id},
@@ -41,6 +41,7 @@ class GetWalletSummaryQuery:
         email_verified       = bool(u[4]) if u else False
         phone_verified       = bool(u[5]) if u else False
         teqlik_locked_db     = int(u[6]) if u else 0
+        stream_minutes_bonus = int(u[7]) if u and u[7] is not None else 0
         # Toplam kilitli teqlik: locked_balance + bekleyen referral bonus (henüz credited olmadı)
         pending_referral_bonus = 150 if (pending_referred_by and email_verified and not phone_verified) else 0
         teqlik_locked        = teqlik_locked_db + pending_referral_bonus
@@ -69,4 +70,5 @@ class GetWalletSummaryQuery:
             "teqlik_locked": teqlik_locked,
             "email_verified": email_verified,
             "phone_verified": phone_verified,
+            "stream_minutes_bonus": stream_minutes_bonus,
         }

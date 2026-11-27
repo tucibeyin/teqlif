@@ -74,3 +74,19 @@ class UserVerificationChangedEvent {
     required this.phoneVerified,
   });
 }
+
+/// Teqlik → yayın dakikası dönüşümü başarıyla tamamlandığında fırlatılır.
+/// WalletScreen bakiyeyi ve bonus dakikaları anlık günceller.
+class WalletConversionSuccessEvent {
+  final int spentTeqlik;
+  final int addedMinutes;
+  final int newBalance;
+  final int newBonusMinutes;
+
+  const WalletConversionSuccessEvent({
+    required this.spentTeqlik,
+    required this.addedMinutes,
+    required this.newBalance,
+    required this.newBonusMinutes,
+  });
+}

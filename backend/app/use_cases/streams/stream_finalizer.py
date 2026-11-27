@@ -111,10 +111,14 @@ async def finalize_stream(stream: LiveStream, db: AsyncSession) -> None:
         duration_secs = max(0, int((now - started).total_seconds()))
         duration_mins = -(-duration_secs // 60)  # ceil integer division
         if duration_mins > 0:
+            # Bonus dakikalar önce tükenir (kullanıcı teqlik ödemişti).
+            # Kalan dakika aylık sayaca eklenir.
             await db.execute(
                 text(
-                    "UPDATE users SET monthly_stream_minutes_used = "
-                    "COALESCE(monthly_stream_minutes_used, 0) + :mins "
+                    "UPDATE users SET "
+                    "  stream_minutes_bonus = GREATEST(0, COALESCE(stream_minutes_bonus, 0) - :mins), "
+                    "  monthly_stream_minutes_used = COALESCE(monthly_stream_minutes_used, 0) "
+                    "    + GREATEST(0, :mins - COALESCE(stream_minutes_bonus, 0)) "
                     "WHERE id = :uid"
                 ),
                 {"mins": duration_mins, "uid": stream.host_id},

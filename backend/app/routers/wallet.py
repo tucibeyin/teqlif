@@ -84,7 +84,61 @@ _TYPE_LABELS = {
     "convert_to_teqlik":            "Kazanç teqlik'e dönüştürüldü",
     "bonus_mint":                   "Dönüşüm bonusu",
     "pro_subscription_biannual":    "6 Aylık PRO Aboneliği",
+    "spend_stream_minutes":         "Yayın dakikası dönüştürüldü",
 }
+
+
+@router.get("/conversion-rates")
+async def get_conversion_rates(
+    current_user: User = Depends(get_current_user),
+    redis=Depends(get_redis),
+):
+    """Teqlik maliyet listesi — tier.py'den okunur, 1 saat Redis cache."""
+    _CACHE_KEY = "wallet:conversion_rates"
+    cached = await redis.get(_CACHE_KEY)
+    if cached:
+        import json as _json
+        return _json.loads(cached)
+    from app.use_cases.wallet.queries.get_conversion_rates_query import GetConversionRatesQuery
+    result = GetConversionRatesQuery().execute()
+    import json as _json
+    await redis.set(_CACHE_KEY, _json.dumps(result), ex=3600)
+    return result
+
+
+class ConvertStreamMinutesRequest(BaseModel):
+    minutes: int = Field(gt=0, le=10000)
+
+
+@router.post("/stream-minutes/convert")
+async def convert_stream_minutes(
+    body: ConvertStreamMinutesRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    redis=Depends(get_redis),
+):
+    """Teqlik bakiyesini bonus yayın dakikasına dönüştürür.
+
+    Atomik: FOR UPDATE ile row lock. Bonus dakikalar aylık reset'e dahil değil.
+    """
+    from app.use_cases.wallet.commands.convert_stream_minutes_command import ConvertStreamMinutesCommand
+    result = await ConvertStreamMinutesCommand(db).execute(
+        user_id=current_user.id,
+        minutes=body.minutes,
+    )
+    await db.commit()
+
+    # Wallet summary cache temizle — taze bakiye gösterilsin
+    await redis.delete(f"wallet:{current_user.id}:summary")
+    await invalidate_user_session_cache(current_user.id)
+
+    return {
+        "ok": True,
+        "spent_teqlik": result.spent_teqlik,
+        "added_minutes": result.added_minutes,
+        "new_balance": result.new_balance,
+        "new_bonus_minutes": result.new_bonus_minutes,
+    }
 
 
 @router.get("/summary")

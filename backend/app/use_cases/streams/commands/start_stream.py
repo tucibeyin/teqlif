@@ -41,10 +41,12 @@ class StartStreamCommand:
                 user.monthly_stream_reset_at = now_utc
                 await self.uow.session.flush()
 
-            # Aylık yayın süresi kontrolü
+            # Aylık yayın süresi kontrolü — bonus dakikalar aylık limite ek olarak sayılır
             limit = stream_limit_minutes(user.user_type)
-            if limit is not None and (user.monthly_stream_minutes_used or 0) >= limit:
-                raise BadRequestException(code="STREAM_MONTHLY_LIMIT_REACHED")
+            if limit is not None:
+                effective_limit = limit + (user.stream_minutes_bonus or 0)
+                if (user.monthly_stream_minutes_used or 0) >= effective_limit:
+                    raise BadRequestException(code="STREAM_MONTHLY_LIMIT_REACHED")
 
             existing = await self.uow.session.scalar(
                 select(LiveStream).where(

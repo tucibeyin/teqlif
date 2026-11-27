@@ -122,6 +122,9 @@ CREDIT_COSTS_TEQLIK: dict[str, int] = {
     "reactivation": 10,
 }
 
+# Yayın dakikası dönüşüm oranı: 1 teqlik = 1 dakika yayın kredisi.
+TEQLIK_PER_STREAM_MINUTE: int = 1
+
 # ── IAP product mapping ───────────────────────────────────────────────────────
 
 # Product ID → user_type (Apple/Google'da kayıtlı ID'ler değişmez)
