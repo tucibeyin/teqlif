@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import BadRequestException, InsufficientFundsException, NotFoundException
 from app.core.logger import get_logger
-from app.services.subscription.tier import commission_rate
+from app.services.subscription.tier import commission_rate, effective_tier
 
 logger = get_logger(__name__)
 
@@ -48,7 +48,7 @@ class SendGiftCommand:
         # ── Alıcıyı bul ────────────────────────────────────────────────────────
         receiver_row = await self._session.execute(
             text(
-                "SELECT id, user_type FROM users "
+                "SELECT id, user_type, sub_expires_at, sub_grace_until FROM users "
                 "WHERE username = :uname AND status = 'active' LIMIT 1"
             ),
             {"uname": receiver_username},
@@ -57,7 +57,9 @@ class SendGiftCommand:
         if receiver is None:
             raise NotFoundException(code="RECEIVER_NOT_FOUND")
 
-        receiver_id, receiver_type = receiver
+        receiver_id, raw_type, sub_exp, sub_grace = receiver
+        # DB user_type stale olabilir; tier.effective_tier ile gerçek tier hesaplanır (§57).
+        receiver_type = effective_tier(raw_type, sub_exp, sub_grace)
         if receiver_id == sender_id:
             raise BadRequestException(code="SELF_GIFT_FORBIDDEN")
 

@@ -99,24 +99,9 @@ _USER_SESSION_TTL = 900  # 15 dakika
 
 
 def _effective_user_type(user_type: str, sub_expires_at: Optional[datetime], sub_grace_until: Optional[datetime]) -> str:
-    """
-    Abonelik süresini göz önünde bulundurarak efektif tier döner.
-
-    sub_expires_at geçmişte ve grace period da dolmuşsa 'standard' döner.
-    Bu sayede cron task çalışmadan önce de auth/me doğru tier'ı yansıtır.
-    """
-    from app.services.subscription.tier import TIER_STANDARD, SUBSCRIPTION_TIERS
-    if user_type not in SUBSCRIPTION_TIERS:
-        return user_type
-    if sub_expires_at is None:
-        return user_type
-    now = datetime.now(timezone.utc)
-    if sub_expires_at > now:
-        return user_type
-    # Süresi dolmuş — grace period aktif mi?
-    if sub_grace_until and sub_grace_until > now:
-        return user_type
-    return TIER_STANDARD
+    """Efektif tier hesaplamayı tier.py domain katmanına delege eder (§57)."""
+    from app.services.subscription.tier import effective_tier
+    return effective_tier(user_type, sub_expires_at, sub_grace_until)
 
 
 def _serialize_user(user) -> dict:

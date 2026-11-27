@@ -11,6 +11,9 @@ Yeni tier eklemek için:
 """
 from __future__ import annotations
 
+from datetime import datetime, timezone
+from typing import Optional
+
 # ── Tier sabitleri ────────────────────────────────────────────────────────────
 
 TIER_STANDARD = "standard"
@@ -215,3 +218,25 @@ def tier_from_product(product_id: str) -> str | None:
 def plan_type_from_product(product_id: str) -> str | None:
     """Product ID'den plan_type (ödeme periyodu) döner."""
     return PRODUCT_PLAN_TYPE.get(product_id)
+
+
+def effective_tier(
+    user_type: str,
+    sub_expires_at: Optional[datetime],
+    sub_grace_until: Optional[datetime],
+) -> str:
+    """DB user_type stale olabilir; sub_expires_at+grace'e göre gerçek tier döner.
+
+    Kural: abonelik süresi ve grace period ikisi de geçmişte ise TIER_STANDARD.
+    Caller'ı: auth._effective_user_type (delivery), send_gift_command (use case).
+    """
+    if user_type not in SUBSCRIPTION_TIERS:
+        return user_type
+    if sub_expires_at is None:
+        return user_type
+    now = datetime.now(timezone.utc)
+    if sub_expires_at > now:
+        return user_type
+    if sub_grace_until and sub_grace_until > now:
+        return user_type
+    return TIER_STANDARD
