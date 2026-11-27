@@ -4,7 +4,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Kasım 2026 — §54 Subscription on-read expiry check + Apple S2S cache invalidation (d8a3ec44); §53 Açık artırma teklif hız sınırı sliding window (63d64a40); Android TeqlifIncomingConnection extras→callData JVM fix (e90b64a6); §52 AntiBotDefender CG-NAT + LiveList double-init (1df60b6c–a45c5327); §51 Android ConnectionService + native FCM receiver (1c985668); §50 Subscription cross-screen sync + Apple S2S downgrade bug fix; §49 Nginx sitemap proxy & MinIO robots disallow; §48 Tier-aware plan mapping + upgrade panel + UI düzeltmeleri (496ee490–b37b6667); §47 Reserved Usernames; §13 node listesi güncellendi
+**Son güncelleme:** Kasım 2026 — §55 CallPolicy + canlı yayında gelen arama engelleme (54e7a54c); §54 Subscription on-read expiry check + Apple S2S cache invalidation (d8a3ec44); §53 Açık artırma teklif hız sınırı sliding window (63d64a40); Android TeqlifIncomingConnection extras→callData JVM fix (e90b64a6); §52 AntiBotDefender CG-NAT + LiveList double-init (1df60b6c–a45c5327); §51 Android ConnectionService + native FCM receiver (1c985668); §50 Subscription cross-screen sync + Apple S2S downgrade bug fix; §49 Nginx sitemap proxy & MinIO robots disallow; §48 Tier-aware plan mapping + upgrade panel + UI düzeltmeleri (496ee490–b37b6667); §47 Reserved Usernames; §13 node listesi güncellendi
 
 ---
 
@@ -3665,3 +3665,119 @@ async def _invalidate_cache(user_id: int) -> None:
 |-------|------------|
 | `backend/app/utils/auth.py` | `_effective_user_type()` eklendi; cache write + DTO return'da uygulandı |
 | `backend/app/services/store/notifications/apple_handler.py` | `_invalidate_cache()` eklendi; `_handle_expired` + `_handle_revoke`'da çağrıldı |
+
+---
+
+## 55. CallPolicy — Canlı Yayında Gelen Arama Engelleme (commit 54e7a54c)
+
+### Problem
+
+Canlı yayın yapan bir kullanıcıya arama geldiğinde mevcut sistem bunu yönetmiyordu:
+- `is_busy()` fonksiyonu `"live_streaming"` durumunu kapsamıyordu.
+- `call_presence` stream başlangıcında veya sonunda güncellenmiyordu.
+- Arama başlatma router'ı doğrudan meşgul kontrolüne geçiyordu; başka çağrılamama sebepleri için genişletmek zordu.
+
+Ek olarak, bu özelliğin ücretli kullanıcılar tarafından Bildirim Ayarları ekranından açılıp kapatılabilir olması istendi.
+
+### Karar
+
+**CallPolicy servis katmanı** eklendi. Pre-flight check mantığı router'dan ayrıldı; tek sorumluluk ilkesi ve test edilebilirlik sağlandı.
+
+#### Veri akışı
+
+```
+ConfirmLiveCommand.execute()
+  → Redis stream:is_live:{id} SET
+  → call_presence.set_presence(host_id, "live_streaming", stream_id, [])
+
+start_call() (calls router)
+  → CallPolicy.check_callee_callable(callee)
+       → is_live_streaming(callee.id)
+       → prefs.block_calls_while_live → true ise 409 USER_LIVE_BUSY
+
+finalize_stream() (stream_finalizer)
+  → Redis stream:is_live DEL
+  → call_presence.clear_presence(host_id)
+```
+
+#### CallPolicy (backend/app/services/call_policy.py)
+
+```python
+class CallPolicy:
+    async def check_callee_callable(self, callee) -> None:
+        from app.services.call_presence import is_live_streaming
+        prefs = callee.notification_prefs or {}
+        if await is_live_streaming(callee.id):
+            block = prefs.get("block_calls_while_live", True)
+            if block:
+                raise AppException(status_code=409, code="USER_LIVE_BUSY",
+                                   message="User is live streaming")
+```
+
+Varsayılan `True` — özellik kapatılmadıkça tüm kullanıcılar (ücretli/ücretsiz ayrımı olmaksızın) korunur. Ayarı değiştirme ise subscription gerektirir.
+
+#### call_presence güncellemeleri
+
+```python
+async def is_live_streaming(uid: int) -> bool:
+    p = await get_presence(uid)
+    return p is not None and p.get("status") == "live_streaming"
+
+async def is_busy(uid: int) -> bool:
+    p = await get_presence(uid)
+    return p is not None and p.get("status") in ("ringing", "in_call", "live_streaming")
+```
+
+`is_busy()` artık `"live_streaming"` durumunu da kapsar — arka plan işlemleri için geriye dönük uyumlu.
+
+#### Tier guard (auth router)
+
+`block_calls_while_live` alanını değiştirmek subscription gerektirir:
+
+```python
+if data.model_fields_set & {"block_calls_while_live"}:
+    if current_user.user_type not in SUBSCRIPTION_TIERS:
+        raise ForbiddenException(code="FEATURE_REQUIRES_SUBSCRIPTION")
+```
+
+Okuma/varsayılan değer subscription gerektirmez — tüm kullanıcılar özelliği alır, sadece kapatma/açma ücretli.
+
+#### Flutter (Bildirim Ayarları ekranı)
+
+`_ProSection`'a yeni toggle kartı eklendi:
+- Ücretsiz kullanıcı: `Icons.lock_outline` ile kilitli kart (varsayılan `true` ile çalışır)
+- Subscription kullanıcı: Switch açık/kapalı
+
+ARB anahtarları: `notifCallsWhileLiveTitle` / `notifCallsWhileLiveDesc` — tr/en/ar/ru/de.
+
+### Hata kodu
+
+| Kod | HTTP | Anlam |
+|-----|------|-------|
+| `USER_LIVE_BUSY` | 409 | Aranan kişi canlı yayında ve arama engelleme açık |
+| `USER_BUSY` | 409 | Aranan kişi başka bir çağrıda |
+
+İki ayrı kod, caller tarafında farklı UX mesajı gösterilmesini sağlar.
+
+### Tasarım Notları
+
+- **Fail-safe**: `ConfirmLiveCommand` ve `finalize_stream` içindeki `call_presence` çağrıları try/except ile sarılmıştır — başarısız olursa stream akışı bozulmaz.
+- **Tek temizlik noktası**: `finalize_stream()` tüm stream bitiş yollarını (EndStreamCommand, force_close, admin_end) kapsar; `clear_presence` buraya eklendi, başka yere eklenmedi.
+- **Varsayılan güvenli**: `block_calls_while_live` varsayılanı `True` — kullanıcı hiç ayar yapmasa da yayın sırasında aramalar engellenir.
+- **CallPolicy genişletilebilir**: Gelecekte "arama engelleme (kullanıcı tarafından)" veya "sadece takip edilmeyenlerden engelle" gibi kurallar buraya eklenebilir, router değişmez.
+
+### Dosyalar
+
+| Dosya | Değişiklik |
+|-------|------------|
+| `backend/app/services/call_policy.py` | Yeni — `CallPolicy.check_callee_callable()` |
+| `backend/app/services/call_presence.py` | `is_live_streaming()` eklendi; `is_busy()` live_streaming kapsar |
+| `backend/app/use_cases/streams/commands/lifecycle_commands.py` | `ConfirmLiveCommand`: stream başlayınca presence yaz |
+| `backend/app/use_cases/streams/stream_finalizer.py` | `finalize_stream`: stream bitince presence temizle |
+| `backend/app/schemas/user.py` | `DEFAULT_NOTIF_PREFS` + `NotificationPrefs`'e `block_calls_while_live: bool = True` |
+| `backend/app/routers/auth.py` | `update_notification_prefs`: tier guard |
+| `backend/app/routers/calls.py` | `start_call`: `CallPolicy().check_callee_callable(callee)` |
+| `mobile/lib/screens/viewmodels/notification_settings_view_model.dart` | `blockCallsWhileLive` state + `setBlockCallsWhileLive()` |
+| `mobile/lib/screens/notification_settings_screen.dart` | `_ProSection`'a yeni toggle kartı |
+| `documents/language/app_*.arb` (5 dosya) | `notifCallsWhileLiveTitle` + `notifCallsWhileLiveDesc` |
+
