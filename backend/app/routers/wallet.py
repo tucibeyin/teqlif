@@ -93,7 +93,12 @@ async def wallet_summary(
     db: AsyncSession = Depends(get_db),
 ):
     from app.use_cases.wallet.queries.get_wallet_summary_query import GetWalletSummaryQuery
-    return await GetWalletSummaryQuery(db).execute(current_user.id)
+    result = await GetWalletSummaryQuery(db).execute(current_user.id)
+    # Efektif tier auth katmanından gelir (§56): current_user.user_type, get_current_user
+    # dependency'si içinde _effective_user_type() ile hesaplanmıştır. Query bu hesaplamayı
+    # tekrarlamaz; sorumluluklar ayrıktır.
+    result["user_type"] = current_user.user_type
+    return result
 
 
 # ── Subscription Reconciliation (Apple pull) ───────────────────────────────────

@@ -4,7 +4,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Kasım 2026 — §55 CallPolicy + canlı yayında gelen arama engelleme (54e7a54c); §54 Subscription on-read expiry check + Apple S2S cache invalidation (d8a3ec44); §53 Açık artırma teklif hız sınırı sliding window (63d64a40); Android TeqlifIncomingConnection extras→callData JVM fix (e90b64a6); §52 AntiBotDefender CG-NAT + LiveList double-init (1df60b6c–a45c5327); §51 Android ConnectionService + native FCM receiver (1c985668); §50 Subscription cross-screen sync + Apple S2S downgrade bug fix; §49 Nginx sitemap proxy & MinIO robots disallow; §48 Tier-aware plan mapping + upgrade panel + UI düzeltmeleri (496ee490–b37b6667); §47 Reserved Usernames; §13 node listesi güncellendi
+**Son güncelleme:** Kasım 2026 — §56 Subscription tier tutarlılığı: sorumluluk ayrımı + Apple RENEWAL guard + 15 dk cron; §55 CallPolicy + canlı yayında gelen arama engelleme (54e7a54c); §54 Subscription on-read expiry check + Apple S2S cache invalidation (d8a3ec44); §53 Açık artırma teklif hız sınırı sliding window (63d64a40); Android TeqlifIncomingConnection extras→callData JVM fix (e90b64a6); §52 AntiBotDefender CG-NAT + LiveList double-init (1df60b6c–a45c5327); §51 Android ConnectionService + native FCM receiver (1c985668); §50 Subscription cross-screen sync + Apple S2S downgrade bug fix; §49 Nginx sitemap proxy & MinIO robots disallow; §48 Tier-aware plan mapping + upgrade panel + UI düzeltmeleri (496ee490–b37b6667); §47 Reserved Usernames; §13 node listesi güncellendi
 
 ---
 
@@ -3781,3 +3781,113 @@ ARB anahtarları: `notifCallsWhileLiveTitle` / `notifCallsWhileLiveDesc` — tr/
 | `mobile/lib/screens/notification_settings_screen.dart` | `_ProSection`'a yeni toggle kartı |
 | `documents/language/app_*.arb` (5 dosya) | `notifCallsWhileLiveTitle` + `notifCallsWhileLiveDesc` |
 
+
+---
+
+## 56. Subscription Tier Tutarlılığı: Sorumluluk Ayrımı + Apple RENEWAL Guard + 15 dk Cron
+
+### Problem
+
+§55 sonrası staging analizi üç ayrı yapısal kusur ortaya koydu:
+
+**1. `GetWalletSummaryQuery` sorumluluk sızıntısı**
+`GET /wallet/summary` endpoint'i `user_type`'ı doğrudan DB'den ham okuyordu:
+```python
+# Önceki — tehlikeli
+user_type = u[1] if u else "standard"   # sub_expires_at kontrolü yok
+```
+§54'ün `_effective_user_type()` on-read check'i yalnızca `get_current_user` akışında uygulanıyordu. `wallet/summary` bu akıştan geçmediği için DB'deki stale `user_type = tier4`'ü doğrudan döndürüyor, cüzdan "PREMIUM+" gösterirken uygulamanın her yeri "standart" diyordu.
+
+**2. Apple S2S RENEWAL handler geçmiş tarihli `expiresDate` yazıyor**
+Apple Sandbox'ta (ve nadiren prodda) S2S RENEWAL bildirimleri gecikmiş teslim edilebiliyor. Bildirimdeki `expiresDate` geçmişte bir tarih olabilir. Önceki handler bu tarihi koşulsuz yazıyordu:
+```sql
+UPDATE users SET sub_expires_at = :exp   -- geçmiş tarih yazılabilir
+```
+Sonuç: aktif aboneliği olan kullanıcı gecikmiş S2S nedeniyle stale `sub_expires_at` alıyor.
+
+**3. Expiry cron günde 1 çalışıyordu**
+`check_expired_pro_users_task` gece 03:10'da çalışıyordu. Gece yarısında dolmuş bir abonelik 27 saate kadar DB'de stale kalabiliyordu.
+
+### Karar
+
+Üç bağımsız fix, birbirini tamamlayan katmanlar olarak uygulandı:
+
+#### Fix 1 — Sorumluluk ayrımı: router compose eder
+
+**Mimari ilke:** Tier hesaplama auth katmanının sorumluluğudur. Data query katmanı finansal veri okur, iş kuralı hesaplamaz.
+
+`wallet_summary` endpoint'i `current_user` bağımlılığına sahip. `current_user.user_type`, `get_current_user` → `_fetch_and_cache_user()` → `_effective_user_type()` zincirinden geçerek hesaplanmış efektif tier'dir. Query bu hesaplamayı tekrarlamak zorunda değil:
+
+```python
+# wallet.py router
+result = await GetWalletSummaryQuery(db).execute(current_user.id)
+result["user_type"] = current_user.user_type   # auth katmanından, DB'den değil
+return result
+```
+
+`GetWalletSummaryQuery.execute()` artık `user_type` okumaz. Auth katmanı tier hesaplar, data katmanı finansal veri okur, router compose eder — tek sorumluluk ilkesi.
+
+#### Fix 2 — Apple RENEWAL handler: `GREATEST` guard
+
+```sql
+-- Önceki
+sub_expires_at = :exp
+
+-- Yeni
+sub_expires_at = GREATEST(COALESCE(sub_expires_at, :exp), :exp)
+```
+
+`GREATEST()` garantisi: `sub_expires_at` asla geri taşınmaz. Gecikmiş bir S2S bildirimi eski `expiresDate` ile gelirse, DB'deki daha yeni tarih korunur.
+
+Bu aynı zamanda idempotent: aynı bildirim birden fazla kez gelse de sonuç değişmez.
+
+#### Fix 3 — Cron 15 dakikaya
+
+`schedule.yaml`:
+```yaml
+# Önceki
+- name: check_expired_pro_users_task
+  hour: 3
+  minute: 10
+  watchdog_m: 1440
+
+# Yeni
+- name: check_expired_pro_users_task
+  minute: [0, 15, 30, 45]   # her saat başı 4 kez = 15 dakikada bir
+  watchdog_m: 20
+```
+
+Staleness penceresi: 24 saat → 15 dakika.
+
+### Katman mimarisi — §56 sonrası
+
+| Katman | Mekanizma | Gecikme | Açıklama |
+|--------|-----------|---------|----------|
+| L1 | Apple S2S EXPIRED/REVOKE → DB + cache invalidate | Anlık | RENEWAL'da GREATEST guard |
+| L2 | 15 dk cron — `check_expired_pro_users_task` | ≤15 dk | Eskiden 24 saat |
+| L3 | On-read check — `_effective_user_type()` | Anlık | Son savunma; auth akışında |
+| L4 | **Sorumluluk ayrımı** — router injection | - | Her endpoint auth'tan tier alır |
+
+L4 yeni katman değil, L3'ün tutarlı uygulanması. §54, L3'ü `auth/me` yoluna ekledi; §56, L3'ün tüm endpoint'lerde geçerli olmasını garanti altına aldı.
+
+### Neden workaround değil
+
+**Workaround olsaydı:** `GetWalletSummaryQuery.execute()`'ya `_effective_user_type()` çağrısı eklenirdi. Tier hesaplama mantığı query katmanına sızar, aynı mantık iki yerde bulunurdu.
+
+**Clean architecture:** Query katmanı hesaplama yapmaz. `current_user.user_type` auth katmanında bir kez hesaplanır, ihtiyaç duyan tüm endpoint'lere dependency injection ile ulaşır.
+
+### Tasarım Notları
+
+- **§54 on-read check'i kaldırılmadı** — L3 olarak kalır. L2 (cron) + L4 (router injection) birlikte L3'ü "son savunma" konumuna taşıdı; "birincil mekanizma" değil.
+- **GREATEST idempotency** — Apple'ın aynı RENEWAL bildirimini birden fazla kez teslim etmesi (sandbox'ta yaygın) `sub_expires_at`'i değiştirmez.
+- **watchdog_m: 20** — 15 dk cron için watchdog toleransı 20 dakika. Bir çalışma atlanırsa Telegram uyarısı gönderilir.
+- **Google Play uygulaması yok** — `google_handler.py` RENEWAL mantığı farklı; Google Play S2S gecikmeli bildirim sorunu daha az ciddi. Ayrı ADR gerekirse eklenebilir.
+
+### Dosyalar
+
+| Dosya | Değişiklik |
+|-------|------------|
+| `deploy/scale/V2.1/schedule.yaml` | `check_expired_pro_users_task`: günlük 03:10 → `minute: [0,15,30,45]`, `watchdog_m: 20` |
+| `backend/app/services/store/notifications/apple_handler.py` | `_handle_did_renew()`: `GREATEST(COALESCE(sub_expires_at, :exp), :exp)` |
+| `backend/app/routers/wallet.py` | `wallet_summary`: `result["user_type"] = current_user.user_type` |
+| `backend/app/use_cases/wallet/queries/get_wallet_summary_query.py` | `user_type` DB'den okunmuyor; dönen dict'ten çıkarıldı |

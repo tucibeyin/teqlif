@@ -137,11 +137,14 @@ class AppleNotificationHandler(StoreNotificationHandler):
         # Downgrade pending ise bu yenilemede yeni tiere geç
         new_tier  = tier_from_product(product_id)
         plan_type = plan_type_from_product(product_id)
+        # sub_expires_at asla geri taşınmaz: Apple Sandbox veya gecikmiş S2S bildirimleri
+        # eski expiresDate ile gelebilir. GREATEST(mevcut, yeni) ile en ileri tarih korunur.
         if new_tier and plan_type:
             await self._session.execute(
                 text(
                     "UPDATE users SET user_type = :tier, plan_type = :plan, "
-                    "sub_expires_at = :exp, sub_grace_until = NULL, "
+                    "sub_expires_at = GREATEST(COALESCE(sub_expires_at, :exp), :exp), "
+                    "sub_grace_until = NULL, "
                     "auto_renew_enabled = TRUE, pending_tier = NULL, "
                     "monthly_stream_minutes_used = 0, monthly_stream_reset_at = NOW() "
                     "WHERE id = :uid"
@@ -151,7 +154,9 @@ class AppleNotificationHandler(StoreNotificationHandler):
         else:
             await self._session.execute(
                 text(
-                    "UPDATE users SET sub_expires_at = :exp, sub_grace_until = NULL, "
+                    "UPDATE users SET "
+                    "sub_expires_at = GREATEST(COALESCE(sub_expires_at, :exp), :exp), "
+                    "sub_grace_until = NULL, "
                     "monthly_stream_minutes_used = 0, monthly_stream_reset_at = NOW() "
                     "WHERE id = :uid"
                 ),

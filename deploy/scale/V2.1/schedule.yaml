@@ -78,11 +78,11 @@ batch:
     minute: 10
     watchdog_m: 1440
 
-  # PRO abonelik expiry sigortası — Apple webhook (EXPIRED) sigortası; pg_dump sonrası
+  # PRO abonelik expiry — her 15 dakikada bir çalışır (§56: staleness penceresi 15 dk'ya indirildi)
+  # Apple S2S gecikebileceğinden günlük çalışmak yetersiz; saate bağlı değil, her çeyrekte çalışır.
   - name: check_expired_pro_users_task
-    hour: 3
-    minute: 10
-    watchdog_m: 1440
+    minute: [0, 15, 30, 45]
+    watchdog_m: 20
 
   # Üyelik sona ermeden 2-3 gün önce push uyarısı
   - name: notify_subscription_expiry_task
