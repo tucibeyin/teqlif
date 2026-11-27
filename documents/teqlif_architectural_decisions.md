@@ -3891,3 +3891,115 @@ L4 yeni katman değil, L3'ün tutarlı uygulanması. §54, L3'ü `auth/me` yolun
 | `backend/app/services/store/notifications/apple_handler.py` | `_handle_did_renew()`: `GREATEST(COALESCE(sub_expires_at, :exp), :exp)` |
 | `backend/app/routers/wallet.py` | `wallet_summary`: `result["user_type"] = current_user.user_type` |
 | `backend/app/use_cases/wallet/queries/get_wallet_summary_query.py` | `user_type` DB'den okunmuyor; dönen dict'ten çıkarıldı |
+
+
+---
+
+## 57. effective_tier Domain Katmanına Taşındı; Hediye Komisyonu Staleness Giderildi
+
+### Problem
+
+§56, `wallet/summary` endpoint'inde `user_type` DB stale sorununu router injection ile çözdü. Ancak aynı staleness riski `send_gift_command.py`'da da mevcuttu ve farklı bir mimari kusurla birleşiyordu:
+
+**1. `send_gift_command` stale `user_type` okuyordu**
+
+```python
+# Önceki — tehlikeli
+"SELECT id, user_type FROM users WHERE username = :uname ..."
+receiver_id, receiver_type = receiver
+host_share_pct = int(commission_rate(receiver_type) * 100)
+```
+
+`receiver_type` DB'den ham okunuyor, `effective_tier()` çağrılmıyordu. Süresi dolmuş aboneliği olan bir yayıncı Apple S2S gecikmesinde %75–%100 komisyon almaya devam edebilirdi.
+
+**2. `_effective_user_type()` yanlış katmandaydı**
+
+Mantığı saf domain işlemi (I/O yok, zaman kontrolü): "bu user_type + sub_expires_at + sub_grace_until bileşimi efektif hangi tier?" sorusunu yanıtlar. Ancak `app.utils.auth`'ta tanımlıydı — delivery/auth katmanı.
+
+`send_gift_command.py` (use case katmanı) bu mantığa ihtiyaç duyuyor. Use case → auth bağımlılığı Clean Architecture'ın dependency rule'unu ihlal eder:
+
+```
+Delivery (auth.py)        ← use case buraya bağlanmamalı
+      ↑
+Application (use case)
+      ↑
+Domain (tier.py)          ← doğru bağımlılık yönü
+```
+
+### Karar
+
+#### Fix 1 — `effective_tier()` domain katmanına taşındı
+
+`tier.py` tek kaynak ilkesini sürdürür; tüm tier mantığı buradadır.
+
+```python
+# tier.py — yeni public fonksiyon
+def effective_tier(
+    user_type: str,
+    sub_expires_at: Optional[datetime],
+    sub_grace_until: Optional[datetime],
+) -> str:
+    if user_type not in SUBSCRIPTION_TIERS:
+        return user_type
+    if sub_expires_at is None:
+        return user_type
+    now = datetime.now(timezone.utc)
+    if sub_expires_at > now:
+        return user_type
+    if sub_grace_until and sub_grace_until > now:
+        return user_type
+    return TIER_STANDARD
+```
+
+#### Fix 2 — `auth._effective_user_type` delege eder
+
+```python
+# auth.py — delivery katmanı domain'e delege eder
+def _effective_user_type(user_type, sub_expires_at, sub_grace_until):
+    from app.services.subscription.tier import effective_tier
+    return effective_tier(user_type, sub_expires_at, sub_grace_until)
+```
+
+Mevcut çağrı noktaları (`get_current_user` akışı) değişmez; yalnızca body delege eder.
+
+#### Fix 3 — `send_gift_command` efektif tier hesaplar
+
+```python
+# Önceki
+"SELECT id, user_type FROM users ..."
+receiver_id, receiver_type = receiver
+
+# Yeni
+"SELECT id, user_type, sub_expires_at, sub_grace_until FROM users ..."
+receiver_id, raw_type, sub_exp, sub_grace = receiver
+receiver_type = effective_tier(raw_type, sub_exp, sub_grace)
+```
+
+Use case artık domain katmanından `effective_tier` import eder — dependency rule korunur.
+
+### Dependency haritası — §57 sonrası
+
+```
+tier.py (domain)
+  effective_tier()
+        ↑              ↑
+auth.py             send_gift_command.py
+(delivery)          (use case)
+_effective_user_type → delege
+```
+
+Her iki caller da domain katmanına bağlanır. Çapraz bağımlılık (use case → delivery) ortadan kalktı.
+
+### Tasarım Notları
+
+- **`_effective_user_type` kaldırılmadı** — `auth.py` içi call site'lar bu private fonksiyonu kullanıyor. Body'si artık `effective_tier`'a delege eder; bu bir adapter, gereksiz duplikasyon değil.
+- **Staleness penceresi** — `send_gift_command` için §56'nın L2 cron (15 dk) ve L3 on-read check devreye girmez (alıcı `current_user` değil). `effective_tier()` bu boşluğu kapatır: hediye anında alıcının gerçek tier'ı hesaplanır.
+- **`i18n` tutarsızlıkları** — Aynı inceleme döngüsünde ARB string'leri kod gerçeğiyle eşitlendi: `subSheetSubtitle`, `walletEarningsProBadge` (dinamik `{rate}`), `membershipFeatureRevenueDesc`, `tierProPlusDesc` (1080p → 720p), `listingReactivateProUpsell` (5 → 3). Detay bu ADR'nin kapsamı dışı; commit `66ce6f82`.
+
+### Dosyalar
+
+| Dosya | Değişiklik |
+|-------|------------|
+| `backend/app/services/subscription/tier.py` | `effective_tier(user_type, sub_expires_at, sub_grace_until)` eklendi |
+| `backend/app/utils/auth.py` | `_effective_user_type`: mantık kaldırıldı, `tier.effective_tier`'a delege |
+| `backend/app/use_cases/wallet/commands/send_gift_command.py` | `SELECT` + `sub_expires_at`/`sub_grace_until`; `effective_tier()` çağrısı |
