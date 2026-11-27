@@ -271,13 +271,8 @@ class MainViewModel extends AutoDisposeAsyncNotifier<MainState> {
         if (auctionId != null) {
           _navigate(MainNavigationEvent.toPurchaseDetail, auctionId);
         } else {
-          // sender_id = related_id = listing_id OR stream_id — stream_id yanlış ilan açar
-          final wonLid = int.tryParse(data['listing_id']?.toString() ?? '');
-          if (wonLid != null) {
-            _navigate(MainNavigationEvent.toListing, wonLid);
-          } else {
-            _navigate(MainNavigationEvent.toNotificationsTab, null);
-          }
+          // auction_id yoksa (eski bildirim) → alışverişler listesi
+          _navigate(MainNavigationEvent.toPurchasesScreen, null);
         }
         break;
 
