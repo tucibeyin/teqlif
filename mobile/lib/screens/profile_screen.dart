@@ -4959,7 +4959,8 @@ class _EarningsPill extends StatelessWidget {
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
-                  loc.t('walletEarningsProBadge'),
+                  loc.tOr('walletEarningsProBadge', '👑 {rate}%')
+                      .replaceAll('{rate}', UserTier.commissionPercent(userType).toString()),
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 9,
