@@ -39,7 +39,7 @@ class GossipServer:
         app.router.add_post("/cmd",   self._handle_cmd)
         runner = web.AppRunner(app)
         await runner.setup()
-        site = web.TCPSite(runner, self._cfg.wg_ip, self._cfg.gossip_port)
+        site = web.TCPSite(runner, self._cfg.wg_ip, self._cfg.gossip_port, reuse_address=True)
         await site.start()
         logger.info("Gossip sunucu: %s:%d", self._cfg.wg_ip, self._cfg.gossip_port)
         await stop.wait()
