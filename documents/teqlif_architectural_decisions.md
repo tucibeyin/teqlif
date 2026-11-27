@@ -4,7 +4,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Kasım 2026 — §53 Açık artırma teklif hız sınırı sliding window (63d64a40); Android TeqlifIncomingConnection extras→callData JVM fix (e90b64a6); §52 AntiBotDefender CG-NAT + LiveList double-init (1df60b6c–a45c5327); §51 Android ConnectionService + native FCM receiver (1c985668); §50 Subscription cross-screen sync + Apple S2S downgrade bug fix; §49 Nginx sitemap proxy & MinIO robots disallow; §48 Tier-aware plan mapping + upgrade panel + UI düzeltmeleri (496ee490–b37b6667); §47 Reserved Usernames; §13 node listesi güncellendi
+**Son güncelleme:** Kasım 2026 — §54 Subscription on-read expiry check + Apple S2S cache invalidation (d8a3ec44); §53 Açık artırma teklif hız sınırı sliding window (63d64a40); Android TeqlifIncomingConnection extras→callData JVM fix (e90b64a6); §52 AntiBotDefender CG-NAT + LiveList double-init (1df60b6c–a45c5327); §51 Android ConnectionService + native FCM receiver (1c985668); §50 Subscription cross-screen sync + Apple S2S downgrade bug fix; §49 Nginx sitemap proxy & MinIO robots disallow; §48 Tier-aware plan mapping + upgrade panel + UI düzeltmeleri (496ee490–b37b6667); §47 Reserved Usernames; §13 node listesi güncellendi
 
 ---
 
@@ -45,6 +45,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 51. [Android ConnectionService + Native FCM Receiver — Pil Optimizasyonuna Karşı Dayanıklı Çağrı](#51-android-connectionservice--native-fcm-receiver--pil-optimizasyonuna-karşı-dayanıklı-çağrı-commit-1c985668)
 52. [AntiBotDefender CG-NAT Eşiği + LiveList Double-Init Race Condition](#52-antibotdefender-cg-nat-eşiği--livelist-double-init-race-condition-commit-1df60b6c-a45c5327)
 53. [Açık Artırma Teklif Hız Sınırı — Sliding Window + Auction-Scoped](#53-açık-artırma-teklif-hız-sınırı--sliding-window--auction-scoped-commit-63d64a40)
+54. [Subscription On-Read Expiry Check + Apple S2S Cache Invalidation](#54-subscription-on-read-expiry-check--apple-s2s-cache-invalidation-commit-d8a3ec44)
 
 ---
 
@@ -3586,3 +3587,81 @@ Fixed-window farkı: kullanıcı her zaman son 60 saniyedeki teklif sayısına g
 | `backend/app/routers/auction.py` | `@limiter.limit` kaldırıldı; sliding window + scope + TTL 2s |
 
 
+
+---
+
+## 54. Subscription On-Read Expiry Check + Apple S2S Cache Invalidation (commit d8a3ec44)
+
+### Problem
+
+Staging'de `teqlif` test kullanıcısı aynı build'in farklı açılışlarında bazen "PREMIUM", bazen "PRO" olarak görünüyordu. İnceleme üç yapısal kusur ortaya koydu:
+
+1. **On-read expiry yok**: `auth/me`, Redis session cache'inden (`session:user:{id}`, TTL=15dk) `user_type` değerini doğrudan dönüyordu. `sub_expires_at` geçmiş olsa bile 15 dakika boyunca eski tier servis ediliyordu.
+2. **Apple S2S handler cache'i temizlemiyordu**: `EXPIRED`/`REVOKE` event'lerinde DB `user_type = 'standard'` yazılıyordu, ancak Redis session key silinmiyordu. Sonuç: DB ile cache arasında 15 dakikaya kadar tutarsızlık.
+3. **Cron-only reconciliation**: Günlük `check_expired_pro_users_task` (03:10) tek güvenlik katmanıydı. Cron çalışana kadar süresi dolmuş kullanıcılar premium tier ile işlem yapabiliyordu.
+
+Neden PRO/PREMIUM arasında geçiş: Apple sandbox, saniyeler arayla birbiriyle çelişen S2S event'leri gönderdi (SUBSCRIBED tier3 sonra tier1 renewal). Her `auth/me` çağrısı farklı bir cache state'e denk geliyordu.
+
+### Karar
+
+**3-katman savunma tamamlandı.** L1 ve L2 mevcut, eksik olan L3 eklendi:
+
+| Katman | Mekanizma | Gecikme | Güvenilirlik |
+|--------|-----------|---------|--------------|
+| L1 | Apple S2S event (EXPIRED/REVOKE) → DB + cache invalidate | Anlık | Düşük (sandbox unreliable) |
+| L2 | Daily cron 03:10 — `check_expired_pro_users_task` | 0–24 saat | Yüksek |
+| L3 | **On-read expiry check** — `auth/me`'de `sub_expires_at` kontrol | Anlık | Çok Yüksek |
+
+### L3: `_effective_user_type()`
+
+`backend/app/utils/auth.py`'e eklendi:
+
+```python
+def _effective_user_type(user_type, sub_expires_at, sub_grace_until) -> str:
+    if user_type not in SUBSCRIPTION_TIERS:
+        return user_type          # standard veya bilinmeyen — dokunma
+    if sub_expires_at is None:
+        return user_type          # süresiz (gelecekte kullanılabilir)
+    now = datetime.now(timezone.utc)
+    if sub_expires_at > now:
+        return user_type          # hâlâ geçerli
+    if sub_grace_until and sub_grace_until > now:
+        return user_type          # grace period aktif
+    return TIER_STANDARD          # süresi dolmuş — downgrade
+```
+
+İki noktada uygulanır:
+- **Redis cache'e yazarken**: `data["user_type"] = _effective_user_type(...)` — cache'e doğrudan stale tier yazılmaz.
+- **ORM'den DTO üretirken**: `dto.model_copy(update={"user_type": effective})` — DB güncellemesi beklenilmeksizin doğru tier döner.
+
+Cache hit path'inde (en sık path) ek kontrol **yoktur** — cache'e zaten doğru tier yazıldığından tekrar kontrol gerekmez. Bu kasıtlı: her request'te `sub_expires_at` parse etmek cache'in amacını zayıflatır.
+
+### L1 Güçlendirme: Apple S2S Cache Invalidation
+
+`backend/app/services/store/notifications/apple_handler.py`'e eklendi:
+
+```python
+@staticmethod
+async def _invalidate_cache(user_id: int) -> None:
+    try:
+        from app.utils.auth import invalidate_user_session_cache
+        await invalidate_user_session_cache(user_id)
+    except Exception as exc:
+        logger.warning("[AppleNotif] session cache invalidate başarısız | user=%s | %s", ...)
+```
+
+`_handle_expired()` ve `_handle_revoke()` içinde DB UPDATE'ten hemen sonra çağrılır. Fail-safe: cache silinmese de L3 on-read check devreye girer.
+
+### Tasarım Notları
+
+- **Cache hit path'inde kontrol yok** — kasıtlı. `sub_expires_at` değeri cache'e yazılırken zaten efektif tier ile yazılıyor; her okumada tekrar parse etmek gereksiz overhead.
+- **Fail-open** — `_invalidate_cache()` exception yakalar ve devam eder; L3 ikincil güvencedir.
+- **Grace period korunur** — `sub_grace_until > now` ise tier düşürülmez. Apple DID_FAIL_TO_RENEW+GRACE_PERIOD event'ı bunu sağlar.
+- **Non-subscription tier'lar dokunulmaz** — `SUBSCRIPTION_TIERS` frozenset dışındaki değerler (örn. `'standard'`) olduğu gibi döner.
+
+### Dosyalar
+
+| Dosya | Değişiklik |
+|-------|------------|
+| `backend/app/utils/auth.py` | `_effective_user_type()` eklendi; cache write + DTO return'da uygulandı |
+| `backend/app/services/store/notifications/apple_handler.py` | `_invalidate_cache()` eklendi; `_handle_expired` + `_handle_revoke`'da çağrıldı |
