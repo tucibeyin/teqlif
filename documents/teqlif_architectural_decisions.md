@@ -4,7 +4,7 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 **Yeni bir ekranı refactor ederken bu dosyaya bak — her karar burada, neden sorusuyla birlikte.**
 
 **Pilot ekran:** `create_listing_screen.dart` (tüm pattern'lar burada uygulandı, referans al)  
-**Son güncelleme:** Kasım 2026 — §56 Subscription tier tutarlılığı: sorumluluk ayrımı + Apple RENEWAL guard + 15 dk cron; §55 CallPolicy + canlı yayında gelen arama engelleme (54e7a54c); §54 Subscription on-read expiry check + Apple S2S cache invalidation (d8a3ec44); §53 Açık artırma teklif hız sınırı sliding window (63d64a40); Android TeqlifIncomingConnection extras→callData JVM fix (e90b64a6); §52 AntiBotDefender CG-NAT + LiveList double-init (1df60b6c–a45c5327); §51 Android ConnectionService + native FCM receiver (1c985668); §50 Subscription cross-screen sync + Apple S2S downgrade bug fix; §49 Nginx sitemap proxy & MinIO robots disallow; §48 Tier-aware plan mapping + upgrade panel + UI düzeltmeleri (496ee490–b37b6667); §47 Reserved Usernames; §13 node listesi güncellendi
+**Son güncelleme:** Kasım 2026 — §58 Çağrı ekranı kapanmama: checkActiveCall connecting state + disconnect timeout; §57 effective_tier domain katmanı + hediye komisyonu staleness fix; §56 Subscription tier tutarlılığı: sorumluluk ayrımı + Apple RENEWAL guard + 15 dk cron; §55 CallPolicy + canlı yayında gelen arama engelleme (54e7a54c); §54 Subscription on-read expiry check + Apple S2S cache invalidation (d8a3ec44); §53 Açık artırma teklif hız sınırı sliding window (63d64a40); Android TeqlifIncomingConnection extras→callData JVM fix (e90b64a6); §52 AntiBotDefender CG-NAT + LiveList double-init (1df60b6c–a45c5327); §51 Android ConnectionService + native FCM receiver (1c985668); §50 Subscription cross-screen sync + Apple S2S downgrade bug fix; §49 Nginx sitemap proxy & MinIO robots disallow; §48 Tier-aware plan mapping + upgrade panel + UI düzeltmeleri (496ee490–b37b6667); §47 Reserved Usernames; §13 node listesi güncellendi
 
 ---
 
@@ -46,6 +46,10 @@ Bu dosya, teqlif'teki büyük mimari kararları ve uygulama pattern'lerini tutar
 52. [AntiBotDefender CG-NAT Eşiği + LiveList Double-Init Race Condition](#52-antibotdefender-cg-nat-eşiği--livelist-double-init-race-condition-commit-1df60b6c-a45c5327)
 53. [Açık Artırma Teklif Hız Sınırı — Sliding Window + Auction-Scoped](#53-açık-artırma-teklif-hız-sınırı--sliding-window--auction-scoped-commit-63d64a40)
 54. [Subscription On-Read Expiry Check + Apple S2S Cache Invalidation](#54-subscription-on-read-expiry-check--apple-s2s-cache-invalidation-commit-d8a3ec44)
+55. [CallPolicy — Canlı Yayında Gelen Arama Engelleme](#55-callpolicy--canlı-yayında-gelen-arama-engelleme-commit-54e7a54c)
+56. [Subscription Tier Tutarlılığı: Sorumluluk Ayrımı + Apple RENEWAL Guard + 15 dk Cron](#56-subscription-tier-tutarlılığı-sorumluluk-ayrımı--apple-renewal-guard--15-dk-cron)
+57. [effective_tier Domain Katmanına Taşındı; Hediye Komisyonu Staleness Giderildi](#57-effective_tier-domain-katmanına-taşındı-hediye-komisyonu-staleness-giderildi)
+58. [Çağrı Ekranı Kapanmama — checkActiveCall connecting State + disconnect Timeout](#58-çağrı-ekranı-kapanmama--checkactivecall-connecting-state--disconnect-timeout)
 
 ---
 
@@ -4003,3 +4007,83 @@ Her iki caller da domain katmanına bağlanır. Çapraz bağımlılık (use case
 | `backend/app/services/subscription/tier.py` | `effective_tier(user_type, sub_expires_at, sub_grace_until)` eklendi |
 | `backend/app/utils/auth.py` | `_effective_user_type`: mantık kaldırıldı, `tier.effective_tier`'a delege |
 | `backend/app/use_cases/wallet/commands/send_gift_command.py` | `SELECT` + `sub_expires_at`/`sub_grace_until`; `effective_tier()` çağrısı |
+
+---
+
+## 58. Çağrı Ekranı Kapanmama — checkActiveCall connecting State + disconnect Timeout
+
+### Problem
+
+iOS "tucibeyin" → Android "teqlif" araması: çağrı başladı, iOS arayan çağrıyı bitirdi, ancak Android'de çağrı ekranı kapanmadı. Timer saymıyor, çağrı bitmedi mesajı yok — zombie ekran.
+
+**Kök Neden 1 — `checkActiveCall()` `connecting` state'ini atlıyor**
+
+`call_ended` gibi terminal WS olayları backend'de replay store'a **yazılmaz** (bilerek: `if event_type not in ("call_ended", "call_rejected", ...):`). WS bağlantısı kesilip yeniden bağlandığında `call_ended` replay edilmez.
+
+`checkActiveCall()` WS `connected` olayında (yeniden bağlanma) çağrılır ve bağlantıyı backend'e karşı doğrular. Ancak eski kodu yalnızca `active` ve `reconnecting` state'leri kontrol ediyordu:
+
+```dart
+// Önceki — hatalı
+if (currentStatus == CallStatus.active || currentStatus == CallStatus.reconnecting) {
+```
+
+Callee `call_accepted` → `acceptCall()` akışında `CallStatus.connecting` state'ine girer (LiveKit odaya katılıyor). Bu state WS kesilmesiyle bertaraf edilirse callee, `ended` çağrı ile `connecting` state'inde kalır — sonsuza kadar.
+
+**Kök Neden 2 — `_disconnectRoom()` askıya alınabilir**
+
+`_hangUpLocally()` → `await _disconnectRoom()` → `await _roomAdapter.disconnect()` → `await _room!.disconnect()` zinciri `connect()` uçuştayken bloke olabilir. `_connectingTimeoutTimer` bu `await` öncesinde iptal edildiğinden yedek mekanizma kalmaz — state transition kalıcı olarak bloke olur.
+
+### Karar
+
+#### Fix 1 — `checkActiveCall()` `connecting` state'ini kapsar
+
+```dart
+// call_service.dart — checkActiveCall()
+if (currentStatus == CallStatus.active ||
+    currentStatus == CallStatus.reconnecting ||
+    currentStatus == CallStatus.connecting) {
+  final activeCallId = state.value.callId;
+  if (activeCallId != null) {
+    try {
+      final backendStatus = await _repository.getCallStatus(activeCallId);
+      _cpLog('RECOVERY', 'checkActiveCall (${currentStatus.name}) → backendStatus=$backendStatus callId=$activeCallId');
+      if (backendStatus == 'ended' || backendStatus == 'rejected' || backendStatus == 'missed') {
+        _cpLog('RECOVERY', 'checkActiveCall → stale ${currentStatus.name} cleared | callId=$activeCallId backendStatus=$backendStatus');
+        await _notif.endAllCalls();
+        await _hangUpLocally(status: CallStatus.ended, endReason: EndReason.remote);
+      }
+    } catch (e) {
+      _cpLog('RECOVERY', 'checkActiveCall ${currentStatus.name}-verify FAILED | $e (non-fatal)');
+    }
+  }
+  return;
+}
+```
+
+Bu bir eksik case tamamlamasıdır — workaround değil. Mevcut recovery mekanizması `connecting` state'ini kapsamamaktaydı.
+
+#### Fix 2 — `_disconnectRoom()` timeout
+
+```dart
+// call_service.dart — _hangUpLocally()
+await _disconnectRoom().timeout(
+  const Duration(seconds: 6),
+  onTimeout: () {
+    _cpLog('END', '_disconnectRoom TIMEOUT (6s) — proceeding with state transition (room cleanup in background)');
+  },
+);
+```
+
+LiveKit üçüncü taraf kütüphanesi `connect()` uçuştayken `disconnect()` bloke edebilir; bu kütüphane içinden düzeltilemez. Dart'ta third-party async bloklanmalarına karşı `.timeout()` standart pattern — pragma değil, kabul edilebilir pragmatizm. Oda cleanup arka planda devam eder; state transition 6 saniye sonra ilerler.
+
+### Tasarım Notları
+
+- **Fix 1 clean fix'tir.** `checkActiveCall()` WS replay'in kapsamadığı durumlar için vardır. `connecting` bu kapsamın doğal parçası — `active`/`reconnecting` ile aynı backend doğrulama bloğu çalışır.
+- **Fix 2 pragmatik defensive measure'dır.** Alternatifler (CancellationToken, Completer bazlı custom adapter) soruna orantısız karmaşıklık getirir. Kabul edilebilir trade-off: 6 saniyelik timeout penceresi karşısında zombie ekran.
+- **`RoomDisconnectedEvent` yolu** (LiveKit odası silindiğinde `endCall()` trigger eder) Fix 1 tetiklenmeden önce de kurtarabilir; Fix 1 bu yolun çalışmadığı (WS kesilmesi + LiveKit silme gecikmesi) senaryoyu kapatır.
+
+### Dosyalar
+
+| Dosya | Değişiklik |
+|-------|------------|
+| `mobile/lib/services/call_service.dart` | `checkActiveCall()`: `connecting` state eklendi; `_hangUpLocally()`: `_disconnectRoom().timeout(6s)` |

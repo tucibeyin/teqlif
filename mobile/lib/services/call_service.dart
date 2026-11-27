@@ -1129,7 +1129,12 @@ class CallService {
       _cpLog('END', 'call DURATION | callId=${state.value.callId} acceptedAt=${effectiveAcceptedAt?.toIso8601String() ?? "NULL"} durationMs=$callDurationMs durationSec=${callDurationMs > 0 ? callDurationMs ~/ 1000 : -1}');
 
       _cpLog('END', 'disconnectRoom starting');
-      await _disconnectRoom();
+      await _disconnectRoom().timeout(
+        const Duration(seconds: 6),
+        onTimeout: () {
+          _cpLog('END', '_disconnectRoom TIMEOUT (6s) — proceeding with state transition (room cleanup in background)');
+        },
+      );
       _cpLog('END', 'disconnectRoom done');
       _cpLog('HW', 'wakelock DISABLE | context=_hangUpLocally');
       WakelockPlus.disable();
@@ -1275,22 +1280,25 @@ class CallService {
       return;
     }
 
-    // Active/reconnecting while WS reconnects or app resumes: the call may have ended on the
-    // backend (callee dropped without HTTP /end, ghost cleanup, network partition). Verify so
-    // the caller is not stuck in a zombie active state indefinitely.
-    if (currentStatus == CallStatus.active || currentStatus == CallStatus.reconnecting) {
+    // Active/reconnecting/connecting while WS reconnects or app resumes: the call may have ended
+    // on the backend (callee dropped without HTTP /end, ghost cleanup, network partition, or
+    // call_ended WS was lost because terminal events are not stored for replay). Verify so the
+    // caller/callee is not stuck in a zombie state indefinitely.
+    if (currentStatus == CallStatus.active ||
+        currentStatus == CallStatus.reconnecting ||
+        currentStatus == CallStatus.connecting) {
       final activeCallId = state.value.callId;
       if (activeCallId != null) {
         try {
           final backendStatus = await _repository.getCallStatus(activeCallId);
-          _cpLog('RECOVERY', 'checkActiveCall (active) → backendStatus=$backendStatus callId=$activeCallId');
+          _cpLog('RECOVERY', 'checkActiveCall (${currentStatus.name}) → backendStatus=$backendStatus callId=$activeCallId');
           if (backendStatus == 'ended' || backendStatus == 'rejected' || backendStatus == 'missed') {
-            _cpLog('RECOVERY', 'checkActiveCall → zombie active cleared | callId=$activeCallId backendStatus=$backendStatus');
+            _cpLog('RECOVERY', 'checkActiveCall → stale ${currentStatus.name} cleared | callId=$activeCallId backendStatus=$backendStatus');
             await _notif.endAllCalls();
             await _hangUpLocally(status: CallStatus.ended, endReason: EndReason.remote);
           }
         } catch (e) {
-          _cpLog('RECOVERY', 'checkActiveCall active-verify FAILED | $e (non-fatal)');
+          _cpLog('RECOVERY', 'checkActiveCall ${currentStatus.name}-verify FAILED | $e (non-fatal)');
         }
       }
       return;
