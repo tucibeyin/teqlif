@@ -32,7 +32,7 @@ class _PipVideoWidgetState extends ConsumerState<PipVideoWidget> {
         if (track == null) return const SizedBox.shrink();
 
         final size = MediaQuery.of(context).size;
-        _position ??= Offset(size.width - 136, size.height - 360);
+        _position ??= Offset(16, size.height - 360);
 
         return Positioned(
           left: _position!.dx,
