@@ -1,7 +1,7 @@
 """
 Wallet Cron Görevleri
 
-release_pending_earnings_task       — Her gün 02:15 (T+14 gift_events → available)
+release_pending_earnings_task       — Her gün 02:15 (T+7 gift_events → available)
 daily_financial_reconciliation_task — Her gün 00:00 (denetim raporu)
 reset_monthly_withdrawal_quota_task — Her ayın 1'i 00:05 (V1.0: no-op)
 check_expired_pro_users_task        — Her gün 03:10 (süresi dolmuş PRO güvenlik ağı)
@@ -25,9 +25,9 @@ _PENDING_HOLD_DAYS = 7
 
 
 async def release_pending_earnings_task(ctx: dict) -> None:
-    """T+14 dolmuş gift_events kazançlarını available'a taşı.
+    """T+7 dolmuş gift_events kazançlarını available'a taşı.
 
-    gift_events.payout_status='pending' AND sent_at <= NOW()-14d
+    gift_events.payout_status='pending' AND sent_at <= NOW()-7d
     → user_wallet_earnings: available += total, pending -= total
     → gift_events.payout_status = 'released'
 
