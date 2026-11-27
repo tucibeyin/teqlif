@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../services/localization_service.dart';
 import 'commerce_activity_overlay.dart';
 
-class CommerceActivityToggle extends ConsumerWidget {
+class CommerceActivityToggle extends ConsumerStatefulWidget {
   final bool isOpen;
   final int count;
   final VoidCallback onToggle;
@@ -17,14 +17,88 @@ class CommerceActivityToggle extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CommerceActivityToggle> createState() =>
+      _CommerceActivityToggleState();
+}
+
+class _CommerceActivityToggleState extends ConsumerState<CommerceActivityToggle>
+    with TickerProviderStateMixin {
+  // 0.0 turns = kapalı (sol ok), 0.5 turns = açık (sağ ok, 180°)
+  late final AnimationController _rotCtrl;
+  late final Animation<double> _rotAnim;
+
+  // Yeni işlem geldiğinde tetiklenir; panel açılınca durur
+  late final AnimationController _pulseCtrl;
+  late final Animation<double> _pulseAnim;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _rotCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 260),
+    );
+    _rotAnim = Tween<double>(begin: 0.0, end: 0.5).animate(
+      CurvedAnimation(parent: _rotCtrl, curve: Curves.easeInOut),
+    );
+    if (widget.isOpen) _rotCtrl.value = 1.0;
+
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    // begin:1.0 → controller=0.0 (idle) = tam opaklık
+    _pulseAnim = Tween<double>(begin: 1.0, end: 0.5).animate(
+      CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void didUpdateWidget(CommerceActivityToggle old) {
+    super.didUpdateWidget(old);
+
+    if (widget.isOpen != old.isOpen) {
+      if (widget.isOpen) {
+        _rotCtrl.forward();
+        _pulseCtrl.stop();
+        _pulseCtrl.reset();
+      } else {
+        _rotCtrl.reverse();
+      }
+    }
+
+    if (!widget.isOpen && widget.count > old.count && !_pulseCtrl.isAnimating) {
+      _pulseCtrl.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void dispose() {
+    _rotCtrl.dispose();
+    _pulseCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final loc = ref.watch(localizationProvider);
     const radius =
         BorderRadiusDirectional.horizontal(start: Radius.circular(12));
     final borderColor =
-        Colors.white.withValues(alpha: isOpen ? 0.10 : 0.15);
+        Colors.white.withValues(alpha: widget.isOpen ? 0.10 : 0.15);
+
+    final chevron = RotationTransition(
+      turns: _rotAnim,
+      child: const Icon(
+        Icons.chevron_left_rounded,
+        color: Color(0xFF64748B),
+        size: 18,
+      ),
+    );
 
     return GestureDetector(
-      onTap: onToggle,
+      onTap: widget.onToggle,
       child: ClipRRect(
         borderRadius: radius,
         child: BackdropFilter(
@@ -33,15 +107,14 @@ class CommerceActivityToggle extends ConsumerWidget {
             duration: const Duration(milliseconds: 260),
             curve: Curves.easeInOut,
             clipBehavior: Clip.hardEdge,
-            width: isOpen ? 32 : 38,
-            height:
-                isOpen ? kCommerceActivityH / 2 : 160,
-            padding: isOpen
+            width: widget.isOpen ? 32 : 38,
+            height: widget.isOpen ? kCommerceActivityH / 2 : 160,
+            padding: widget.isOpen
                 ? EdgeInsets.zero
                 : const EdgeInsets.symmetric(vertical: 14),
             decoration: BoxDecoration(
               color: Colors.black
-                  .withValues(alpha: isOpen ? 0.42 : 0.52),
+                  .withValues(alpha: widget.isOpen ? 0.42 : 0.52),
               borderRadius: radius,
               border: Border(
                 left: BorderSide(color: borderColor),
@@ -49,26 +122,16 @@ class CommerceActivityToggle extends ConsumerWidget {
                 bottom: BorderSide(color: borderColor),
               ),
             ),
-            child: isOpen
-                ? _openChild()
-                : _closedChild(ref.read(localizationProvider)),
+            child: widget.isOpen
+                ? Center(child: chevron)
+                : _closedChild(loc, chevron),
           ),
         ),
       ),
     );
   }
 
-  Widget _openChild() {
-    return const Center(
-      child: Icon(
-        Icons.chevron_right_rounded,
-        color: Color(0xFF64748B),
-        size: 20,
-      ),
-    );
-  }
-
-  Widget _closedChild(TranslationPack loc) {
+  Widget _closedChild(TranslationPack loc, Widget chevron) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -81,7 +144,7 @@ class CommerceActivityToggle extends ConsumerWidget {
           ),
           alignment: Alignment.center,
           child: Text(
-            '$count',
+            '${widget.count}',
             style: const TextStyle(
               color: Color(0xFFCBD5E1),
               fontSize: 10,
@@ -95,7 +158,7 @@ class CommerceActivityToggle extends ConsumerWidget {
           child: Text(
             loc.t('lblCommerceActivity'),
             style: const TextStyle(
-              color: Color(0xFF475569),
+              color: Color(0xFFCBD5E1),
               fontSize: 7.5,
               fontWeight: FontWeight.w800,
               letterSpacing: 0.6,
@@ -103,10 +166,9 @@ class CommerceActivityToggle extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 8),
-        const Icon(
-          Icons.chevron_left_rounded,
-          color: Color(0xFF64748B),
-          size: 18,
+        FadeTransition(
+          opacity: _pulseAnim,
+          child: chevron,
         ),
       ],
     );
