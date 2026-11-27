@@ -647,6 +647,7 @@ async def purchase_sale(sale_id: int, data: DirectSalePurchaseIn,
                     "body_params": {"item": sale.title, "price": f"{unit_price:.0f} TL"},
                 },
                 "sale_id": sale_id,
+                "order_id": order.id,
             },
             pref_key="direct_sale_purchased",
         ))

@@ -30,6 +30,7 @@ enum MainNavigationEvent {
   toMyRecordings,
   toWallet,
   toPurchaseDetail,
+  toPurchasesScreen,
 }
 
 class MainNavigationData {
@@ -371,11 +372,12 @@ class MainViewModel extends AutoDisposeAsyncNotifier<MainState> {
         break;
 
       case 'direct_sale_purchased':
-        final saleId = int.tryParse(data['sale_id']?.toString() ?? '');
-        if (saleId != null) {
-          _navigate(MainNavigationEvent.toDirectSaleDetail, saleId);
+        final orderId = int.tryParse(data['order_id']?.toString() ?? '');
+        if (orderId != null) {
+          _navigate(MainNavigationEvent.toPurchaseDetail, {'id': orderId, 'type': 'direct'});
         } else {
-          _navigate(MainNavigationEvent.toNotificationsTab, null);
+          // order_id yoksa (eski bildirim) alışverişler listesini aç
+          _navigate(MainNavigationEvent.toPurchasesScreen, null);
         }
         break;
 

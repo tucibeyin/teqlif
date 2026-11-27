@@ -3,6 +3,7 @@ import '../services/category_service.dart';
 import '../services/storage_service.dart';
 import 'direct_sale_detail_screen.dart';
 import 'purchase_detail_screen.dart';
+import 'purchases_screen.dart';
 import '../services/auth_service.dart';
 import 'my_recordings_screen.dart';
 import 'subscription_tools_screen.dart';
@@ -368,17 +369,35 @@ class _MainScreenState extends ConsumerState<MainScreen> with WidgetsBindingObse
               );
               break;
             case MainNavigationEvent.toPurchaseDetail:
-              final auctionId = navData.payload as int;
+              final payload = navData.payload;
               ref.read(authServiceProvider).getMyPurchases().then((purchases) {
                 if (!context.mounted) return;
-                final match = purchases.where((p) => p['id'] == auctionId && p['type'] == 'auction').firstOrNull;
+                Map<String, dynamic>? match;
+                if (payload is Map<String, dynamic>) {
+                  final id = payload['id'] as int;
+                  final type = payload['type'] as String;
+                  match = purchases.where((p) => p['id'] == id && p['type'] == type).firstOrNull;
+                } else if (payload is int) {
+                  match = purchases.where((p) => p['id'] == payload && p['type'] == 'auction').firstOrNull;
+                }
                 if (match != null) {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => PurchaseDetailScreen(purchase: match)),
+                    MaterialPageRoute(builder: (_) => PurchaseDetailScreen(purchase: match!)),
+                  );
+                } else {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const PurchasesScreen()),
                   );
                 }
               }).catchError((_) {});
+              break;
+            case MainNavigationEvent.toPurchasesScreen:
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const PurchasesScreen()),
+              );
               break;
             case MainNavigationEvent.none:
               break;
