@@ -32,26 +32,12 @@ class SubscriptionToolsScreen extends ConsumerStatefulWidget {
 class _SubscriptionToolsScreenState extends ConsumerState<SubscriptionToolsScreen> {
   final _liveAccordionKey = GlobalKey();
   final _myRecordingsKey = GlobalKey();
+  bool _needsScroll = false;
 
   @override
   void initState() {
     super.initState();
-    if (widget.scrollToLiveSection) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        Future.delayed(const Duration(milliseconds: 400), () {
-          if (!mounted) return;
-          final ctx = _myRecordingsKey.currentContext;
-          if (ctx != null) {
-            Scrollable.ensureVisible(
-              ctx,
-              duration: const Duration(milliseconds: 400),
-              curve: Curves.easeInOut,
-              alignment: 0.1,
-            );
-          }
-        });
-      });
-    }
+    _needsScroll = widget.scrollToLiveSection;
   }
 
   @override
@@ -72,6 +58,23 @@ class _SubscriptionToolsScreenState extends ConsumerState<SubscriptionToolsScree
     ref.listenManual(subscriptionToolsProvider(widget.userType), (prev, next) {}, fireImmediately: true);
 
     final hasSubscription = state.hasSubscription;
+
+    if (_needsScroll && !state.isLoading) {
+      _needsScroll = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final ctx = _myRecordingsKey.currentContext;
+        if (ctx != null) {
+          Scrollable.ensureVisible(
+            ctx,
+            duration: const Duration(milliseconds: 400),
+            curve: Curves.easeInOut,
+            alignment: 0.1,
+          );
+        }
+      });
+    }
+
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
