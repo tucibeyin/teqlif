@@ -299,6 +299,7 @@ class CurrentUserDTO(BaseModel):
     last_tier: Optional[str] = None
     monthly_stream_minutes_used: int = 0
     monthly_stream_reset_at: Optional[datetime] = None
+    stream_minutes_bonus: int = 0
 
     @computed_field
     @property
