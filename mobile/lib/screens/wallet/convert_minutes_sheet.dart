@@ -297,22 +297,22 @@ class _ConvertMinutesSheetState extends ConsumerState<ConvertMinutesSheet> {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 6),
-
-                    // "dakika" birimi (input'un sağında, + butonunun solunda)
-                    Text(
-                      loc.t('walletConvertMinuteUnit'),
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: AppColors.textSecondary(context),
-                      ),
-                    ),
                     const SizedBox(width: 8),
 
                     // Artır
                     _StepperBtn(
                       icon: Icons.add,
                       onTap: () => _increment(notifier, state.minutes),
+                    ),
+                    const SizedBox(width: 8),
+
+                    // "dakika" birimi (+ butonunun sağında)
+                    Text(
+                      loc.t('walletConvertMinuteUnit'),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textSecondary(context),
+                      ),
                     ),
 
                     // Hesaplanan teqlik
