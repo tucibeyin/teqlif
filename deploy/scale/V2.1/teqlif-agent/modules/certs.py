@@ -24,7 +24,7 @@ from alerter import TelegramAlerter
 logger = logging.getLogger("teqlif-agent.certs")
 
 _CERT_WARN_DAYS  = [30, 7]   # bu gün sayılarında uyarı gönder
-_I18N_LANGS      = ["tr", "en", "ar", "ru"]
+_I18N_LANGS      = ["tr", "en", "ar", "ru", "de"]
 _I18N_MAX_AGE_H  = 25        # pack bu saatten eskiyse uyar
 _REDIS_MEM_WARN  = 3.8       # GB — maxmemory=4GB, %95
 
