@@ -221,43 +221,113 @@ async def send_stream_started_notifications(
     stream_id: int,
 ) -> None:
     """
-    Takipçilere 'yayın başladı' push bildirimi gönderir.
-    Tek JOIN sorgusuyla tüm fcm_token'ları toplar; send_multicast ile gönderir.
-    asyncio.create_task döngüsünden ~100× daha az Redis/FCM trafiği.
+    Takipçilere 'yayın başladı' bildirimi gönderir.
+
+    1. Tüm takipçileri tek JOIN sorgusuyla çek (id + fcm_token).
+    2. DB'ye toplu notification INSERT (tek sorgu).
+    3. Redis pipeline ile hangi kullanıcıların WS bağlantısı aktif olduğunu tespit et.
+    4. Online takipçiler → WS broadcast (in-app banner).
+    5. Offline takipçiler → FCM multicast.
     """
     try:
-        from sqlalchemy import select
+        from sqlalchemy import select, insert as sa_insert
         from app.database import AsyncSessionLocal
         from app.models.follow import Follow
+        from app.models.notification import Notification
         from app.models.user import User
+        from app.models.user_device import UserDevice
         from app.core.di import container
         from app.core.ports.push_notification_port import PushNotificationPort
+        from app.core.ws_manager import ws_manager
+        from app.utils.redis_client import get_redis
+        from datetime import datetime, timezone
 
+        notif_title = f"@{username} yayında!"
+        notif_body  = stream_title or ""
+
+        # 1. Tüm takipçileri çek
         async with AsyncSessionLocal() as db:
             rows = (await db.execute(
-                select(User.fcm_token)
+                select(User.id)
                 .join(Follow, Follow.follower_id == User.id)
-                .where(
-                    Follow.followed_id == host_id,
-                    User.fcm_token.isnot(None),
-                )
+                .where(Follow.followed_id == host_id)
             )).all()
 
-        tokens = [row.fcm_token for row in rows if row.fcm_token]
-        if not tokens:
-            logger.info("[Worker] stream_started: takipçi token yok | stream=%d", stream_id)
+        follower_ids = [r[0] for r in rows]
+        if not follower_ids:
+            logger.info("[Worker] stream_started: takipçi yok | stream=%d", stream_id)
             return
 
-        push_port = container.resolve(PushNotificationPort)
-        result = await push_port.send_multicast(
-            tokens=tokens,
-            title=f"@{username} yayında!",
-            body=stream_title or "",
-            data={"type": "stream_started", "stream_id": str(stream_id), "username": username},
-        )
+        # 2. DB'ye toplu notification INSERT
+        now = datetime.now(timezone.utc)
+        CHUNK = 1000
+        async with AsyncSessionLocal() as db:
+            mappings = [
+                {
+                    "user_id": uid,
+                    "type": "stream_started",
+                    "title": notif_title,
+                    "body": notif_body,
+                    "related_id": host_id,
+                    "created_at": now,
+                    "is_read": False,
+                }
+                for uid in follower_ids
+            ]
+            for i in range(0, len(mappings), CHUNK):
+                await db.execute(sa_insert(Notification), mappings[i : i + CHUNK])
+            await db.commit()
+
+        # 3. Redis pipeline ile online kullanıcıları toplu tespit et
+        online_ids: set[int] = set()
+        try:
+            redis = await get_redis()
+            pipe = redis.pipeline()
+            for uid in follower_ids:
+                pipe.exists(f"ws_notif_online:{uid}")
+            results = await pipe.execute()
+            online_ids = {uid for uid, exists in zip(follower_ids, results) if exists}
+        except Exception as exc:
+            logger.warning("[Worker] stream_started: Redis online check başarısız | %s", exc)
+
+        # 4. Online takipçiler → WS in-app banner
+        ws_payload = {
+            "type": "notification",
+            "notif_type": "stream_started",
+            "title": notif_title,
+            "body": notif_body,
+            "related_id": host_id,
+            "stream_id": stream_id,
+            "username": username,
+        }
+        ws_sent = 0
+        for uid in online_ids:
+            sent = await ws_manager.broadcast_local(f"notif:{uid}", ws_payload)
+            ws_sent += sent
+
+        # 5. Offline takipçiler → FCM multicast
+        offline_ids = [uid for uid in follower_ids if uid not in online_ids]
+        fcm_success = fcm_failure = 0
+        if offline_ids:
+            async with AsyncSessionLocal() as db:
+                token_rows = (await db.execute(
+                    select(UserDevice.fcm_token)
+                    .where(UserDevice.user_id.in_(offline_ids))
+                )).all()
+            tokens = [r[0] for r in token_rows if r[0]]
+            if tokens:
+                push_port = container.resolve(PushNotificationPort)
+                result = await push_port.send_multicast(
+                    tokens=tokens,
+                    title=notif_title,
+                    body=notif_body,
+                    data={"type": "stream_started", "stream_id": str(stream_id), "username": username},
+                )
+                fcm_success, fcm_failure = result["success"], result["failure"]
+
         logger.info(
-            "[Worker] stream_started multicast | stream=%d followers=%d success=%d failure=%d",
-            stream_id, len(tokens), result["success"], result["failure"],
+            "[Worker] stream_started | stream=%d followers=%d online=%d ws_sent=%d fcm_success=%d fcm_failure=%d",
+            stream_id, len(follower_ids), len(online_ids), ws_sent, fcm_success, fcm_failure,
         )
     except Exception as exc:
         logger.error(
