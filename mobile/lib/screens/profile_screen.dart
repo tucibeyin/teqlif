@@ -5128,7 +5128,7 @@ class _TeqlikPacksTab extends StatelessWidget {
   static const _useCases = [
     _UseCase('🎁', 'teqlikUseCaseGiftTitle', 'Canlı yayında hediye gönder',
         'teqlikUseCaseGiftDesc', 'Favori yayıncına özel hediyeler at, onları destekle', true),
-    _UseCase('🎥', 'walletRateLiveStream', 'Canlı Yayın Dakikası',
+    _UseCase('🎥', 'teqlikUseCaseLiveStreamTitle', 'Canlı Yayın',
         'walletLiveStreamDesc', 'Canlı yayın dakikası olarak kullan', true),
     _UseCase('🚀', 'teqlikUseCaseBoostTitle', 'Boost',
         'teqlikUseCaseBoostDesc', "Keşfet'te daha fazla kişiye ulaş, görünürlüğünü artır", true),
