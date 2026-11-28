@@ -158,6 +158,7 @@ async def blast_credits(
         "last_tier": current_user.last_tier,
         "monthly_stream_minutes_used": current_user.monthly_stream_minutes_used,
         "monthly_stream_reset_at": current_user.monthly_stream_reset_at.isoformat() if current_user.monthly_stream_reset_at else None,
+        "stream_minutes_bonus": current_user.stream_minutes_bonus,
     }
 
 

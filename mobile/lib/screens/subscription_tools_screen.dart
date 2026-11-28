@@ -119,6 +119,7 @@ class _SubscriptionToolsScreenState extends ConsumerState<SubscriptionToolsScree
             reactivationCredits: state.reactivationCredits,
             userType: state.userType,
             monthlyStreamMinutesUsed: state.monthlyStreamMinutesUsed,
+            streamMinutesBonus: state.streamMinutesBonus,
             isLoading: state.isLoading,
           ),
           const SizedBox(height: 20),
@@ -868,21 +869,25 @@ class CreditItemModel {
 class _StreamHoursRow extends ConsumerWidget {
   final String userType;
   final int minutesUsed;
+  final int bonusMinutes;
   final bool isLoading;
   final TranslationPack loc;
 
   const _StreamHoursRow({
     required this.userType,
     required this.minutesUsed,
+    this.bonusMinutes = 0,
     required this.isLoading,
     required this.loc,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final limitMins = _streamLimitMinutesFor(userType);
-    final isUnlimited = limitMins == null;
-    final progress = isUnlimited ? 0.0 : (minutesUsed / limitMins).clamp(0.0, 1.0);
+    final tierLimitMins = _streamLimitMinutesFor(userType);
+    final isUnlimited = tierLimitMins == null;
+    // Efektif limit: tier limiti + bonus dakikalar
+    final effectiveLimitMins = isUnlimited ? null : tierLimitMins! + bonusMinutes;
+    final progress = isUnlimited ? 0.0 : (minutesUsed / effectiveLimitMins!).clamp(0.0, 1.0);
 
     final Color barColor = isUnlimited
         ? const Color(0xFF7C3AED)
@@ -892,7 +897,7 @@ class _StreamHoursRow extends ConsumerWidget {
                 ? const Color(0xFFF59E0B)
                 : const Color(0xFF22C55E);
 
-    final remainingMins = isUnlimited ? 0 : (limitMins! - minutesUsed).clamp(0, limitMins!);
+    final remainingMins = isUnlimited ? 0 : (effectiveLimitMins! - minutesUsed).clamp(0, effectiveLimitMins!);
     final percent = isUnlimited ? null : (progress * 100).round();
 
     return InkWell(
@@ -977,6 +982,19 @@ class _StreamHoursRow extends ConsumerWidget {
                       ),
                     ],
                   ),
+                  if (bonusMinutes > 0) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(Icons.videocam_rounded, size: 12, color: Color(0xFF06B6D4)),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${loc.tOr('subStreamBonusLabel', 'Bonus')}: +${_fmtStreamTime(bonusMinutes, loc)}',
+                          style: const TextStyle(fontSize: 11, color: Color(0xFF06B6D4), fontWeight: FontWeight.w500),
+                        ),
+                      ],
+                    ),
+                  ],
                 ] else ...[
                   const SizedBox(height: 6),
                   Text(
@@ -1101,6 +1119,7 @@ class _CreditsSummaryCard extends ConsumerWidget {
   final Map<String, dynamic>? reactivationCredits;
   final String userType;
   final int monthlyStreamMinutesUsed;
+  final int streamMinutesBonus;
   final bool isLoading;
 
   const _CreditsSummaryCard({
@@ -1110,6 +1129,7 @@ class _CreditsSummaryCard extends ConsumerWidget {
     required this.reactivationCredits,
     this.userType = UserTier.standard,
     this.monthlyStreamMinutesUsed = 0,
+    this.streamMinutesBonus = 0,
     required this.isLoading,
   });
 
@@ -1180,6 +1200,7 @@ class _CreditsSummaryCard extends ConsumerWidget {
           _StreamHoursRow(
             userType: userType,
             minutesUsed: monthlyStreamMinutesUsed,
+            bonusMinutes: streamMinutesBonus,
             isLoading: isLoading,
             loc: loc,
           ),

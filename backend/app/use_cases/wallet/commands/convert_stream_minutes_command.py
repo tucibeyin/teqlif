@@ -9,6 +9,7 @@ from app.core.exceptions import BadRequestException
 from app.core.logger import get_logger
 from app.models.user import User
 from app.services.subscription.tier import TEQLIK_PER_STREAM_MINUTE
+from app.models.wallet_ledger import WalletLedger
 
 logger = get_logger(__name__)
 
@@ -53,6 +54,18 @@ class ConvertStreamMinutesCommand:
         user.stream_minutes_bonus += minutes
 
         await self._session.flush()
+
+        # Audit: wallet ledger'a yaz
+        self._session.add(
+            WalletLedger(
+                user_id=user_id,
+                delta_teqlik=-cost,
+                balance_after=user.teqlik_balance,
+                tx_type="spend_stream_minutes",
+                reference_id=minutes,
+                reference_type="stream_minute_bonus",
+            )
+        )
 
         logger.info(
             "[ConvertStreamMinutes] user_id=%s dakika=%s maliyet=%s yeni_bakiye=%s bonus=%s",
