@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../services/localization_service.dart';
+import '../../../widgets/live/live_press_btn.dart';
 import 'commerce_activity_overlay.dart';
 
 class CommerceActivityToggle extends ConsumerStatefulWidget {
@@ -97,7 +98,7 @@ class _CommerceActivityToggleState extends ConsumerState<CommerceActivityToggle>
       ),
     );
 
-    return GestureDetector(
+    return LivePressBtn(
       onTap: widget.onToggle,
       child: ClipRRect(
         borderRadius: radius,

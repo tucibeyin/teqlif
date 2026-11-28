@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../services/localization_service.dart';
 import '../../services/share_service.dart';
+import 'live_press_btn.dart';
 import '../../core/user_tier.dart';
 import '../tier_badge.dart';
 
@@ -64,7 +65,7 @@ class ViewerTopBar extends ConsumerWidget {
           Row(
             children: [
               // Geri
-              GestureDetector(
+              LivePressBtn(
                 key: const Key('viewer_btn_geri'),
                 onTap: onEnterPip ?? onLeave,
                 child: Container(
@@ -149,7 +150,7 @@ class ViewerTopBar extends ConsumerWidget {
               // Paylaş butonu
               if (streamId != null) ...[
                 Builder(
-                  builder: (btnCtx) => GestureDetector(
+                  builder: (btnCtx) => LivePressBtn(
                     key: const Key('viewer_btn_paylas'),
                     onTap: () {
                       final box = btnCtx.findRenderObject() as RenderBox?;
@@ -201,7 +202,7 @@ class ViewerTopBar extends ConsumerWidget {
               ],
 
               // Ayrıl
-              GestureDetector(
+              LivePressBtn(
                 key: const Key('viewer_btn_ayril'),
                 onTap: onLeave,
                 child: Container(

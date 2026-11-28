@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'live_press_btn.dart';
 
 /// Canlı yayın host ekranı — medya kontrol butonları.
 ///
@@ -68,7 +69,7 @@ class _ControlBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return LivePressBtn(
       onTap: onTap,
       child: Container(
         width: 44,

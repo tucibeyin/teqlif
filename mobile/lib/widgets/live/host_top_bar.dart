@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
 import '../../services/localization_service.dart';
+import 'live_press_btn.dart';
 
 /// Canlı yayın host ekranı — üst bilgi çubuğu.
 ///
@@ -98,7 +99,7 @@ class HostTopBar extends ConsumerWidget {
                 ),
 
               // İzleyici sayısı (tıklanabilir)
-              GestureDetector(
+              LivePressBtn(
                 onTap: onViewersTap,
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -142,7 +143,7 @@ class HostTopBar extends ConsumerWidget {
               const SizedBox(width: 10),
 
               // Yayını Bitir
-              GestureDetector(
+              LivePressBtn(
                 key: const Key('host_btn_yayin_bitir'),
                 onTap: onEndStream,
                 child: Container(
@@ -395,7 +396,7 @@ class _TopCtrlBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return LivePressBtn(
       onTap: onTap,
       child: Container(
         width: 36,

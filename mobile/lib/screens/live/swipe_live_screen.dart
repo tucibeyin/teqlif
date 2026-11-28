@@ -33,6 +33,7 @@ import '../../widgets/live/cohost_mod_sheet.dart';
 import '../../widgets/live/floating_hearts.dart';
 import '../../widgets/live/raid_ended_overlay.dart';
 import '../../widgets/live/viewer_top_bar.dart';
+import '../../widgets/live/live_press_btn.dart';
 import '../../providers/pip_provider.dart';
 import '../../services/pip_service.dart';
 import '../public_profile_screen.dart';
@@ -1319,7 +1320,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
                         bottom: 0,
                         left: 0,
                         right: 0,
-                        child: GestureDetector(
+                        child: LivePressBtn(
                           onTap: () async {
                             final sid = widget.session.token?.streamId;
                             if (sid != null) {
@@ -1477,7 +1478,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
                     trailingAction: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        GestureDetector(
+                        LivePressBtn(
                           onTap: _showGiftSheet,
                           child: Container(
                             width: 38,
@@ -1493,7 +1494,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
                           ),
                         ),
                         const SizedBox(width: 6),
-                        GestureDetector(
+                        LivePressBtn(
                           onTap: _onHeartTap,
                           child: Container(
                             width: 38,
@@ -1940,7 +1941,7 @@ class _GiftSheetState extends ConsumerState<_GiftSheet> {
                 };
                 final (backendKey, label, cost) = g;
                 final emoji = keyEmoji[backendKey] ?? '🎁';
-                return GestureDetector(
+                return LivePressBtn(
                   onTap: () => _send(backendKey, cost),
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
@@ -2392,7 +2393,7 @@ class _ListingVideoPageState extends ConsumerState<_ListingVideoPage> {
                   ),
                   const SizedBox(height: 12),
                   // İlana Git butonu
-                  GestureDetector(
+                  LivePressBtn(
                     onTap: _goToListing,
                     child: Container(
                       width: double.infinity,

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../models/commerce_activity.dart';
 import '../../../services/localization_service.dart';
+import '../../../widgets/live/live_press_btn.dart';
 import '../../../utils/number_formatter.dart';
 import '../../../utils/username_color.dart';
 
@@ -179,7 +180,7 @@ class _BidRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isFirst = rank == 0;
-    return GestureDetector(
+    return LivePressBtn(
       onTap: onUsernameTap != null
           ? () => onUsernameTap!(event.actor)
           : null,
@@ -243,7 +244,7 @@ class _DsPurchaseRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return LivePressBtn(
       onTap: onUsernameTap != null
           ? () => onUsernameTap!(event.actor)
           : null,
