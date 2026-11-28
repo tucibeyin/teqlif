@@ -11,10 +11,11 @@ Ne yapar:
   - @-annotation ve @@locale satırlarını atlar
   - ARB'de bulunmayan opt_* option label'larını statik dict'ten ekler
   - translations tablosuna UPSERT eder (key, lang, value)
-  - Redis i18n cache'ini invalidate eder
+  - Redis i18n cache'ini invalidate eder ve hemen yeniden ısıtır (warm-up)
   - Kaç key sync'lendiğini raporlar
 """
 import asyncio
+import hashlib
 import json
 import os
 import sys
@@ -51,6 +52,7 @@ def _read_arb(lang: str) -> dict[str, str]:
 
 async def sync() -> None:
     totals: dict[str, int] = {}
+    packs: dict[str, dict[str, str]] = {}
 
     async with AsyncSessionLocal() as session:
         for lang in _LANGS:
@@ -58,6 +60,7 @@ async def sync() -> None:
             if not pack:
                 print(f"[sync_translations] WARN: {lang} ARB boş, atlandı")
                 continue
+            packs[lang] = pack
 
 
 
@@ -91,7 +94,7 @@ async def sync() -> None:
 
         await session.commit()
 
-    # Redis cache'i invalidate et — bir sonraki /api/i18n/{lang} isteğinde taze veri gelir
+    # Redis cache'i invalidate et, ardından hemen warm-up yap
     try:
         redis = await get_redis()
         for lang in _LANGS:
@@ -103,6 +106,19 @@ async def sync() -> None:
             await redis.delete(*catalog_keys)
             print(f"[sync_translations] Catalog cache temizlendi ({len(catalog_keys)} key)")
         print("[sync_translations] Redis i18n cache temizlendi")
+
+        # Warm-up: pack'leri hemen Redis'e yaz — lazy rebuild beklenmez
+        _CACHE_TTL = 3600
+        warmed: list[str] = []
+        for lang, pack in packs.items():
+            packed = json.dumps(pack, ensure_ascii=False)
+            digest = hashlib.md5(
+                json.dumps(pack, sort_keys=True, ensure_ascii=False).encode()
+            ).hexdigest()
+            await redis.set(f"i18n:{lang}", packed, ex=_CACHE_TTL)
+            await redis.set(f"i18n:{lang}:version", digest, ex=_CACHE_TTL)
+            warmed.append(lang)
+        print(f"[sync_translations] i18n warm-up tamamlandı: {', '.join(warmed)}")
     except Exception as exc:
         print(f"[sync_translations] WARN: Redis cache temizlenemedi: {exc}")
 
