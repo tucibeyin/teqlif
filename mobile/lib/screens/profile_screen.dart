@@ -2067,57 +2067,42 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
           TeqSettingsSection(
             title: loc.t('profileAccountSection'),
             items: [
-              InkWell(
+              ListTile(
+                leading: ShaderMask(
+                  shaderCallback: (bounds) => LinearGradient(
+                    colors: _subGradient(_userType),
+                  ).createShader(bounds),
+                  child: const Icon(Icons.workspace_premium, size: 24, color: Colors.white),
+                ),
+                title: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      TierBadge.tierLabel(_userType, loc),
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                    ),
+                    if (UserTier.hasSubscription(_userType) && _planType != null)
+                      Text(
+                        loc.t('accountInfoSubscriptionPlan', {'plan': _planType!}),
+                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
+                      ),
+                    if (!_autoRenewEnabled && UserTier.hasSubscription(_userType))
+                      Text(
+                        loc.t('subAutoRenewOff'),
+                        style: const TextStyle(fontSize: 11, color: Color(0xFFEF4444)),
+                      ),
+                    if (_pendingTier != null)
+                      Text(
+                        loc.t('subPendingDowngrade'),
+                        style: const TextStyle(fontSize: 11, color: Color(0xFFF59E0B)),
+                      ),
+                  ],
+                ),
+                trailing: Icon(Icons.chevron_right, color: AppColors.border(context), size: 20),
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const WalletScreen()),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  child: Row(
-                    children: [
-                      ShaderMask(
-                        shaderCallback: (bounds) => LinearGradient(
-                          colors: _subGradient(_userType),
-                        ).createShader(bounds),
-                        child: const Icon(Icons.workspace_premium, size: 28, color: Colors.white),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              TierBadge.tierLabel(_userType, loc),
-                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                            ),
-                            if (UserTier.hasSubscription(_userType) && _planType != null)
-                              Text(
-                                loc.t('accountInfoSubscriptionPlan', {'plan': _planType!}),
-                                style: TextStyle(fontSize: 13, color: AppColors.textSecondary(context)),
-                              ),
-                            if (!_autoRenewEnabled && UserTier.hasSubscription(_userType))
-                              Padding(
-                                padding: const EdgeInsets.only(top: 2),
-                                child: Text(
-                                  loc.t('subAutoRenewOff'),
-                                  style: const TextStyle(fontSize: 12, color: Color(0xFFEF4444)),
-                                ),
-                              ),
-                            if (_pendingTier != null)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 2),
-                                child: Text(
-                                  loc.t('subPendingDowngrade'),
-                                  style: const TextStyle(fontSize: 12, color: Color(0xFFF59E0B)),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                      Icon(Icons.chevron_right, color: AppColors.border(context), size: 20),
-                    ],
-                  ),
                 ),
               ),
               TeqSettingsTile(
