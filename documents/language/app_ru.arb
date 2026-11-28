@@ -2514,7 +2514,7 @@
   "walletConvertMinuteUnit": "мин",
   "walletConvertMinuteUnitShort": "мин",
   "walletConversionRates": "Что можно сделать с teqlik?",
-  "walletRateLiveStream": "Минута прямой трансляции",
+  "walletRateLiveStream": "Прямая трансляция",
   "walletLiveStreamDesc": "Использовать как минуты прямой трансляции",
   "walletRateBoost": "Продвижение объявления ( Boost )",
   "walletRateBlast": "Массовое уведомление аудитории ( Blast )",

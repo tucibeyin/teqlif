@@ -1138,7 +1138,7 @@
   "walletConvertMinuteUnit": "Minute",
   "walletConvertMinuteUnitShort": "Min",
   "walletConversionRates": "Was können Sie mit teqlik tun?",
-  "walletRateLiveStream": "Live-Stream-Minute",
+  "walletRateLiveStream": "Live-Stream",
   "walletLiveStreamDesc": "Als Live-Stream-Minuten verwenden",
   "walletRateBoost": "Inserat-Promotion ( Boost )",
   "walletRateBlast": "Massenbenachrichtigung ( Blast )",
