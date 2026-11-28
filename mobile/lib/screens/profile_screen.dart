@@ -2078,24 +2078,30 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      TierBadge.tierLabel(_userType, loc),
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-                    ),
+                    TierBadge(userType: _userType, fontSize: 11, iconSize: 9),
                     if (UserTier.hasSubscription(_userType) && _planType != null)
-                      Text(
-                        loc.t('accountInfoSubscriptionPlan', {'plan': _planType!}),
-                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          loc.t('accountInfoSubscriptionPlan', {'plan': _planType!}),
+                          style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
+                        ),
                       ),
                     if (!_autoRenewEnabled && UserTier.hasSubscription(_userType))
-                      Text(
-                        loc.t('subAutoRenewOff'),
-                        style: const TextStyle(fontSize: 11, color: Color(0xFFEF4444)),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          loc.t('subAutoRenewOff'),
+                          style: const TextStyle(fontSize: 11, color: Color(0xFFEF4444)),
+                        ),
                       ),
                     if (_pendingTier != null)
-                      Text(
-                        loc.t('subPendingDowngrade'),
-                        style: const TextStyle(fontSize: 11, color: Color(0xFFF59E0B)),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          loc.t('subPendingDowngrade'),
+                          style: const TextStyle(fontSize: 11, color: Color(0xFFF59E0B)),
+                        ),
                       ),
                   ],
                 ),

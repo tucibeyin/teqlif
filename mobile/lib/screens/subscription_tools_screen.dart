@@ -18,6 +18,7 @@ import 'retargeting_screen.dart';
 import 'live_stream_history_screen.dart';
 import 'my_recordings_screen.dart';
 import 'profile_screen.dart';
+import '../widgets/tier_badge.dart';
 
 class SubscriptionToolsScreen extends ConsumerStatefulWidget {
   final String userType;
@@ -406,22 +407,7 @@ class _ProStatusCard extends ConsumerWidget {
                     ),
                     ...[
                       const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: _getTierColor(userType).withValues(alpha: 0.35),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          _getTierName(loc, userType),
-                          style: const TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ),
+                      TierBadge(userType: userType, fontSize: 10, iconSize: 8),
                       if (planType != null) ...[
                         const SizedBox(width: 4),
                         Container(
