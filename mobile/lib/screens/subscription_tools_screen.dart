@@ -918,7 +918,7 @@ class _StreamHoursRow extends ConsumerWidget {
               color: const Color(0xFF14B8A6).withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(Icons.stream_outlined, color: Color(0xFF14B8A6), size: 20),
+            child: const Icon(Icons.live_tv, color: Color(0xFF14B8A6), size: 20),
           ),
           const SizedBox(width: 12),
           Expanded(
