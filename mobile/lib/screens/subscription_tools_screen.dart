@@ -62,7 +62,9 @@ class _SubscriptionToolsScreenState extends ConsumerState<SubscriptionToolsScree
 
     if (_needsScroll && !state.isLoading) {
       _needsScroll = false;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        // Route geçiş animasyonu (iOS ~300ms, Android ~250ms) + layout settle
+        await Future.delayed(const Duration(milliseconds: 350));
         if (!mounted) return;
         final ctx = _myRecordingsKey.currentContext;
         if (ctx != null) {
