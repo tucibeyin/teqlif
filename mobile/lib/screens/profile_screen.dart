@@ -5128,6 +5128,8 @@ class _TeqlikPacksTab extends StatelessWidget {
   static const _useCases = [
     _UseCase('🎁', 'teqlikUseCaseGiftTitle', 'Canlı yayında hediye gönder',
         'teqlikUseCaseGiftDesc', 'Favori yayıncına özel hediyeler at, onları destekle', true),
+    _UseCase('🎥', 'walletRateLiveStream', 'Canlı Yayın Dakikası',
+        'walletLiveStreamDesc', 'Canlı yayın dakikası olarak kullan', true),
     _UseCase('🚀', 'teqlikUseCaseBoostTitle', 'Boost',
         'teqlikUseCaseBoostDesc', "Keşfet'te daha fazla kişiye ulaş, görünürlüğünü artır", true),
     _UseCase('💥', 'teqlikUseCaseBlastTitle', 'Blast',
@@ -5139,11 +5141,12 @@ class _TeqlikPacksTab extends StatelessWidget {
   ];
 
   static const _ucColors = [
-    Color(0x1AFB923C),
-    Color(0x1A8B5CF6),
-    Color(0x1AEF4444),
-    Color(0x1A06B6D4),
-    Color(0x1AF59E0B),
+    Color(0x1AFB923C),  // gift - turuncu
+    Color(0x1A06B6D4),  // stream dakikası - cyan
+    Color(0x1A8B5CF6),  // boost - mor
+    Color(0x1AEF4444),  // blast - kırmızı
+    Color(0x1A6366F1),  // ai - indigo
+    Color(0x1AF59E0B),  // avatar - amber
   ];
 
   @override
@@ -5156,40 +5159,6 @@ class _TeqlikPacksTab extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // ── Canlı yayın dakikası açıklaması ──
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF06B6D4).withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color:
-                            const Color(0xFF06B6D4).withValues(alpha: 0.22),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.videocam_rounded,
-                            size: 18, color: Color(0xFF06B6D4)),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            loc.t('walletLiveStreamDesc'),
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: Color(0xFF06B6D4),
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
                 // ── Başlık ──
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 20, 16, 14),
