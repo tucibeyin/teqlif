@@ -2070,7 +2070,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
               InkWell(
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => SubscriptionToolsScreen(userType: _userType)),
+                  MaterialPageRoute(builder: (_) => const WalletScreen()),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -2115,19 +2115,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                           ],
                         ),
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(colors: _subGradient(_userType)),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          UserTier.hasSubscription(_userType)
-                              ? loc.t('accountInfoManageSubscription')
-                              : loc.t('accountInfoUpgrade'),
-                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white),
-                        ),
-                      ),
+                      Icon(Icons.chevron_right, color: AppColors.border(context), size: 20),
                     ],
                   ),
                 ),
