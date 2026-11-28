@@ -91,12 +91,24 @@ async def _i18n_refresh_loop() -> None:
 
 
 # --- SENTRY ENTEGRASYONU ---
+def _sentry_before_send(event, hint):
+    exc_info = hint.get("exc_info")
+    if exc_info and exc_info[0] is not None:
+        try:
+            from starlette.websockets import WebSocketDisconnect
+            if issubclass(exc_info[0], WebSocketDisconnect):
+                return None
+        except ImportError:
+            pass
+    return event
+
 if settings.sentry_backend_dsn:
     sentry_sdk.init(
         dsn=settings.sentry_backend_dsn,
         environment=settings.sentry_environment,
         traces_sample_rate=0.05,
         profiles_sample_rate=0.05,
+        before_send=_sentry_before_send,
     )
     logger.info("Sentry Backend entegrasyonu aktif edildi.")
 # ---------------------------
