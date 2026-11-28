@@ -956,6 +956,9 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
   bool _biometricAvailable = false;
   // widget.user stale olabilir — StorageService'ten güncel değer okunur
   String _userType = UserTier.standard;
+  String? _planType;
+  bool _autoRenewEnabled = true;
+  String? _pendingTier;
   bool _isPrivate = false;
   late String _displayedLang;
   bool _isSwitching = false;
@@ -1095,12 +1098,19 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
   }
 
 
+  List<Color> _subGradient(String userType) {
+    if (UserTier.isTier3OrAbove(userType)) return const [Color(0xFF0284C7), Color(0xFF38BDF8)];
+    if (UserTier.hasSubscription(userType)) return const [Color(0xFFD97706), Color(0xFFFFD700)];
+    return const [Color(0xFF6B7280), Color(0xFF9CA3AF)];
+  }
+
   Future<void> _loadPremiumStatus() async {
     // Cache-first: anlık gösterim
     final info = await StorageService.getUserInfo();
     if (mounted && info != null) {
       setState(() {
         _userType = info['user_type'] as String? ?? UserTier.standard;
+        _planType = info['plan_type'] as String?;
         _isPrivate = info['is_private'] == true;
       });
     }
@@ -1110,6 +1120,9 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
       if (mounted) {
         setState(() {
           _userType = user.userType;
+          _planType = user.planType;
+          _autoRenewEnabled = user.autoRenewEnabled;
+          _pendingTier = user.pendingTier;
         });
         await StorageService.saveUserInfo(
           id: user.id,
@@ -2054,26 +2067,68 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
           TeqSettingsSection(
             title: loc.t('profileAccountSection'),
             items: [
-              ListTile(
-                leading: FaIcon(
-                  FontAwesomeIcons.crown,
-                  size: 18,
-                  color: UserTier.hasSubscription(_userType)
-                      ? UserTier.crownGradient(_userType)[0]
-                      : AppColors.iconColor(context),
-                ),
-                title: Text(
-                  TierBadge.tierLabel(_userType, loc),
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppColors.textPrimary(context),
-                  ),
-                ),
-                trailing: Icon(Icons.chevron_right, color: AppColors.border(context), size: 20),
+              InkWell(
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => SubscriptionToolsScreen(userType: _userType),
+                  MaterialPageRoute(builder: (_) => SubscriptionToolsScreen(userType: _userType)),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Row(
+                    children: [
+                      ShaderMask(
+                        shaderCallback: (bounds) => LinearGradient(
+                          colors: _subGradient(_userType),
+                        ).createShader(bounds),
+                        child: const Icon(Icons.workspace_premium, size: 28, color: Colors.white),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              TierBadge.tierLabel(_userType, loc),
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                            ),
+                            if (UserTier.hasSubscription(_userType) && _planType != null)
+                              Text(
+                                loc.t('accountInfoSubscriptionPlan', {'plan': _planType!}),
+                                style: TextStyle(fontSize: 13, color: AppColors.textSecondary(context)),
+                              ),
+                            if (!_autoRenewEnabled && UserTier.hasSubscription(_userType))
+                              Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Text(
+                                  loc.t('subAutoRenewOff'),
+                                  style: const TextStyle(fontSize: 12, color: Color(0xFFEF4444)),
+                                ),
+                              ),
+                            if (_pendingTier != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Text(
+                                  loc.t('subPendingDowngrade'),
+                                  style: const TextStyle(fontSize: 12, color: Color(0xFFF59E0B)),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(colors: _subGradient(_userType)),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          UserTier.hasSubscription(_userType)
+                              ? loc.t('accountInfoManageSubscription')
+                              : loc.t('accountInfoUpgrade'),
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),

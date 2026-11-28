@@ -31,19 +31,20 @@ class SubscriptionToolsScreen extends ConsumerStatefulWidget {
 
 class _SubscriptionToolsScreenState extends ConsumerState<SubscriptionToolsScreen> {
   final _liveAccordionKey = GlobalKey();
+  final _myRecordingsKey = GlobalKey();
 
   @override
   void initState() {
     super.initState();
     if (widget.scrollToLiveSection) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        ModalRoute.of(context)?.didPush().then((_) {
+        Future.delayed(const Duration(milliseconds: 400), () {
           if (!mounted) return;
-          final ctx = _liveAccordionKey.currentContext;
+          final ctx = _myRecordingsKey.currentContext;
           if (ctx != null) {
             Scrollable.ensureVisible(
               ctx,
-              duration: const Duration(milliseconds: 500),
+              duration: const Duration(milliseconds: 400),
               curve: Curves.easeInOut,
               alignment: 0.1,
             );
@@ -254,6 +255,7 @@ class _SubscriptionToolsScreenState extends ConsumerState<SubscriptionToolsScree
               ),
               const SizedBox(height: 10),
               _ToolCard(
+                key: _myRecordingsKey,
                 icon: Icons.video_library_outlined,
                 iconColor: const Color(0xFFF97316),
                 title: loc.t('subToolMyRecordingsTitle'),
@@ -626,6 +628,7 @@ class _ToolCard extends ConsumerWidget {
   final VoidCallback onTap;
 
   const _ToolCard({
+    super.key,
     required this.icon,
     required this.iconColor,
     required this.title,

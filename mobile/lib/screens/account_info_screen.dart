@@ -10,7 +10,6 @@ import '../ui_library/components/inputs/teq_text_field.dart';
 import '../ui_library/components/buttons/teq_button.dart';
 import '../core/app_exception.dart';
 import 'viewmodels/account_info_view_model.dart';
-import 'subscription_tools_screen.dart';
 import '../core/user_tier.dart';
 import '../core/event_bus.dart';
 
@@ -113,8 +112,6 @@ class _AccountInfoScreenState extends ConsumerState<AccountInfoScreen> with Widg
                     ],
                   ),
                 ),
-                const SizedBox(height: 12),
-                _SubscriptionSectionCard(user: user),
               ],
             ),
           );
@@ -557,117 +554,3 @@ class _PhoneSheetState extends ConsumerState<_PhoneSheet> {
 }
 
 // ---------------------------------------------------------------------------
-
-class _SubscriptionSectionCard extends ConsumerWidget {
-  final Map<String, dynamic> user;
-  const _SubscriptionSectionCard({required this.user});
-
-  String _tierLabel(String userType, TranslationPack loc) {
-    switch (userType) {
-      case UserTier.tier4: return loc.tOr('tierLabelPremiumPlus', 'PREMIUM+');
-      case UserTier.tier3: return loc.t('tierLabelPremium');
-      case UserTier.tier2: return loc.t('tierLabelProPlus');
-      case UserTier.tier1: return loc.t('tierLabelPro');
-      default: return loc.t('tierLabelStandard');
-    }
-  }
-
-  List<Color> _tierGradient(String userType) {
-    if (UserTier.isTier3OrAbove(userType)) return const [Color(0xFF0284C7), Color(0xFF38BDF8)];
-    if (UserTier.hasSubscription(userType)) return const [Color(0xFFD97706), Color(0xFFFFD700)];
-    return const [Color(0xFF6B7280), Color(0xFF9CA3AF)];
-  }
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final loc = ref.watch(localizationProvider);
-    final userType = user['user_type'] as String? ?? UserTier.standard;
-    final planType = user['plan_type'] as String?;
-    final autoRenew = user['auto_renew_enabled'] as bool? ?? true;
-    final pendingTier = user['pending_tier'] as String?;
-    final isPaid = UserTier.hasSubscription(userType);
-    final colors = _tierGradient(userType);
-
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface(context),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border(context), width: 0.5),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
-            child: Text(
-              loc.t('accountInfoSubscriptionSection'),
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary(context)),
-            ),
-          ),
-          const Divider(height: 1),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                ShaderMask(
-                  shaderCallback: (bounds) => LinearGradient(colors: colors).createShader(bounds),
-                  child: const Icon(Icons.workspace_premium, size: 28, color: Colors.white),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _tierLabel(userType, loc),
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                      ),
-                      if (isPaid && planType != null)
-                        Text(
-                          loc.t('accountInfoSubscriptionPlan', {'plan': planType}),
-                          style: TextStyle(fontSize: 13, color: AppColors.textSecondary(context)),
-                        ),
-                      if (!autoRenew && isPaid)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 2),
-                          child: Text(
-                            loc.t('subAutoRenewOff'),
-                            style: const TextStyle(fontSize: 12, color: Color(0xFFEF4444)),
-                          ),
-                        ),
-                      if (pendingTier != null)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 2),
-                          child: Text(
-                            loc.t('subPendingDowngrade'),
-                            style: const TextStyle(fontSize: 12, color: Color(0xFFF59E0B)),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => SubscriptionToolsScreen(userType: userType)),
-                  ),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(colors: colors),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      isPaid ? loc.t('accountInfoManageSubscription') : loc.t('accountInfoUpgrade'),
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
