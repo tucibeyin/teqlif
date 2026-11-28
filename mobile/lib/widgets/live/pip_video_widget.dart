@@ -51,16 +51,13 @@ class _PipVideoWidgetState extends ConsumerState<PipVideoWidget> {
               onTap: _expandToFullScreen,
               child: Stack(
                 children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: SizedBox(
-                      width: 120,
-                      height: 200,
-                      child: VideoTrackRenderer(
-                        track,
-                        fit: VideoViewFit.cover,
-                        mirrorMode: VideoViewMirrorMode.mirror,
-                      ),
+                  SizedBox(
+                    width: 120,
+                    height: 200,
+                    child: VideoTrackRenderer(
+                      track,
+                      fit: VideoViewFit.cover,
+                      mirrorMode: VideoViewMirrorMode.mirror,
                     ),
                   ),
               // shadow / border
@@ -114,6 +111,14 @@ class _PipVideoWidgetState extends ConsumerState<PipVideoWidget> {
                   ),
                 ),
               ),
+              // Platform view köşelerini gizler (VideoTrackRenderer ClipRRect'i yoksayar)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: CustomPaint(
+                    painter: _PipCornerMaskPainter(radius: 12),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -135,14 +140,14 @@ class _PipVideoWidgetState extends ConsumerState<PipVideoWidget> {
     final pip = ref.read(pipProvider);
     final streamId = pip.currentStreamId;
     if (streamId == null) return;
-    
+
     debugPrint('[${DateTime.now().toString()}] [EVENT: PIP_DEBUG] _expandToFullScreen called. streamId: $streamId');
     // PiP'ten tam ekrana geçince pip_viewer_set'ten çıkar (joinStream yeniden ekleyecek)
     ref.read(streamServiceProvider).pipExit(streamId);
-    
+
     // Odayı kapatmadan (seamless) devre dışı bırak
     ref.read(pipProvider.notifier).disablePip(disconnectRoom: false);
-    
+
     // Tam ekrana yeni bağlantıyla aç
     Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(
@@ -150,4 +155,25 @@ class _PipVideoWidgetState extends ConsumerState<PipVideoWidget> {
       ),
     );
   }
+}
+
+// VideoTrackRenderer bir platform view — Flutter'ın ClipRRect'ini yoksayar.
+// Bu painter dış köşe üçgenlerini siyahla kapatarak görsel köşe radius sağlar.
+class _PipCornerMaskPainter extends CustomPainter {
+  final double radius;
+  const _PipCornerMaskPainter({required this.radius});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = Colors.black;
+    final outer = Path()..addRect(Rect.fromLTWH(0, 0, size.width, size.height));
+    final inner = Path()..addRRect(RRect.fromRectAndRadius(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      Radius.circular(radius),
+    ));
+    canvas.drawPath(Path.combine(PathOperation.difference, outer, inner), paint);
+  }
+
+  @override
+  bool shouldRepaint(_PipCornerMaskPainter old) => old.radius != radius;
 }

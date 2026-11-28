@@ -1300,51 +1300,63 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
                   _pipLeft = ((_pipLeft ?? (s.width - 110 - 16)) + d.delta.dx).clamp(0.0, s.width - 110);
                 });
               },
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  width: 110,
-                  height: 160,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.white, width: 2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Stack(
-                    children: [
-                      VideoTrackRenderer(
-                        _localVideoTrack!,
-                        key: ValueKey(_localVideoTrack.hashCode),
-                        fit: VideoViewFit.cover,
-                      ),
-                      Positioned(
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
-                        child: LivePressBtn(
-                          onTap: () async {
-                            final sid = widget.session.token?.streamId;
-                            if (sid != null) {
-                              try { await ref.read(streamServiceProvider).leaveCoHost(sid); } catch (_) {}
-                            }
-                            _handleCoHostRemoved();
-                          },
-                          child: Container(
-                            color: const Color(0xDDEF4444),
-                            padding: const EdgeInsets.symmetric(vertical: 5),
-                            alignment: Alignment.center,
-                            child: const Text(
-                              '✕ Sahneden Çık',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                              ),
+              child: SizedBox(
+                width: 110,
+                height: 160,
+                child: Stack(
+                  children: [
+                    VideoTrackRenderer(
+                      _localVideoTrack!,
+                      key: ValueKey(_localVideoTrack.hashCode),
+                      fit: VideoViewFit.cover,
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      child: LivePressBtn(
+                        onTap: () async {
+                          final sid = widget.session.token?.streamId;
+                          if (sid != null) {
+                            try { await ref.read(streamServiceProvider).leaveCoHost(sid); } catch (_) {}
+                          }
+                          _handleCoHostRemoved();
+                        },
+                        child: Container(
+                          color: const Color(0xDDEF4444),
+                          padding: const EdgeInsets.symmetric(vertical: 5),
+                          alignment: Alignment.center,
+                          child: const Text(
+                            '✕ Sahneden Çık',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                    // Platform view köşelerini gizler
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: CustomPaint(
+                          painter: _PipCornerMaskPainter(radius: 12),
+                        ),
+                      ),
+                    ),
+                    // Beyaz çerçeve
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.white, width: 2),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -1361,20 +1373,36 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
                   _pipLeft = ((_pipLeft ?? (s.width - 110 - 16)) + d.delta.dx).clamp(0.0, s.width - 110);
                 });
               },
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  width: 110,
-                  height: 160,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.white, width: 2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: VideoTrackRenderer(
-                    widget.session.coHostVideoTrack!,
-                    fit: VideoViewFit.cover,
-                    mirrorMode: VideoViewMirrorMode.mirror,
-                  ),
+              child: SizedBox(
+                width: 110,
+                height: 160,
+                child: Stack(
+                  children: [
+                    VideoTrackRenderer(
+                      widget.session.coHostVideoTrack!,
+                      fit: VideoViewFit.cover,
+                      mirrorMode: VideoViewMirrorMode.mirror,
+                    ),
+                    // Platform view köşelerini gizler
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: CustomPaint(
+                          painter: _PipCornerMaskPainter(radius: 12),
+                        ),
+                      ),
+                    ),
+                    // Beyaz çerçeve
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.white, width: 2),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -2429,4 +2457,25 @@ class _ListingVideoPageState extends ConsumerState<_ListingVideoPage> {
       ),
     );
   }
+}
+
+// VideoTrackRenderer bir platform view — Flutter'ın ClipRRect'ini yoksayar.
+// Bu painter dış köşe üçgenlerini siyahla kapatarak görsel köşe radius sağlar.
+class _PipCornerMaskPainter extends CustomPainter {
+  final double radius;
+  const _PipCornerMaskPainter({required this.radius});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = Colors.black;
+    final outer = Path()..addRect(Rect.fromLTWH(0, 0, size.width, size.height));
+    final inner = Path()..addRRect(RRect.fromRectAndRadius(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      Radius.circular(radius),
+    ));
+    canvas.drawPath(Path.combine(PathOperation.difference, outer, inner), paint);
+  }
+
+  @override
+  bool shouldRepaint(_PipCornerMaskPainter old) => old.radius != radius;
 }
