@@ -105,14 +105,22 @@ async def notifications_ws(websocket: WebSocket):
     try:
         raw = await asyncio.wait_for(websocket.receive_json(), timeout=5.0)
         token = raw.get("token", "") if isinstance(raw, dict) else ""
+    except WebSocketDisconnect:
+        return  # istemci zaten bağlantıyı kesti
     except (asyncio.TimeoutError, Exception):
-        await websocket.close(code=4001)
+        try:
+            await websocket.close(code=4001)
+        except Exception:
+            pass
         return
 
     user_id = decode_token(token)
     if not user_id:
         logger.warning("[NOTIF WS] Geçersiz token, bağlantı kapatıldı")
-        await websocket.close(code=4001)
+        try:
+            await websocket.close(code=4001)
+        except Exception:
+            pass
         return
     user_id_var.set(str(user_id))
 
@@ -127,11 +135,17 @@ async def notifications_ws(websocket: WebSocket):
             _status_val = _udata.get("status", "")
             _tok_ver = _udata.get("token_version")
             if _status_val != UserStatus.ACTIVE.value:
-                await websocket.close(code=4001)
+                try:
+                    await websocket.close(code=4001)
+                except Exception:
+                    pass
                 return
             if _tok_ver is not None and _decode_token_version(token) != int(_tok_ver):
                 logger.warning("[NOTIF WS] Geçersiz token_version (cache) | user_id=%s", user_id)
-                await websocket.close(code=4001)
+                try:
+                    await websocket.close(code=4001)
+                except Exception:
+                    pass
                 return
         else:
             # Cache miss — DB'ye git
@@ -139,11 +153,17 @@ async def notifications_ws(websocket: WebSocket):
                 result = await db.execute(select(User.status, User.token_version).where(User.id == user_id))
                 row = result.one_or_none()
                 if not row or row.status != UserStatus.ACTIVE:
-                    await websocket.close(code=4001)
+                    try:
+                        await websocket.close(code=4001)
+                    except Exception:
+                        pass
                     return
                 if _decode_token_version(token) != row.token_version:
                     logger.warning("[NOTIF WS] Geçersiz token_version (db) | user_id=%s", user_id)
-                    await websocket.close(code=4001)
+                    try:
+                        await websocket.close(code=4001)
+                    except Exception:
+                        pass
                     return
     except Exception as exc:
         logger.error("[NOTIF WS] Doğrulama hatası | user_id=%s | %s", user_id, exc, exc_info=True)
@@ -157,7 +177,10 @@ async def notifications_ws(websocket: WebSocket):
     session_count = await register_ws_session(user_id)
     if session_count > MAX_CONCURRENT_SESSIONS:
         await release_ws_session(user_id)
-        await websocket.close(code=4008)
+        try:
+            await websocket.close(code=4008)
+        except Exception:
+            pass
         logger.warning(
             "[NOTIF WS] Eş zamanlı oturum limiti aşıldı | user_id=%s | count=%s limit=%s",
             user_id, session_count, MAX_CONCURRENT_SESSIONS,
