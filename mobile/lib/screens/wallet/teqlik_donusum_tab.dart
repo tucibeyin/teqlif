@@ -29,7 +29,7 @@ class _TeqlikDonusumTabState extends ConsumerState<TeqlikDonusumTab>
       vsync: this,
       duration: const Duration(milliseconds: 900),
     )..repeat(reverse: true);
-    _pulse = Tween<double>(begin: 1.0, end: 1.07).animate(
+    _pulse = Tween<double>(begin: 1.0, end: 1.1).animate(
       CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
     );
     _loadRates();
@@ -61,6 +61,40 @@ class _TeqlikDonusumTabState extends ConsumerState<TeqlikDonusumTab>
     final loc = ref.watch(localizationProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    // Pulsing dönüşüm ikonu — sadece Canlı Yayın Dakikası kartına geçirilir
+    final convertButton = ScaleTransition(
+      scale: _pulse,
+      child: GestureDetector(
+        onTap: () => ConvertMinutesSheet.show(
+          context,
+          currentBalance: widget.currentBalance,
+          teqlikPerMinute: _teqlikPerMinute,
+        ),
+        child: Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF0891B2), Color(0xFF06B6D4)],
+            ),
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF06B6D4).withOpacity(0.45),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.swap_horiz_rounded,
+            color: Colors.white,
+            size: 18,
+          ),
+        ),
+      ),
+    );
+
     return RefreshIndicator(
       onRefresh: _loadRates,
       child: ListView(
@@ -78,65 +112,21 @@ class _TeqlikDonusumTabState extends ConsumerState<TeqlikDonusumTab>
           ),
           const SizedBox(height: 12),
 
-          // ── Referans Kartlar ────────────────────────────────────────────
+          // ── Referans Kartlar ─────────────────────────────────────────────
           if (_loadingRates)
             const Center(child: CircularProgressIndicator())
           else
-            ..._rates.map((rate) => _RateCard(
-                  arbKey: rate['arb_key'] as String? ?? '',
-                  cost: rate['cost'] as int? ?? 0,
-                  isStreamMinute: rate['key'] == 'stream_minute',
-                  loc: loc,
-                  isDark: isDark,
-                )),
-
-          const SizedBox(height: 28),
-
-          // ── CTA: Dönüşüm Butonu ─────────────────────────────────────────
-          Center(
-            child: ScaleTransition(
-              scale: _pulse,
-              child: GestureDetector(
-                onTap: () => ConvertMinutesSheet.show(
-                  context,
-                  currentBalance: widget.currentBalance,
-                  teqlikPerMinute: _teqlikPerMinute,
-                ),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF0891B2), Color(0xFF06B6D4)],
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF06B6D4).withOpacity(0.4),
-                        blurRadius: 16,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.swap_horiz_rounded, color: Colors.white, size: 22),
-                      const SizedBox(width: 10),
-                      Text(
-                        loc.t('walletTabConversion'),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
+            ..._rates.map((rate) {
+              final isStream = rate['key'] == 'stream_minute';
+              return _RateCard(
+                arbKey: rate['arb_key'] as String? ?? '',
+                cost: rate['cost'] as int? ?? 0,
+                isStreamMinute: isStream,
+                loc: loc,
+                isDark: isDark,
+                convertButton: isStream ? convertButton : null,
+              );
+            }),
         ],
       ),
     );
@@ -149,6 +139,7 @@ class _RateCard extends StatelessWidget {
   final bool isStreamMinute;
   final TranslationPack loc;
   final bool isDark;
+  final Widget? convertButton;
 
   const _RateCard({
     required this.arbKey,
@@ -156,6 +147,7 @@ class _RateCard extends StatelessWidget {
     required this.isStreamMinute,
     required this.loc,
     required this.isDark,
+    this.convertButton,
   });
 
   @override
@@ -165,9 +157,7 @@ class _RateCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: isStreamMinute
-            ? (isDark
-                ? const Color(0xFF0C2231)
-                : const Color(0xFFE0F7FA))
+            ? (isDark ? const Color(0xFF0C2231) : const Color(0xFFE0F7FA))
             : AppColors.card(context),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
@@ -178,6 +168,7 @@ class _RateCard extends StatelessWidget {
       ),
       child: Row(
         children: [
+          // İkon
           Container(
             width: 36,
             height: 36,
@@ -196,6 +187,8 @@ class _RateCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
+
+          // Etiket
           Expanded(
             child: Text(
               loc.t(arbKey),
@@ -206,6 +199,16 @@ class _RateCard extends StatelessWidget {
               ),
             ),
           ),
+
+          // Dönüşüm ikonu (sadece Canlı Yayın Dakikası kartında)
+          if (convertButton != null) ...[
+            const SizedBox(width: 10),
+            convertButton!,
+            const SizedBox(width: 10),
+          ] else
+            const SizedBox(width: 8),
+
+          // Maliyet
           Text(
             '$cost teqlik',
             style: TextStyle(

@@ -5156,6 +5156,40 @@ class _TeqlikPacksTab extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // ── Canlı yayın dakikası açıklaması ──
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF06B6D4).withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color:
+                            const Color(0xFF06B6D4).withValues(alpha: 0.22),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.videocam_rounded,
+                            size: 18, color: Color(0xFF06B6D4)),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            loc.t('walletLiveStreamDesc'),
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF06B6D4),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
                 // ── Başlık ──
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 20, 16, 14),

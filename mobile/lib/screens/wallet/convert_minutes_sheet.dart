@@ -120,7 +120,6 @@ class _ConvertMinutesSheetState extends ConsumerState<ConvertMinutesSheet> {
     int cost,
     TranslationPack loc,
   ) async {
-    final isDark = Theme.of(ctx).brightness == Brightness.dark;
     return await showDialog<bool>(
           context: ctx,
           builder: (dCtx) => AlertDialog(
@@ -135,9 +134,9 @@ class _ConvertMinutesSheetState extends ConsumerState<ConvertMinutesSheet> {
               ),
             ),
             content: Text(
-              loc.t('walletConvertTeqlikEq', {
-                'minutes': minutes.toString(),
+              loc.t('walletConvertConfirmBody', {
                 'teqlik': cost.toString(),
+                'minutes': minutes.toString(),
               }),
               style: TextStyle(color: AppColors.textSecondary(dCtx), fontSize: 14),
             ),
