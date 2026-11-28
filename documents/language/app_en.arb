@@ -1136,6 +1136,7 @@
   "walletConvertRateInfo": "1 stream minute = 1 teqlik",
   "walletConvertSheetDesc": "Convert your teqlik balance into live stream minutes.",
   "walletConvertMinuteUnit": "minute",
+  "walletConvertMinuteUnitShort": "min",
   "walletConversionRates": "What Can You Do with Teqlik?",
   "walletRateLiveStream": "Live Stream Minute",
   "walletLiveStreamDesc": "Use as live stream minutes",

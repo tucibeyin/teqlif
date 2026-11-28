@@ -1139,6 +1139,7 @@
   "walletConvertRateInfo": "1 دقيقة بث = 1 teqlik",
   "walletConvertSheetDesc": "يمكنك تحويل رصيد teqlik الخاص بك إلى دقائق بث مباشر.",
   "walletConvertMinuteUnit": "دقيقة",
+  "walletConvertMinuteUnitShort": "د",
   "walletConversionRates": "ماذا يمكنك فعله بـ teqlik؟",
   "walletRateLiveStream": "دقيقة البث المباشر",
   "walletLiveStreamDesc": "استخدمها كدقائق بث مباشر",

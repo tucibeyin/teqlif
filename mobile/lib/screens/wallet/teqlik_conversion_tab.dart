@@ -202,11 +202,9 @@ class _RateCard extends StatelessWidget {
 
           // Dönüşüm ikonu (sadece Canlı Yayın Dakikası kartında)
           if (convertButton != null) ...[
-            const SizedBox(width: 10),
-            convertButton!,
-            const SizedBox(width: 6),
+            const SizedBox(width: 8),
             Text(
-              '1 ${loc.t('walletConvertMinuteUnit')}',
+              '1 ${loc.t('walletConvertMinuteUnitShort')}',
               style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
@@ -214,6 +212,8 @@ class _RateCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 6),
+            convertButton!,
+            const SizedBox(width: 8),
           ] else
             const SizedBox(width: 8),
 

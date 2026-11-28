@@ -2512,6 +2512,7 @@
   "walletConvertRateInfo": "1 минута трансляции = 1 teqlik",
   "walletConvertSheetDesc": "Вы можете конвертировать ваши teqlik в минуты прямой трансляции.",
   "walletConvertMinuteUnit": "мин",
+  "walletConvertMinuteUnitShort": "мин",
   "walletConversionRates": "Что можно сделать с teqlik?",
   "walletRateLiveStream": "Минута прямой трансляции",
   "walletLiveStreamDesc": "Использовать как минуты прямой трансляции",

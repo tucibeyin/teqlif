@@ -1137,6 +1137,7 @@
   "walletConvertRateInfo": "1 dakika yayın = 1 teqlik",
   "walletConvertSheetDesc": "Mevcut teqlik'lerinizi Canlı Yayın dakikasına dönüştürebilirsiniz.",
   "walletConvertMinuteUnit": "dakika",
+  "walletConvertMinuteUnitShort": "dk",
   "walletConversionRates": "Teqlik ile Neler Yapabilirsiniz?",
   "walletRateLiveStream": "Canlı Yayın Dakikası",
   "walletLiveStreamDesc": "Canlı yayın dakikası olarak kullan",
