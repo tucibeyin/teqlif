@@ -20,6 +20,7 @@ import '../services/auth_service.dart' show RefreshOutcome;
 import '../services/storage_service.dart';
 import '../utils/username_color.dart';
 import '../ui_library/components/overlays/teq_toast.dart';
+import 'live/live_press_btn.dart';
 
 final _log = LoggerService.instance;
 
@@ -976,7 +977,7 @@ class ChatPanelState extends ConsumerState<ChatPanel> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                GestureDetector(
+                LivePressBtn(
                   key: const Key('chat_panel_btn_gonder'),
                   onTap: _selfMuted ? null : _sendMessage,
                   child: Container(

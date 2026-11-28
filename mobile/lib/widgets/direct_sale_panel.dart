@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:teqlif/core/network/api_client.dart';
 import '../config/theme.dart' show kPrimary;
+import 'live/live_press_btn.dart';
 import '../models/direct_sale.dart';
 import '../providers/direct_sale_provider.dart';
 import '../services/analytics_service.dart';
@@ -378,7 +379,7 @@ class _IdleHostPanel extends ConsumerWidget {
   }) {
     final hasLabel = label != null;
     final bg = color ?? Colors.white.withValues(alpha: 0.15);
-    return GestureDetector(
+    return LivePressBtn(
       onTap: onTap,
       child: Container(
         padding: hasLabel
@@ -410,7 +411,7 @@ class _IdleHostPanel extends ConsumerWidget {
   }
 
   Widget _pillBtn({required String label, required VoidCallback onTap}) {
-    return GestureDetector(
+    return LivePressBtn(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
@@ -689,7 +690,7 @@ class _ActivePanel extends ConsumerWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           // ── Ürün kartı (tıklanabilir → detay modal) ──────────────────────
-          GestureDetector(
+          LivePressBtn(
             onTap: () => _showProductDetail(context),
             child: Row(
               children: [
@@ -803,7 +804,7 @@ class _ActivePanel extends ConsumerWidget {
               ],
             ),
           ] else if (state.canPurchase) ...[
-            GestureDetector(
+            LivePressBtn(
               onTap: onBuy,
               child: Container(
                 width: double.infinity,
@@ -988,7 +989,7 @@ class _ProductDetailSheetState extends ConsumerState<_ProductDetailSheet> {
             const SizedBox(height: 20),
 
             if (canBuy)
-              GestureDetector(
+              LivePressBtn(
                 onTap: () {
                   Navigator.pop(context);
                   widget.onBuy?.call();
@@ -1336,7 +1337,7 @@ class _HostBtn extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Expanded(
-      child: GestureDetector(
+      child: LivePressBtn(
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
@@ -1696,7 +1697,7 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  GestureDetector(
+                  LivePressBtn(
                     onTap: () => ref
                         .read(directSaleViewerProvider(widget.streamId)
                             .notifier)
@@ -1744,7 +1745,7 @@ class _QtyBtn extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return GestureDetector(
+    return LivePressBtn(
       onTap: onTap,
       child: Container(
         width: 32,
@@ -1914,7 +1915,7 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
                       ? imgs[0] as String?
                       : item['image_url'] as String?;
                   final thumbUrl = rawImg != null ? ref.read(apiClientProvider).imgUrl(rawImg) : null;
-                  return GestureDetector(
+                  return LivePressBtn(
                     onTap: () => setState(() {
                       _selectedListing = item;
                       if (item['price'] != null) {
@@ -2112,7 +2113,7 @@ class _StartDialogState extends ConsumerState<_StartDialog> {
   }
 
   Widget _modeBtn(String label, bool active, VoidCallback onTap) {
-    return GestureDetector(
+    return LivePressBtn(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 7),
@@ -2201,7 +2202,7 @@ class _SuggestionChip extends ConsumerWidget {
         final priceStr = TeqNumberFormatter.format(s.suggestedPrice!, fieldKey: 'price');
         final label = loc.t('directSaleSuggestionPrice', {'price': priceStr});
 
-        return GestureDetector(
+        return LivePressBtn(
           onTap: () {
             priceCtrl.text = TeqNumberFormatter.format(s.suggestedPrice!, fieldKey: 'price');
             onApply();

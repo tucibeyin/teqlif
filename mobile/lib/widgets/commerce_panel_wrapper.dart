@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/theme.dart' show kPrimary;
+import 'live/live_press_btn.dart';
 import '../models/auction.dart';
 import '../models/direct_sale.dart';
 import '../providers/auction_provider.dart';
@@ -211,7 +212,7 @@ class _ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return LivePressBtn(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),

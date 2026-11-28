@@ -6,6 +6,7 @@ import '../services/image_cache_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/localization_service.dart';
+import 'live/live_press_btn.dart';
 import 'package:http/http.dart' as http;
 import 'package:teqlif/core/network/api_client.dart';
 import '../config/theme.dart';
@@ -488,7 +489,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                   const SizedBox(width: 8),
                   // Ürün + fiyat
                   Expanded(
-                    child: GestureDetector(
+                    child: LivePressBtn(
                       onTap: (!_isHostLike && state.listingId != null)
                           ? () => _showListingPopup(context, state.listingId!)
                           : null,
@@ -869,7 +870,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        GestureDetector(
+        LivePressBtn(
           key: const Key('auction_btn_teklif_ver'),
           onTap: enabled ? () => _showBidSheet(context, state) : null,
           child: Container(
@@ -892,7 +893,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
         ),
         if (showBin) ...[
           const SizedBox(height: 4),
-          GestureDetector(
+          LivePressBtn(
             key: const Key('auction_btn_hemen_al'),
             onTap: () => _buyItNow(state),
             child: Container(
@@ -1247,7 +1248,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
     Color color,
     VoidCallback? onTap,
   ) {
-    return GestureDetector(
+    return LivePressBtn(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
@@ -1275,7 +1276,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
   }
 
   Widget _pillBtn(String label, Color color, VoidCallback onTap) {
-    return GestureDetector(
+    return LivePressBtn(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
@@ -1328,7 +1329,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
     return Builder(
       builder: (context) {
         final loc = ref.watch(localizationProvider);
-        return GestureDetector(
+        return LivePressBtn(
           onTap: _acceptBid,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -1351,7 +1352,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
   }
 
   Widget _iconBtn(IconData icon, Color color, VoidCallback onTap) {
-    return GestureDetector(
+    return LivePressBtn(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(7),
@@ -1900,7 +1901,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
               }
               return Padding(
                 padding: const EdgeInsets.only(top: 14),
-                child: GestureDetector(
+                child: LivePressBtn(
                   key: const Key('auction_sheet_btn_hemen_al'),
                   onTap: _loading ? null : _buyItNow,
                   child: Container(
@@ -2209,7 +2210,7 @@ class _StartAuctionDialogState extends ConsumerState<_StartAuctionDialog> {
                   final isSelected =
                       _selectedListing != null &&
                       _selectedListing['id'] == lItem['id'];
-                  return GestureDetector(
+                  return LivePressBtn(
                     onTap: () => setState(() => _selectedListing = lItem),
                     child: Container(
                       margin: const EdgeInsets.only(bottom: 6),
@@ -2360,7 +2361,7 @@ class _StartAuctionDialogState extends ConsumerState<_StartAuctionDialog> {
   }
 
   Widget _modeBtn(String label, bool active, VoidCallback onTap) {
-    return GestureDetector(
+    return LivePressBtn(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8),
@@ -2475,7 +2476,7 @@ class _AuctionHostActiveCard extends ConsumerWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           // ── Ürün satırı ───────────────────────────────────────────────────
-          GestureDetector(
+          LivePressBtn(
             onTap: onShowListing,
             child: Row(
               children: [
@@ -2635,7 +2636,7 @@ class _AuctionHostBtn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: GestureDetector(
+      child: LivePressBtn(
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
