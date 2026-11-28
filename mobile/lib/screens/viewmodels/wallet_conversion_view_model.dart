@@ -68,6 +68,8 @@ class WalletConversionNotifier extends AutoDisposeNotifier<WalletConversionState
       newBalance: result['new_balance'] as int? ?? (currentBalance - state.minutes),
       newBonusMinutes: result['new_bonus_minutes'] as int? ?? state.minutes,
     ));
+    // SubscriptionToolsScreen'in Yayın Süresi satırını anında güncelle
+    eventBus.fire(const CreditsChangedEvent());
 
     await WalletService.invalidateBalance();
 
