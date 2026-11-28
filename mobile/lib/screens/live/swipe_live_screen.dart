@@ -2220,40 +2220,38 @@ class _ListingVideoPageState extends ConsumerState<_ListingVideoPage> {
     });
   }
 
+  /// Thumbnail her zaman alt katmanda, video hazır olduğunda üstüne anında biner.
+  /// AnimatedSwitcher yok — geçiş değil örtme (TikTok/Reels yöntemi).
   Widget _buildListingBackground(
       Map<String, dynamic> listing, String thumbUrl) {
-    if (_initialized && _ctrl != null) {
-      debugPrint(
-          '[${DateTime.now().toString()}] [EVENT: LISTING_UI_BUILD_READY] Showing VIDEO PLAYER for listing: ${listing['id']}');
-      return FittedBox(
-        key: ValueKey('video_${listing['id']}'),
-        fit: BoxFit.cover,
-        child: SizedBox(
-          width: _ctrl!.value.size.width,
-          height: _ctrl!.value.size.height,
-          child: VideoPlayer(_ctrl!),
-        ),
-      );
-    }
-    if (thumbUrl.isNotEmpty) {
-      debugPrint(
-          '[${DateTime.now().toString()}] [EVENT: LISTING_UI_BUILD_FALLBACK] Showing THUMBNAIL for listing: ${listing['id']}');
-      return CachedNetworkImage(
-        key: ValueKey('thumb_${listing['id']}'),
-        imageUrl: ref.read(apiClientProvider).imgUrl(thumbUrl),
-        cacheKey: 'listing_${listing['id'] as int}_photo_0',
-        cacheManager: TeqlifCacheManager(),
-        memCacheWidth: 400,
-        fit: BoxFit.cover,
-        placeholder: (_, _) => const ColoredBox(color: Colors.black),
-        errorWidget: (_, _, _) => const ColoredBox(color: Colors.black),
-      );
-    }
-    debugPrint(
-        '[${DateTime.now().toString()}] [EVENT: LISTING_UI_BUILD_LOADING] Showing BLACK SCREEN for listing: ${listing['id']}');
-    return ColoredBox(
-      key: ValueKey('dark_${listing['id']}'),
-      color: Colors.black,
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // Thumbnail — her zaman altta; video yoksa tek katman
+        if (thumbUrl.isNotEmpty)
+          CachedNetworkImage(
+            imageUrl: ref.read(apiClientProvider).imgUrl(thumbUrl),
+            cacheKey: 'listing_${listing['id'] as int}_photo_0',
+            cacheManager: TeqlifCacheManager(),
+            memCacheWidth: 400,
+            fit: BoxFit.cover,
+            placeholder: (_, _) => const ColoredBox(color: Colors.black),
+            errorWidget: (_, _, _) => const ColoredBox(color: Colors.black),
+          )
+        else
+          const ColoredBox(color: Colors.black),
+
+        // Video — hazır olduğunda thumbnail'in üstüne anında biner
+        if (_initialized && _ctrl != null)
+          FittedBox(
+            fit: BoxFit.cover,
+            child: SizedBox(
+              width: _ctrl!.value.size.width,
+              height: _ctrl!.value.size.height,
+              child: VideoPlayer(_ctrl!),
+            ),
+          ),
+      ],
     );
   }
 
@@ -2283,13 +2281,8 @@ class _ListingVideoPageState extends ConsumerState<_ListingVideoPage> {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // ── Video veya thumbnail (fade geçişli) ──────────────────────────
-          Positioned.fill(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 150),
-              child: _buildListingBackground(listing, thumbUrl),
-            ),
-          ),
+          // ── Thumbnail (alt) + video (üst, hazır olunca) ─────────────────
+          Positioned.fill(child: _buildListingBackground(listing, thumbUrl)),
 
           // ── Yüklenme göstergesi: sadece thumbnail yokken ─────────────────
           if (!_initialized && thumbUrl.isEmpty)
