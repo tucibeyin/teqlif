@@ -26,24 +26,38 @@ class ListingVideoManager {
     // 1. VideoCacheManager'a önbelleğe alınacakları bildir
     VideoCacheManager.instance.updateCache(cacheIds, urls);
 
-    // 2. Sadece aktif listing controller'ı RAM'de tut.
-    //    nextIds: VideoCacheManager disk'e indiriyor; controller on-demand oluşturulur.
-    //    VideoPlayerController.initialize() bile MediaCodec nesneleri açar (~30-50 MB);
-    //    WebRTC ile eş zamanlı çalıştığında OOM'a yol açar.
-    final keepIds = activeId > 0 ? {activeId} : <int>{};
+    // 2. Aktif + en fazla 2 komşu listing controller'ını RAM'de tut.
+    //    nextIds (mesafe ≤2): pre-initialize et ama play() çağırma.
+    //    cacheIds (mesafe ≤5): VideoCacheManager disk'e indiriyor; controller açma.
+    //    Önceki tasarım sadece activeId tutuyordu (OOM endişesi). 3 controller
+    //    ~90-150MB overhead — modern cihazlarda kabul edilebilir, cold-start'ı önler.
+    final warmIds = nextIds.take(2).toSet();
+    final keepIds = <int>{
+      if (activeId > 0) activeId,
+      ...warmIds,
+    };
 
-    // 3. Artık aktif olmayan controller'ları temizle
+    // 3. Artık viewport dışındaki controller'ları temizle
     final toRemove = _controllers.keys.where((id) => !keepIds.contains(id)).toList();
     for (final id in toRemove) {
       final ctrl = _controllers.remove(id);
       ctrl?.dispose();
     }
 
-    // 4. Sadece aktif listing için controller başlat
+    // 4. Aktif listing için controller başlat
     if (activeId > 0) {
       final url = urls[activeId];
       if (url != null && url.isNotEmpty && !_controllers.containsKey(activeId)) {
         _initController(activeId, url);
+      }
+    }
+
+    // 5. Komşu listingler için controller'ı önceden ısıt (play çağrılmaz)
+    for (final id in warmIds) {
+      if (id == activeId) continue;
+      final url = urls[id];
+      if (url != null && url.isNotEmpty && !_controllers.containsKey(id)) {
+        _initController(id, url);
       }
     }
   }

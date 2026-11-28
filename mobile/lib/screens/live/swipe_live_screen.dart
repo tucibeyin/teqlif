@@ -2286,7 +2286,7 @@ class _ListingVideoPageState extends ConsumerState<_ListingVideoPage> {
           // ── Video veya thumbnail (fade geçişli) ──────────────────────────
           Positioned.fill(
             child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 500),
+              duration: const Duration(milliseconds: 150),
               child: _buildListingBackground(listing, thumbUrl),
             ),
           ),
