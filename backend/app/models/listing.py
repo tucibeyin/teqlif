@@ -43,6 +43,7 @@ class Listing(Base):
     image_urls: Mapped[Optional[list]] = mapped_column(JSONB, nullable=True)
     thumbnail_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     video_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    video_thumbnail_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     buy_it_now_price: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2), nullable=True)
     last_sold_price: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2), nullable=True, index=True)
     last_start_price: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2), nullable=True)

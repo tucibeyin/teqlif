@@ -2271,8 +2271,14 @@ class _ListingVideoPageState extends ConsumerState<_ListingVideoPage> {
     final category = CategoryService.localizedLabelFor(loc, categoryKey);
     final location = listing['location']?.toString() ?? '';
     final username = (listing['user'] as Map<String, dynamic>?)?['username']?.toString() ?? '';
-    final thumbUrl = listing['thumbnail_url']?.toString() ??
-        listing['image_url']?.toString() ?? '';
+    // Video'lu ilanlar: video_thumbnail_url (ilk kare) önceliklidir — ilan fotoğrafı değil
+    final hasVideo = (listing['video_url'] as String?)?.isNotEmpty == true;
+    final thumbUrl = (hasVideo
+            ? listing['video_thumbnail_url']?.toString()
+            : null) ??
+        listing['thumbnail_url']?.toString() ??
+        listing['image_url']?.toString() ??
+        '';
     final topPad = MediaQuery.of(context).padding.top;
     final botPad = MediaQuery.of(context).padding.bottom;
 

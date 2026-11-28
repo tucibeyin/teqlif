@@ -43,6 +43,7 @@ class GetVideoFeedQuery:
                 "location": listing.location,
                 "video_url": listing.video_url,
                 "thumbnail_url": listing.thumbnail_url,
+                "video_thumbnail_url": listing.video_thumbnail_url,
                 "image_url": listing.image_url,
                 "user": {"id": user.id, "username": user.username},
             }

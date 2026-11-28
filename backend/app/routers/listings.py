@@ -236,6 +236,7 @@ async def create_listing(
         image_urls=payload.get("image_urls"),
         thumbnail_url=payload.get("thumbnail_url"),
         video_url=payload.get("video_url"),
+        video_thumbnail_url=payload.get("video_thumbnail_url"),
     )
 
     pool = get_pool()
@@ -268,7 +269,7 @@ async def update_listing(
     # Sadece payload'da gerçekten bulunan medya alanlarını ilet.
     # Yoksa _UNSET varsayılanı devreye girer → DB'deki değer değişmez.
     media_kwargs = {}
-    for field in ("image_urls", "image_url", "thumbnail_url", "video_url"):
+    for field in ("image_urls", "image_url", "thumbnail_url", "video_url", "video_thumbnail_url"):
         if field in payload:
             media_kwargs[field] = payload[field]
 
@@ -503,6 +504,8 @@ async def similar_listings(
             "image_url": item.image_url,
             "image_urls": _parse_image_urls(item.image_urls),
             "thumbnail_url": item.thumbnail_url,
+            "video_url": item.video_url,
+            "video_thumbnail_url": item.video_thumbnail_url,
             "category": item.category,
             "condition": item.condition,
             "location": item.location,

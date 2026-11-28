@@ -92,6 +92,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
   final _picker = ImagePicker();
   File? _video;
   String? _videoUploadUrl;
+  String? _videoThumbnailUrl;
   bool _videoUploading = false;
   double _videoUploadProgress = 0.0;
 
@@ -386,7 +387,10 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
           if (mounted) setState(() => _videoUploadProgress = p);
         },
       );
-      if (mounted) setState(() => _videoUploadUrl = result.videoUrl);
+      if (mounted) setState(() {
+        _videoUploadUrl = result.videoUrl;
+        _videoThumbnailUrl = result.thumbUrl;
+      });
     } on MediaCompressCancelledException {
       if (mounted) _removeVideo();
     } catch (e) {
@@ -563,6 +567,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
             if (imageUrls.isNotEmpty) 'image_url': imageUrls.first,
             'thumbnail_url': ?thumbnailUrl,
             if (_videoUploadUrl != null) 'video_url': _videoUploadUrl,
+            if (_videoThumbnailUrl != null) 'video_thumbnail_url': _videoThumbnailUrl,
           }),
         ),
       );

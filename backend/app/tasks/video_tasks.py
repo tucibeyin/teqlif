@@ -275,7 +275,8 @@ async def process_listing_video_task(ctx: dict, video_key: str) -> None:
             except Exception as exc:
                 logger.warning("[VideoTask] Thumbnail yüklenemedi | key=%s | %s", thumb_key, exc)
 
-        # listings.thumbnail_url best-effort güncelle (listing henüz oluşturulmamışsa 0 satır etkilenir)
+        # listings.video_thumbnail_url best-effort güncelle (listing henüz oluşturulmamışsa 0 satır etkilenir)
+        # upload endpoint sync thumbnail döndürdüğü için bu sadece fallback — remuxed video'nun frame'i daha doğru
         if thumb_url:
             video_uuid = os.path.basename(video_key).split(".")[0]
             try:
@@ -285,19 +286,19 @@ async def process_listing_video_task(ctx: dict, video_key: str) -> None:
                     result = await db.execute(
                         text(
                             "UPDATE listings "
-                            "SET thumbnail_url = :thumb "
+                            "SET video_thumbnail_url = :thumb "
                             "WHERE video_url LIKE :pattern "
-                            "AND thumbnail_url IS NULL"
+                            "AND video_thumbnail_url IS NULL"
                         ),
                         {"thumb": thumb_url, "pattern": f"%{video_uuid}%"},
                     )
                     await db.commit()
                     logger.info(
-                        "[VideoTask] thumbnail_url güncellendi | listings=%d | key=%s",
+                        "[VideoTask] video_thumbnail_url güncellendi | listings=%d | key=%s",
                         result.rowcount, video_key,
                     )
             except Exception as exc:
-                logger.warning("[VideoTask] thumbnail_url güncellenemedi | key=%s | %s", video_key, exc)
+                logger.warning("[VideoTask] video_thumbnail_url güncellenemedi | key=%s | %s", video_key, exc)
 
     logger.info("[VideoTask] Tamamlandı | key=%s", video_key)
 

@@ -51,6 +51,7 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
   final _picker = ImagePicker();
   File? _video;
   String? _videoUploadUrl;
+  String? _videoThumbnailUrl;
   bool _videoUploading = false;
   double _videoUploadProgress = 0.0;
 
@@ -77,6 +78,7 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
 
     if (widget.listing['video_url'] != null) {
       _videoUploadUrl = widget.listing['video_url'];
+      _videoThumbnailUrl = widget.listing['video_thumbnail_url'] as String?;
     }
 
     ref.read(categoryServiceProvider).getCategories().then((cats) {
@@ -188,7 +190,10 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
           if (mounted) setState(() => _videoUploadProgress = p);
         },
       );
-      if (mounted) setState(() => _videoUploadUrl = result.videoUrl);
+      if (mounted) setState(() {
+        _videoUploadUrl = result.videoUrl;
+        _videoThumbnailUrl = result.thumbUrl;
+      });
     } on MediaCompressCancelledException {
       if (mounted) _removeVideo();
     } catch (e) {
@@ -383,6 +388,7 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
             if (imageUrls.isNotEmpty) 'image_url': imageUrls.first,
             'thumbnail_url': ?thumbnailUrl,
             'video_url': _videoUploadUrl,
+            if (_videoThumbnailUrl != null) 'video_thumbnail_url': _videoThumbnailUrl,
           }),
         ),
       );

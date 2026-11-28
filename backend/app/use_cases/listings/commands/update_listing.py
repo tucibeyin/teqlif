@@ -57,8 +57,9 @@ class UpdateListingCommand:
         extra_fields: Optional[dict] = None,
         image_urls: Any = _UNSET,    # list[str] | None | _UNSET ("iletilmedi" anlamı)
         image_url: Any = _UNSET,     # str | None | _UNSET
-        thumbnail_url: Any = _UNSET, # str | None | _UNSET
-        video_url: Any = _UNSET,     # str | None | _UNSET
+        thumbnail_url: Any = _UNSET,         # str | None | _UNSET
+        video_url: Any = _UNSET,             # str | None | _UNSET
+        video_thumbnail_url: Any = _UNSET,   # str | None | _UNSET
     ) -> dict:
         logger.info("[UpdateListingCommand] Başlatıldı | listing_id=%s user_id=%s", listing_id, user_id)
 
@@ -136,9 +137,12 @@ class UpdateListingCommand:
                 listing.video_url = video_url  # None = kaldır, str = güncelle
                 if old_video and old_video != video_url and old_video.startswith("/uploads/"):
                     files_to_delete.append(old_video[len("/uploads/"):])
-                # thumbnail_url iletilmediyse ve yeni video varsa, deterministik türet
-                if thumbnail_url is _UNSET and video_url:
-                    listing.thumbnail_url = f"{video_url.rsplit('.', 1)[0]}_vthumb.jpg"
+                # video_thumbnail_url iletilmediyse ve yeni video varsa, deterministik türet
+                if video_thumbnail_url is _UNSET and video_url:
+                    listing.video_thumbnail_url = f"{video_url.rsplit('.', 1)[0]}_vthumb.jpg"
+
+            if video_thumbnail_url is not _UNSET:
+                listing.video_thumbnail_url = video_thumbnail_url
 
             listing.updated_at = datetime.now(timezone.utc)
             from app.services.feed.listing_cache_service import build_listing_snapshot

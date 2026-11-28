@@ -35,6 +35,7 @@ class CreateListingCommand:
         image_urls: list = None,
         thumbnail_url: Optional[str] = None,
         video_url: Optional[str] = None,
+        video_thumbnail_url: Optional[str] = None,
     ) -> dict:
         logger.info("[CreateListingCommand] İşlem başlatıldı | user_id=%s", user_id)
 
@@ -70,10 +71,9 @@ class CreateListingCommand:
         brand = ef.get("brand")
         model_name = ef.get("model") or ef.get("model_name")
 
-        # Video yüklendi ama thumbnail yoksa: worker'dan önce ilan oluşturulabilir
-        # (race condition). Deterministik key türetme her durumda doğru URL'i verir.
-        if not thumbnail_url and video_url:
-            thumbnail_url = f"{video_url.rsplit('.', 1)[0]}_vthumb.jpg"
+        # video_thumbnail_url: upload endpoint'ten gelir; yoksa video_url'den türet.
+        if not video_thumbnail_url and video_url:
+            video_thumbnail_url = f"{video_url.rsplit('.', 1)[0]}_vthumb.jpg"
 
         async with self.uow:
             listing_data = {
@@ -95,6 +95,7 @@ class CreateListingCommand:
                 "image_urls": image_urls or [],
                 "thumbnail_url": thumbnail_url,
                 "video_url": video_url,
+                "video_thumbnail_url": video_thumbnail_url,
             }
 
             new_listing = await self.uow.listings.create(obj_in=listing_data)

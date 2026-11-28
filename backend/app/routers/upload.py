@@ -40,6 +40,44 @@ async def _read_streaming(file: UploadFile, max_bytes: int) -> bytes:
     return b"".join(chunks)
 
 
+async def _extract_video_first_frame(data: bytes, video_key: str) -> str | None:
+    """Video baytlarından ilk kareyi (frame 0) çıkarıp MinIO'ya yükler, URL döner.
+
+    Hafif işlem (~50-100ms) — HTTP isteği içinde synchronous çalışır.
+    Hata durumunda None döner, sessizce geçer.
+    """
+    import os
+    import shutil
+    import tempfile
+
+    if not shutil.which("ffmpeg"):
+        return None
+    try:
+        with tempfile.TemporaryDirectory() as tmp:
+            src = os.path.join(tmp, "src.mp4")
+            dst = os.path.join(tmp, "vthumb.jpg")
+            with open(src, "wb") as f:
+                f.write(data)
+            proc = await asyncio.create_subprocess_exec(
+                "ffmpeg", "-y", "-i", src,
+                "-ss", "0", "-frames:v", "1", "-q:v", "2",
+                dst,
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.DEVNULL,
+            )
+            await asyncio.wait_for(proc.communicate(), timeout=15)
+            if not os.path.exists(dst):
+                return None
+            with open(dst, "rb") as f:
+                thumb_bytes = f.read()
+        key_stem = video_key.rsplit(".", 1)[0]
+        thumb_key = f"{key_stem}_vthumb.jpg"
+        return await storage.upload_bytes_async(thumb_key, thumb_bytes, "image/jpeg")
+    except Exception as exc:
+        logger.warning("[UPLOAD] Video ilk kare çıkarılamadı | key=%s | %s", video_key, exc)
+        return None
+
+
 @router.post("/listing-video")
 @limiter.limit("10/minute")
 async def upload_listing_video(
@@ -61,7 +99,10 @@ async def upload_listing_video(
     video_key = f"listings/video/{uuid.uuid4().hex}.mp4"
     video_url = await storage.upload_bytes_async(video_key, data, "video/mp4")
 
-    # ARQ video kuyruğuna devret: remux + thumbnail arka planda işlenir
+    # İlk kareyi sync çıkar (~50-100ms) — mobile anında alır, timing race yok
+    thumb_url = await _extract_video_first_frame(data, video_key)
+
+    # ARQ video kuyruğuna devret: remux + AAC + faststart arka planda işlenir
     pool = get_pool()
     if pool:
         await pool.enqueue_job(
@@ -72,10 +113,10 @@ async def upload_listing_video(
         )
 
     logger.info(
-        "[UPLOAD] İlan videosu yüklendi (ham) | user_id=%s | key=%s",
-        current_user.id, video_key,
+        "[UPLOAD] İlan videosu yüklendi | user_id=%s | key=%s | thumb=%s",
+        current_user.id, video_key, thumb_url is not None,
     )
-    return {"video_url": video_url, "thumb_url": None}
+    return {"video_url": video_url, "thumb_url": thumb_url}
 
 
 @router.post("")
