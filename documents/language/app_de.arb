@@ -1134,6 +1134,8 @@
   "walletConvertInsufficient": "Unzureichendes teqlik-Guthaben",
   "walletConvertZeroError": "Bitte mindestens 1 Minute eingeben",
   "walletConvertRateInfo": "1 Stream-Minute = 1 teqlik",
+  "walletConvertSheetDesc": "Konvertieren Sie Ihr teqlik-Guthaben in Live-Stream-Minuten.",
+  "walletConvertMinuteUnit": "Minute",
   "walletConversionRates": "Was können Sie mit teqlik tun?",
   "walletRateLiveStream": "Live-Stream-Minute",
   "walletLiveStreamDesc": "Als Live-Stream-Minuten verwenden",

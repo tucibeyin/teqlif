@@ -1137,6 +1137,8 @@
   "walletConvertInsufficient": "رصيد teqlik غير كافٍ",
   "walletConvertZeroError": "يرجى إدخال دقيقة واحدة على الأقل",
   "walletConvertRateInfo": "1 دقيقة بث = 1 teqlik",
+  "walletConvertSheetDesc": "يمكنك تحويل رصيد teqlik الخاص بك إلى دقائق بث مباشر.",
+  "walletConvertMinuteUnit": "دقيقة",
   "walletConversionRates": "ماذا يمكنك فعله بـ teqlik؟",
   "walletRateLiveStream": "دقيقة البث المباشر",
   "walletLiveStreamDesc": "استخدمها كدقائق بث مباشر",

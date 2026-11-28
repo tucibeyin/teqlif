@@ -1135,6 +1135,8 @@
   "walletConvertInsufficient": "Yetersiz teqlik bakiyesi",
   "walletConvertZeroError": "Lütfen en az 1 dakika girin",
   "walletConvertRateInfo": "1 dakika yayın = 1 teqlik",
+  "walletConvertSheetDesc": "Mevcut teqlik'lerinizi Canlı Yayın dakikasına dönüştürebilirsiniz.",
+  "walletConvertMinuteUnit": "dakika",
   "walletConversionRates": "Teqlik ile Neler Yapabilirsiniz?",
   "walletRateLiveStream": "Canlı Yayın Dakikası",
   "walletLiveStreamDesc": "Canlı yayın dakikası olarak kullan",

@@ -80,7 +80,7 @@ import '../ui_library/components/badges/tier_crown_badge.dart';
 import '../widgets/tier_badge.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import '../services/iap_service.dart';
-import 'wallet/teqlik_donusum_tab.dart';
+import 'wallet/teqlik_conversion_tab.dart';
 import 'wallet/convert_minutes_sheet.dart';
 import 'viewmodels/wallet_conversion_view_model.dart';
 
@@ -4616,7 +4616,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
                         controller: _txnTabController,
                         children: [
                           // ── Alt Sekme 1: teqlik DÖNÜŞÜM ───────────────
-                          TeqlikDonusumTab(currentBalance: _balance ?? 0),
+                          TeqlikConversionTab(currentBalance: _balance ?? 0),
 
                           // ── Alt Sekme 2: HAREKETLER ───────────────────
                           RefreshIndicator(

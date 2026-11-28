@@ -5,16 +5,16 @@ import '../../services/localization_service.dart';
 import '../../services/wallet_service.dart';
 import 'convert_minutes_sheet.dart';
 
-class TeqlikDonusumTab extends ConsumerStatefulWidget {
+class TeqlikConversionTab extends ConsumerStatefulWidget {
   final int currentBalance;
 
-  const TeqlikDonusumTab({super.key, required this.currentBalance});
+  const TeqlikConversionTab({super.key, required this.currentBalance});
 
   @override
-  ConsumerState<TeqlikDonusumTab> createState() => _TeqlikDonusumTabState();
+  ConsumerState<TeqlikConversionTab> createState() => _TeqlikConversionTabState();
 }
 
-class _TeqlikDonusumTabState extends ConsumerState<TeqlikDonusumTab>
+class _TeqlikConversionTabState extends ConsumerState<TeqlikConversionTab>
     with SingleTickerProviderStateMixin {
   List<Map<String, dynamic>> _rates = [];
   int _teqlikPerMinute = 1;
@@ -204,7 +204,16 @@ class _RateCard extends StatelessWidget {
           if (convertButton != null) ...[
             const SizedBox(width: 10),
             convertButton!,
-            const SizedBox(width: 10),
+            const SizedBox(width: 6),
+            Text(
+              '1 ${loc.t('walletConvertMinuteUnit')}',
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF06B6D4),
+              ),
+            ),
+            const SizedBox(width: 6),
           ] else
             const SizedBox(width: 8),
 

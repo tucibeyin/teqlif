@@ -201,12 +201,40 @@ class _ConvertMinutesSheetState extends ConsumerState<ConvertMinutesSheet> {
                 const SizedBox(height: 20),
 
                 // Başlık
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      loc.t('walletRateLiveStream'),
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary(context),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    const Icon(
+                      Icons.swap_horiz_rounded,
+                      size: 20,
+                      color: Color(0xFF06B6D4),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'teqlik',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary(context),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
                 Text(
-                  loc.t('walletConvertTitle'),
+                  loc.t('walletConvertSheetDesc'),
                   style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary(context),
+                    fontSize: 12,
+                    color: AppColors.textSecondary(context),
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -240,8 +268,8 @@ class _ConvertMinutesSheetState extends ConsumerState<ConvertMinutesSheet> {
                     const SizedBox(width: 8),
 
                     // Dakika input
-                    Expanded(
-                      flex: 2,
+                    SizedBox(
+                      width: 72,
                       child: TextField(
                         controller: _ctrl,
                         keyboardType: TextInputType.number,
@@ -276,21 +304,27 @@ class _ConvertMinutesSheetState extends ConsumerState<ConvertMinutesSheet> {
                       icon: Icons.add,
                       onTap: () => _increment(notifier, state.minutes),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 6),
+
+                    // "dakika" birimi
+                    Text(
+                      loc.t('walletConvertMinuteUnit'),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textSecondary(context),
+                      ),
+                    ),
 
                     // Hesaplanan teqlik
-                    Expanded(
-                      flex: 2,
-                      child: Text(
-                        '= $cost teqlik',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: cost > widget.currentBalance
-                              ? Colors.red
-                              : const Color(0xFF06B6D4),
-                        ),
+                    const Spacer(),
+                    Text(
+                      '= $cost teqlik',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: cost > widget.currentBalance
+                            ? Colors.red
+                            : const Color(0xFF06B6D4),
                       ),
                     ),
                   ],

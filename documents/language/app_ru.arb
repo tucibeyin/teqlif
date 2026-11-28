@@ -2510,6 +2510,8 @@
   "walletConvertInsufficient": "Недостаточно teqlik на балансе",
   "walletConvertZeroError": "Пожалуйста, введите не менее 1 минуты",
   "walletConvertRateInfo": "1 минута трансляции = 1 teqlik",
+  "walletConvertSheetDesc": "Вы можете конвертировать ваши teqlik в минуты прямой трансляции.",
+  "walletConvertMinuteUnit": "мин",
   "walletConversionRates": "Что можно сделать с teqlik?",
   "walletRateLiveStream": "Минута прямой трансляции",
   "walletLiveStreamDesc": "Использовать как минуты прямой трансляции",
